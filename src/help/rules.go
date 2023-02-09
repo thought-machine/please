@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
@@ -16,9 +17,20 @@ import (
 
 var log = logging.Log
 
-// PrintRuleArgs prints the arguments of all builtin rules
-func PrintRuleArgs() {
-	env := getRuleArgs(newState())
+// PrintRuleArgs prints the arguments of
+//
+//	a) all builtin rules if no files are passed, or
+//	b) all rules in the given files.
+func PrintRuleArgs(files cli.StdinStrings) {
+	var funcMap map[string]*asp.Statement
+	if len(files) > 0 {
+		log.Debugf("Got some files")
+		funcMap = getFunctionsFromFiles(files)
+	} else {
+		log.Debugf("No files, using state")
+		funcMap = getFunctionsFromState(newState())
+	}
+	env := getRuleArgs(funcMap)
 	b, err := json.MarshalIndent(env, "", "  ")
 	if err != nil {
 		log.Fatalf("Failed JSON encoding: %s", err)
@@ -74,6 +86,16 @@ func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
 	return m
 }
 
+func parseFilesForFunctions(p *asp.Parser, files []string) map[string]*asp.Statement {
+	m := map[string]*asp.Statement{}
+	for _, file := range files {
+		if stmts, err := p.ParseFileOnly(file); err == nil {
+			addAllFunctions(m, stmts, false)
+		}
+	}
+	return m
+}
+
 // addAllFunctions adds all the functions from a set of statements to the given map.
 func addAllFunctions(m map[string]*asp.Statement, stmts []*asp.Statement, builtin bool) {
 	for _, stmt := range stmts {
@@ -92,16 +114,23 @@ func addAllFunctions(m map[string]*asp.Statement, stmts []*asp.Statement, builti
 	}
 }
 
+func getFunctionsFromState(state *core.BuildState) map[string]*asp.Statement {
+	return AllBuiltinFunctions(state)
+}
+
+func getFunctionsFromFiles(files cli.StdinStrings) map[string]*asp.Statement {
+	state := newState()
+	p := asp.NewParser(state)
+	return parseFilesForFunctions(p, files)
+}
+
 // getRuleArgs retrieves the arguments of builtin rules. It's split from PrintRuleArgs for testing.
-func getRuleArgs(state *core.BuildState) environment {
+func getRuleArgs(statementMap map[string]*asp.Statement) environment {
 	argsRegex := regexp.MustCompile("\n +Args: *\n")
 	env := environment{Functions: map[string]function{}}
-	for name, stmt := range AllBuiltinFunctions(state) {
+	for name, stmt := range statementMap {
 		f := stmt.FuncDef
 		r := function{Docstring: f.Docstring}
-		if strings.HasSuffix(f.EoDef.Filename, "_rules.build_defs") {
-			r.Language = strings.TrimSuffix(f.EoDef.Filename, "_rules.build_defs")
-		}
 		if indices := argsRegex.FindStringIndex(r.Docstring); indices != nil {
 			r.Comment = strings.TrimSpace(r.Docstring[:indices[0]])
 		}
@@ -131,7 +160,6 @@ type function struct {
 	Args      []functionArg `json:"args"`
 	Comment   string        `json:"comment,omitempty"`
 	Docstring string        `json:"docstring,omitempty"`
-	Language  string        `json:"language,omitempty"`
 }
 
 // A functionArg represents a single argument to a function.

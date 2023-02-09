@@ -1,8 +1,8 @@
 genrule(
   name = "unzip",
   srcs = ["input.zip"],
-  cmd = "$TOOLS_JARCAT x -o $OUT $SRC",
+  cmd = "$TOOLS_ARCAT x -o $OUT $SRC",
   tools = {
-    "jarcat": [CONFIG.JARCAT_TOOL],
+    "arcat": [CONFIG.ARCAT_TOOL],
   }
 )

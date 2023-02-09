@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//rules",
         "//src/core",
-        "//src/help",
         "//src/parse/asp",
         "//src/plz",
         "//third_party/go:buildtools",

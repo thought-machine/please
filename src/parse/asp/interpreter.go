@@ -1,11 +1,9 @@
 package asp
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"runtime/debug"
-	"runtime/pprof"
 	"strings"
 	"sync"
 
@@ -21,11 +19,11 @@ type interpreter struct {
 	parser      *Parser
 	subincludes *cmap.Map[string, pyDict]
 
-	config *pyConfig
+	configs      map[*core.BuildState]*pyConfig
+	configsMutex sync.RWMutex
 
 	breakpointMutex sync.Mutex
 	limiter         semaphore
-	profiling       bool
 
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 }
@@ -34,7 +32,6 @@ type interpreter struct {
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
-		ctx:    context.Background(),
 		state:  state,
 		locals: map[string]pyObject{},
 	}
@@ -49,18 +46,38 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		scope:       s,
 		parser:      p,
 		subincludes: subincludes,
-		config:      newConfig(state),
+		configs:     map[*core.BuildState]*pyConfig{},
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
-		profiling:   state.Config.Profiling,
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
 	return i
 }
 
+func (i *interpreter) getExistingConfig(state *core.BuildState) *pyConfig {
+	i.configsMutex.RLock()
+	defer i.configsMutex.RUnlock()
+
+	return i.configs[state]
+}
+
+// getConfig returns the asp CONFIG object for the given state.
+func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
+	if c := i.getExistingConfig(state); c != nil {
+		return c
+	}
+
+	i.configsMutex.Lock()
+	defer i.configsMutex.Unlock()
+
+	c := newConfig(state)
+	i.configs[state] = c
+	return c
+}
+
 // LoadBuiltins loads a set of builtins from a file, optionally with its contents.
 func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*Statement) error {
-	s := i.scope.NewScope()
+	s := i.scope.NewScope(filename)
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
@@ -99,10 +116,37 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 	return err
 }
 
+func (i *interpreter) preloadSubincludes(s *scope) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = handleErrors(r)
+		}
+	}()
+
+	// We should have ensured these targets are downloaded by this point in `parse_step.go`
+	for _, label := range s.state.GetPreloadedSubincludes() {
+		t := s.state.Graph.TargetOrDie(label)
+
+		includeState := s.state
+		if t.Label.Subrepo != "" {
+			subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
+			includeState = subrepo.State
+		}
+
+		s.interpreter.loadPluginConfig(s, includeState)
+		for _, out := range t.FullOutputs() {
+			s.SetAll(s.interpreter.Subinclude(out, t.Label), false)
+		}
+	}
+	return
+}
+
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, forSubinclude bool, statements []*Statement) (*scope, error) {
 	s := i.scope.NewPackagedScope(pkg, 1)
+	s.config = i.getConfig(s.state).Copy()
+
 	// Config needs a little separate tweaking.
 	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
 	// mutating operations like .setdefault() otherwise.
@@ -114,7 +158,11 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 		}
 	}
 
-	s.config = i.config.Copy()
+	if !forSubinclude {
+		if err := i.preloadSubincludes(s); err != nil {
+			return nil, err
+		}
+	}
 
 	s.Set("CONFIG", s.config)
 	_, err := i.interpretStatements(s, statements)
@@ -161,7 +209,7 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}
 	stmts = i.parser.optimise(stmts)
-	s := i.scope.NewScope()
+	s := i.scope.NewScope(path)
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.subincludeLabel = &label
@@ -207,8 +255,8 @@ type parseTarget struct {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx             context.Context
 	interpreter     *interpreter
+	filename        string
 	state           *core.BuildState
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel
@@ -289,15 +337,19 @@ func (s *scope) subincludePackage() *core.Package {
 }
 
 // NewScope creates a new child scope of this one.
-func (s *scope) NewScope() *scope {
-	return s.NewPackagedScope(s.pkg, 0)
+func (s *scope) NewScope(filename string) *scope {
+	return s.newScope(s.pkg, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
+	return s.newScope(pkg, pkg.Filename, hint)
+}
+
+func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
 	s2 := &scope{
-		ctx:         s.ctx,
+		filename:    filename,
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
@@ -389,7 +441,7 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	s.Set("False", False)
 	s.Set("None", None)
 	if state != nil {
-		s.config = s.interpreter.config
+		s.config = s.interpreter.getConfig(state)
 		s.Set("CONFIG", s.config)
 	}
 }
@@ -401,7 +453,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 	var stmt *Statement
 	defer func() {
 		if r := recover(); r != nil {
-			panic(AddStackFrame(stmt.Pos, r))
+			panic(AddStackFrame(s.filename, stmt.Pos, r))
 		}
 	}()
 	for _, stmt = range statements {
@@ -486,7 +538,7 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			panic(AddStackFrame(expr.Pos, r))
+			panic(AddStackFrame(s.filename, expr.Pos, r))
 		}
 	}()
 	if expr.If != nil && !s.interpretExpression(expr.If.Condition).IsTruthy() {
@@ -722,7 +774,7 @@ func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
-	cs := s.NewScope()
+	cs := s.NewScope(s.filename)
 	l := s.iterate(expr.Comprehension.Expr)
 	ret := make(pyList, 0, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
@@ -743,7 +795,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	cs := s.NewScope()
+	cs := s.NewScope(s.filename)
 	l := cs.iterate(expr.Comprehension.Expr)
 	ret := make(pyDict, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
@@ -828,15 +880,7 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	if !ok {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
-	if !s.interpreter.profiling {
-		return f.Call(s.ctx, s, c)
-	}
-	// If the CPU profiler is being run, attach the name of the current function in scope.
-	var ret pyObject
-	pprof.Do(s.ctx, pprof.Labels("asp:func", f.name), func(ctx context.Context) {
-		ret = f.Call(ctx, s, c)
-	})
-	return ret
+	return f.Call(s, c)
 }
 
 // Constant returns an object from an expression that describes a constant,

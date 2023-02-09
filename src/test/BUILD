@@ -14,7 +14,6 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//src/worker",
         "//third_party/go:cover",
         "//third_party/go:deferred_regex",
     ],

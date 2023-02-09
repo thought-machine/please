@@ -46,6 +46,12 @@ func (d *doc) SetText(text string) {
 	d.Content = strings.Split(text, "\n")
 }
 
+func (d *doc) AspFile() *asp.File {
+	d.Mutex.Lock()
+	defer d.Mutex.Unlock()
+	return asp.NewFile(d.Filename, []byte(strings.Join(d.Content, "\n")))
+}
+
 func (h *Handler) didOpen(params *lsp.DidOpenTextDocumentParams) error {
 	_, err := h.open(params.TextDocument.URI, params.TextDocument.Text)
 	return err

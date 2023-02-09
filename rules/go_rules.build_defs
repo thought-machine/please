@@ -1597,7 +1597,7 @@ def _go_github_repo_cmd(name, get, repo, revision, module_major_version):
     else:
         cmds += [f'mv {dest}*/ src/{out}']
 
-    return cmds, [remote_rule], [CONFIG.JARCAT_TOOL]
+    return cmds, [remote_rule], [CONFIG.ARCAT_TOOL]
 
 
 def _set_go_env():

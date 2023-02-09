@@ -460,6 +460,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.PexTool = "/////_please:please_pex"
 	config.Java.JavacWorker = "/////_please:javac_worker"
 	config.Java.JarCatTool = "/////_please:arcat"
+	config.Build.ArcatTool = "/////_please:arcat"
 	config.Java.JUnitRunner = "/////_please:junit_runner"
 
 	config.Metrics.Timeout = cli.Duration(2 * time.Second)
@@ -522,6 +523,7 @@ type Configuration struct {
 		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
 		ParallelDownloads    int          `help:"Max number of remote_file downloads to run in parallel."`
+		ArcatTool            string       `help:"Defines the tool used to concatenate files which we use in various build rules. Defaults to Arcat." var:"ARCAT_TOOL"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -685,16 +687,11 @@ type Configuration struct {
 
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
-	// Profiling can be set to true by a caller to enable CPU profiling in any areas that might
-	// want to take special effort about it.
-	Profiling bool
 
 	FeatureFlags struct {
-		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
-		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
-		PackageOutputsStrictness      bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
-		PythonWheelHashing            bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
-		NoIterSourcesMarked           bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
+		PackageOutputsStrictness bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
+		PythonWheelHashing       bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
+		NoIterSourcesMarked      bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
 		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
 		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
 		ExcludeGoRules                bool `help:"Whether to include the go rules rules or require use of the plugin"`

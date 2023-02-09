@@ -64,16 +64,10 @@ const (
 
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
-	// NewParser creates a new parser on the state object
-	NewParser(state *BuildState)
-	// WaitForInit waits until the parser is fully initialised with pre-loaded build definitions
-	WaitForInit()
-	// Init starts initialising the parser
-	Init(state *BuildState)
 	// ParseFile parses a single BUILD file into the given package.
 	ParseFile(pkg *Package, forLabel, dependent *BuildLabel, forSubinclude bool, filename string) error
 	// ParseReader parses a single BUILD file into the given package.
-	ParseReader(pkg *Package, reader io.ReadSeeker) error
+	ParseReader(pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel, forSubinclude bool) error
 	// RunPreBuildFunction runs a pre-build function for a target.
 	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
@@ -217,12 +211,11 @@ type BuildState struct {
 	// they're encountered.
 	EnableBreakpoints bool
 
-	// initOnce is used to control when we load plugin configuration, and trigger parser initialisation. We need access
-	// to the subrepo's config files to do this so this is deferred to build time.
+	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
-	// Used to synchronise with the above once to make sure we've loaded the subrepo config before trying to set up the
-	// CONFIG.PLUGIN_NAME during subincludes
-	initialised chan struct{}
+
+	// preloadDownloadOnce is used
+	preloadDownloadOnce *sync.Once
 }
 
 // Copy creates a copy of this state object
@@ -230,8 +223,8 @@ func (state *BuildState) Copy() *BuildState {
 	ret := &BuildState{}
 	*ret = *state
 
-	ret.initialised = make(chan struct{})
 	ret.initOnce = new(sync.Once)
+	ret.preloadDownloadOnce = new(sync.Once)
 	return ret
 }
 
@@ -239,8 +232,6 @@ func (state *BuildState) Copy() *BuildState {
 // it's not done up front. Once we have done that, we can initialise the parser for the subrepo.
 func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 	state.initOnce.Do(func() {
-		defer close(state.initialised)
-
 		// If we are the root repo, or an cross-compilation of that, we don't want to re-load the config files. That's
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
@@ -253,15 +244,8 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 				return
 			}
 		}
-
-		go state.Parser.Init(state)
 	})
 	return
-}
-
-// WaitForInit waits for the subrepo to load its repo config and trigger parser initialisation
-func (state *BuildState) WaitForInit() {
-	<-state.initialised
 }
 
 // ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
@@ -670,6 +654,30 @@ func (state *BuildState) forwardResults() {
 		}
 		state.progress.mutex.Unlock()
 	}
+}
+
+// WaitForPreloadedSubincludeTargetsAndEnsureDownloaded waits for all preloaded subinclude targets to be built, and
+// downloads them.
+func (state *BuildState) WaitForPreloadedSubincludeTargetsAndEnsureDownloaded() {
+	state.preloadDownloadOnce.Do(func() {
+		wg := sync.WaitGroup{}
+		for _, inc := range state.GetPreloadedSubincludes() {
+			if inc.IsPseudoTarget() {
+				log.Fatalf("Can't preload pseudotarget %v", inc)
+			}
+
+			// Queue them up asynchronously to feed the queues as quickly as possible
+			wg.Add(1)
+			go func(inc BuildLabel) {
+				state.WaitForTargetAndEnsureDownload(inc, OriginalTarget)
+				wg.Done()
+			}(inc)
+		}
+
+		// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
+		// a package
+		wg.Wait()
+	})
 }
 
 // checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
@@ -1202,8 +1210,6 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	s.Config = config
 	s.Arch = arch
 
-	s.Parser.NewParser(s)
-	go s.Parser.Init(s)
 	state.progress.allStates = append(state.progress.allStates, s)
 
 	return s
@@ -1232,10 +1238,31 @@ func (state *BuildState) ForSubrepo(name string, bazelCompat bool) *BuildState {
 		s.Config.Parse.BuildFileName = append(state.Config.Parse.BuildFileName, "BUILD.bazel")
 	}
 
-	s.Parser.NewParser(s)
 	state.progress.allStates = append(state.progress.allStates, s)
 
 	return s
+}
+
+// GetPreloadedSubincludes gets the preloaded subincludes for this state, de-duplicating if there are duplicates
+func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
+	if len(state.RepoConfig.Parse.PreloadSubincludes) == 0 {
+		return state.Config.Parse.PreloadSubincludes
+	}
+
+	done := map[BuildLabel]struct{}{}
+	includes := make([]BuildLabel, 0, len(state.Config.Parse.PreloadSubincludes)+len(state.RepoConfig.Parse.PreloadSubincludes))
+
+	is := append(state.Config.Parse.PreloadSubincludes, state.RepoConfig.Parse.PreloadSubincludes...)
+
+	for _, i := range is {
+		if _, ok := done[i]; ok {
+			continue
+		}
+
+		includes = append(includes, i)
+		done[i] = struct{}{}
+	}
+	return includes
 }
 
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
@@ -1364,8 +1391,8 @@ func NewBuildState(config *Configuration) *BuildState {
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
-		initialised: make(chan struct{}),
-		initOnce:    new(sync.Once),
+		initOnce:            new(sync.Once),
+		preloadDownloadOnce: new(sync.Once),
 	}
 
 	state.PathHasher = state.Hasher(config.Build.HashFunction)

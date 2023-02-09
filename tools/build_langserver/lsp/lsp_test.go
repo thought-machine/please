@@ -440,7 +440,7 @@ func TestCompletionFunction(t *testing.T) {
 				Kind:             lsp.CIKFunction,
 				InsertTextFormat: lsp.ITFPlainText,
 				TextEdit:         textEdit("rary", 1, 6),
-				Documentation:    h.builtins["go_library"].FuncDef.Docstring,
+				Documentation:    h.builtins["go_library"].Stmt.FuncDef.Docstring,
 			},
 		},
 	}, completions)
@@ -481,7 +481,7 @@ func TestCompletionPartialFunction(t *testing.T) {
 				Kind:             lsp.CIKFunction,
 				InsertTextFormat: lsp.ITFPlainText,
 				TextEdit:         textEdit("rary", 1, 6),
-				Documentation:    h.builtins["go_library"].FuncDef.Docstring,
+				Documentation:    h.builtins["go_library"].Stmt.FuncDef.Docstring,
 			},
 		},
 	}, completions)

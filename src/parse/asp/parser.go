@@ -47,15 +47,6 @@ func newParser() *Parser {
 	}
 }
 
-// Finalise is called after all the builtins and preloaded subincludes have been loaded. It locks the base config so
-// that it can no longer be mutated.
-func (p *Parser) Finalise() {
-	p.interpreter.config.base.Lock()
-	defer p.interpreter.config.base.Unlock()
-
-	p.interpreter.config.base.finalised = true
-}
-
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
 // Optionally the file contents can be supplied directly.
 func (p *Parser) LoadBuiltins(filename string, contents []byte) error {
@@ -96,31 +87,10 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	return err
 }
 
-func (p *Parser) SubincludeTarget(state *core.BuildState, target *core.BuildTarget) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = handleErrors(r)
-		}
-	}()
-	p.limiter.Acquire()
-	defer p.limiter.Release()
-	subincludePkgState := state.Root()
-	if target.Subrepo != nil {
-		target.Subrepo.State.WaitForInit()
-		subincludePkgState = target.Subrepo.State
-	}
-
-	p.interpreter.loadPluginConfig(subincludePkgState, state, p.interpreter.config)
-	for _, out := range target.FullOutputs() {
-		p.interpreter.scope.SetAll(p.interpreter.Subinclude(out, target.Label), true)
-	}
-	return nil
-}
-
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.
-func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
+func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker, forLabel, dependent *core.BuildLabel, forSubinclude bool) (bool, error) {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
@@ -128,7 +98,7 @@ func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, err = p.interpreter.interpretAll(pkg, nil, nil, false, stmts)
+	_, err = p.interpreter.interpretAll(pkg, forLabel, dependent, forSubinclude, stmts)
 	return true, err
 }
 

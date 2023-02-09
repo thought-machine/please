@@ -1,2 +1,6 @@
 [Parse]
-BuildFileName = BUILD_FILE
+BuildFileName = BUILD
+PreloadSubincludes = ///shell//build_defs:shell
+
+[Plugin "shell"]
+target = //plugins:shell

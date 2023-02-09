@@ -48,7 +48,7 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		if opts.Check && err == nil {
 			if errs := checkAST(stmts); len(errs) != 0 {
 				for _, err := range errs {
-					printErr(err)
+					printErr(filename, err)
 				}
 				return fmt.Errorf("Errors found while checking %s", filename)
 			}
@@ -156,14 +156,14 @@ func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (er
 		}
 	}
 	sort.Slice(errs, func(i, j int) bool {
-		return errs[i].Pos.Line < errs[j].Pos.Line
+		return errs[i].Pos < errs[j].Pos
 	})
 	return errs
 }
 
-func printErr(err assignment) {
-	stack := asp.AddStackFrame(err.Pos, fmt.Errorf("Variable %s is written but never read", err.Name))
-	if f, err := os.Open(err.Pos.Filename); err == nil {
+func printErr(filename string, err assignment) {
+	stack := asp.AddStackFrame(filename, err.Pos, fmt.Errorf("Variable %s is written but never read", err.Name))
+	if f, err := os.Open(filename); err == nil {
 		defer f.Close()
 		stack = asp.AddReader(stack, f)
 	}

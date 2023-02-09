@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package root_dir;
-
-message TestMessage {
-    string id = 1;
-}

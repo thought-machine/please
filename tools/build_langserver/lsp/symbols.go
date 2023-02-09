@@ -17,6 +17,7 @@ import (
 // also oddly there seems to be little support for describing statements.
 func (h *Handler) symbols(params *lsp.DocumentSymbolParams) ([]*lsp.SymbolInformation, error) {
 	doc := h.doc(params.TextDocument.URI)
+	f := doc.AspFile()
 	stmts := h.parseIfNeeded(doc)
 	syms := []*lsp.SymbolInformation{}
 	addSym := func(name string, kind lsp.SymbolKind, pos, endPos asp.Position) {
@@ -24,7 +25,7 @@ func (h *Handler) symbols(params *lsp.DocumentSymbolParams) ([]*lsp.SymbolInform
 			sym := &lsp.SymbolInformation{Name: name, Kind: kind}
 			sym.Location = lsp.Location{
 				URI:   params.TextDocument.URI,
-				Range: rng(pos, endPos),
+				Range: rng(f.Pos(pos), f.Pos(endPos)),
 			}
 			syms = append(syms, sym)
 		}
@@ -41,7 +42,7 @@ func (h *Handler) symbols(params *lsp.DocumentSymbolParams) ([]*lsp.SymbolInform
 	})
 	asp.WalkAST(stmts, func(arg *asp.CallArgument) bool {
 		if arg.Name != "" {
-			addSym(arg.Name, lsp.SKKey, arg.Pos, asp.Position{Line: arg.Pos.Line, Column: arg.Pos.Column + len(arg.Name)})
+			addSym(arg.Name, lsp.SKKey, arg.Pos, arg.Pos+asp.Position(len(arg.Name)))
 		}
 		return true
 	})
@@ -103,18 +104,18 @@ func stmtToSymbol(stmt *asp.Statement) (string, lsp.SymbolKind) {
 
 // pos converts an asp Position into an LSP one.
 // N.B. asp positions are 1-indexed whereas LSP ones are zero-indexed.
-func pos(pos asp.Position) lsp.Position {
+func pos(pos asp.FilePosition) lsp.Position {
 	return lsp.Position{Line: pos.Line - 1, Character: pos.Column - 1}
 }
 
 // aspPos converts an LSP position into an asp one.
 // Note 1 vs 0-indexing again.
-func aspPos(pos lsp.Position) asp.Position {
-	return asp.Position{Line: pos.Line + 1, Column: pos.Character + 1}
+func aspPos(pos lsp.Position) asp.FilePosition {
+	return asp.FilePosition{Line: pos.Line + 1, Column: pos.Character + 1}
 }
 
 // rng converts a pair of asp positions into an LSP range.
-func rng(start, end asp.Position) lsp.Range {
+func rng(start, end asp.FilePosition) lsp.Range {
 	return lsp.Range{Start: pos(start), End: pos(end)}
 }
 

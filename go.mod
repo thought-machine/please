@@ -1,6 +1,7 @@
 module github.com/thought-machine/please
 
 require (
+	cloud.google.com/go/longrunning v0.3.0
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
 	github.com/alessio/shellescape v1.4.1
@@ -38,11 +39,12 @@ require (
 	github.com/ulikunitz/xz v0.5.10
 	github.com/zeebo/blake3 v0.2.3
 	go.uber.org/automaxprocs v1.4.0
+	golang.org/x/exp v0.0.0-20230116083435-1de6713980de
 	golang.org/x/net v0.3.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.3.0
 	golang.org/x/term v0.3.0
-	golang.org/x/tools v0.1.12
+	golang.org/x/tools v0.2.0
 	google.golang.org/genproto v0.0.0-20221206210731-b1a01be3a5f6
 	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
@@ -54,7 +56,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.2 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
 	cloud.google.com/go/kms v1.7.0 // indirect
-	cloud.google.com/go/longrunning v0.3.0 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect

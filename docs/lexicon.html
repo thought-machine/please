@@ -17,17 +17,7 @@
   </li>
   <li>
     <span>
-      <a class="copy-link" href="#cc">C and C++ rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
       <a class="copy-link" href="#go">Go rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
-      <a class="copy-link" href="#java">Java rules</a>
     </span>
   </li>
   <li>
@@ -754,7 +744,7 @@
             <td>list</td>
             <td>
               List of glob patterns to exclude from anything matched by
-              <code class="code">includes</code>.
+              <code class="code">include</code>.
             </td>
           </tr>
           <tr>
@@ -1148,34 +1138,6 @@
 </section>
 
 <section class="mt4">
-  <h2 class="title-2" id="cc">
-    C and C++ rules
-  </h2>
-
-  <p>Rules to build C and C++ targets.</p>
-
-  <p>
-    The process of building C or C++ code is fairly complex so while these rules
-    do their best to keep things reasonably simple, there's a lot of scope for
-    things going wrong.
-  </p>
-
-  <p>
-    There is very little difference between the <code class="code">c_</code> and
-    <code class="code">cc_</code> variants of each rule, in nearly all cases
-    they simply use different tools and flags in the
-    <a class="copy-link" href="/config.html#cpp">relevant config section</a>.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "c_library" }}
-  {{ template "lexicon_entry.html" .Named "c_static_library" }}
-  {{ template "lexicon_entry.html" .Named "c_shared_object" }}
-  {{ template "lexicon_entry.html" .Named "c_binary" }}
-  {{ template "lexicon_entry.html" .Named "c_test" }}
-</section>
-
-<section class="mt4">
   <h2 class="title-2" id="go">
     Go rules
   </h2>
@@ -1199,24 +1161,6 @@
   {{ template "lexicon_entry.html" .Named "go_test_main" }}
   {{ template "lexicon_entry.html" .Named "go_module" }}
   {{ template "lexicon_entry.html" .Named "go_mod_download" }}
-  {{ template "lexicon_entry.html" .Named "go_get" }}
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="java">
-    Java rules
-  </h2>
-
-  <p>Built-in rules to compile Java code.</p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "java_library" }}
-  {{ template "lexicon_entry.html" .Named "java_module" }}
-  {{ template "lexicon_entry.html" .Named "java_binary" }}
-  {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
-  {{ template "lexicon_entry.html" .Named "java_test" }}
-  {{ template "lexicon_entry.html" .Named "maven_jar" }}
-  {{ template "lexicon_entry.html" .Named "java_toolchain" }}
 </section>
 
 <section class="mt4">

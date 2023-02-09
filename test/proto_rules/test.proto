@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package proto_rules;
-
-message TestMessage {
-    string id = 1;
-}

@@ -27,22 +27,24 @@ const (
 // An errorStack is an error that carries an internal stack trace.
 type errorStack struct {
 	// From top down, i.e. Stack[0] is the innermost function in the call stack.
-	Stack []Position
+	Stack []FilePosition
 	// Readers that correspond to each level in the stack trace.
 	// Each may be nil but this will always have the same length as Stack.
 	Readers []io.ReadSeeker
 	// The original error that was encountered.
 	err error
+	// Files that we have gone through so far
+	files map[string]*File
 }
 
 // fail panics on lex/parse errors in a file.
 // For convenience we reuse errorStack although there is of course not really a call stack at this point.
-func fail(pos Position, message string, args ...interface{}) {
-	panic(AddStackFrame(pos, fmt.Errorf(message, args...)))
+func fail(filename string, pos Position, message string, args ...interface{}) {
+	panic(AddStackFrame(filename, pos, fmt.Errorf(message, args...)))
 }
 
 // AddStackFrame adds a new stack frame to the given errorStack, or wraps an existing error if not.
-func AddStackFrame(pos Position, err interface{}) error {
+func AddStackFrame(filename string, pos Position, err interface{}) error {
 	stack, ok := err.(*errorStack)
 	if !ok {
 		if e, ok := err.(error); ok {
@@ -50,12 +52,25 @@ func AddStackFrame(pos Position, err interface{}) error {
 		} else {
 			stack = &errorStack{err: fmt.Errorf("%s", err)}
 		}
-	} else if n := len(stack.Stack) - 1; n > 0 && stack.Stack[n].Filename == pos.Filename && stack.Stack[n].Line == pos.Line {
+	} else if n := len(stack.Stack) - 1; n > 0 && stack.Stack[n].Filename == filename && stack.Stack[n].Line == stack.file(filename).Pos(pos).Line {
 		return stack // Don't duplicate the same line multiple times. Often happens since one line can have multiple expressions.
 	}
-	stack.Stack = append(stack.Stack, pos)
+	stack.Stack = append(stack.Stack, stack.file(filename).Pos(pos))
 	stack.Readers = append(stack.Readers, nil)
 	return stack
+}
+
+// file returns a File for the given path
+func (stack *errorStack) file(filename string) *File {
+	if stack.files == nil {
+		stack.files = map[string]*File{}
+	}
+	f, present := stack.files[filename]
+	if !present {
+		f = newFile(filename)
+		stack.files[filename] = f
+	}
+	return f
 }
 
 // AddReader adds an io.Reader to an errStack, which will allow it to recover more information from that file.
@@ -146,7 +161,7 @@ func (stack *errorStack) errorMessage() string {
 		} else if charsBefore == len(line) {
 			line += "  "
 		} else if charsBefore > len(line) {
-			return stack.Error() // probably something's gone wrong and we're on totally the wrong line.
+			return stack.ShortError() // probably something's gone wrong and we're on totally the wrong line.
 		}
 		spaces := strings.Repeat(" ", charsBefore)
 		if !cli.ShowColouredOutput {

@@ -46,7 +46,6 @@ import (
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
 	"github.com/thought-machine/please/src/watch"
-	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.Log
@@ -104,7 +103,6 @@ var opts struct {
 	Complete         string `long:"complete" hidden:"true" env:"PLZ_COMPLETE" description:"Provide completion options for this build target."`
 
 	Build struct {
-		Prepare    bool   `long:"prepare" description:"Prepare build directory for these targets but don't build them."`
 		Shell      string `long:"shell" choice:"shell" choice:"run" optional:"true" optional-value:"shell" description:"Like --prepare, but opens a shell in the build directory with the appropriate environment variables."`
 		Rebuild    bool   `long:"rebuild" description:"To force the optimisation and rebuild one or more targets."`
 		NoDownload bool   `long:"nodownload" hidden:"true" description:"Don't download outputs after building. Only applies when using remote build execution."`
@@ -189,7 +187,6 @@ var opts struct {
 		Cmd        string `long:"cmd" description:"Overrides the command to be run. This is useful when the initial command needs to be wrapped in another one." default:""`
 		Parallel   struct {
 			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
-			Quiet          bool               `short:"q" long:"quiet" description:"Deprecated in favour of --output=quiet. Suppress output from successful subprocesses."`
 			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
 				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
@@ -334,7 +331,7 @@ var opts struct {
 
 	Tool struct {
 		Args struct {
-			Tool tool.Tool     `positional-arg-name:"tool" description:"Tool to invoke (jarcat, lint, etc)"`
+			Tool tool.Tool     `positional-arg-name:"tool" description:"Tool to invoke (arcat, lint, etc)"`
 			Args cli.Filepaths `positional-arg-name:"arguments" description:"Arguments to pass to the tool"`
 		} `positional-args:"true"`
 	} `command:"tool" hidden:"true" description:"Invoke one of Please's sub-tools"`
@@ -413,7 +410,7 @@ var opts struct {
 		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
 		Rules struct {
 			Args struct {
-				Targets []core.BuildLabel `hidden:"true" description:"deprecated, has no effect"`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to parse for build rules." hidden:"true"`
 			} `positional-args:"true"`
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
@@ -426,12 +423,6 @@ var opts struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to calculate changes for. Overrides flags relating to SCM operations."`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the set of changed targets in regard to a set of modified files or SCM commits."`
-		Roots struct {
-			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
-			Args   struct {
-				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
-			} `positional-args:"true"`
-		} `command:"roots" description:"Show build labels with no dependents in the given list, from the list."`
 		Filter struct {
 			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
 			Args   struct {
@@ -583,9 +574,6 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
-			} else if opts.Run.InWD {
-				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
-				dir = originalWorkingDirectory
 			}
 
 			if opts.Run.EntryPoint != "" {
@@ -606,16 +594,9 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
-			} else if opts.Run.InWD {
-				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
-				dir = originalWorkingDirectory
 			}
 			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
 			output := opts.Run.Parallel.Output
-			if opts.Run.Parallel.Quiet {
-				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
-				output = process.Quiet
-			}
 			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
@@ -625,9 +606,6 @@ var buildFunctions = map[string]func() int{
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
-			} else if opts.Run.InWD {
-				log.Warningf("--in_wd is deprecated in favour of --wd=. and will be removed in v17.")
-				dir = originalWorkingDirectory
 			}
 			output := opts.Run.Sequential.Output
 			if opts.Run.Sequential.Quiet {
@@ -799,9 +777,9 @@ var buildFunctions = map[string]func() int{
 		if opts.Query.Completions.Cmd == "help" {
 			// Special-case completing help topics rather than build targets.
 			if len(fragments) == 0 {
-				help.Topics("")
+				help.Topics("", config)
 			} else {
-				help.Topics(fragments[0])
+				help.Topics(fragments[0], config)
 			}
 			return 0
 		}
@@ -874,7 +852,7 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"query.rules": func() int {
-		help.PrintRuleArgs()
+		help.PrintRuleArgs(opts.Query.Rules.Args.Files)
 		return 0
 	},
 	"query.changes": func() int {
@@ -936,11 +914,6 @@ var buildFunctions = map[string]func() int{
 			fmt.Println(target.String())
 		}
 		return 0
-	},
-	"query.roots": func() int {
-		return runQuery(true, opts.Query.Roots.Args.Targets, func(state *core.BuildState) {
-			query.Roots(state.Graph, state.ExpandOriginalLabels(), opts.Query.Roots.Hidden)
-		})
 	},
 	"query.filter": func() int {
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
@@ -1116,10 +1089,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedTests = shouldTest
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
-	if opts.Build.Prepare {
-		log.Warningf("--prepare has been deprecated in favour of --shell and will be removed in v17.")
-	}
-	state.PrepareOnly = opts.Build.Prepare || opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
+	state.PrepareOnly = opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
 	state.Watch = len(opts.Watch.Args.Targets) > 0
 	state.CleanWorkdirs = !opts.BehaviorFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
@@ -1150,10 +1120,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 
 	if opts.Run.InTempDir && opts.Run.WD != "" {
 		log.Fatal("Can't use both --in_temp_dir and --wd at the same time")
-	} else if opts.Run.InTempDir && opts.Run.InWD {
-		log.Fatal("Can't use both --in_temp_dir and --in_wd at the same time")
-	} else if opts.Run.WD != "" && opts.Run.InWD {
-		log.Fatal("Can't use both --in_wd and --wd at the same time. --in_wd is deprecated in favour of --wd.")
 	}
 
 	runPlease(state, targets)
@@ -1335,7 +1301,6 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 	}
 	config := readConfig()
 	// Now apply any flags that override this
-	config.Profiling = opts.Profile != ""
 	if opts.Update.Latest || opts.Update.LatestPrerelease {
 		config.Please.Version.Unset()
 	} else if opts.Update.Version.IsSet {
@@ -1551,7 +1516,6 @@ func execute(command string) int {
 			runtime.StopTrace()
 		}()
 	}
-	defer worker.StopAll()
 
 	log.Debugf("plz %v", command)
 	return buildFunctions[command]()

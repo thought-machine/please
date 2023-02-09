@@ -15,7 +15,6 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/parse/asp",
-        "//src/worker",
         "//third_party/go:semver",
     ],
 )

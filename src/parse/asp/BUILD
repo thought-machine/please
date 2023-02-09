@@ -20,6 +20,7 @@ go_library(
         "//third_party/go:gcfg",
         "//third_party/go:promptui",
         "//third_party/go:semver2",
+        "//third_party/go:x_exp",
     ],
 )
 
