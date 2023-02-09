@@ -15,7 +15,6 @@ func TestAllAssetsReturnsAListOfBuildDefinitionFiles(t *testing.T) {
 		"cc_rules.build_defs",
 		"config_rules.build_defs",
 		"go_rules.build_defs",
-		"java_rules.build_defs",
 		"misc_rules.build_defs",
 		"proto_rules.build_defs",
 		"python_rules.build_defs",

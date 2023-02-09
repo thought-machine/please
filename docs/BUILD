@@ -61,7 +61,7 @@ plugins = {
     "java": "v0.2.5",
     "go": "v1.1.4",
     "cc": "v0.3.2",
-    "shell": "v0.1.1",
+    "shell": "v0.1.2",
     "go-proto": "v0.2.0",
     "proto": "v0.2.0",
 }
