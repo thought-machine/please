@@ -25,5 +25,6 @@ plugin_repo(
 plugin_repo(
     name = "python",
     plugin = "python-rules",
-    revision = "v1.2.0",
+    # TODO(jpoole): Once v17 has been cut, we can update the python plugin to use it and cut a named release
+    revision = "d500dd9f477bb54f8b266fae9dd35d721bebee9e",
 )
