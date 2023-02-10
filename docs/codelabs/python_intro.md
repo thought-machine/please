@@ -88,7 +88,7 @@ $ plz run //src:main
 Hello, world!
 ```
 
-There's a lot going on here; first off, `python_binary()` is one of the function available in the [Python plugin](/plugin.html#python).
+There's a lot going on here; first off, `python_binary()` is one of the functions available in the [Python plugin](/plugin.html#python).
 This build function creates a "build target" in the `src` package. A package, in the Please sense, is any directory that
 contains a `BUILD` file.
 
