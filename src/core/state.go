@@ -262,9 +262,6 @@ func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
 		ret["c_rules.build_defs"] = struct{}{}
 		ret["cc_rules.build_defs"] = struct{}{}
 	}
-	if state.Config.FeatureFlags.ExcludeGoRules {
-		ret["go_rules.build_defs"] = struct{}{}
-	}
 	if state.Config.FeatureFlags.ExcludeShellRules {
 		ret["sh_rules.build_defs"] = struct{}{}
 	}
