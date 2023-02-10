@@ -97,6 +97,9 @@
       >
         <!-- prettier-ignore -->
         <code data-lang="plz">
+    # https://github.com/please-build/python-rules
+    subinclude("///python//build_defs:python")
+
     python_library(
         name = 'my_library',
         srcs = ['file1.py', 'file2.py'],

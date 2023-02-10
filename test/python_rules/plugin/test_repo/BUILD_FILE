@@ -1,4 +1,0 @@
-plugin_repo(
-    name = "python",
-    revision = "c3555dd8f92f22110dc85002338902d61ac77253",
-)

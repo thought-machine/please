@@ -32,11 +32,6 @@
   </li>
   <li>
     <span>
-      <a class="copy-link" href="#python">Python rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
       <a class="copy-link" href="#subrepo">Subrepo rules</a>
     </span>
   </li>
@@ -785,7 +780,7 @@
 
     <p>
       Uses for this are normally fairly language-specific. The clearest example
-      is maybe the builtin Python rules, where
+      is maybe the <a class="link" href="http://github.com/please-build/python-rules">Python rules</a>, where
       <code class="code">python_binary</code> and
       <code class="code">python_test</code> use this to identify if any of their
       dependencies have marked them as not being zip-safe.
@@ -1432,44 +1427,6 @@
   {{ template "lexicon_entry.html" .Named "proto_library" }}
   {{ template "lexicon_entry.html" .Named "grpc_library" }}
   {{ template "lexicon_entry.html" .Named "proto_language" }}
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="python">
-    Python rules
-  </h2>
-
-  <p>Rules to build Python code.</p>
-
-  <p>
-    The output artifacts for Python rules are .zip files similar to
-    <a
-      class="copy-link"
-      href="https://github.com/pantsbuild/pex"
-      target="_blank"
-      rel="noopener"
-      >.pex</a
-    >
-    files (and are suffixed as such).
-  </p>
-
-  <p>
-    This combines all the in-repo dependencies into a single file that can be
-    deployed and run on any system that has a suitable Python interpreter.
-    Please optimises this process to improve incrementality and includes some
-    hooks to make running from a zipfile as transparent as possible; nonetheless
-    certain file-based operations may not work since there is not a real file
-    system available. If necessary various Python rules can be annotated with
-    <code class="code">zip_safe</code> to control this; if a binary is
-    zip-unsafe it will extract itself before running.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "python_library" }}
-  {{ template "lexicon_entry.html" .Named "python_binary" }}
-  {{ template "lexicon_entry.html" .Named "python_test" }}
-  {{ template "lexicon_entry.html" .Named "pip_library" }}
-  {{ template "lexicon_entry.html" .Named "python_wheel" }}
 </section>
 
 <section class="mt4">
