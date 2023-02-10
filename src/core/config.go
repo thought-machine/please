@@ -832,7 +832,6 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 			if v, isSet := os.LookupEnv(k); isSet {
 				if k == "PATH" {
 					// plz's install location always needs to be on the path.
-					v = config.Please.Location + ":" + v
 					includePath = false // skip this in a bit
 				}
 				env = append(env, k+"="+v)
@@ -844,7 +843,6 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 		if v, isSet := os.LookupEnv(k); isSet {
 			if k == "PATH" {
 				// plz's install location always needs to be on the path.
-				v = config.Please.Location + ":" + v
 				includePath = false // skip this in a bit
 			}
 			env = append(env, k+"="+v)
@@ -855,7 +853,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) [
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"))
+		env = append(env, "PATH="+strings.Join(config.Build.Path, ":"))
 	}
 
 	sort.Strings(env)
