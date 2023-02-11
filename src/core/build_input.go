@@ -21,6 +21,10 @@ type BuildInput interface {
 	LocalPaths(graph *BuildGraph) []string
 	// Label returns the build label associated with this input, or false if it doesn't have one.
 	Label() (BuildLabel, bool)
+	// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+	// label with a specified path. For instance, `//path/to:target|path/to/file.txt` is meant to
+	// target a specific single file from the artifacts available from such label.
+	SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool)
 	// nonOutputLabel returns the build label associated with this input, or nil if it doesn't have
 	// one or is a specific output of a rule.
 	// This is fiddly enough that we don't want to expose it outside the package right now.
@@ -61,6 +65,12 @@ func (label FileLabel) LocalPaths(graph *BuildGraph) []string {
 // Label returns the build rule associated with this input. For a FileLabel it's always nil.
 func (label FileLabel) Label() (BuildLabel, bool) {
 	return BuildLabel{}, false
+}
+
+// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+// label with a specified path. This is not the case for FileLabel.
+func (label FileLabel) SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool) {
+	return AnnotatedOutputLabel{}, false
 }
 
 func (label FileLabel) nonOutputLabel() (BuildLabel, bool) {
@@ -106,6 +116,12 @@ func (label SubrepoFileLabel) LocalPaths(graph *BuildGraph) []string {
 // Label returns the build rule associated with this input. For a SubrepoFileLabel it's always nil.
 func (label SubrepoFileLabel) Label() (BuildLabel, bool) {
 	return BuildLabel{}, false
+}
+
+// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+// label with a specified path. This is not the case for SubrepoFileLabel.
+func (label SubrepoFileLabel) SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool) {
+	return AnnotatedOutputLabel{}, false
 }
 
 func (label SubrepoFileLabel) nonOutputLabel() (BuildLabel, bool) {
@@ -162,6 +178,12 @@ func (label SystemFileLabel) Label() (BuildLabel, bool) {
 	return BuildLabel{}, false
 }
 
+// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+// label with a specified path. This is not the case for SystemFileLabel.
+func (label SystemFileLabel) SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool) {
+	return AnnotatedOutputLabel{}, false
+}
+
 func (label SystemFileLabel) nonOutputLabel() (BuildLabel, bool) {
 	return BuildLabel{}, false
 }
@@ -211,6 +233,12 @@ func (label SystemPathLabel) Label() (BuildLabel, bool) {
 	return BuildLabel{}, false
 }
 
+// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+// label with a specified path. This is not the case for SystemPathLabel.
+func (label SystemPathLabel) SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool) {
+	return AnnotatedOutputLabel{}, false
+}
+
 func (label SystemPathLabel) nonOutputLabel() (BuildLabel, bool) {
 	return BuildLabel{}, false
 }
@@ -240,8 +268,11 @@ func (label AnnotatedOutputLabel) Paths(graph *BuildGraph) []string {
 	if _, ok := target.EntryPoints[label.Annotation]; ok {
 		return label.BuildLabel.Paths(graph)
 	}
-
-	return addPathPrefix(target.NamedOutputs(label.Annotation), target.PackageDir())
+	if namedOutputs := target.NamedOutputs(label.Annotation); namedOutputs != nil {
+		return addPathPrefix(namedOutputs, target.PackageDir())
+	}
+	// The annotation is expected to refer to a specific file of the label's artifacts.
+	return addPathPrefix([]string{label.Annotation}, target.PackageDir())
 }
 
 // FullPaths is like Paths but includes the leading plz-out/gen directory.
@@ -250,7 +281,11 @@ func (label AnnotatedOutputLabel) FullPaths(graph *BuildGraph) []string {
 	if _, ok := target.EntryPoints[label.Annotation]; ok {
 		return label.BuildLabel.FullPaths(graph)
 	}
-	return addPathPrefix(target.NamedOutputs(label.Annotation), target.OutDir())
+	if namedOutputs := target.NamedOutputs(label.Annotation); namedOutputs != nil {
+		return addPathPrefix(namedOutputs, target.OutDir())
+	}
+	// The annotation is expected to refer to a specific file of the label's artifacts.
+	return addPathPrefix([]string{label.Annotation}, target.OutDir())
 }
 
 // LocalPaths returns paths within the local package
@@ -259,12 +294,30 @@ func (label AnnotatedOutputLabel) LocalPaths(graph *BuildGraph) []string {
 	if _, ok := target.EntryPoints[label.Annotation]; ok {
 		return label.BuildLabel.LocalPaths(graph)
 	}
-	return target.NamedOutputs(label.Annotation)
+	if namedOutputs := target.NamedOutputs(label.Annotation); namedOutputs != nil {
+		return namedOutputs
+	}
+	// The annotation is expected to refer to a specific file of the label's artifacts.
+	return []string{label.Annotation}
 }
 
 // Label returns the build rule associated with this input. For a AnnotatedOutputLabel it's always non-nil.
 func (label AnnotatedOutputLabel) Label() (BuildLabel, bool) {
 	return label.BuildLabel, true
+}
+
+// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+// label with a specified path.
+// This is true if the label annotation is neither a entry point or named output.
+func (label AnnotatedOutputLabel) SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool) {
+	target := graph.TargetOrDie(label.BuildLabel)
+	if _, ok := target.EntryPoints[label.Annotation]; ok {
+		return AnnotatedOutputLabel{}, false
+	}
+	if namedOutputs := target.NamedOutputs(label.Annotation); namedOutputs != nil {
+		return AnnotatedOutputLabel{}, false
+	}
+	return label, true
 }
 
 func (label AnnotatedOutputLabel) nonOutputLabel() (BuildLabel, bool) {
@@ -318,6 +371,12 @@ func (label URLLabel) LocalPaths(graph *BuildGraph) []string {
 // Label returns the build rule associated with this input. For a URLLabel it's always nil.
 func (label URLLabel) Label() (BuildLabel, bool) {
 	return BuildLabel{}, false
+}
+
+// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+// label with a specified path. This is not the case for URLLabel.
+func (label URLLabel) SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool) {
+	return AnnotatedOutputLabel{}, false
 }
 
 func (label URLLabel) nonOutputLabel() (BuildLabel, bool) {

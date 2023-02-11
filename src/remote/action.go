@@ -226,6 +226,22 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 				// This is just How Things Are, so mimic it here.
 				pkgName = "."
 			}
+			// If the source originates from the `//path/to:target|path/to/file.txt`
+			// label then the input directory is constructed with `path/to/file.txt`
+			// as a base file.
+			if annotatedLabel, ok := input.SpecificPathLabel(c.state.Graph); ok {
+				f, err := c.searchFilePathNodeInDirectory(annotatedLabel.Annotation, o)
+				if err != nil {
+					return nil, fmt.Errorf("Error finding %s: %w", annotatedLabel.Annotation, err)
+				}
+				d := b.Dir(pkgName)
+				d.Files = append(d.Files, &pb.FileNode{
+					Name:         filepath.Base(f.Name),
+					Digest:       f.Digest,
+					IsExecutable: f.IsExecutable,
+				})
+				continue
+			}
 			// Recall that (as noted in setOutputs) these can have full paths on them, which
 			// we now need to sort out again to create well-formed Directory protos.
 			for _, f := range o.Files {
@@ -274,6 +290,29 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 		})
 	}
 	return b, nil
+}
+
+// searchFilePathNodeInDirectory searchs for a file node at a given path from dir
+func (c *Client) searchFilePathNodeInDirectory(path string, dir *pb.Directory) (*pb.FileNode, error) {
+	parts := strings.Split(path, "/")
+	if len(parts) == 1 {
+		for _, f := range dir.Files {
+			if f.Name == parts[0] {
+				return f, nil
+			}
+		}
+		return nil, fmt.Errorf("Not found")
+	}
+	for _, subdirNode := range dir.Directories {
+		if subdirNode.Name == parts[0] {
+			subdir := &pb.Directory{}
+			if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(subdirNode.Digest), subdir); err != nil {
+				return nil, err
+			}
+			return c.searchFilePathNodeInDirectory(strings.Join(parts[1:], "/"), subdir)
+		}
+	}
+	return nil, fmt.Errorf("Not found")
 }
 
 // addChildDirs adds a set of child directories to a builder.

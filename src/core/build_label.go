@@ -320,6 +320,12 @@ func (label BuildLabel) Label() (BuildLabel, bool) {
 	return label, true
 }
 
+// SpecificPathLabel returns the AnnotatedOutputLabel associated with this input, if it is a
+// label with a specified path. This is not the case for BuildLabel.
+func (label BuildLabel) SpecificPathLabel(graph *BuildGraph) (AnnotatedOutputLabel, bool) {
+	return AnnotatedOutputLabel{}, false
+}
+
 func (label BuildLabel) nonOutputLabel() (BuildLabel, bool) {
 	return label, true
 }

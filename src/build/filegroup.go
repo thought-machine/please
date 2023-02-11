@@ -109,9 +109,16 @@ func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, err
 	}
 	changed := false
 	outDir := target.OutDir()
-	localSources := target.AllSourceLocalPaths(state.Graph)
+	localSourcePathInputs := target.AllSourceLocalPathInputs(state.Graph)
 	for i, source := range target.AllSourceFullPaths(state.Graph) {
-		out := filepath.Join(outDir, localSources[i])
+		var out string
+		if _, ok := localSourcePathInputs[i].Input.SpecificPathLabel(state.Graph); ok {
+			// If the source originates from the `//path/to:target|path/to/file.txt`
+			// label then we output the basename of the `path/to/file.txt` artifact.
+			out = filepath.Join(outDir, filepath.Base(localSourcePathInputs[i].Path))
+		} else {
+			out = filepath.Join(outDir, localSourcePathInputs[i].Path)
+		}
 		fileChanged, err := theFilegroupBuilder.Build(state, target, source, out)
 		if err != nil {
 			return true, err

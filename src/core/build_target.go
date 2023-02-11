@@ -489,12 +489,35 @@ func (target *BuildTarget) AllSourceLocalPaths(graph *BuildGraph) []string {
 	return target.allSourcePaths(graph, BuildInput.LocalPaths)
 }
 
+// SourcePathInput is a pair of source path to build input.
+type SourcePathInput struct {
+	Path  string
+	Input BuildInput
+}
+
+// AllSourceLocalPathInputs is similar to AllSourceLocalPaths in that the local part of
+// all the source paths for this target are returned, along with the BuildInput they are
+// related to.
+func (target *BuildTarget) AllSourceLocalPathInputs(graph *BuildGraph) []SourcePathInput {
+	return target.allSourcePathInputs(graph, BuildInput.LocalPaths)
+}
+
 type buildPathsFunc func(BuildInput, *BuildGraph) []string
 
 func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc) []string {
 	ret := make([]string, 0, len(target.Sources))
 	for _, source := range target.AllSources() {
 		ret = append(ret, target.sourcePaths(graph, source, full)...)
+	}
+	return ret
+}
+
+func (target *BuildTarget) allSourcePathInputs(graph *BuildGraph, full buildPathsFunc) []SourcePathInput {
+	ret := make([]SourcePathInput, 0, len(target.Sources))
+	for _, source := range target.AllSources() {
+		for _, sourcePath := range target.sourcePaths(graph, source, full) {
+			ret = append(ret, SourcePathInput{sourcePath, source})
+		}
 	}
 	return ret
 }
@@ -727,7 +750,14 @@ func (target *BuildTarget) Outputs() []string {
 			if namedLabel, ok := src.(AnnotatedOutputLabel); ok {
 				// Bit of a hack, but this needs different treatment from either of the others.
 				for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
-					ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
+					if namedOutputs := dep.NamedOutputs(namedLabel.Annotation); namedOutputs != nil {
+						// Source input example: //path/to:target|output-key
+						ret = append(ret, namedOutputs...)
+					} else {
+						// Source input example: //path/to:target|path/to/file.txt
+						// The output should be the base of the file path specified.
+						ret = append(ret, filepath.Base(namedLabel.Annotation))
+					}
 				}
 			} else if label, ok := src.nonOutputLabel(); !ok {
 				ret = append(ret, src.LocalPaths(nil)[0])
