@@ -1,3 +1,5 @@
+subinclude("///go//build_defs:go", "///shell//build_defs:shell")
+
 sh_cmd(
     name = "hello_world",
     cmd = "echo \"hello world\"",
