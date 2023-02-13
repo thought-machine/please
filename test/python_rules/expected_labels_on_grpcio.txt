@@ -1,2 +1,0 @@
-py
-pip:grpcio==1.32.0
