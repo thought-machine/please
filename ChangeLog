@@ -1,3 +1,8 @@
+Version 16.27.3
+---------------
+    * Follow subincludes when querying changes (#2692)
+
+
 Version 16.27.2
 ---------------
     * Stop reading xattrs for filegroups (#2660)
