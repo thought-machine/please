@@ -91,10 +91,9 @@ func newRevdeps(graph *core.BuildGraph, hidden bool, maxDepth int) *revdeps {
 		}
 	}
 
-
 	return &revdeps{
-		revdeps:           buildRevdeps(graph),
-		subincludes:       subincludes,
+		revdeps:     buildRevdeps(graph),
+		subincludes: subincludes,
 		os: &openSet{
 			items: list.New(),
 			done:  map[core.BuildLabel]struct{}{},
