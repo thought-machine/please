@@ -1,4 +1,4 @@
-Version 16.27.3
+Version 16.27.4
 ---------------
     * Fix an issue with following subincludes in query changes from (#2692) (#2702)
 
