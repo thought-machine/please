@@ -68,7 +68,6 @@ type revdeps struct {
 	revdeps map[core.BuildLabel][]*core.BuildTarget
 	// subincludes is a map of build labels to the packages that subinclude them
 	subincludes       map[core.BuildLabel][]*core.Package
-	followSubincludes bool
 
 	// hidden is whether to count hidden targets towards the depth budget
 	hidden bool
@@ -96,7 +95,6 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 	return &revdeps{
 		revdeps:           buildRevdeps(graph),
 		subincludes:       subincludes,
-		followSubincludes: followSubincludes,
 		os: &openSet{
 			items: list.New(),
 			done:  map[core.BuildLabel]struct{}{},
@@ -168,11 +166,10 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 	ret := make(map[*core.BuildTarget]struct{}, 1000)
 	for next := r.os.Pop(); next != nil; next = r.os.Pop() {
 		ts := r.revdeps[next.target.Label]
-		if r.followSubincludes {
-			for _, p := range r.subincludes[next.target.Label] {
-				ts = append(ts, p.AllTargets()...)
-			}
+		for _, p := range r.subincludes[next.target.Label] {
+			ts = append(ts, p.AllTargets()...)
 		}
+
 
 		for _, t := range ts {
 			depth := next.depth
