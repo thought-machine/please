@@ -1,5 +1,9 @@
 Version 16.27.3
 ---------------
+    * Fix an issue with following subincludes in query changes from (#2692) (#2702)
+
+Version 16.27.3
+---------------
     * Follow subincludes when querying changes (#2692)
 
 
