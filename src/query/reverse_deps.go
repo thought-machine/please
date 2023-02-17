@@ -67,7 +67,7 @@ type revdeps struct {
 	// revdeps is the map of immediate reverse dependencies
 	revdeps map[core.BuildLabel][]*core.BuildTarget
 	// subincludes is a map of build labels to the packages that subinclude them
-	subincludes       map[core.BuildLabel][]*core.Package
+	subincludes map[core.BuildLabel][]*core.Package
 
 	// hidden is whether to count hidden targets towards the depth budget
 	hidden bool
@@ -167,7 +167,6 @@ func (r *revdeps) findRevdeps(state *core.BuildState) map[*core.BuildTarget]stru
 		for _, p := range r.subincludes[next.target.Label] {
 			ts = append(ts, p.AllTargets()...)
 		}
-
 
 		for _, t := range ts {
 			depth := next.depth
