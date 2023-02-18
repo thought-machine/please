@@ -1,6 +1,6 @@
 package(default_visibility = ["//test/..."])
 
-subinclude("///shell//build_defs:shell")
+subinclude("///shell//build_defs:shell", "///go//build_defs:go")
 
 sh_binary(
     name = "content_checker",
@@ -25,4 +25,18 @@ filegroup(
     name = "cc_embed_binary",
     srcs = ["cc_embed_binary.build_defs"],
     visibility = ["//test/..."],
+)
+
+filegroup(
+    name = "plugin_go",
+    srcs = ["_plugin_go"],
+    visibility = ["//test/..."],
+)
+
+genrule(
+    name = "go_config",
+    srcs = ["go_config.template"],
+    outs = ["go_config"],
+    cmd = "cp $SRC $OUT && sed -i 's|<GO_TOOL>|'$TOOLS'|g' $OUT",
+    tools = [CONFIG.GO.GO_TOOL],
 )

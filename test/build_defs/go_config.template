@@ -1,0 +1,7 @@
+
+[Parse]
+PreloadedSubincludes = ///go//build_defs:go
+
+[Plugin "go"]
+Target = //_plugins:go
+GoTool = <GO_TOOL>

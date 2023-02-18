@@ -11,13 +11,22 @@ def please_repo_e2e_test(
         expect_output_contains: dict = {},
         expect_output_doesnt_contain: dict = {},
         labels: list = [],
+        include_go_plugin = True,
 ):
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     if expected_failure:
         plz_command += "; [ ! $? -eq 0 ]"
 
     test_cmd = [
-        "mv $DATA_BASE_CONFIG $DATA_REPO",
+        "cp $DATA_BASE_CONFIG $DATA_REPO",
+    ]
+
+    if include_go_plugin:
+        data["GO_PLUGIN"] = "//test/build_defs:plugin_go"
+        data["GO_PLUGIN_CONF"] = "//test/build_defs:go_config"
+        test_cmd += ["cat $DATA_GO_PLUGIN_CONF >> $DATA_REPO/.plzconfig.e2e && mv $DATA_GO_PLUGIN $DATA_REPO/_plugins"]
+
+    test_cmd += [
         "cd $DATA_REPO",
         plz_command,
     ]
