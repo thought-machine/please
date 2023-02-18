@@ -46,7 +46,7 @@ go_module(
     ],
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/crypto",
-    version = "v0.5.0",
+    version = "v0.6.0",
     visibility = ["PUBLIC"],
     deps = [":xterm"],
 )
@@ -702,12 +702,12 @@ go_module(
     name = "cli-init",
     install = ["..."],
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.2.0",
+    version = "v5.2.1",
     deps = [
         ":go-flags",
         ":humanize",
         ":logging",
-        ":xcrypto",
+        ":xterm",
     ],
 )
 
