@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 WIBBLE=$(cat $DATA_WIBBLE)
 WOBBLE=$(cat $DATA_WOBBLE)
