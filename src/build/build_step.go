@@ -184,154 +184,16 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return prepareOnly(tid, state, target)
 	}
 
-	var postBuildOutput string
-	var cacheKey []byte
-	var metadata *core.BuildMetadata
-
 	if target.HasLabel("go") {
 		// Create a dummy go.mod file so Go tooling ignores the contents of plz-out.
 		goModOnce.Do(writeGoMod)
 	}
 
-	if runRemotely {
-		metadata, err = state.RemoteClient.Build(tid, target)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Wait if another process is currently building this target
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
-		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
-		defer core.ReleaseFileLock(file)
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
-
-		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
-			return err
-		}
-
-		// We don't record rule hashes for filegroups since we know the implementation and the check
-		// is just "are these the same file" which we do anyway, and it means we don't have to worry
-		// about two rules outputting the same file.
-		haveRunPostBuildFunction := false
-		if !target.IsFilegroup && !needsBuilding(state, target, false) {
-			log.Debug("Not rebuilding %s, nothing's changed", target.Label)
-
-			// If running the build could update the target,(e.g. via a post build action) we need to restore those
-			// changes from the build metadata and check if we need to build the target again
-			if target.BuildCouldModifyTarget() {
-				// needsBuilding checks that the metadata file exists so this is safe
-				metadata, err = loadTargetMetadata(target)
-				if err != nil {
-					return fmt.Errorf("failed to load build metadata for %s: %w", target.Label, err)
-				}
-
-				addOutDirOutsFromMetadata(target, metadata)
-
-				if target.PostBuildFunction != nil {
-					if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), ""); err != nil {
-						log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
-					}
-				}
-			}
-
-			// If we still don't need to build, return immediately
-			if !target.BuildCouldModifyTarget() || !needsBuilding(state, target, true) {
-				if target.IsFilegroup {
-					// Small optimisation to ensure we don't need to rehash things unnecessarily.
-					copyFilegroupHashes(state, target)
-				}
-				target.SetState(core.Reused)
-				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
-				buildLinks(state, target)
-				return nil // Nothing needs to be done.
-			}
-			log.Debug("Rebuilding %s after post-build function", target.Label)
-			haveRunPostBuildFunction = true
-		}
-		if target.IsFilegroup {
-			log.Debug("Building %s...", target.Label)
-			changed, err := buildFilegroup(state, target)
-			if err != nil {
-				return err
-			}
-			if changed {
-				if _, err := calculateAndCheckRuleHash(state, target); err != nil {
-					return err
-				}
-				target.SetState(core.Built)
-				state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
-			} else {
-				target.SetState(core.Unchanged)
-				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
-			}
-			buildLinks(state, target)
-			return nil
-		}
-
-		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
-			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
-		}
-
-		// If we fail to hash our outputs, we get a nil hash so we'll attempt to pull the outputs from the cache
-		//
-		// N.B. Important we do not go through state.TargetHasher here since it memoises and
-		//      this calculation might be incorrect.
-		oldOutputHash := outputHashOrNil(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
-		cacheKey = mustShortTargetHash(state, target)
-
-		if state.Cache != nil && !runRemotely && !state.ShouldRebuild(target) {
-			// Note that ordering here is quite sensitive since the post-build function can modify
-			// what we would retrieve from the cache.
-			if target.BuildCouldModifyTarget() {
-				log.Debug("Checking for build metadata for %s in cache...", target.Label)
-				if metadata = retrieveFromCache(state.Cache, target, cacheKey, nil); metadata != nil {
-					addOutDirOutsFromMetadata(target, metadata)
-					if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
-						postBuildOutput = string(metadata.Stdout)
-						if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
-							return err
-						}
-					}
-					// Now that we've updated the rule, retrieve the artifacts with the new output hash
-					if retrieveArtifacts(tid, state, target, oldOutputHash) {
-						return writeRuleHash(state, target)
-					}
-				}
-			} else if retrieveArtifacts(tid, state, target, oldOutputHash) {
-				return nil
-			}
-		}
-		if err := target.CheckSecrets(); err != nil {
-			return err
-		}
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
-		if err := prepareSources(state, state.Graph, target); err != nil {
-			return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
-		}
-
-		state.LogBuildResult(tid, target, core.TargetBuilding, target.BuildingDescription)
-		metadata, err = build(state, target, cacheKey)
-		if err != nil {
-			return err
-		}
-
-		// Add optional outputs to target metadata
-		metadata.OptionalOutputs = make([]string, 0)
-		for _, output := range fs.Glob(state.Config.Parse.BuildFileName, target.TmpDir(), target.OptionalOutputs, nil, true) {
-			log.Debug("Add discovered optional output to metadata %s", output)
-			metadata.OptionalOutputs = append(metadata.OptionalOutputs, output)
-		}
-
-		metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
-		if err != nil {
-			return err
-		}
-	}
+	metadata, oldPostBuildOutput, cacheKey, err := buildMaybeRemotely(tid, state, target, runRemotely)
 
 	if target.PostBuildFunction != nil {
 		outs := target.Outputs()
-		if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), postBuildOutput); err != nil {
+		if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), oldPostBuildOutput); err != nil {
 			return err
 		}
 
@@ -408,6 +270,150 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		state.LogBuildResult(tid, target, core.TargetBuilt, "Built (unchanged)")
 	}
 	return nil
+}
+
+// buildMaybeRemotely builds a target either locally or remotely
+func buildMaybeRemotely(tid int, state *core.BuildState, target *core.BuildTarget, remotely bool) (*core.BuildMetadata, string, []byte, error) {
+	if remotely {
+		metadata, err := state.RemoteClient.Build(tid, target)
+		return metadata, "", nil, err
+	}
+	return buildLocally(tid, state, target)
+}
+
+// BuildLocally builds a target using local execution.
+func BuildLocally(tid int, state *core.BuildState, target *core.BuildTarget) (*core.BuildMetadata, error) {
+	metadata, _, _, err := buildLocally(tid, state, target)
+	return metadata, err
+}
+
+func buildLocally(tid int, state *core.BuildState, target *core.BuildTarget) (metadata *core.BuildMetadata, oldPostBuildOutput string, cacheKey []byte, err error) {
+	// Wait if another process is currently building this target
+	state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
+	file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+	defer core.ReleaseFileLock(file)
+	state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
+
+	// Ensure we have downloaded any previous dependencies if that's relevant.
+	if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
+		return nil, "", nil, err
+	}
+
+	// We don't record rule hashes for filegroups since we know the implementation and the check
+	// is just "are these the same file" which we do anyway, and it means we don't have to worry
+	// about two rules outputting the same file.
+	haveRunPostBuildFunction := false
+	if !target.IsFilegroup && !needsBuilding(state, target, false) {
+		log.Debug("Not rebuilding %s, nothing's changed", target.Label)
+
+		// If running the build could update the target,(e.g. via a post build action) we need to restore those
+		// changes from the build metadata and check if we need to build the target again
+		if target.BuildCouldModifyTarget() {
+			// needsBuilding checks that the metadata file exists so this is safe
+			metadata, err = loadTargetMetadata(target)
+			if err != nil {
+				return nil, "", nil, fmt.Errorf("failed to load build metadata for %s: %w", target.Label, err)
+			}
+
+			addOutDirOutsFromMetadata(target, metadata)
+
+			if target.PostBuildFunction != nil {
+				if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), ""); err != nil {
+					log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
+				}
+			}
+		}
+
+		// If we still don't need to build, return immediately
+		if !target.BuildCouldModifyTarget() || !needsBuilding(state, target, true) {
+			if target.IsFilegroup {
+				// Small optimisation to ensure we don't need to rehash things unnecessarily.
+				copyFilegroupHashes(state, target)
+			}
+			target.SetState(core.Reused)
+			state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
+			buildLinks(state, target)
+			return metadata, "", nil, nil // Nothing needs to be done.
+		}
+		log.Debug("Rebuilding %s after post-build function", target.Label)
+		haveRunPostBuildFunction = true
+	}
+	if target.IsFilegroup {
+		log.Debug("Building %s...", target.Label)
+		changed, err := buildFilegroup(state, target)
+		if err != nil {
+			return metadata, "", nil, err
+		}
+		if changed {
+			if _, err := calculateAndCheckRuleHash(state, target); err != nil {
+				return metadata, "", nil, err
+			}
+			target.SetState(core.Built)
+			state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
+		} else {
+			target.SetState(core.Unchanged)
+			state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
+		}
+		buildLinks(state, target)
+		return metadata, "", nil, nil
+	}
+
+	if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
+		return nil, "", nil, fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
+	}
+
+	// If we fail to hash our outputs, we get a nil hash so we'll attempt to pull the outputs from the cache
+	//
+	// N.B. Important we do not go through state.TargetHasher here since it memoises and
+	//      this calculation might be incorrect.
+	oldOutputHash := outputHashOrNil(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
+	cacheKey = mustShortTargetHash(state, target)
+
+	if state.Cache != nil && !state.ShouldRebuild(target) {
+		// Note that ordering here is quite sensitive since the post-build function can modify
+		// what we would retrieve from the cache.
+		if target.BuildCouldModifyTarget() {
+			log.Debug("Checking for build metadata for %s in cache...", target.Label)
+			if metadata = retrieveFromCache(state.Cache, target, cacheKey, nil); metadata != nil {
+				addOutDirOutsFromMetadata(target, metadata)
+				if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
+					if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), ""); err != nil {
+						return nil, "", nil, err
+					}
+				}
+				// Now that we've updated the rule, retrieve the artifacts with the new output hash
+				if retrieveArtifacts(tid, state, target, oldOutputHash) {
+					return metadata, "", cacheKey, writeRuleHash(state, target)
+				}
+			}
+		} else if retrieveArtifacts(tid, state, target, oldOutputHash) {
+			return metadata, "", cacheKey, nil
+		}
+	}
+	if err := target.CheckSecrets(); err != nil {
+		return nil, "", nil, err
+	}
+	state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
+	if err := prepareSources(state, state.Graph, target); err != nil {
+		return nil, "", nil, fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
+	}
+
+	state.LogBuildResult(tid, target, core.TargetBuilding, target.BuildingDescription)
+	oldPostBuildOutput = string(metadata.Stdout)
+	metadata, err = build(state, target, cacheKey)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	// Add optional outputs to target metadata
+	metadata.OptionalOutputs = make([]string, 0)
+	for _, output := range fs.Glob(state.Config.Parse.BuildFileName, target.TmpDir(), target.OptionalOutputs, nil, true) {
+		log.Debug("Add discovered optional output to metadata %s", output)
+		metadata.OptionalOutputs = append(metadata.OptionalOutputs, output)
+	}
+
+	metadata.OutputDirOuts, err = addOutputDirectoriesToBuildOutput(target)
+	return metadata, oldPostBuildOutput, cacheKey, err
 }
 
 func outputHashOrNil(target *core.BuildTarget, outputs []string, hasher *fs.PathHasher, combine func() hash.Hash) []byte {

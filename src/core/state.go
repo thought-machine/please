@@ -94,6 +94,14 @@ type RemoteClient interface {
 	Disconnect() error
 }
 
+// A LocalClient is the interface to a local execution service. Used for callbacks from the remote service.
+type LocalClient interface {
+	// Build invokes a build of the target locally.
+	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
+	// Test invokes a test run of the target locally.
+	Test(tid int, target *BuildTarget, run int) (*BuildMetadata, error)
+}
+
 // A TargetHasher is a thing that knows how to create hashes for targets.
 type TargetHasher interface {
 	// OutputHash calculates the output hash for a given build target.
@@ -138,6 +146,8 @@ type BuildState struct {
 	Cache Cache
 	// Client to remote execution service, if configured.
 	RemoteClient RemoteClient
+	// Client to local execution service, only if remote execution is configured.
+	LocalClient LocalClient
 	// Hasher for targets
 	TargetHasher TargetHasher
 	// Arguments to tests.
