@@ -717,26 +717,31 @@ func (target *BuildTarget) DeclaredOutputNames() []string {
 	return ret
 }
 
+func (target *BuildTarget) filegroupOutputs(srcs []BuildInput) []string {
+	ret := make([]string, 0, len(srcs))
+	// Filegroups just re-output their inputs.
+	for _, src := range srcs {
+		if namedLabel, ok := src.(AnnotatedOutputLabel); ok {
+			// Bit of a hack, but this needs different treatment from either of the others.
+			for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
+				ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
+			}
+		} else if label, ok := src.nonOutputLabel(); !ok {
+			ret = append(ret, src.LocalPaths(nil)[0])
+		} else {
+			for _, dep := range target.DependenciesFor(label) {
+				ret = append(ret, dep.Outputs()...)
+			}
+		}
+	}
+	return ret
+}
+
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
 	if target.IsFilegroup {
-		ret = make([]string, 0, len(target.Sources))
-		// Filegroups just re-output their inputs.
-		for _, src := range target.Sources {
-			if namedLabel, ok := src.(AnnotatedOutputLabel); ok {
-				// Bit of a hack, but this needs different treatment from either of the others.
-				for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
-					ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
-				}
-			} else if label, ok := src.nonOutputLabel(); !ok {
-				ret = append(ret, src.LocalPaths(nil)[0])
-			} else {
-				for _, dep := range target.DependenciesFor(label) {
-					ret = append(ret, dep.Outputs()...)
-				}
-			}
-		}
+		ret = target.filegroupOutputs(target.AllSources())
 	} else {
 		// Must really copy the slice before sorting it ([:] is too shallow)
 		ret = make([]string, len(target.outputs))
@@ -777,6 +782,14 @@ func (target *BuildTarget) AllOutputs() []string {
 // NamedOutputs returns a slice of all the outputs of this rule with a given name.
 // If the name is not declared by this rule it panics.
 func (target *BuildTarget) NamedOutputs(name string) []string {
+	if target.IsFilegroup {
+		if target.NamedSources == nil {
+			return nil
+		}
+		if srcs, present := target.NamedSources[name]; present {
+			return target.filegroupOutputs(srcs)
+		}
+	}
 	if target.namedOutputs == nil {
 		return nil
 	}
