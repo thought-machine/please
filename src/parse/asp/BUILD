@@ -7,6 +7,7 @@ go_library(
         "config.go",
         "errors.go",
         "exec.go",
+        "file_position.go",
         "grammar.go",
         "grammar_parse.go",
         "interpreter.go",
@@ -22,6 +23,7 @@ go_library(
         "///third_party/go/github.com_Masterminds_semver_v3//:v3",
         "///third_party/go/github.com_manifoldco_promptui//:promptui",
         "///third_party/go/github.com_please-build_gcfg//types",
+        "///third_party/go/golang.org_x_exp//slices",
         "//rules",
         "//src/cli",
         "//src/cli/logging",
@@ -36,6 +38,7 @@ go_test(
     srcs = [
         "builtins_test.go",
         "config_test.go",
+        "file_position_test.go",
         "interpreter_test.go",
         "label_context_test.go",
         "lexer_test.go",

@@ -28,6 +28,6 @@ go_test(
     labels = ["no_cirrus"],  # Git branches aren't happening as expected here.
     deps = [
         ":test",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

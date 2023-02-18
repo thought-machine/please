@@ -39,4 +39,3 @@ go_test(
         "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
     ],
 )
-

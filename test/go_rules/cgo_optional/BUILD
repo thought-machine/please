@@ -11,6 +11,6 @@ go_test(
     srcs = ["go_test.go"],
     deps = [
         ":cgo_optional",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

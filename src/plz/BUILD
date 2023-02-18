@@ -21,8 +21,8 @@ go_test(
     srcs = ["plz_test.go"],
     deps = [
         ":plz",
-        "//src/core",
+        "///third_party/go/github.com_stretchr_testify//assert",
         "//src/cli",
-        "//third_party/go:testify",
-    ]
+        "//src/core",
+    ],
 )

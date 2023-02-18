@@ -5,7 +5,7 @@ go_test(
     deps = [
         "//src/core",
         "//third_party/go:net",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 

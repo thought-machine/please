@@ -30,4 +30,3 @@ go_test(
         "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
-

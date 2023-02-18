@@ -1,3 +1,5 @@
+subinclude("///go//build_defs:go")
+
 package(default_visibility = ["PUBLIC"])
 
 go_toolchain(
@@ -551,15 +553,7 @@ go_get(
     version = "v0.6.1",
 )
 
-go_module(
-    name = "x_exp",
-    install = [
-        "constraints",
-        "maps",
-        "slices",
-    ],
-    licences = ["BSD"],
+go_get(
     module = "golang.org/x/exp",
     version = "1de6713980dea447778ef6e71194d5eb54288072",
-    visibility = ["PUBLIC"],
 )

@@ -38,7 +38,6 @@ go_binary(
         "//src/tool",
         "//src/update",
         "//src/watch",
-        "//src/worker",
     ],
 )
 

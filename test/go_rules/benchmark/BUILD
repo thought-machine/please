@@ -7,5 +7,5 @@ go_test(
     name = "benchmark_test",
     srcs = ["bench_test.go"],
     data = [":benchmark"],
-    deps = ["//third_party/go:testify"],
+    deps = ["///third_party/go/github.com_stretchr_testify//assert"],
 )

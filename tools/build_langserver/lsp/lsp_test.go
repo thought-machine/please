@@ -66,7 +66,7 @@ go_test(
     srcs = ["lsp_test.go"],
     deps = [
         ":lsp",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 `
@@ -146,7 +146,7 @@ func TestDidClose(t *testing.T) {
 const testFormattingContent = `go_test(
     name = "lsp_test",
     srcs = ["lsp_test.go"],
-    deps = [":lsp","//third_party/go:testify"],
+    deps = [":lsp","///third_party/go/github.com_stretchr_testify//assert"],
 )
 `
 
@@ -186,7 +186,7 @@ func TestFormatting(t *testing.T) {
 				Start: lsp.Position{Line: 5, Character: 0},
 				End:   lsp.Position{Line: 5, Character: 0},
 			},
-			NewText: `        "//third_party/go:testify",`,
+			NewText: `        "///third_party/go/github.com_stretchr_testify//assert",`,
 		},
 		{
 			Range: lsp.Range{

@@ -22,7 +22,6 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//src/worker",
     ],
 )
 
@@ -42,5 +41,3 @@ go_test(
         "//src/core",
     ],
 )
-
-

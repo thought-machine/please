@@ -55,8 +55,9 @@ go_benchmark(
     srcs = ["hash_benchmark_test.go"],
     deps = [
         ":fs",
-        "//third_party/go:blake3",
-        "//third_party/go:testify",
-        "//third_party/go:xxhash",
+        "///third_party/go/github.com_cespare_xxhash_v2//:v2",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
+        "///third_party/go/github.com_zeebo_blake3//:blake3",
     ],
 )

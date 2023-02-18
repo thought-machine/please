@@ -7,7 +7,6 @@ go_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        "///third_party/go/github.com_google_shlex//:shlex",
         "///third_party/go/github.com_hashicorp_go-multierror//:go-multierror",
         "///third_party/go/github.com_hashicorp_go-retryablehttp//:go-retryablehttp",
         "//src/cli",
@@ -17,21 +16,16 @@ go_library(
         "//src/generate",
         "//src/metrics",
         "//src/process",
-        "//third_party/go:go-multierror",
-        "//third_party/go:go-retryablehttp",
-        "//third_party/go:protobuf",
-        "//third_party/go:shlex",
     ],
 )
 
-"""go_test(
+go_test(
     name = "build_test",
     srcs = [
         "build_step_test.go",
         "incrementality_test.go",
         "remote_file_test.go",
     ],
-    data = ["test_data"],
     deps = [
         ":build",
         "///third_party/go/github.com_stretchr_testify//assert",
@@ -41,19 +35,3 @@ go_library(
         "//src/fs",
     ],
 )
-
-
-go_test(
-    name = "build_step_stress_test",
-    srcs = ["build_step_stress_test.go"],
-    external = True,
-    deps = [
-        ":build",
-        "//src/cli/logging",
-        "//src/core",
-        "//src/output",
-        "//src/plz",
-        "///third_party/go/github.com_stretchr_testify//assert",
-        "///third_party/go/github.com_stretchr_testify//require",
-    ],
-)"""

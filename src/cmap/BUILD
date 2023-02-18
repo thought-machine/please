@@ -26,7 +26,7 @@ go_benchmark(
     srcs = ["cmap_test.go"],
     deps = [
         ":cmap",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -35,6 +35,6 @@ go_benchmark(
     srcs = ["hash_test.go"],
     deps = [
         ":cmap",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

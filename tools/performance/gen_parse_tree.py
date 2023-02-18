@@ -41,7 +41,7 @@ LANGUAGES = list(LANGUAGE_EXTENSIONS.keys())
 # This is a little fiddly but a nice touch of realism: some targets have very high fan-out
 TEST_DEPS = {
     'python': [],
-    'go': ['//third_party/go:testify'],
+    'go': ['///third_party/go/github.com_stretchr_testify//assert'],
     'java': ['//third_party/java:junit', '//third_party/java:hamcrest'],
     'cc': [],
 }

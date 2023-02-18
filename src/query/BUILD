@@ -13,7 +13,6 @@ go_library(
         "print.go",
         "query_step.go",
         "reverse_deps.go",
-        "roots.go",
         "somepath.go",
         "whatinputs.go",
         "whatoutputs.go",
@@ -29,7 +28,7 @@ go_library(
 )
 
 go_test(
-    name = "print_test",
+    name = "query_test",
     srcs = [
         "changes_test.go",
         "completions_test.go",
@@ -40,72 +39,12 @@ go_test(
         "whatinputs_test.go",
         "whatoutputs_test.go",
     ],
+    data = ["completions_test_repo"],
     deps = [
         ":query",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
         "//src/core",
         "//src/parse",
-    ],
-)
-
-go_test(
-    name = "graph_test",
-    srcs = ["graph_test.go"],
-    deps = [
-        ":query",
-        "//src/core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "whatoutputs_test",
-    srcs = ["whatoutputs_test.go"],
-    deps = [
-        ":query",
-        "//src/core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "whatinputs_test",
-    srcs = ["whatinputs_test.go"],
-    deps = [
-        ":query",
-        "//src/core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "changes_test",
-    srcs = ["changes_test.go"],
-    deps = [
-        ":query",
-        "//src/core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "reverse_deps_test",
-    srcs = ["reverse_deps_test.go"],
-    deps = [
-        ":query",
-        "//src/core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "completions_test",
-    srcs = ["completions_test.go"],
-    data = ["completions_test_repo"],
-    deps = [
-        ":query",
-        "//src/core",
-        "//third_party/go:testify",
     ],
 )

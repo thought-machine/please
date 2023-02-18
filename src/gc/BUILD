@@ -24,15 +24,3 @@ go_test(
         "//src/fs",
     ],
 )
-
-go_test(
-    name = "rewrite_test",
-    srcs = ["rewrite_test.go"],
-    data = [
-        "test_data",
-    ],
-    deps = [
-        ":gc",
-        "//third_party/go:testify",
-    ],
-)

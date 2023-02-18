@@ -42,7 +42,7 @@ go_test(
         ":core",
         "//src/cli",
         "//third_party/go:go-flags",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -51,7 +51,7 @@ go_test(
     srcs = ["label_parse_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -60,7 +60,7 @@ go_test(
     srcs = ["graph_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -69,7 +69,7 @@ go_test(
     srcs = ["state_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -79,7 +79,7 @@ go_test(
     data = ["test_data"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -89,7 +89,7 @@ go_test(
     data = ["test_data"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -98,7 +98,7 @@ go_test(
     srcs = ["build_env_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -107,7 +107,7 @@ go_test(
     srcs = ["utils_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -116,7 +116,7 @@ go_test(
     srcs = ["lock_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -125,7 +125,7 @@ go_test(
     srcs = ["build_label_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -134,7 +134,7 @@ go_test(
     srcs = ["test_results_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -143,7 +143,7 @@ go_test(
     srcs = ["build_input_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -152,7 +152,7 @@ go_test(
     srcs = ["subrepo_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -161,7 +161,7 @@ go_test(
     srcs = ["command_replacements_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 
@@ -170,6 +170,6 @@ go_test(
     srcs = ["stamp_test.go"],
     deps = [
         ":core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
