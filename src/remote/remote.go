@@ -312,7 +312,7 @@ func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 		return nil, err
 	}
 	metadata, ar, digest, err := c.build(tid, target)
-	if err != nil {
+	if err != nil || ar == nil {
 		return metadata, err
 	}
 	if c.state.TargetHasher != nil {
@@ -371,7 +371,7 @@ func (c *Client) Run(target *core.BuildTarget) error {
 		return err
 	}
 	// 24 hours is kind of an arbitrarily long timeout. Basically we just don't want to limit it here.
-	_, _, err = c.execute(0, target, cmd, digest, false, false)
+	_, _, err = c.execute(0, target, cmd, digest, false, true, false, 0)
 	return err
 }
 
@@ -395,8 +395,8 @@ func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, 
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	metadata, ar, err := c.execute(tid, target, command, stampedDigest, false, needStdout)
-	if target.Stamp && err == nil {
+	metadata, ar, err := c.execute(tid, target, command, stampedDigest, false, false, needStdout, 0)
+	if target.Stamp && err == nil && ar != nil {
 		err = c.verifyActionResult(target, command, unstampedDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
 		if err == nil {
 			// Store results under unstamped digest too.
@@ -533,7 +533,7 @@ func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *cor
 	if err != nil {
 		return nil, err
 	}
-	metadata, ar, err := c.execute(tid, target, command, digest, true, false)
+	metadata, ar, err := c.execute(tid, target, command, digest, true, false, false, run)
 
 	if ar != nil {
 		_, dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
@@ -592,12 +592,20 @@ func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command
 
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
-func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, isRun, needStdout bool, testRun int) (*core.BuildMetadata, *pb.ActionResult, error) {
 	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, isTest, needStdout); metadata != nil {
 			return metadata, ar, nil
 		}
 	}
+	if local := c.state.Config.Remote.PreferLocal; local && isTest {
+		metadata, err := c.state.LocalClient.Test(tid, target, testRun)
+		return metadata, nil, err
+	} else if local && !isRun {
+		metadata, err := c.state.LocalClient.Build(tid, target)
+		return metadata, nil, err
+	}
+
 	// We didn't actually upload the inputs before, so we must do so now.
 	command, digest, err := c.uploadAction(target, isTest, false)
 	if err != nil {

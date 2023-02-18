@@ -571,6 +571,7 @@ type Configuration struct {
 		Secure        bool         `help:"Whether to use TLS for communication or not."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		UploadDirs    bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
+		PreferLocal   bool         `help:"Prefer to use local execution for unbuilt tasks when remote execution is active."`
 		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`

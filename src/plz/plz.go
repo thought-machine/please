@@ -29,6 +29,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	build.Init(state)
 	if state.Config.Remote.URL != "" {
 		state.RemoteClient = remote.New(state)
+		state.LocalClient = localClient{state: state}
 	}
 	if config.Display.SystemStats {
 		go state.UpdateResources()
@@ -247,4 +248,17 @@ func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
 		}
 	}
 	return ret
+}
+
+// A localClient fulfils the LocalClient interface from src/core
+type localClient struct {
+	state *core.BuildState
+}
+
+func (client localClient) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
+	return build.BuildLocally(tid, client.state, target)
+}
+
+func (client localClient) Test(tid int, target *core.BuildTarget, run int) (*core.BuildMetadata, error) {
+	return test.TestLocally(tid, client.state, target, run)
 }

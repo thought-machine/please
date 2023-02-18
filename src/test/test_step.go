@@ -406,6 +406,12 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 	return metadata, data, coverage, err
 }
 
+// TestLocally runs a single test run locally.
+func TestLocally(tid int, state *core.BuildState, target *core.BuildTarget, run int) (*core.BuildMetadata, error) {
+	stdout, err := prepareAndRunTest(tid, state, target, run)
+	return &core.BuildMetadata{Stdout: stdout}, err
+}
+
 // prepareAndRunTest sets up a test directory and runs the test.
 func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
 	if err = core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
