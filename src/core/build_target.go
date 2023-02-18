@@ -789,6 +789,7 @@ func (target *BuildTarget) NamedOutputs(name string) []string {
 		if srcs, present := target.NamedSources[name]; present {
 			return target.filegroupOutputs(srcs)
 		}
+		return nil
 	}
 	if target.namedOutputs == nil {
 		return nil

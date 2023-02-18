@@ -49,5 +49,6 @@ sh_test(
     data = {
         "wibble": [":named|wibble"],
         "wobble": [":named|wobble"],
+        "all": [":named"],
     },
 )

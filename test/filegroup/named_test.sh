@@ -10,3 +10,7 @@ if [ "$WOBBLE" != "wobblewobblewobble" ]; then
     echo "Unexpected context in wobble: $WOBBLE"
     exit 1
 fi
+if [ "$DATA_ALL" != "test/filegroup/wibble test/filegroup/wobble" ]; then
+    echo "Unexpected context in DATA_ALL: $DATA_ALL"
+    exit 1
+fi
