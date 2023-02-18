@@ -599,9 +599,11 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 		}
 	}
 	if local := c.state.Config.Remote.PreferLocal; local && isTest {
+		target.Local = true
 		metadata, err := c.state.LocalClient.Test(tid, target, testRun)
 		return metadata, nil, err
 	} else if local && !isRun {
+		target.Local = true
 		metadata, err := c.state.LocalClient.Build(tid, target)
 		return metadata, nil, err
 	}
