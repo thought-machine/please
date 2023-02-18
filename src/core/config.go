@@ -460,6 +460,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.PexTool = "/////_please:please_pex"
 	config.Java.JavacWorker = "/////_please:javac_worker"
 	config.Java.JarCatTool = "/////_please:arcat"
+	config.Build.ArcatTool = "/////_please:arcat"
 	config.Java.JUnitRunner = "/////_please:junit_runner"
 
 	config.Metrics.Timeout = cli.Duration(2 * time.Second)
@@ -522,6 +523,7 @@ type Configuration struct {
 		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)"`
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
 		ParallelDownloads    int          `help:"Max number of remote_file downloads to run in parallel."`
+		ArcatTool            string       `help:"Defines the tool used to concatenate files which we use in various build rules. Defaults to Arcat." var:"ARCAT_TOOL"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -615,7 +617,7 @@ type Configuration struct {
 		WheelNameScheme     []string `help:"Defines a custom templatized wheel naming scheme. Templatized variables should be surrounded in curly braces, and the available options are: url_base, package_name, version and initial (the first character of package_name). The default search pattern is '{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl' along with a few common variants." var:"PYTHON_WHEEL_NAME_SCHEME"`
 		InterpreterOptions  string   `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
 		DisableVendorFlags  bool     `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." var:"DISABLE_VENDOR_FLAGS"`
-	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude_flag:"ExcludePythonRules"`
+	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude:"true"`
 	Java struct {
 		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
 		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
@@ -685,25 +687,19 @@ type Configuration struct {
 
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
-	// Profiling can be set to true by a caller to enable CPU profiling in any areas that might
-	// want to take special effort about it.
-	Profiling bool
 
 	FeatureFlags struct {
-		JavaBinaryExecutableByDefault bool `help:"Makes java_binary rules self executable by default. Target release version 16." var:"FF_JAVA_SELF_EXEC"`
-		SingleSHA1Hash                bool `help:"Stop combining sha1 with the empty hash when there's a single output (just like SHA256 and the other hash functions do) "`
-		PackageOutputsStrictness      bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
-		PythonWheelHashing            bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
-		NoIterSourcesMarked           bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
-		ExcludePythonRules            bool `help:"Whether to include the python rules or use the plugin"`
-		ExcludeJavaRules              bool `help:"Whether to include the java rules or use the plugin"`
-		ExcludeCCRules                bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
-		ExcludeGoRules                bool `help:"Whether to include the go rules rules or require use of the plugin"`
-		ExcludeShellRules             bool `help:"Whether to include the shell rules rules or require use of the plugin"`
-		ExcludeProtoRules             bool `help:"Whether to include the proto rules or require use of the plugin"`
-		ExcludeSymlinksInGlob         bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
-		GoDontCollapseImportPath      bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
-		ErrorOnEmptyGlob              bool `help:"Error out if a glob doesn't match anything" var:"FF_ERROR_ON_EMPTY_GLOB"`
+		PackageOutputsStrictness bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
+		PythonWheelHashing       bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
+		NoIterSourcesMarked      bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
+		ExcludeJavaRules         bool `help:"Whether to include the java rules or use the plugin"`
+		ExcludeCCRules           bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
+		ExcludeGoRules           bool `help:"Whether to include the go rules rules or require use of the plugin"`
+		ExcludeShellRules        bool `help:"Whether to include the shell rules rules or require use of the plugin"`
+		ExcludeProtoRules        bool `help:"Whether to include the proto rules or require use of the plugin"`
+		ExcludeSymlinksInGlob    bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
+		GoDontCollapseImportPath bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
+		ErrorOnEmptyGlob         bool `help:"Error out if a glob doesn't match anything" var:"FF_ERROR_ON_EMPTY_GLOB"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`

@@ -216,7 +216,7 @@
                   <li class="pl4" role="menuitem">
                     <a
                             class="silver no-underline"
-                            href="/lexicon.html#cc"
+                            href="/plugins.html#cc"
                     >C++ rules</a
                     >
                   </li>
@@ -225,13 +225,6 @@
                             class="silver no-underline"
                             href="/lexicon.html#go"
                     >Go rules</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="silver no-underline"
-                            href="/lexicon.html#java"
-                    >Java rules</a
                     >
                   </li>
                   <li class="pl4" role="menuitem">
@@ -251,20 +244,6 @@
                   <li class="pl4" role="menuitem">
                     <a
                             class="silver no-underline"
-                            href="/lexicon.html#python"
-                    >Python rules</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="silver no-underline"
-                            href="/lexicon.html#sh"
-                    >Shell rules</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="silver no-underline"
                             href="/lexicon.html#subrepo"
                     >Subrepo rules</a
                     >
@@ -273,7 +252,71 @@
               {{end}}
             </li>
 
-            {{$isItemActive := matches .Filename "build_rules.html" "tests.html" "workers.html" "post_build.html" "require_provide.html"}}
+            {{$isItemActive := matches .Filename "plugins.html"}}
+            <li
+                    class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"
+                    role="menuitem">
+              <a
+                      class="{{boolOption $isItemActive "white" "violet"}} no-underline"
+                      href="/plugins.html"
+              >Plugins</a
+              >
+              {{if $isItemActive}}
+                <ul role="menu">
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#cc"
+                    >C++</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#go"
+                    >Go</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#go-proto"
+                    >Go-proto</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#java"
+                    >Java</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#proto"
+                    >Proto</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#python"
+                    >Python</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="silver no-underline"
+                            href="/plugins.html#shell"
+                    >Shell</a
+                    >
+                  </li>
+                </ul>
+              {{end}}
+            </li>
+
+            {{$isItemActive := matches .Filename "build_rules.html" "tests.html" "post_build.html" "require_provide.html"}}
             <li
                     class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"
                     role="menuitem">
@@ -296,13 +339,6 @@
                             class="{{isFilenameOption "tests.html" "white" "silver"}} no-underline"
                             href="/tests.html"
                     >Testing with Please</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="{{isFilenameOption "workers.html" "white" "silver"}} no-underline"
-                            href="/workers.html"
-                    >Persistent workers</a
                     >
                   </li>
                   <li class="pl4" role="menuitem">

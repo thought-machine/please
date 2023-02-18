@@ -80,7 +80,7 @@
 
       <!-- prettier-ignore -->
       <pre class="white">
-    See <a class="copy-link" href="/lexicon.html#pip_library">pip_library()</a> for more information
+    See <a class="copy-link" href="/plugins.html#pip_library">pip_library()</a> for more information
       </pre>
     </div>
 
@@ -103,7 +103,7 @@
 
       <!-- prettier-ignore -->
       <pre class="white">
-    See <a class="copy-link" href="/lexicon.html#maven_jar">maven_jar()</a> for more information
+    See <a class="copy-link" href="/plugins.html#maven_jar">maven_jar()</a> for more information
       </pre>
     </div>
 
@@ -117,17 +117,17 @@
       <pre>
         <!-- prettier-ignore -->
         <code data-lang="plz">
-    go_get(
+    go_module(
         name = 'my_library',
-        get = "github.com/me/my_library",
-        revision = "v1.0.0",
+        module = "github.com/me/my_library",
+        version = "v1.0.0",
     )
         </code>
       </pre>
 
       <!-- prettier-ignore -->
       <pre class="white">
-    See <a class="copy-link" href="/lexicon.html#go_get">go_get()</a> for more information
+    See <a class="copy-link" href="/plugins.html#go_module">go_module()</a> for more information
       </pre>
     </div>
 
@@ -155,7 +155,7 @@
   reproducibility.<br />
   There are one or two alternatives that show slightly different approaches
   (e.g.
-  <a class="copy-link" href="/lexicon.html#python_wheel">python_wheel</a>
+  <a class="copy-link" href="/plugins.html#python_wheel">python_wheel</a>
   which is more standalone, and
   <a class="copy-link" href="/lexicon.html#remote_file">remote_file</a>
   which is a general tool to download anything (although often more work is
@@ -308,14 +308,14 @@
     This can be a little unreliable though, since the Maven package format is
     complex, and your dependencies aren't fully within your control and can
     change between builds - we recommend
-    <a class="copy-link" href="/lexicon.html#maven_jar">maven_jar</a>
+    <a class="copy-link" href="/plugins.html#maven_jar">maven_jar</a>
     instead, but understand it's more work to set up.
   </p>
 
   <p>
     <code class="code">requirements.txt</code> files from Python are not usually
     especially difficult to translate using
-    <a class="copy-link" href="/lexicon.html#pip_library">pip_library</a>; again
+    <a class="copy-link" href="/plugins.html#pip_library">pip_library</a>; again
     we require listing transitive dependencies explicitly, but this is not
     normally too onerous for Python.<br />
     Since Please needs to know precisely what will be output, the rules can
@@ -325,7 +325,7 @@
   </p>
 
   <p>
-    <a class="copy-link" href="/lexicon.html#go_get">go_get</a> works pretty
+    <a class="copy-link" href="/plugins.html#go_module">go_module</a> works pretty
     similarly to the usual <code class="code">go get</code> tool, but again only
     outputs a single package at a time. Writing up the dependencies can be eased
     by using something like

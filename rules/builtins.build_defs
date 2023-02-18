@@ -221,17 +221,6 @@ def dirname(p:str) -> str:
     return before
 
 
-def _deprecated_exception(msg):
-    log.warning('Builtin exception types are deprecated, please use fail() instead. ' +
-                'See https://github.com/thought-machine/please/issues/1598 for more information.')
-    return str(msg)
-
-# These are deprecated and will be removed in v17.
-ParseError = _deprecated_exception
-ConfigError = _deprecated_exception
-ValueError = _deprecated_exception
-
-
 # Post-build callback functions.
 def get_labels(name:str, prefix:str, all:bool=False, transitive=True) -> list:
     pass

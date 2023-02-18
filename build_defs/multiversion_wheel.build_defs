@@ -36,6 +36,6 @@ def python_multiversion_wheel(name, version:str, urls:list, licences:list=None, 
         requires = ['py'],
         visibility = visibility,
         labels = ['whl:%s==%s' % (name, version)],
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         licences = licences,
     )

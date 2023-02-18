@@ -1,3 +1,5 @@
+subinclude("///shell//build_defs:shell")
+
 filegroup(
     name = "version",
     srcs = ["VERSION"],
@@ -40,5 +42,5 @@ sh_cmd(
 github_repo(
     name = "pleasings",
     repo = "thought-machine/pleasings",
-    revision = "v1.0.0",
+    revision = "v1.1.0",
 )

@@ -491,7 +491,7 @@ def protoc_binary(name, url:str|dict = '', version:str = '', hashes=None, deps=N
         tag = 'wkt',
         srcs = [download],
         outs = ['google'],
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         cmd = '$TOOL x $SRCS --strip_prefix include',
         labels = [
             'protoc:-I"$TMP_DIR"/' + package_name(),
@@ -501,7 +501,7 @@ def protoc_binary(name, url:str|dict = '', version:str = '', hashes=None, deps=N
         name = name,
         srcs = [download],
         outs = ['protoc'],
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         binary = True,
         cmd = '$TOOL x $SRCS bin/protoc',
         visibility = visibility,

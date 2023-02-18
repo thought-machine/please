@@ -85,7 +85,10 @@ func (hasher *PathHasher) Hash(path string, recalc, store, timestamp bool) ([]by
 		if present && cached != nil {
 			return cached, nil
 		} else if present {
-			store = false // Don't store hashes on this file (see MoveHash)
+			// We set this to nil in CopyHash() when it's a filegroup source in the source tree.
+			// These files are hard links so can change under us. We shouldn't read or store xattrs.
+			store = false
+			recalc = true
 		}
 	}
 	// This check is important; if the file doesn't exist now, we don't want that

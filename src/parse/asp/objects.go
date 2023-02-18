@@ -1,7 +1,6 @@
 package asp
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -631,7 +630,7 @@ func (f *pyFunc) String() string {
 	return fmt.Sprintf("<function %s>", f.name)
 }
 
-func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
+func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
 			return f.callNative(s.NewScope("<builtin code>"), c)
@@ -639,7 +638,6 @@ func (f *pyFunc) Call(ctx context.Context, s *scope, c *Call) pyObject {
 		return f.callNative(s, c)
 	}
 	s2 := f.scope.newScope(s.pkg, f.scope.filename, len(f.args)+1)
-	s2.ctx = ctx
 	s2.config = s.config
 	s2.Set("CONFIG", s.config) // This needs to be copied across too :(
 	s2.Callback = s.Callback
@@ -804,11 +802,6 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 
 type pyConfigBase struct {
 	dict pyDict
-
-	// While preloading, we might be mutating base with the plugin configs. During this time we must use mux to control
-	// access to base.
-	finalised bool
-	sync.RWMutex
 }
 
 // A pyConfig is a wrapper object around Please's global config.
@@ -898,11 +891,6 @@ func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 		if obj, present := c.overlay[key]; present {
 			return obj
 		}
-	}
-	// We may still be adding new config values to base when not finalised
-	if !c.base.finalised {
-		c.base.RLock()
-		defer c.base.RUnlock()
 	}
 
 	if obj, present := c.base.dict[key]; present {

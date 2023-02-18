@@ -161,7 +161,7 @@ func (stack *errorStack) errorMessage() string {
 		} else if charsBefore == len(line) {
 			line += "  "
 		} else if charsBefore > len(line) {
-			return stack.Error() // probably something's gone wrong and we're on totally the wrong line.
+			return stack.ShortError() // probably something's gone wrong and we're on totally the wrong line.
 		}
 		spaces := strings.Repeat(" ", charsBefore)
 		if !cli.ShowColouredOutput {

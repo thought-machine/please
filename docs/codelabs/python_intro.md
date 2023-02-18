@@ -88,7 +88,7 @@ $ plz run //src:main
 Hello, world!
 ```
 
-There's a lot going on here; first off, `python_binary()` is one of many [built-in functions](/lexicon.html#python).
+There's a lot going on here; first off, `python_binary()` is one of the functions available in the [Python plugin](/plugin.html#python).
 This build function creates a "build target" in the `src` package. A package, in the Please sense, is any directory that
 contains a `BUILD` file.
 
@@ -309,7 +309,7 @@ Hopefully you now have an idea as to how to build Python with Please. Please is 
 
 - [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this
 tutorial in more detail.
-- [Built-in rules](/lexicon.html#python) - See the rest of the Python rules as well as rules for other languages and tools.
+- [Plugin rules](/plugin.html#python) - See the rest of the Python rules in the python plugin.
 - [Config](/config.html#python) - See the available config options for Please, especially those relating to Python.
 - [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
 determine files changes since master, watch rules and build them automatically as things change and much more! Use

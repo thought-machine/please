@@ -50,7 +50,7 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
         test_only = test_only,
     )
 
-    tools = {'jarcat': [CONFIG.JARCAT_TOOL], 'ar': [CONFIG.AR_TOOL]}
+    tools = {'arcat': [CONFIG.ARCAT_TOOL], 'ar': [CONFIG.AR_TOOL]}
     if darwin:
         # OSX's ld doesn't support '--format binary', and this is the least fiddly
         # alternative. Requiring an additional tool is a bit suboptimal but probably
@@ -59,12 +59,12 @@ def cc_embed_binary(name:str, src:str, deps:list=[], visibility:list=None,
             'export ENCODED_FILENAME=${SRCS//[\\/\\.]/_}',
             f'echo "{_CC_DARWIN_ASM_CONTENTS}" > embedded.asm',
             '$TOOLS_ASM -fmacho64 embedded.asm -o ${OUTS/.a/.o}',
-            '$TOOLS_JARCAT ar --srcs ${OUTS/.a/.o}',
+            '$TOOLS_ARCAT ar --srcs ${OUTS/.a/.o}',
             '$TOOLS_AR s "$OUTS"',
         ])
         tools['asm'] = [CONFIG.ASM_TOOL]
     else:
-        cmd = '$TOOLS_LD -r --format binary -z noexecstack -m elf_$XARCH %s -o "${OUTS/.a/.o}" $SRC && $TOOLS_JARCAT ar --srcs "${OUTS/.a/.o}" && $TOOLS_AR s "$OUTS"' % CONFIG.DEFAULT_LDFLAGS
+        cmd = '$TOOLS_LD -r --format binary -z noexecstack -m elf_$XARCH %s -o "${OUTS/.a/.o}" $SRC && $TOOLS_ARCAT ar --srcs "${OUTS/.a/.o}" && $TOOLS_AR s "$OUTS"' % CONFIG.DEFAULT_LDFLAGS
         tools['ld'] = [CONFIG.LD_TOOL]
 
     lib_rule = build_rule(

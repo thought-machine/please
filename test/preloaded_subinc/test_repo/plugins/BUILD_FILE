@@ -1,0 +1,12 @@
+plugin_repo(
+    name = "shell",
+    plugin = "shell-rules",
+    revision = "v0.1.1",
+)
+
+plugin_repo(
+    name = "pleasings",
+    plugin = "pleasings",
+    owner = "thought-machine",
+    revision = "9b03499b58111c555ee45ed92e2fccc32d842160",
+)

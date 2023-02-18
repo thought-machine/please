@@ -1,3 +1,20 @@
+Version 17.0.0
+---------------
+    * Change asp.Position to just be an int (#2650)
+    * Fix stack overflow in asp parser stack unwind (#2659)
+    * Add plugin documentation to website (#2657)
+    * Recalculate filegroup outputs when they're not from plz-out (#2660)
+    * Remove SingleSHA1Hash (#2135)
+    * Remove --prepare flag from build (#2666)
+    * Delete JavaBinaryExecutableByDefault feature flag (#2662)
+    * Clarify that Named Outputs can only be depended on as sources (#2670)
+    * Make plugin version linting better (#2671)
+    * Add proto and go-proto rules to docs (#2669)
+    * Make CLI suggestions work with plugin topics (#2679)
+    * Auth before releasing website and binaries (#2684)
+    * Fix typo in gcloud command (#2685)
+
+
 Version 16.27.1
 ---------------
     * Include linux_arm64 in release step (#2646)

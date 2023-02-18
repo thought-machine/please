@@ -125,7 +125,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
             'remote': [remote_rule],
             'build': [build_file],
         },
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         outs = [name],
         cmd = cmd,
         _subrepo = True,
@@ -327,7 +327,7 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
     extract_rule = build_rule(
         name = name,
         srcs = [remote_rule],
-        tools = [CONFIG.JARCAT_TOOL],
+        tools = [CONFIG.ARCAT_TOOL],
         outs = [name],
         cmd = " && ".join([
           "$TOOL x $SRCS -o _tmp",

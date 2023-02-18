@@ -34,12 +34,19 @@ func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
-	if !forSubinclude {
-		state.Parser.WaitForInit()
-	}
 	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
 	if err != nil {
 		return err
+	}
+
+	if subrepo != nil {
+		state = subrepo.State
+	}
+
+	// Ensure that all the preloaded targets are built before we sync the package parse. If we don't do this, we might
+	// take the package lock for a package involved in a subinclude, and end up in a deadlock
+	if !forSubinclude {
+		state.WaitForPreloadedSubincludeTargetsAndEnsureDownloaded()
 	}
 
 	// See if something else has parsed this package first.
@@ -56,13 +63,6 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label)
 		if err := subrepo.State.Initialise(subrepo); err != nil {
 			return err
-		}
-	}
-
-	if subrepo != nil {
-		state = subrepo.State
-		if !forSubinclude {
-			state.Parser.WaitForInit()
 		}
 	}
 
@@ -149,7 +149,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate internal package: %w", err)
 		}
-		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr)); err != nil {
+		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr), &label, &dependent, forSubinclude); err != nil {
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
