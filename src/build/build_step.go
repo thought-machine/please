@@ -986,21 +986,8 @@ func runPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 // checkLicences checks the licences for the target match what we've accepted / rejected in the config
 // and panics if they don't match.
 func checkLicences(state *core.BuildState, target *core.BuildTarget) {
-	for _, licence := range target.Licences {
-		for _, reject := range state.Config.Licences.Reject {
-			if strings.EqualFold(reject, licence) {
-				panic(fmt.Sprintf("Target %s is licensed %s, which is explicitly rejected for this repository", target.Label, licence))
-			}
-		}
-		for _, accept := range state.Config.Licences.Accept {
-			if strings.EqualFold(accept, licence) {
-				log.Info("Licence %s is accepted in this repository", licence)
-				return // Note licences are assumed to be an 'or', ie. any one of them can be accepted.
-			}
-		}
-	}
-	if len(target.Licences) > 0 && len(state.Config.Licences.Accept) > 0 {
-		panic(fmt.Sprintf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", ")))
+	if _, err := target.CheckLicences(state.Config); err != nil {
+		panic(err)
 	}
 }
 
