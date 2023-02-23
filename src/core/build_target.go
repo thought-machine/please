@@ -1809,6 +1809,30 @@ func (target *BuildTarget) PackageDir() string {
 	return target.Label.PackageDir()
 }
 
+// CheckLicences checks the target's licences against the accepted/rejected list.
+// It returns the licence that was accepted and an error if it did not match.
+func (target *BuildTarget) CheckLicences(config *Configuration) (string, error) {
+	if len(target.Licences) == 0 {
+		return "", nil
+	}
+	for _, licence := range target.Licences {
+		for _, reject := range config.Licences.Reject {
+			if strings.EqualFold(reject, licence) {
+				return "", fmt.Errorf("Target %s is licensed %s, which is explicitly rejected for this repository", target.Label, licence)
+			}
+		}
+		for _, accept := range config.Licences.Accept {
+			if strings.EqualFold(accept, licence) {
+				return licence, nil // Note licences are assumed to be an 'or', ie. any one of them can be accepted.
+			}
+		}
+	}
+	if len(config.Licences.Accept) > 0 {
+		return "", fmt.Errorf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", "))
+	}
+	return "", nil
+}
+
 // BuildTargets makes a slice of build targets sortable by their labels.
 type BuildTargets []*BuildTarget
 

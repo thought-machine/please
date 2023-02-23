@@ -940,6 +940,23 @@ func TestIsTool(t *testing.T) {
 	assert.True(t, target.IsTool(l))
 }
 
+func TestCheckLicences(t *testing.T) {
+	config := DefaultConfiguration()
+	config.Licences.Accept = []string{"BSD"}
+	config.Licences.Reject = []string{"GPL"}
+
+	target := makeTarget1("//src/core/test_data/project", "PUBLIC")
+	target.Licences = []string{"BSD", "GPL"}
+	accepted, err := target.CheckLicences(config)
+	assert.NoError(t, err)
+	assert.Equal(t, "BSD", accepted)
+
+	target.Licences = []string{"MIT", "GPL"}
+	accepted, err = target.CheckLicences(config)
+	assert.Error(t, err)
+	assert.Equal(t, "", accepted)
+}
+
 func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(label, ""))
 	if visibility == "PUBLIC" {
