@@ -594,7 +594,7 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 		}
 	}
 	if target.Stamp {
-		if err := fs.WriteFile(bytes.NewReader(core.StampFile(target)), filepath.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
+		if err := fs.WriteFile(bytes.NewReader(core.StampFile(state.Config, target)), filepath.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
 			return err
 		}
 	}
