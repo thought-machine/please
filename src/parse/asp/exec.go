@@ -249,7 +249,8 @@ func execGitCommit(s *scope, args []pyObject) pyObject {
 // git_show() returns the output of `git show -s --format=%{fmt}`
 //
 // %ci == commit-date:
-//   `git show -s --format=%ci` = 2018-12-10 00:53:35 -0800
+//
+//	`git show -s --format=%ci` = 2018-12-10 00:53:35 -0800
 func execGitShow(s *scope, args []pyObject) pyObject {
 	formatVerb := args[0].(pyString)
 	switch formatVerb {

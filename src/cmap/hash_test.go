@@ -131,7 +131,8 @@ func BenchmarkXXHash_20Sx(b *testing.B) {
 
 // ref is our reference implementation, from OneOfOne/cmap/hashers
 // N.B. As of Go 1.18 the workaround is no longer needed (hence why we have our own), this
-//      is reproduced verbatim as a reference implementation.
+//
+//	is reproduced verbatim as a reference implementation.
 func ref(s string) (hash uint64) {
 	const prime32 = 16777619
 	if hash = 2166136261; s == "" {
