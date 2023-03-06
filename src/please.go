@@ -1332,7 +1332,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 // Capture aliases from config file and print to the help output
 func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 	cli.InitLogging(cli.MinVerbosity)
-	if config, err := readConfigAndSetRoot(false); err == nil {
+	if config, err := readConfigAndSetRoot(false); err == nil && parser.Active == nil {
 		config.PrintAliases(wr)
 	}
 }
