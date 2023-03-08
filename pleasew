@@ -36,6 +36,10 @@ case "${ARCH}" in
     x86_64) ARCH='amd64' ;;
 esac
 
+has_command () {
+    command -v "${1}" > /dev/null 2>&1
+}
+
 get_profile () {
     while [ "${#}" -gt 0 ]
     do
@@ -118,9 +122,23 @@ VERSION="${VERSION#*=}"                    # Strip until after first =
 VERSION="$(echo "${VERSION}" | tr -d ' ')" # Remove all spaces
 VERSION="${VERSION#>=}"                    # Strip any initial >=
 
+if has_command curl; then
+    TRANSFER_TOOL='curl'
+    TRANSFER_SILENT_OPTS='-fsSL'
+    TRANSFER_PROGRESS_OPTS='-#fSL'
+elif has_command wget; then
+    TRANSFER_TOOL='wget'
+    TRANSFER_SILENT_OPTS='-qO-'
+    TRANSFER_PROGRESS_OPTS='-O-'
+else
+    printf >&2 '%bUnable to find a command for network operations%b\n' "${RED}" "${RESET}"
+    printf >&2 'Please install either curl or wget\n'
+    exit 1
+fi
+
 if [ "${VERSION:+x}" != 'x' ]; then
     printf >&2 "%bCan't determine version, will use latest.%b\n" "${YELLOW}" "${RESET}"
-    VERSION=$(curl -fsSL "${URL_BASE}"/latest_version)
+    VERSION=$(${TRANSFER_TOOL} ${TRANSFER_SILENT_OPTS} "${URL_BASE}"/latest_version)
 fi
 
 # Find the os / arch to download. You can do this quite nicely with go env
@@ -146,7 +164,7 @@ fi
 
 printf >&2 '%bDownloading Please %s to %s...%b\n' "${GREEN}" "${VERSION}" "${DIR}" "${RESET}"
 mkdir -p "${DIR}"
-curl -#fSL "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "${DIR}"
+${TRANSFER_TOOL} ${TRANSFER_PROGRESS_OPTS} "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "${DIR}"
 
 # Link it all back up a dir
 for x in "${DIR}"/*; do
