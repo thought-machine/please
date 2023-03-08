@@ -6,15 +6,15 @@ set -u
 ESC="$(printf '\033')"
 
 if [ "${NOCOLOR+x}" != 'x' ] || [ "${NO_COLOR+x}" != 'x' ]; then
-	RED="${ESC}[31m"
-	GREEN="${ESC}[32m"
-	YELLOW="${ESC}[33m"
-	RESET="${ESC}[0m"
+    RED="${ESC}[31m"
+    GREEN="${ESC}[32m"
+    YELLOW="${ESC}[33m"
+    RESET="${ESC}[0m"
 else
-	RED=''
-	GREEN=''
-	YELLOW=''
-	RESET=''
+    RED=''
+    GREEN=''
+    YELLOW=''
+    RESET=''
 fi
 
 
@@ -32,8 +32,8 @@ else
 fi
 
 case "${ARCH}" in
-	aarch64_be|aarch64|armv8b|armv8l) ARCH='arm64' ;;
-	x86_64) ARCH='amd64' ;;
+    aarch64_be|aarch64|armv8b|armv8l) ARCH='arm64' ;;
+    x86_64) ARCH='amd64' ;;
 esac
 
 get_profile () {
