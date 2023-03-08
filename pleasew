@@ -5,10 +5,18 @@ set -u
 
 ESC="$(printf '\033')"
 
-RED="${ESC}[31m"
-GREEN="${ESC}[32m"
-YELLOW="${ESC}[33m"
-RESET="${ESC}[0m"
+if [ "${NOCOLOR+x}" = 'x' ] || [ "${NO_COLOR+x}" = 'x' ]; then
+	RED="${ESC}[31m"
+	GREEN="${ESC}[32m"
+	YELLOW="${ESC}[33m"
+	RESET="${ESC}[0m"
+else
+	RED=''
+	GREEN=''
+	YELLOW=''
+	RESET=''
+fi
+
 
 DEFAULT_URL_BASE='https://get.please.build'
 
