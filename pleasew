@@ -5,7 +5,7 @@ set -u
 
 ESC="$(printf '\033')"
 
-if [ "${NOCOLOR+x}" = 'x' ] || [ "${NO_COLOR+x}" = 'x' ]; then
+if [ "${NOCOLOR+x}" != 'x' ] || [ "${NO_COLOR+x}" != 'x' ]; then
 	RED="${ESC}[31m"
 	GREEN="${ESC}[32m"
 	YELLOW="${ESC}[33m"
