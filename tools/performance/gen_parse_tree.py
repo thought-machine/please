@@ -127,8 +127,11 @@ def main(argv):
 Target = //plugins:java
 [Plugin "python"]
 Target = //plugins:python
+[Plugin "cc"]
+Target = //plugins:cc
+[Plugin "go"]
+Target = //plugins:go
     """)
-        pass
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 1000
