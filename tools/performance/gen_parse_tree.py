@@ -123,6 +123,8 @@ def main(argv):
         f.write("""
 [Plugin "java"]
 Target = //plugins:java
+[Plugin "python"]
+Target = //plugins:python
     """)
         pass
     if FLAGS.format:
