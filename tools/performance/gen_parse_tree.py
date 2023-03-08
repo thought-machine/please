@@ -47,6 +47,8 @@ TEST_DEPS = {
 }
 
 LANGUAGE_TEMPLATE = """
+subinclude("///{lang}//build_defs:{lang}")
+
 {lang}_library(
     name = "{name}",
     srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"]),
@@ -123,8 +125,25 @@ def main(argv):
         f.write("""
 [Plugin "java"]
 Target = //plugins:java
-    """)
-        pass
+[Plugin "python"]
+Target = //plugins:python
+[Plugin "cc"]
+Target = //plugins:cc
+TestMain = ///pleasings//cc:unittest_main
+[Plugin "go"]
+Target = //plugins:go
+[parse]
+preloadsubincludes = ///python//build_defs:python
+preloadsubincludes = ///cc//build_defs:cc
+        """)
+    with open(os.path.join(FLAGS.root, 'BUILD.plz'), 'w') as f:
+        f.write("""
+github_repo(
+    name = "pleasings",
+    repo = "thought-machine/pleasings",
+    revision = "v1.1.0",
+)
+        """)
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 1000
