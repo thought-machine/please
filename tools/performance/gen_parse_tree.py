@@ -47,6 +47,8 @@ TEST_DEPS = {
 }
 
 LANGUAGE_TEMPLATE = """
+subinclude("///{lang}//build_defs:{lang}")
+
 {lang}_library(
     name = "{name}",
     srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"]),
