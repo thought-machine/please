@@ -129,9 +129,11 @@ Target = //plugins:java
 Target = //plugins:python
 [Plugin "cc"]
 Target = //plugins:cc
+TestMain = ///pleasings//cc:unittest_main
 [Plugin "go"]
 Target = //plugins:go
     """)
+    shutil.copy('BUILD', os.path.join(FLAGS.root, 'BUILD.plz'))
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 1000
