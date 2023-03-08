@@ -125,7 +125,7 @@ VERSION="${VERSION#>=}"                    # Strip any initial >=
 if has_command curl; then
     TRANSFER_TOOL='curl'
     TRANSFER_SILENT_OPTS='-fsSL'
-    TRANSFER_PROGRESS_OPTS='-#fSL'
+    TRANSFER_PROGRESS_OPTS='-fSL'
 elif has_command wget; then
     TRANSFER_TOOL='wget'
     TRANSFER_SILENT_OPTS='-qO-'
