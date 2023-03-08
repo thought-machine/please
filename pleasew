@@ -3,12 +3,12 @@
 set -e
 set -u
 
-set -o errexit
+ESC="$(printf '\033')"
 
-RED='\x1B[31m'
-GREEN='\x1B[32m'
-YELLOW='\x1B[33m'
-RESET='\x1B[0m'
+RED="${ESC}[31m"
+GREEN="${ESC}[32m"
+YELLOW="${ESC}[33m"
+RESET="${ESC}[0m"
 
 DEFAULT_URL_BASE='https://get.please.build'
 
@@ -22,6 +22,11 @@ else
     # because we only build intel binaries
     ARCH='amd64'
 fi
+
+case "${ARCH}" in
+	aarch64_be|aarch64|armv8b|armv8l) ARCH='arm64' ;;
+	x86_64) ARCH='amd64' ;;
+esac
 
 get_profile () {
     while [ "${#}" -gt 0 ]
@@ -69,7 +74,7 @@ read_config() {
 }
 
 # We might already have it downloaded...
-LOCATION="$(read_config '^location' | cut -d '=' -f 2 | tr -d ' ')"
+LOCATION="$(read_config '^\s*location' | cut -d '=' -f 2 | tr -d ' ')"
 
 if [ "${LOCATION:+x}" != 'x' ]; then
     if [ "${HOME:+x}" != 'x' ]; then
@@ -92,7 +97,7 @@ if [ -f "${TARGET}" ]; then
     exec "${TARGET}" ${PLZ_ARGS:-} "${@}"
 fi
 
-URL_BASE="$(read_config '^downloadlocation' | cut -d '=' -f 2 | tr -d ' ')"
+URL_BASE="$(read_config '^\s*downloadlocation' | cut -d '=' -f 2 | tr -d ' ')"
 
 if [ "${URL_BASE:+x}" != 'x' ]; then
     URL_BASE="${DEFAULT_URL_BASE}"
@@ -100,7 +105,7 @@ fi
 
 URL_BASE="${URL_BASE%/}"
 
-VERSION="$(read_config '^version[^a-z]')"
+VERSION="$(read_config '^\s*version[^a-z]')"
 VERSION="${VERSION#*=}"                    # Strip until after first =
 VERSION="$(echo "${VERSION}" | tr -d ' ')" # Remove all spaces
 VERSION="${VERSION#>=}"                    # Strip any initial >=
@@ -133,7 +138,7 @@ fi
 
 printf >&2 '%bDownloading Please %s to %s...%b\n' "${GREEN}" "${VERSION}" "${DIR}" "${RESET}"
 mkdir -p "${DIR}"
-curl -fsSL "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "${DIR}"
+curl -#fSL "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "${DIR}"
 
 # Link it all back up a dir
 for x in "${DIR}"/*; do
