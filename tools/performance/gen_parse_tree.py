@@ -132,8 +132,18 @@ Target = //plugins:cc
 TestMain = ///pleasings//cc:unittest_main
 [Plugin "go"]
 Target = //plugins:go
-    """)
-    shutil.copy('BUILD', os.path.join(FLAGS.root, 'BUILD.plz'))
+[parse]
+preloadsubincludes = ///python//build_defs:python
+preloadsubincludes = ///cc//build_defs:cc
+        """)
+    with open(os.path.join(FLAGS.root, 'BUILD.plz'), 'w') as f:
+        f.write("""
+github_repo(
+    name = "pleasings",
+    repo = "thought-machine/pleasings",
+    revision = "v1.1.0",
+)
+        """)
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 1000
