@@ -1,10 +1,4 @@
 filegroup(
-    name = "multiversion_wheel",
-    srcs = ["multiversion_wheel.build_defs"],
-    visibility = ["//third_party/python:all"],
-)
-
-filegroup(
     name = "benchmark",
     srcs = ["benchmark.build_defs"],
     visibility = ["PUBLIC"],
