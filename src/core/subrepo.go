@@ -26,11 +26,13 @@ type Subrepo struct {
 	Arch cli.Arch
 	// True if this subrepo was created for a different architecture
 	IsCrossCompile bool
+	// True if this subrepo was created by a plugin
+	IsPlugin bool
 	// AdditionalConfigFiles corresponds to the config parameter on `subrepo()`
 	AdditionalConfigFiles []string
 }
 
-func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch cli.Arch, isCrosscompile bool) *Subrepo {
+func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch cli.Arch, isCrosscompile, isPlugin bool) *Subrepo {
 	return &Subrepo{
 		Name:           name,
 		Root:           root,
@@ -38,12 +40,13 @@ func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch 
 		Target:         target,
 		Arch:           arch,
 		IsCrossCompile: isCrosscompile,
+		IsPlugin:       isPlugin,
 	}
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
 func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
-	s := NewSubrepo(state.ForArch(arch), arch.String(), "", nil, arch, true)
+	s := NewSubrepo(state.ForArch(arch), arch.String(), "", nil, arch, true, false)
 	if err := s.State.Initialise(s); err != nil {
 		// We always return nil as we shortcut loading config for architecture subrepos, but check non-the-less incase
 		// somebody changes something.

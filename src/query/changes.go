@@ -15,19 +15,19 @@ var toolNotFoundHashValue = []byte{1}
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
-func DiffGraphs(before, after *core.BuildState, files []string, level int) core.BuildLabels {
+func DiffGraphs(before, after *core.BuildState, files []string, level int, includePlugins bool) core.BuildLabels {
 	log.Notice("Calculating difference...")
 	changed := diffGraphs(before, after)
 	log.Debugf("Number of changed targets on a non-recursive diff between before and after build graphs: %d", len(changed))
 
 	log.Info("Including changed files...")
-	return changedTargets(after, files, changed, level)
+	return changedTargets(after, files, changed, level, includePlugins)
 }
 
 // Changes calculates changes for a given set of files. It does a subset of what DiffGraphs does due to not having
 // the "before" state so is less accurate (but faster).
-func Changes(state *core.BuildState, files []string, level int) core.BuildLabels {
-	return changedTargets(state, files, map[*core.BuildTarget]struct{}{}, level)
+func Changes(state *core.BuildState, files []string, level int, includePlugins bool) core.BuildLabels {
+	return changedTargets(state, files, map[*core.BuildTarget]struct{}{}, level, includePlugins)
 }
 
 // diffGraphs performs a non-recursive diff of two build graphs.
@@ -45,7 +45,7 @@ func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
 }
 
 // changedTargets returns the set of targets that have changed for the given files.
-func changedTargets(state *core.BuildState, files []string, changed map[*core.BuildTarget]struct{}, level int) core.BuildLabels {
+func changedTargets(state *core.BuildState, files []string, changed map[*core.BuildTarget]struct{}, level int, includePlugins bool) core.BuildLabels {
 	for _, filename := range files {
 		for dir := filename; dir != "." && dir != "/"; {
 			dir = filepath.Dir(dir)
@@ -80,7 +80,9 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 
 	ls := make(core.BuildLabels, 0, len(labels))
 	for _, l := range labels {
-		if state.ShouldInclude(state.Graph.TargetOrDie(l)) {
+		t := state.Graph.TargetOrDie(l)
+		isPlugin := t.Subrepo != nil && t.Subrepo.IsPlugin
+		if state.ShouldInclude(t) && (includePlugins || !isPlugin) {
 			ls = append(ls, l)
 		}
 	}

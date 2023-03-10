@@ -99,7 +99,7 @@ func createBazelSubrepo(state *core.BuildState) {
 		return
 	}
 	dir := filepath.Join(core.OutDir, "bazel_tools")
-	state.Graph.AddSubrepo(core.NewSubrepo(state, "bazel_tools", dir, nil, cli.HostArch(), false))
+	state.Graph.AddSubrepo(core.NewSubrepo(state, "bazel_tools", dir, nil, cli.HostArch(), false, false))
 	// TODO(peterebden): This is a bit yuck... would be nice if we could avoid hardcoding all
 	//                   this upfront and add a build target to do it for us.
 	dir = filepath.Join(dir, "tools/build_defs/repo")

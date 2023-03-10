@@ -1122,7 +1122,14 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		state = state.ForArch(arch)
 		isCrossCompile = true
 	}
-	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile)
+
+	// Created for plugin
+	isPlugin := false
+	if args[PluginArgIdx].IsTruthy() {
+		isPlugin = true
+	}
+
+	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile, isPlugin)
 	if args[PackageRootIdx].IsTruthy() {
 		sr.PackageRoot = args[PackageRootIdx].String()
 	}
