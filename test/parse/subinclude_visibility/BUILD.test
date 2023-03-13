@@ -1,2 +1,2 @@
 # This should fail because this target isn't visible to subinclude here.
-subinclude("//build_defs:multiversion_wheel")
+subinclude("//test/build_defs:not_visible")
