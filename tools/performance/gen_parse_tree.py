@@ -118,8 +118,6 @@ def main(argv):
     os.mkdir(os.path.join(FLAGS.root, 'build_defs'))
     with open('build_defs/BUILD') as fr, open(os.path.join(FLAGS.root, 'build_defs/BUILD'), 'w') as fw:
         fw.write(fr.read().replace('//:version', 'VERSION'))
-    shutil.copy('build_defs/multiversion_wheel.build_defs',
-                os.path.join(FLAGS.root, 'build_defs/multiversion_wheel.build_defs'))
     # Create the .plzconfig in the new root
     with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
         f.write("""
