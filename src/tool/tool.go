@@ -1,7 +1,8 @@
 // Package tool implements running Please's sub-tools (via "plz tool jarcat" etc).
 //
 // N.B. This is not how they are invoked during the build; that runs them directly.
-//      This is only a convenience thing at the command line.
+//
+//	This is only a convenience thing at the command line.
 package tool
 
 import (

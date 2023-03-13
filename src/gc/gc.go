@@ -188,9 +188,11 @@ func anyInclude(labels []core.BuildLabel, label core.BuildLabel) bool {
 // publicDependencies returns the public dependencies of a target, considering any
 // private targets it might have declared.
 // For example, if we have dependencies as follows:
-//   //src/test:container_test
-//   //src/test:_container_test#lib
-//   //src/test:test
+//
+//	//src/test:container_test
+//	//src/test:_container_test#lib
+//	//src/test:test
+//
 // it will return //src/test:test for //src/test:container_test.
 func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
 	ret := []*core.BuildTarget{}
