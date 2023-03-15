@@ -249,7 +249,8 @@ var opts struct {
 	Watch struct {
 		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
 		Args struct {
-			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to watch for changes"`
+			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Additional targets to watch, or test selectors"`
 		} `positional-args:"true" required:"true"`
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
@@ -938,10 +939,11 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"watch": func() int {
+		targets, args := testTargets(opts.Watch.Args.Target, opts.Watch.Args.Args, false, "")
 		// Don't ask it to test now since we don't know if any of them are tests yet.
-		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
+		success, state := runBuild(targets, true, false, false)
 		state.NeedRun = opts.Watch.Run
-		watch.Watch(state, state.ExpandOriginalLabels(), runPlease)
+		watch.Watch(state, state.ExpandOriginalLabels(), args, runPlease)
 		return toExitCode(success, state)
 	},
 	"generate": func() int {
@@ -1092,7 +1094,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
-	state.Watch = len(opts.Watch.Args.Targets) > 0
+	state.Watch = !opts.Watch.Args.Target.IsEmpty()
 	state.CleanWorkdirs = !opts.BehaviorFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun

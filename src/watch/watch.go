@@ -28,7 +28,7 @@ type CallbackFunc func(*core.BuildState, []core.BuildLabel)
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFunc) {
+func Watch(state *core.BuildState, labels core.BuildLabels, testArgs []string, callback CallbackFunc) {
 	// This hasn't been set before, do it now.
 	state.NeedTests = anyTests(state, labels)
 	watcher, err := fsnotify.NewWatcher()
@@ -50,7 +50,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 	// The initial setup only builds targets, it doesn't test or run things.
 	// Do one of those now if requested.
 	if state.NeedTests || state.NeedRun {
-		build(ctx, state, labels, callback)
+		build(ctx, state, labels, testArgs, callback)
 	}
 
 	for {
@@ -74,7 +74,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, callback CallbackFun
 					break outer
 				}
 			}
-			build(ctx, state, labels, callback)
+			build(ctx, state, labels, testArgs, callback)
 		case err := <-watcher.Errors:
 			log.Error("Error watching files:", err)
 		}
@@ -159,13 +159,14 @@ func anyTests(state *core.BuildState, labels []core.BuildLabel) bool {
 }
 
 // build invokes a single build while watching.
-func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, callback CallbackFunc) {
+func build(ctx context.Context, state *core.BuildState, labels []core.BuildLabel, args []string, callback CallbackFunc) {
 	// Set up a new state & copy relevant parts off the existing one.
 	ns := core.NewBuildState(state.Config)
 	ns.Cache = state.Cache
 	ns.VerifyHashes = state.VerifyHashes
 	ns.NumTestRuns = state.NumTestRuns
 	ns.NeedTests = state.NeedTests
+	ns.TestArgs = args
 	ns.NeedRun = state.NeedRun
 	ns.Watch = true
 	ns.CleanWorkdirs = state.CleanWorkdirs
