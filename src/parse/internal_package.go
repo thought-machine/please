@@ -38,7 +38,6 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 			"please_go",
 			"please_go_embed",
 			"please_go_filter",
-			"please_pex",
 			"please_sandbox",
 		},
 	}
