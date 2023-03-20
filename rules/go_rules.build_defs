@@ -4,7 +4,7 @@ Go has a strong built-in concept of packages so it's probably a good idea to mat
 rules to Go packages.
 """
 def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = [], visibility:list = ["PUBLIC"],
-                 architectures:list=[], strip_srcs:bool=False, tags:list=None):
+                 architectures:list=[], strip_srcs:bool=False, tags:list=None, install_std=None):
     """
     Downloads Go and exposes :<name>|go and :<name>|gofmt as entry points. To use this rule add the
     following to your .plzconfig:
@@ -28,6 +28,8 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
                          improve performance, especially for remote execution. This doesn't work with go_get() however
                          it is recommended to set this to True if you're using go_module() exclusively.
       tags (bool): Build tags to pass when installing the standard library.
+      install_std (bool): Whether we should install the standard library. This is required for go 1.20+. If not set,
+                                Please will do whatever is appropriate based on the Go version.
     """
     if url and version:
         fail("Either version or url should be provided but not both")
@@ -44,7 +46,7 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
         hashes = hashes,
     )
 
-    cmd = 'tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*; rm -rf $OUT/test'
+    cmd = 'export GODEBUG="installgoroot=all" && tar -xf $SRCS && mv go $OUT && chmod +x $OUT/bin/*; rm -rf $OUT/test'
     # If we're targeting another platform, build the std lib for that. We can't use CONFIG.OS as this is always set to
     # the host OS for tools.
     if CONFIG.TARGET_OS != CONFIG.HOSTOS or CONFIG.TARGET_ARCH != CONFIG.HOSTARCH:
@@ -57,6 +59,13 @@ def go_toolchain(name:str, url:str|dict = '', version:str = '', hashes:list = []
     for arch in architectures:
         goos, _, goarch = arch.partition("_")
         cmd += f' && (export GOOS={goos} && export GOARCH={goarch} && $OUT/bin/go install{tag_flag} --trimpath std)'
+
+    if semver_check(version, ">= 1.20.0") and install_std is None:
+            install_std = True
+
+    if install_std:
+        cmd += f" && $OUT/bin/go install{tag_flag} --trimpath std"
+
     if strip_srcs:
         trim_toolchain = "mv $OUT/src src && mkdir $OUT/src && mv src/unsafe $OUT/src/unsafe"
         cmd = f"{cmd} && {trim_toolchain}"
