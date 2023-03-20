@@ -1,3 +1,8 @@
+Version 16.28.0
+---------------
+    * Support for Go 1.20 (#2735)
+
+
 Version 16.27.5
 ---------------
     * Exclude targets in subrepos from `plz query changes` (#2725)
