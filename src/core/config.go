@@ -694,7 +694,6 @@ type Configuration struct {
 
 	FeatureFlags struct {
 		PackageOutputsStrictness bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
-		PythonWheelHashing       bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
 		NoIterSourcesMarked      bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
 		ExcludeGoRules           bool `help:"Whether to include the go rules rules or require use of the plugin"`
 		ExcludeProtoRules        bool `help:"Whether to include the proto rules or require use of the plugin"`
