@@ -92,7 +92,6 @@ accept = ISC
 accept = notice
 
 [featureflags]
-PackageOutputsStrictness = true
 PythonWheelHashing = true
 NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
