@@ -411,7 +411,6 @@ func TestDependencies(t *testing.T) {
 }
 
 func TestBuildDependencies(t *testing.T) {
-	state := NewDefaultBuildState()
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
 	target3 := makeTarget1("//src/core:target3", "", target2)
