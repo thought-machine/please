@@ -96,7 +96,6 @@ PackageOutputsStrictness = true
 PythonWheelHashing = true
 NoIterSourcesMarked = true
 GoDontCollapseImportPath = true
-ErrorOnEmptyGlob = true
 ExcludeProtoRules = true
 
 [Plugin "go"]
