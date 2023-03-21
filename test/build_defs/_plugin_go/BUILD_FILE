@@ -1,4 +1,0 @@
-plugin_repo(
-    name = "go",
-    revision = "f8b41f02617dccad23fb10487bebc9feea538c09",
-)
