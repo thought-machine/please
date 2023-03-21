@@ -701,7 +701,6 @@ type Configuration struct {
 		ExcludeShellRules        bool `help:"Whether to include the shell rules rules or require use of the plugin"`
 		ExcludeProtoRules        bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob    bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
-		GoDontCollapseImportPath bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
