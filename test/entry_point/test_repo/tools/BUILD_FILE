@@ -1,5 +1,3 @@
-subinclude("///go//build_defs:go")
-
 build_rule(
     name = "my_tool",
     srcs = [
