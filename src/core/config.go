@@ -57,14 +57,18 @@ const DefaultPleaseLocation = "~/.please"
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
 // readConfigFileOnly reads a single config file into the config struct
-func readConfigFileOnly(config *Configuration, filename string) error {
+func readConfigFileOnly(config *Configuration, filename string, quiet bool) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
-		log.Warning("Error in config file: %s", err)
+		if quiet {
+			log.Debug("Error in config file %s: %s", filename, err)
+		} else {
+			log.Warning("Error in config file %s: %s", filename, err)
+		}
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
@@ -77,7 +81,7 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 	plugins := config.Plugin
 	config.Plugin = map[string]*Plugin{}
 
-	if err := readConfigFileOnly(config, filename); err != nil {
+	if err := readConfigFileOnly(config, filename, subrepo); err != nil {
 		return err
 	}
 
@@ -166,11 +170,11 @@ func defaultConfigFiles() []string {
 // ReadConfigFilesOnly reads all the config locations, in order, and merges them into a config object.
 func ReadConfigFilesOnly(config *Configuration, filenames []string, profiles []string) error {
 	for _, filename := range filenames {
-		if err := readConfigFileOnly(config, filename); err != nil {
+		if err := readConfigFileOnly(config, filename, false); err != nil {
 			return err
 		}
 		for _, profile := range profiles {
-			if err := readConfigFileOnly(config, filename+"."+profile); err != nil {
+			if err := readConfigFileOnly(config, filename+"."+profile, false); err != nil {
 				return err
 			}
 		}

@@ -262,7 +262,7 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 		}
 	}
 	if !isTest && target.Stamp {
-		stamp := core.StampFile(target)
+		stamp := core.StampFile(c.state.Config, target)
 		entry := uploadinfo.EntryFromBlob(stamp)
 		if ch != nil {
 			ch <- entry

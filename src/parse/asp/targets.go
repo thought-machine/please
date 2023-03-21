@@ -311,6 +311,9 @@ func addEntryPoints(s *scope, arg pyObject, target *core.BuildTarget) {
 		entryPoint, ok := entryPointPy.(pyString)
 		s.Assert(ok, "Values of entry_points must be strings, found %v at key %v", entryPointPy.Type(), name)
 		s.Assert(target.NamedOutputs(entryPoint.String()) == nil, "Entry points can't have the same name as a named output")
+		if target.IsFilegroup {
+			s.Assert(target.NamedSources[entryPoint.String()] == nil, "Entry points can't have the same name as a named source on a filegroup")
+		}
 		entryPoints[name] = string(entryPoint)
 	}
 

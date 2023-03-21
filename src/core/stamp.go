@@ -8,11 +8,11 @@ import (
 // a target that is marked stamp=True.
 // This file contains information about its transitive dependencies that can be used to
 // embed information into the output (for example information from labels or licences).
-func StampFile(target *BuildTarget) []byte {
+func StampFile(config *Configuration, target *BuildTarget) []byte {
 	info := &stampInfo{
 		Targets: map[BuildLabel]targetInfo{},
 	}
-	populateStampInfo(target, info)
+	populateStampInfo(config, target, info)
 	b, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
 		log.Fatalf("Failed to encode stamp file: %s", err)
@@ -20,14 +20,16 @@ func StampFile(target *BuildTarget) []byte {
 	return b
 }
 
-func populateStampInfo(target *BuildTarget, info *stampInfo) {
+func populateStampInfo(config *Configuration, target *BuildTarget, info *stampInfo) {
+	accepted, _ := target.CheckLicences(config)
 	info.Targets[target.Label] = targetInfo{
-		Licences: target.Licences,
-		Labels:   target.Labels,
+		Licences:        target.Licences,
+		AcceptedLicence: accepted,
+		Labels:          target.Labels,
 	}
 	for _, dep := range target.Dependencies() {
 		if _, present := info.Targets[dep.Label]; !present {
-			populateStampInfo(dep, info)
+			populateStampInfo(config, dep, info)
 		}
 	}
 }
@@ -37,6 +39,7 @@ type stampInfo struct {
 }
 
 type targetInfo struct {
-	Labels   []string `json:"labels,omitempty"`
-	Licences []string `json:"licences,omitempty"`
+	Labels          []string `json:"labels,omitempty"`
+	Licences        []string `json:"licences,omitempty"`
+	AcceptedLicence string   `json:"accepted_licence,omitempty"`
 }

@@ -27,6 +27,12 @@ filegroup(
     visibility = ["//test/..."],
 )
 
+# Used for some of the parse tests that want a subinclude that isn't visible to them.
+filegroup(
+    name = "not_visible",
+    visibility = [],
+)
+
 filegroup(
     name = "plugin_go",
     srcs = ["_plugin_go"],

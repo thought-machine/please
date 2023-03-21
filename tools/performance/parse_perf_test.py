@@ -41,7 +41,11 @@ def plz() -> list:
 def run(i: int):
     """Run once and return the length of time taken."""
     log.info('Run %d of %d', i + 1, FLAGS.number)
-    duration, mem = parse_time_output(subprocess.run(plz(), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE).stderr.decode("utf-8"))
+    try :
+        duration, mem = parse_time_output(subprocess.run(plz(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stderr.decode("utf-8"))
+    except subprocess.CalledProcessError as err:
+        log.exception('Subprocess failed: ' + err.stderr.decode())
+        raise
     log.info('Complete in %0.2fs, using %d KB', duration, mem)
     return duration, mem
 
