@@ -693,12 +693,8 @@ type Configuration struct {
 	buildEnvStored *storedBuildEnv
 
 	FeatureFlags struct {
-		PythonWheelHashing       bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
 		NoIterSourcesMarked      bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
-		ExcludeJavaRules         bool `help:"Whether to include the java rules or use the plugin"`
-		ExcludeCCRules           bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
 		ExcludeGoRules           bool `help:"Whether to include the go rules rules or require use of the plugin"`
-		ExcludeShellRules        bool `help:"Whether to include the shell rules rules or require use of the plugin"`
 		ExcludeProtoRules        bool `help:"Whether to include the proto rules or require use of the plugin"`
 		ExcludeSymlinksInGlob    bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
 		GoDontCollapseImportPath bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
