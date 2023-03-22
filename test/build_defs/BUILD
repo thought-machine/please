@@ -33,16 +33,3 @@ filegroup(
     visibility = [],
 )
 
-filegroup(
-    name = "plugin_go",
-    srcs = ["_plugin_go"],
-    visibility = ["//test/..."],
-)
-
-genrule(
-    name = "go_config",
-    srcs = ["go_config.template"],
-    outs = ["go_config"],
-    cmd = "cp $SRC $OUT && sed -i 's|<GO_TOOL>|'$TOOLS'|g' $OUT",
-    tools = [CONFIG.GO.GO_TOOL],
-)
