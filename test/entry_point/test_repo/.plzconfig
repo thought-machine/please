@@ -8,4 +8,4 @@ target = //plugins:shell
 
 
 [Plugin "go"]
-target = //plugins:shell
+target = //plugins:go
