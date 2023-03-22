@@ -95,7 +95,6 @@ accept = notice
 PackageOutputsStrictness = true
 PythonWheelHashing = true
 NoIterSourcesMarked = true
-GoDontCollapseImportPath = true
 ExcludeProtoRules = true
 
 [Plugin "go"]
