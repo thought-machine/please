@@ -2,9 +2,12 @@ subinclude("//test/build_defs:build_defs")
 
 genrule(
     name = "foo_plugin",
-    srcs = ["foo_plugin"],
+    srcs = {
+        "plugin": ["foo_plugin"],
+        "tool": ["//test/plugins/tools:fooc"],
+    },
     outs = ["foo_plugin.tar.gz"],
-    cmd = "mv $SRC foo_plugin && tar -czf $OUT foo_plugin",
+    cmd = "mv $SRCS_PLUGIN foo_plugin && mv $SRCS_TOOL foo_plugin/tools && tar -czf $OUT foo_plugin",
 )
 
 def plugin_e2e_test(name, plz_command, expected_output = None, expected_failure = False, expect_output_contains = None):

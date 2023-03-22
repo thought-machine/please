@@ -94,8 +94,6 @@ accept = notice
 [featureflags]
 PackageOutputsStrictness = true
 NoIterSourcesMarked = true
-GoDontCollapseImportPath = true
-ExcludeGoRules = true
 ExcludeProtoRules = true
 
 [Plugin "go"]

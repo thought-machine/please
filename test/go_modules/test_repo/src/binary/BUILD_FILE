@@ -1,8 +1,0 @@
-# A basic binary that libraries in a few third_party modules to make sure they link correctly
-go_binary(
-    name = "binary",
-    srcs = ["main.go"],
-    deps = [
-        "//third_party/go:snappy",
-    ],
-)

@@ -19,5 +19,4 @@ GrpcPlugin = //third_party/go:protoc-gen-go-grpc
 ProtoPlugin = //third_party/go:protoc-gen-go
 
 [FeatureFlags]
-ExcludeGoRules = true
 ExcludeProtoRules = true
