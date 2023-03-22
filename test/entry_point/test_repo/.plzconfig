@@ -1,6 +1,11 @@
 [Parse]
 BuildFileName = BUILD
 preloadsubincludes = ///shell//build_defs:shell
+preloadsubincludes = ///go//build_defs:go
 
 [Plugin "shell"]
 target = //plugins:shell
+
+
+[Plugin "go"]
+target = //plugins:go

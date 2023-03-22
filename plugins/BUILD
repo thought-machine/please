@@ -1,7 +1,8 @@
 plugin_repo(
     name = "go",
     plugin = "go-rules",
-    revision = "v1.1.4",
+    # TODO(jpoole): Once v17 has been cut, we can update the go plugin to use it and cut a named release
+    revision = "f8b41f02617dccad23fb10487bebc9feea538c09",
 )
 
 plugin_repo(
@@ -26,5 +27,5 @@ plugin_repo(
     name = "python",
     plugin = "python-rules",
     # TODO(jpoole): Once v17 has been cut, we can update the python plugin to use it and cut a named release
-    revision = "d500dd9f477bb54f8b266fae9dd35d721bebee9e",
+    revision = "1604c5fdfc641c672c78a34c7c385844b563f71e",
 )
