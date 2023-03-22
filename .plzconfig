@@ -97,7 +97,6 @@ accept = notice
 
 [featureflags]
 PackageOutputsStrictness = true
-NoIterSourcesMarked = true
 ExcludeProtoRules = true
 
 [BuildConfig]
