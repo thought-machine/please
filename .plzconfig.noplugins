@@ -6,8 +6,6 @@ importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 pleasegotool = please_go
 
-[FeatureFlags]
-ExcludeGoRules = false
 
 [BuildConfig]
 use-go-plugin = False

@@ -17,11 +17,6 @@
   </li>
   <li>
     <span>
-      <a class="copy-link" href="#go">Go rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
       <a class="copy-link" href="#misc">Miscellaneous rules</a>
     </span>
   </li>
@@ -1130,32 +1125,6 @@
 
     <p>Use this where you might <code>raise</code> in Python.</p>
   </section>
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="go">
-    Go rules
-  </h2>
-
-  <p>Rules to build Go code.</p>
-
-  <p>
-    Go has a strong built-in concept of packages so while it's not 100% required
-    to strictly keep to 1 package per dir as in classic Go, it's still probably
-    a good idea to match Please rules to Go packages.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "go_toolchain" }}
-  {{ template "lexicon_entry.html" .Named "go_library" }}
-  {{ template "lexicon_entry.html" .Named "cgo_library" }}
-  {{ template "lexicon_entry.html" .Named "go_binary" }}
-  {{ template "lexicon_entry.html" .Named "go_test" }}
-  {{ template "lexicon_entry.html" .Named "go_benchmark" }}
-  {{ template "lexicon_entry.html" .Named "cgo_test" }}
-  {{ template "lexicon_entry.html" .Named "go_test_main" }}
-  {{ template "lexicon_entry.html" .Named "go_module" }}
-  {{ template "lexicon_entry.html" .Named "go_mod_download" }}
 </section>
 
 <section class="mt4">
