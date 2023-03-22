@@ -159,7 +159,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 		}
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
-			for _, dep := range dependency.BuildDependencies(state) {
+			for _, dep := range dependency.BuildDependencies() {
 				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
 					if !done[dep2] && !dependency.IsTool(dep2) {
 						inner(graph.TargetOrDie(dep2))
