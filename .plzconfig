@@ -93,7 +93,6 @@ accept = notice
 
 [featureflags]
 PackageOutputsStrictness = true
-PythonWheelHashing = true
 NoIterSourcesMarked = true
 ExcludeProtoRules = true
 
