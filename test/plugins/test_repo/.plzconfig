@@ -1,6 +1,6 @@
 [Plugin "foo"]
 Target = //plugins:foo
-FoocTool = @foo//tools/fooc
+FoocTool = @foo//tools:fooc
 bartool = bar
 CompileFlag = -sha256
 BoolTest = False

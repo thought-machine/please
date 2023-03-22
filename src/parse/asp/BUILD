@@ -37,13 +37,3 @@ go_test(
     ],
 )
 
-benchmark(
-    name = "interpreter_benchmark",
-    srcs = ["interpreter_benchmark.go"],
-    data = ["test_data"],
-    deps = [
-        ":asp",
-        "//rules",
-        "//src/core",
-    ],
-)
