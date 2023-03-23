@@ -96,7 +96,6 @@ accept = ISC
 accept = notice
 
 [featureflags]
-PackageOutputsStrictness = true
 ExcludeProtoRules = true
 
 [BuildConfig]

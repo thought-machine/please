@@ -36,4 +36,3 @@ go_test(
         "//third_party/go:testify",
     ],
 )
-
