@@ -34,13 +34,12 @@ text_file(
     content = "wobblewobblewobble",
 )
 
-
 filegroup(
     name = "named",
     srcs = {
         "wibble": [":wibble"],
         "wobble": [":wobble"],
-    }
+    },
 )
 
 sh_test(

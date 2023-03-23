@@ -33,12 +33,6 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		ToolsURL: url,
 		Tools: []string{
 			"build_langserver",
-			"javac_worker",
-			"junit_runner.jar",
-			"please_go",
-			"please_go_embed",
-			"please_go_filter",
-			"please_pex",
 			"please_sandbox",
 		},
 	}

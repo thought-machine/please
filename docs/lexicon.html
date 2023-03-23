@@ -17,17 +17,7 @@
   </li>
   <li>
     <span>
-      <a class="copy-link" href="#go">Go rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
       <a class="copy-link" href="#misc">Miscellaneous rules</a>
-    </span>
-  </li>
-  <li>
-    <span>
-      <a class="copy-link" href="#proto">Protocol buffer rules</a>
     </span>
   </li>
   <li>
@@ -1133,32 +1123,6 @@
 </section>
 
 <section class="mt4">
-  <h2 class="title-2" id="go">
-    Go rules
-  </h2>
-
-  <p>Rules to build Go code.</p>
-
-  <p>
-    Go has a strong built-in concept of packages so while it's not 100% required
-    to strictly keep to 1 package per dir as in classic Go, it's still probably
-    a good idea to match Please rules to Go packages.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "go_toolchain" }}
-  {{ template "lexicon_entry.html" .Named "go_library" }}
-  {{ template "lexicon_entry.html" .Named "cgo_library" }}
-  {{ template "lexicon_entry.html" .Named "go_binary" }}
-  {{ template "lexicon_entry.html" .Named "go_test" }}
-  {{ template "lexicon_entry.html" .Named "go_benchmark" }}
-  {{ template "lexicon_entry.html" .Named "cgo_test" }}
-  {{ template "lexicon_entry.html" .Named "go_test_main" }}
-  {{ template "lexicon_entry.html" .Named "go_module" }}
-  {{ template "lexicon_entry.html" .Named "go_mod_download" }}
-</section>
-
-<section class="mt4">
   <h2 class="title-2" id="misc">
     Misc rules
   </h2>
@@ -1407,27 +1371,6 @@
   </section>
 </section>
 
-<section class="mt4">
-  <h2 class="title-2" id="proto">
-    Proto rules
-  </h2>
-
-  <p>Build rules for compiling protocol buffers &amp; gRPC service stubs.</p>
-
-  <p>
-    Note that these are some of the most complex of our built-in build rules,
-    because of their cross-language nature. Each proto_library rule declares a
-    set of sub-rules to run protoc &amp; the appropriate java_library,
-    go_library rules etc. Users shouldn't worry about those sub-rules and just
-    declare a dependency directly on the proto_library rule to get its
-    appropriate outputs.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "proto_library" }}
-  {{ template "lexicon_entry.html" .Named "grpc_library" }}
-  {{ template "lexicon_entry.html" .Named "proto_language" }}
-</section>
 
 <section class="mt4">
   <h2 class="title-2" id="subrepo">

@@ -17,7 +17,7 @@ def please_repo_e2e_test(
         plz_command += "; [ ! $? -eq 0 ]"
 
     test_cmd = [
-        "mv $DATA_BASE_CONFIG $DATA_REPO",
+        "cp $DATA_BASE_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
         plz_command,
     ]

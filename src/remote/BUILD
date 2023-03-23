@@ -17,12 +17,12 @@ go_library(
         "//third_party/go:genproto_rpc",
         "//third_party/go:grpc",
         "//third_party/go:grpc-middleware",
+        "//third_party/go:longrunning",
         "//third_party/go:protobuf-go",
         "//third_party/go:remote-apis",
         "//third_party/go:remote-apis-sdks",
         "//third_party/go:shellescape",
         "//third_party/go:uuid",
-        "//third_party/go:longrunning",
     ],
 )
 

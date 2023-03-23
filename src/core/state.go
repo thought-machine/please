@@ -252,9 +252,6 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
 	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
 	ret := make(map[string]struct{})
-	if state.Config.FeatureFlags.ExcludeGoRules {
-		ret["go_rules.build_defs"] = struct{}{}
-	}
 	if state.Config.FeatureFlags.ExcludeProtoRules {
 		ret["proto_rules.build_defs"] = struct{}{}
 	}

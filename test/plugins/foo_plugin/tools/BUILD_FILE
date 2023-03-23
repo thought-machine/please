@@ -1,0 +1,5 @@
+filegroup(
+    name = "fooc",
+    srcs = ["fooc"],
+    visibility = ["PUBLIC"],
+)

@@ -2,3 +2,8 @@ plugin_repo(
     name = "foo",
     revision = "v1.0.0",
 )
+
+plugin_repo(
+    name = "go",
+    revision = "v1.2.1",
+)
