@@ -32,4 +32,3 @@ filegroup(
     name = "not_visible",
     visibility = [],
 )
-
