@@ -33,7 +33,7 @@ type aspParser struct {
 func newAspParser(state *core.BuildState) *asp.Parser {
 	p := asp.NewParser(state)
 	log.Debug("Loading built-in build rules...")
-	dir, _ := rules.AllAssets(state.ExcludedBuiltinRules())
+	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
 	for _, filename := range dir {
 		src, _ := rules.ReadAsset(filename)

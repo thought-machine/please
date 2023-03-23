@@ -7,7 +7,7 @@ import (
 )
 
 func TestAllAssetsReturnsAListOfBuildDefinitionFiles(t *testing.T) {
-	assets, err := AllAssets(map[string]struct{}{})
+	assets, err := AllAssets()
 
 	defs := []string{
 		"builtins.build_defs",

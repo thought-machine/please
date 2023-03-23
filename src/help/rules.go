@@ -54,7 +54,7 @@ func newState() *core.BuildState {
 func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
 	p := asp.NewParser(state)
 	m := map[string]*asp.Statement{}
-	dir, _ := rules.AllAssets(state.ExcludedBuiltinRules())
+	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
 	for _, filename := range dir {
 		if filename != "builtins.build_defs" {
