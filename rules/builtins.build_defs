@@ -102,7 +102,7 @@ def dict(d):
     fail('dict is not callable')
 
 
-def glob(include:list|str, exclude:list|str&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=not CONFIG.FF_EXCLUDE_GLOB_SYMLINKS, allow_empty:bool=False) -> list:
+def glob(include:list|str, exclude:list|str&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=False, allow_empty:bool=False) -> list:
     pass
 
 
