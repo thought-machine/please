@@ -218,7 +218,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 
 // loadBuiltins extracts & loads all the builtin functions at startup.
 func (h *Handler) loadBuiltins() error {
-	assets, err := rules.AllAssets(map[string]struct{}{})
+	assets, err := rules.AllAssets()
 	if err != nil {
 		return err
 	}
