@@ -95,8 +95,5 @@ accept = ISC
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice
 
-[featureflags]
-ExcludeProtoRules = true
-
 [BuildConfig]
 use-go-plugin = True
