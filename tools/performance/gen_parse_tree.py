@@ -51,13 +51,13 @@ subinclude("///{lang}//build_defs:{lang}")
 
 {lang}_library(
     name = "{name}",
-    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"]),
+    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"], allow_empty=True),
     deps = {deps},
 )
 
 {lang}_test(
     name = "{name}_test",
-    srcs = glob(["*_test.{ext}"]),
+    srcs = glob(["*_test.{ext}"], allow_empty=True),
     deps = {test_deps},
 )
 """
