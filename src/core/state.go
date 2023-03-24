@@ -248,29 +248,6 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 	return
 }
 
-// ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
-func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
-	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
-	ret := make(map[string]struct{})
-	if state.Config.FeatureFlags.ExcludeJavaRules {
-		ret["java_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeCCRules {
-		ret["c_rules.build_defs"] = struct{}{}
-		ret["cc_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeGoRules {
-		ret["go_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeShellRules {
-		ret["sh_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeProtoRules {
-		ret["proto_rules.build_defs"] = struct{}{}
-	}
-	return ret
-}
-
 // A stateProgress records various points of progress for a State.
 // This is split out from above so we can share it between multiple instances.
 type stateProgress struct {

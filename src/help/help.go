@@ -331,7 +331,7 @@ func printMessage(msg string) {
 
 const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is
 {{- if .IsBuiltin }} a built-in build rule in Please.
-{{- else }} an add-on build rule for Please defined in ${YELLOW}{{ .EoDef.Filename }}${RESET}.
+{{- else }} an add-on build rule for Please${RESET}.
 {{- end }} Instructions for use & its arguments:
 
 ${BOLD_YELLOW}{{ .Name }}${RESET}(

@@ -11,7 +11,6 @@ go_library(
         "grammar.go",
         "grammar_parse.go",
         "interpreter.go",
-        "interpreter_benchmark.go",
         "lexer.go",
         "objects.go",
         "parser.go",
@@ -55,17 +54,6 @@ go_test(
         "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//rules",
         "//src/cli",
-        "//src/core",
-    ],
-)
-
-benchmark(
-    name = "interpreter_benchmark",
-    srcs = ["interpreter_benchmark.go"],
-    data = ["test_data"],
-    deps = [
-        ":asp",
-        "//rules",
         "//src/core",
     ],
 )

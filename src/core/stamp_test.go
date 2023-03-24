@@ -7,6 +7,8 @@ import (
 )
 
 func TestStampFile(t *testing.T) {
+	config := DefaultConfiguration()
+	config.Licences.Accept = []string{"bsd-2-clause"}
 	t1 := NewBuildTarget(ParseBuildLabel("//src/core:core", ""))
 	t2 := NewBuildTarget(ParseBuildLabel("//src/fs:fs", ""))
 	t3 := NewBuildTarget(ParseBuildLabel("//third_party/go:errors", ""))
@@ -33,9 +35,10 @@ func TestStampFile(t *testing.T) {
       ],
       "licences": [
         "bsd-2-clause"
-      ]
+      ],
+      "accepted_licence": "bsd-2-clause"
     }
   }
 }`)
-	assert.Equal(t, expected, StampFile(t1))
+	assert.Equal(t, expected, StampFile(config, t1))
 }

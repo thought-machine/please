@@ -35,7 +35,6 @@ func TestCollapseHash2(t *testing.T) {
 
 func TestIterSources(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.Config.FeatureFlags.NoIterSourcesMarked = true
 
 	graph := buildGraph()
 	iterSources := func(label string) []SourcePair {

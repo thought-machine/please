@@ -639,12 +639,12 @@ func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
 }
 
 // BuildDependencies returns the build-time dependencies of this target (i.e. not data, internal nor source).
-func (target *BuildTarget) BuildDependencies(state *BuildState) []*BuildTarget {
+func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
-		if !deps.data && !deps.internal && (!state.Config.FeatureFlags.NoIterSourcesMarked || !deps.source) {
+		if !deps.data && !deps.internal && !deps.source {
 			for _, dep := range deps.deps {
 				ret = append(ret, dep)
 			}
@@ -717,26 +717,31 @@ func (target *BuildTarget) DeclaredOutputNames() []string {
 	return ret
 }
 
+func (target *BuildTarget) filegroupOutputs(srcs []BuildInput) []string {
+	ret := make([]string, 0, len(srcs))
+	// Filegroups just re-output their inputs.
+	for _, src := range srcs {
+		if namedLabel, ok := src.(AnnotatedOutputLabel); ok {
+			// Bit of a hack, but this needs different treatment from either of the others.
+			for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
+				ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
+			}
+		} else if label, ok := src.nonOutputLabel(); !ok {
+			ret = append(ret, src.LocalPaths(nil)[0])
+		} else {
+			for _, dep := range target.DependenciesFor(label) {
+				ret = append(ret, dep.Outputs()...)
+			}
+		}
+	}
+	return ret
+}
+
 // Outputs returns a slice of all the outputs of this rule.
 func (target *BuildTarget) Outputs() []string {
 	var ret []string
 	if target.IsFilegroup {
-		ret = make([]string, 0, len(target.Sources))
-		// Filegroups just re-output their inputs.
-		for _, src := range target.Sources {
-			if namedLabel, ok := src.(AnnotatedOutputLabel); ok {
-				// Bit of a hack, but this needs different treatment from either of the others.
-				for _, dep := range target.DependenciesFor(namedLabel.BuildLabel) {
-					ret = append(ret, dep.NamedOutputs(namedLabel.Annotation)...)
-				}
-			} else if label, ok := src.nonOutputLabel(); !ok {
-				ret = append(ret, src.LocalPaths(nil)[0])
-			} else {
-				for _, dep := range target.DependenciesFor(label) {
-					ret = append(ret, dep.Outputs()...)
-				}
-			}
-		}
+		ret = target.filegroupOutputs(target.AllSources())
 	} else {
 		// Must really copy the slice before sorting it ([:] is too shallow)
 		ret = make([]string, len(target.outputs))
@@ -777,6 +782,15 @@ func (target *BuildTarget) AllOutputs() []string {
 // NamedOutputs returns a slice of all the outputs of this rule with a given name.
 // If the name is not declared by this rule it panics.
 func (target *BuildTarget) NamedOutputs(name string) []string {
+	if target.IsFilegroup {
+		if target.NamedSources == nil {
+			return nil
+		}
+		if srcs, present := target.NamedSources[name]; present {
+			return target.filegroupOutputs(srcs)
+		}
+		return nil
+	}
 	if target.namedOutputs == nil {
 		return nil
 	}
@@ -1807,6 +1821,30 @@ func (target *BuildTarget) PackageDir() string {
 		return filepath.Join(target.Subrepo.PackageRoot, target.Label.PackageDir())
 	}
 	return target.Label.PackageDir()
+}
+
+// CheckLicences checks the target's licences against the accepted/rejected list.
+// It returns the licence that was accepted and an error if it did not match.
+func (target *BuildTarget) CheckLicences(config *Configuration) (string, error) {
+	if len(target.Licences) == 0 {
+		return "", nil
+	}
+	for _, licence := range target.Licences {
+		for _, reject := range config.Licences.Reject {
+			if strings.EqualFold(reject, licence) {
+				return "", fmt.Errorf("Target %s is licensed %s, which is explicitly rejected for this repository", target.Label, licence)
+			}
+		}
+		for _, accept := range config.Licences.Accept {
+			if strings.EqualFold(accept, licence) {
+				return licence, nil // Note licences are assumed to be an 'or', ie. any one of them can be accepted.
+			}
+		}
+	}
+	if len(config.Licences.Accept) > 0 {
+		return "", fmt.Errorf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", "))
+	}
+	return "", nil
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

@@ -32,7 +32,6 @@ go_test(
     srcs = [
         "changes_test.go",
         "completions_test.go",
-        "deps_test.go",
         "graph_test.go",
         "print_test.go",
         "reverse_deps_test.go",

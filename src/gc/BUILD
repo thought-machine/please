@@ -17,6 +17,9 @@ go_test(
         "gc_test.go",
         "rewrite_test.go",
     ],
+    data = [
+        "test_data",
+    ],
     deps = [
         ":gc",
         "///third_party/go/github.com_stretchr_testify//assert",

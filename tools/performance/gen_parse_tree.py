@@ -47,15 +47,17 @@ TEST_DEPS = {
 }
 
 LANGUAGE_TEMPLATE = """
+subinclude("///{lang}//build_defs:{lang}")
+
 {lang}_library(
     name = "{name}",
-    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"]),
+    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"], allow_empty=True),
     deps = {deps},
 )
 
 {lang}_test(
     name = "{name}_test",
-    srcs = glob(["*_test.{ext}"]),
+    srcs = glob(["*_test.{ext}"], allow_empty=True),
     deps = {test_deps},
 )
 """
@@ -116,15 +118,30 @@ def main(argv):
     os.mkdir(os.path.join(FLAGS.root, 'build_defs'))
     with open('build_defs/BUILD') as fr, open(os.path.join(FLAGS.root, 'build_defs/BUILD'), 'w') as fw:
         fw.write(fr.read().replace('//:version', 'VERSION'))
-    shutil.copy('build_defs/multiversion_wheel.build_defs',
-                os.path.join(FLAGS.root, 'build_defs/multiversion_wheel.build_defs'))
     # Create the .plzconfig in the new root
     with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
         f.write("""
 [Plugin "java"]
 Target = //plugins:java
-    """)
-        pass
+[Plugin "python"]
+Target = //plugins:python
+[Plugin "cc"]
+Target = //plugins:cc
+TestMain = ///pleasings//cc:unittest_main
+[Plugin "go"]
+Target = //plugins:go
+[parse]
+preloadsubincludes = ///python//build_defs:python
+preloadsubincludes = ///cc//build_defs:cc
+        """)
+    with open(os.path.join(FLAGS.root, 'BUILD.plz'), 'w') as f:
+        f.write("""
+github_repo(
+    name = "pleasings",
+    repo = "thought-machine/pleasings",
+    revision = "v1.1.0",
+)
+        """)
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 1000

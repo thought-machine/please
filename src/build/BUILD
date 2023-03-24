@@ -26,6 +26,7 @@ go_test(
         "incrementality_test.go",
         "remote_file_test.go",
     ],
+    data = ["test_data"],
     deps = [
         ":build",
         "///third_party/go/github.com_stretchr_testify//assert",

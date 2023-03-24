@@ -1,13 +1,9 @@
 go_library(
     name = "remote",
-    srcs = [
-        "action.go",
-        "blobs.go",
-        "build_metadata_store.go",
-        "remote.go",
-        "stats.go",
-        "utils.go",
-    ],
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/cloud.google.com_go_longrunning//autogen/longrunningpb",

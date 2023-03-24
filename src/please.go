@@ -249,7 +249,8 @@ var opts struct {
 	Watch struct {
 		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
 		Args struct {
-			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to watch for changes"`
+			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Additional targets to watch, or test selectors"`
 		} `positional-args:"true" required:"true"`
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
@@ -416,6 +417,7 @@ var opts struct {
 		Changes struct {
 			Since            string `short:"s" long:"since" default:"origin/master" description:"Revision to compare against"`
 			IncludeDependees string `long:"include_dependees" default:"none" choice:"none" choice:"direct" choice:"transitive" description:"Deprecated: use level 1 for direct and -1 for transitive. Include direct or transitive dependees of changed targets."`
+			IncludeSubrepos  bool   `long:"include_subrepos" description:"Include changed targets that belong to subrepos."`
 			Level            int    `long:"level" default:"-2" description:"Levels of the dependencies of changed targets (-1 for unlimited)." default-mask:"0"`
 			Inexact          bool   `long:"inexact" description:"Calculate changes more quickly and without doing any SCM checkouts, but may miss some targets."`
 			In               string `long:"in" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc). Implies --inexact."`
@@ -858,6 +860,7 @@ var buildFunctions = map[string]func() int{
 	"query.changes": func() int {
 		// query changes always excludes 'manual' targets.
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
+		includeSubrepos := opts.Query.Changes.IncludeSubrepos
 		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
 		direct := opts.Query.Changes.IncludeDependees == "direct"
@@ -878,7 +881,7 @@ var buildFunctions = map[string]func() int{
 		}
 		runInexact := func(files []string) int {
 			return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-				for _, target := range query.Changes(state, files, level) {
+				for _, target := range query.Changes(state, files, level, includeSubrepos) {
 					fmt.Println(target.String())
 				}
 			})
@@ -910,7 +913,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return 1
 		}
-		for _, target := range query.DiffGraphs(before, after, files, level) {
+		for _, target := range query.DiffGraphs(before, after, files, level, includeSubrepos) {
 			fmt.Println(target.String())
 		}
 		return 0
@@ -936,10 +939,11 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"watch": func() int {
+		targets, args := testTargets(opts.Watch.Args.Target, opts.Watch.Args.Args, false, "")
 		// Don't ask it to test now since we don't know if any of them are tests yet.
-		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
+		success, state := runBuild(targets, true, false, false)
 		state.NeedRun = opts.Watch.Run
-		watch.Watch(state, state.ExpandOriginalLabels(), runPlease)
+		watch.Watch(state, state.ExpandOriginalLabels(), args, runPlease)
 		return toExitCode(success, state)
 	},
 	"generate": func() int {
@@ -1090,7 +1094,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
-	state.Watch = len(opts.Watch.Args.Targets) > 0
+	state.Watch = !opts.Watch.Args.Target.IsEmpty()
 	state.CleanWorkdirs = !opts.BehaviorFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
@@ -1332,7 +1336,7 @@ func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 // Capture aliases from config file and print to the help output
 func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 	cli.InitLogging(cli.MinVerbosity)
-	if config, err := readConfigAndSetRoot(false); err == nil {
+	if config, err := readConfigAndSetRoot(false); err == nil && parser.Active == nil {
 		config.PrintAliases(wr)
 	}
 }

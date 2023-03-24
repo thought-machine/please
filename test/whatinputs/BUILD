@@ -10,13 +10,13 @@ plz_e2e_test(
 plz_e2e_test(
     name = "source_and_no_source",
     cmd = "plz query whatinputs making/up/a/file/path/should/be/easy test/whatinputs/test_package/foo.txt",
-    expected_failure = True,
     expect_output_contains = "making/up/a/file/path/should/be/easy is not a source to any current target",
+    expected_failure = True,
 )
 
 plz_e2e_test(
     name = "source_and_no_source_print",
     cmd = "plz query whatinputs making/up/a/file/path/should/be/easy test/whatinputs/test_package/foo.txt --echo_files",
-    expected_failure = True,
     expect_output_contains = "making/up/a/file/path/should/be/easy is not a source to any current target",
+    expected_failure = True,
 )
