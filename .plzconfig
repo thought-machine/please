@@ -32,8 +32,7 @@ TestMain = ///pleasings//cc:unittest_main
 
 [Plugin "java"]
 Target = //plugins:java
-Toolchain = //third_party/java:toolchain
-
+JavacTool = javac
 
 [gc]
 keep = //test/...
