@@ -32,8 +32,8 @@ TestMain = ///pleasings//cc:unittest_main
 
 [Plugin "java"]
 Target = //plugins:java
-JavacWorker = //tools/java:javac_worker
-JunitRunner = //tools/java:junit_runner
+Toolchain = //third_party/java:toolchain
+
 
 [gc]
 keep = //test/...
