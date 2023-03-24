@@ -4,11 +4,6 @@ filegroup(
     name = "tools",
     srcs = [
         "//tools/build_langserver",
-        "//tools/java:javac_worker",
-        "//tools/java:junit_runner",
-        "//tools/please_go",
-        "//tools/please_go_embed",
-        "//tools/please_go_filter",
         "//tools/sandbox:please_sandbox",
     ],
     binary = True,
