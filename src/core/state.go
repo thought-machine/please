@@ -10,6 +10,7 @@ import (
 	"io"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1167,7 +1168,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	defer state.progress.mutex.Unlock()
 
 	for _, s := range state.progress.allStates {
-		if s.Arch == arch {
+		if s.Arch == arch && strings.HasPrefix(s.CurrentSubrepo, strings.TrimSuffix(state.CurrentSubrepo, "_"+state.Arch.String())) {
 			return s
 		}
 	}
