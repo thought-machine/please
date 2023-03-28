@@ -243,7 +243,7 @@ jobs:
      working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20220516
-     resource_class: large
+     resource_class: xlarge
      steps:
        - checkout
        - attach_workspace:
