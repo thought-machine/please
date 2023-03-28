@@ -21,7 +21,7 @@ flags.DEFINE_string('plz', 'plz', 'Binary to run to invoke plz')
 flags.DEFINE_integer('num_threads', 10, 'Number of parallel threads to give plz')
 flags.DEFINE_string('output', 'results.json', 'File to write results to')
 flags.DEFINE_string('revision', 'unknown', 'Git revision')
-flags.DEFINE_integer('number', 5, 'Number of times to run test')
+flags.DEFINE_integer('number', 5, 'Number of times to run test', short_name='n')
 flags.DEFINE_string('root', 'tree', 'Directory to run in')
 FLAGS = flags.FLAGS
 
