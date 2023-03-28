@@ -1,1 +1,1 @@
-Couldn't find any dependency path between //src:please and //third_party/java:junit
+Couldn't find any dependency path between //src:please and //docs/tools/config_templater:config_templater
