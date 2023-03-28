@@ -9,3 +9,4 @@ target = //plugins:shell
 
 [Plugin "go"]
 target = //plugins:go
+GoTool = //:toolchain|go
