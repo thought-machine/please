@@ -32,7 +32,6 @@ DIRNAMES = [
 LANGUAGE_EXTENSIONS = {
     'python': 'py',
     'go': 'go',
-    'java': 'java',
     'cc': 'cc',
 }
 
@@ -42,7 +41,6 @@ LANGUAGES = list(LANGUAGE_EXTENSIONS.keys())
 TEST_DEPS = {
     'python': [],
     'go': ['//third_party/go:testify'],
-    'java': ['//third_party/java:junit', '//third_party/java:hamcrest'],
     'cc': [],
 }
 
@@ -121,8 +119,6 @@ def main(argv):
     # Create the .plzconfig in the new root
     with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
         f.write("""
-[Plugin "java"]
-Target = //plugins:java
 [Plugin "python"]
 Target = //plugins:python
 [Plugin "cc"]
@@ -133,6 +129,7 @@ Target = //plugins:go
 [parse]
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///cc//build_defs:cc
+preloadsubincludes = ///go//build_defs:go
         """)
     with open(os.path.join(FLAGS.root, 'BUILD.plz'), 'w') as f:
         f.write("""
