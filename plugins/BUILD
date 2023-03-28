@@ -2,7 +2,7 @@ plugin_repo(
     name = "go",
     plugin = "go-rules",
     owner = "tatskaari",
-    revision = "65701d57b266161a02a6285f33a221c9ed9148ba", #rule-gen
+    revision = "048548c42c83ea0decf8203133f6b36bc780060b", #rule-gen
 )
 
 plugin_repo(
