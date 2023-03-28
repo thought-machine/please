@@ -30,10 +30,6 @@ defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-
 defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
 TestMain = ///pleasings//cc:unittest_main
 
-[Plugin "java"]
-Target = //plugins:java
-JavacTool = javac
-
 [gc]
 keep = //test/...
 keep = //docs:all

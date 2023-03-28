@@ -1,4 +1,5 @@
 Found path:
-  //tools/java:junit_runner
-  //third_party/java:junit_runner
-  //third_party/java:junit
+  //src:please
+  //src/build:build
+  //src/core:core
+  //src/fs:fs
