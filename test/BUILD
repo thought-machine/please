@@ -10,7 +10,7 @@
 # mitigated by having these tests only run tests in this package which are tagged as manual
 # so the bootstrap script won't try to run them twice simultaneously.
 
-subinclude("//test/build_defs", "///java//build_defs:java")
+subinclude("//test/build_defs")
 
 # This isn't really needed in this BUILD file, but is intended to avoid race conditions
 # between this and other BUILD files that have the same dependency.
@@ -21,19 +21,19 @@ subinclude("///pleasings//go:go_bindata")
 # found is not necessarily unique or stable.
 plz_e2e_test(
     name = "query_somepath_test",
-    cmd = "plz query somepath //tools/java:junit_runner //third_party/java:junit",
+    cmd = "plz query somepath //src:please //src/fs",
     expected_output = "query_somepath_test.txt",
 )
 
 plz_e2e_test(
     name = "query_somepath_reverse_test",
-    cmd = "plz query somepath //third_party/java:junit //tools/java:junit_runner",
+    cmd = "plz query somepath //src/fs //src:please",
     expected_output = "query_somepath_test.txt",
 )
 
 plz_e2e_test(
     name = "query_somepath_nopath_test",
-    cmd = "plz query somepath //src:please //third_party/java:junit",
+    cmd = "plz query somepath //src:please //docs/tools/config_templater",
     expected_failure = True,
     expected_output = "query_somepath_nopath_test.txt",
 )
@@ -172,14 +172,6 @@ plz_e2e_test(
     labels = ["python3"],
 )
 
-java_test(
-    name = "individual_test_run_java",
-    srcs = ["IndividualTest.java"],
-    labels = ["manual"],
-    deps = [
-        "//third_party/java:junit",
-    ],
-)
 
 # Test re-runs.
 go_test(
