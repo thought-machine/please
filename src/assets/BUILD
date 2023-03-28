@@ -1,10 +1,7 @@
 go_library(
     name = "assets",
     srcs = ["assets.go"],
-    resources = glob([
-        "pleasew",
-        "plz_complete.sh",
-    ]),
+    resources = [":resources"],
     visibility = ["//src/..."],
 )
 
