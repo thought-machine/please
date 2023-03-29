@@ -236,6 +236,9 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 		// If we are the root repo, or an cross-compilation of that, we don't want to re-load the config files. That's
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
+			if strings.HasPrefix(state.CurrentSubrepo, "third_party/go/github.com_bazelbuild_remote-apis-sdks") {
+				log.Debug("")
+			}
 			state.RepoConfig = &Configuration{}
 			err = readConfigFilesInto(state.RepoConfig, append(subrepo.AdditionalConfigFiles, filepath.Join(subrepo.Root, ".plzconfig")))
 			if err != nil {
@@ -1168,7 +1171,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	defer state.progress.mutex.Unlock()
 
 	for _, s := range state.progress.allStates {
-		if s.Arch == arch && strings.HasPrefix(s.CurrentSubrepo, strings.TrimSuffix(state.CurrentSubrepo, "_"+state.Arch.String())) {
+		if s.Arch == arch && s.CurrentSubrepo == state.CurrentSubrepo {
 			return s
 		}
 	}
@@ -1187,7 +1190,6 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 
 	s.Config = config
 	s.Arch = arch
-
 	state.progress.allStates = append(state.progress.allStates, s)
 
 	return s
