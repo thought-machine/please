@@ -2,6 +2,7 @@ go_library(
     name = "process",
     srcs = [
         "exec_linux.go",
+        "exec_other.go",
         "output.go",
         "process.go",
         "progress.go",
