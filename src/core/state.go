@@ -1167,7 +1167,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	defer state.progress.mutex.Unlock()
 
 	for _, s := range state.progress.allStates {
-		if s.Arch == arch {
+		if s.Arch == arch && s.CurrentSubrepo == state.CurrentSubrepo {
 			return s
 		}
 	}

@@ -1121,6 +1121,8 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		}
 		state = state.ForArch(arch)
 		isCrossCompile = true
+	} else if state.Arch != arch {
+		state = state.ForArch(arch)
 	}
 	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile)
 	if args[PackageRootIdx].IsTruthy() {
