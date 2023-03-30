@@ -211,7 +211,8 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}
 	stmts = i.parser.optimise(stmts)
-	s := pkgScope.NewScope(path)
+	s := i.scope.NewScope(path)
+	s.state = pkgScope.state
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.subincludeLabel = &label
