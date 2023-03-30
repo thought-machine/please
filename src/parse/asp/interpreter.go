@@ -2,6 +2,7 @@ package asp
 
 import (
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -135,7 +136,7 @@ func (i *interpreter) preloadSubincludes(s *scope) (err error) {
 
 		s.interpreter.loadPluginConfig(s, includeState)
 		for _, out := range t.FullOutputs() {
-			s.SetAll(s.interpreter.Subinclude(out, t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(s, out, t.Label), false)
 		}
 	}
 	return
@@ -193,15 +194,16 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
-	globals, wait, first := i.subincludes.GetOrWait(path)
+func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel) pyDict {
+	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
+	globals, wait, first := i.subincludes.GetOrWait(key)
 	if globals != nil {
 		return globals
 	} else if !first {
 		i.limiter.Release()
 		defer i.limiter.Acquire()
 		<-wait
-		return i.subincludes.Get(path)
+		return i.subincludes.Get(key)
 	}
 	// If we get here, it falls to us to parse this.
 	stmts, err := i.parser.parse(path)
@@ -209,7 +211,7 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}
 	stmts = i.parser.optimise(stmts)
-	s := i.scope.NewScope(path)
+	s := pkgScope.NewScope(path)
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
 	s.subincludeLabel = &label
@@ -220,7 +222,7 @@ func (i *interpreter) Subinclude(path string, label core.BuildLabel) pyDict {
 	if s.config.overlay == nil {
 		delete(locals, "CONFIG") // Config doesn't have any local modifications
 	}
-	i.subincludes.Set(path, locals)
+	i.subincludes.Set(key, locals)
 	return locals
 }
 

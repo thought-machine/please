@@ -195,11 +195,6 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 		return
 	}
 
-	// Config values are not available in the top level
-	if s.pkg == nil {
-		return
-	}
-
 	pluginName := pluginState.RepoConfig.PluginDefinition.Name
 	if pluginName == "" {
 		// Subinclude is not a plugin. Stop here.
