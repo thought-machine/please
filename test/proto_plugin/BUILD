@@ -6,6 +6,7 @@ please_repo_e2e_test(
     labels = [
         "no_cirrus",
         "no-musl",
+        "manual",
     ],
     plz_command = "plz -o plugin.go.gotool:$TOOLS_GO test",
     repo = "test_repo",
