@@ -237,9 +237,14 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
 				expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
 				return false
-			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
-				expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
-				expr.Val = nil
+			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil {
+				if prop := expr.Val.Ident.Action[0].Property; len(prop.Action) == 0 {
+					expr.Optimised = &OptimisedExpression{Config: prop.Name}
+					expr.Val = nil
+				} else if len(prop.Action) == 1 && prop.Action[0].Property != nil && len(prop.Action[0].Property.Action) == 0 {
+					expr.Optimised = &OptimisedExpression{Config: prop.Name, SubConfig: prop.Action[0].Property.Name}
+					expr.Val = nil
+				}
 				return false
 			}
 		}
@@ -534,6 +539,8 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 			return expr.Optimised.Constant
 		} else if expr.Optimised.Local != "" {
 			return s.Lookup(expr.Optimised.Local)
+		} else if expr.Optimised.SubConfig != "" {
+			return s.config.Property(s, expr.Optimised.Config).Property(s, expr.Optimised.SubConfig)
 		}
 		return s.config.Property(s, expr.Optimised.Config)
 	}
