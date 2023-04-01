@@ -19,8 +19,9 @@ type interpreter struct {
 	parser      *Parser
 	subincludes *cmap.Map[string, pyDict]
 
-	configs      map[*core.BuildState]*pyConfig
-	configsMutex sync.RWMutex
+	configs       map[*core.BuildState]*pyConfig
+	configsMutex  sync.RWMutex
+	pluginConfigs *cmap.Map[string, *pyConfigBase]
 
 	breakpointMutex sync.Mutex
 	limiter         semaphore
@@ -35,19 +36,19 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
-	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
-	var subincludes *cmap.Map[string, pyDict]
-	if p.interpreter != nil {
-		subincludes = p.interpreter.subincludes
-	} else {
-		subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
-	}
 	i := &interpreter{
-		scope:       s,
-		parser:      p,
-		subincludes: subincludes,
-		configs:     map[*core.BuildState]*pyConfig{},
-		limiter:     make(semaphore, state.Config.Parse.NumThreads),
+		scope:   s,
+		parser:  p,
+		configs: map[*core.BuildState]*pyConfig{},
+		limiter: make(semaphore, state.Config.Parse.NumThreads),
+	}
+	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
+	if p.interpreter != nil {
+		i.subincludes = p.interpreter.subincludes
+		i.pluginConfigs = p.interpreter.pluginConfigs
+	} else {
+		i.subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
+		i.pluginConfigs = cmap.New[string, *pyConfigBase](cmap.SmallShardCount, cmap.XXHash)
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
