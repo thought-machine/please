@@ -479,4 +479,5 @@ plz_e2e_test(
     name = "shell_output_test",
     cmd = "plz test //test:shell_output_test_case",
     expect_output_contains = "$TEST",
+    expected_failure = True,
 )
