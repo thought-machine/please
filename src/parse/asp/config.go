@@ -213,7 +213,7 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 }
 
 func (i *interpreter) pluginConfig(name string, pluginState *core.BuildState, pkgState *core.BuildState) *pyConfigBase {
-	key := pluginConfigKey{Name: name, State: pluginState}
+	key := pluginConfigKey{Name: name, State: pkgState}
 	if cfg, wait, first := i.pluginConfigs.GetOrWait(key); cfg != nil {
 		return cfg
 	} else if !first {
