@@ -31,7 +31,10 @@ func printf(format string, args ...interface{}) {
 }
 
 func replace(s string) string {
-	return replacements[s]
+	if repl, present := replacements[s]; present {
+		return repl
+	}
+	return "$" + s
 }
 
 // These are the standard set of replacements we use.
