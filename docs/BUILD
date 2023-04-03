@@ -63,7 +63,7 @@ plugins = {
     "cc": "v0.3.2",
     "shell": "v0.1.2",
     "go-proto": "v0.2.0",
-    "proto": "v0.2.0",
+    "proto": "v0.2.1",
 }
 
 plugin_targets = []
