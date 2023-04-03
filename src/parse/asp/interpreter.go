@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"unsafe"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cmap"
@@ -21,12 +22,17 @@ type interpreter struct {
 
 	configs       map[*core.BuildState]*pyConfig
 	configsMutex  sync.RWMutex
-	pluginConfigs *cmap.Map[string, *pyConfigBase]
+	pluginConfigs *cmap.Map[pluginConfigKey, *pyConfigBase]
 
 	breakpointMutex sync.Mutex
 	limiter         semaphore
 
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
+}
+
+type pluginConfigKey struct {
+	Name  string
+	State *core.BuildState
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -48,7 +54,9 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		i.pluginConfigs = p.interpreter.pluginConfigs
 	} else {
 		i.subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
-		i.pluginConfigs = cmap.New[string, *pyConfigBase](cmap.SmallShardCount, cmap.XXHash)
+		i.pluginConfigs = cmap.New[pluginConfigKey, *pyConfigBase](cmap.SmallShardCount, func(key pluginConfigKey) uint64 {
+			return cmap.XXHash(key.Name) ^ uint64(uintptr(unsafe.Pointer(key.State)))
+		})
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)

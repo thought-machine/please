@@ -212,7 +212,8 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 	s.config.overlay[key] = &pyConfig{base: i.pluginConfig(key, pluginState, s.state)}
 }
 
-func (i *interpreter) pluginConfig(key string, pluginState *core.BuildState, pkgState *core.BuildState) *pyConfigBase {
+func (i *interpreter) pluginConfig(name string, pluginState *core.BuildState, pkgState *core.BuildState) *pyConfigBase {
+	key := pluginConfigKey{Name: name, State: pluginState}
 	if cfg, wait, first := i.pluginConfigs.GetOrWait(key); cfg != nil {
 		return cfg
 	} else if !first {
