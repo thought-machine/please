@@ -76,9 +76,11 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
         elif expected_output:
             test_cmd += 'diff -au output $(location %s)' % expected_output
         elif expect_output_contains:
-            test_cmd += f'_STR="$(cat output)" _SUBSTR="{expect_output_contains}" && if [ "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi'
+            substr = _quote(expect_output_contains)
+            test_cmd += f'_STR="$(cat output)" _SUBSTR={substr} && if [ "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi'
         elif expect_output_doesnt_contain:
-            test_cmd += f'_STR="$(cat output)" _SUBSTR="{expect_output_doesnt_contain}" && if [ -z "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi'
+            substr = _quote(expect_output_doesnt_contain)
+            test_cmd += f'_STR="$(cat output)" _SUBSTR={substr} && if [ -z "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi'
         elif expect_file_exists:
             test_cmd += 'if [ ! -f %s ]; then cat output; exit 1; fi' % expect_file_exists
         elif expect_file_doesnt_exist:
@@ -111,3 +113,9 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
         exit_on_error = False,
         timeout = timeout,
     )
+
+
+def _quote(s):
+    if '$' in s:
+        return "'" + s + "'"
+    return '"' + s + '"'

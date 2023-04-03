@@ -172,7 +172,6 @@ plz_e2e_test(
     labels = ["python3"],
 )
 
-
 # Test re-runs.
 go_test(
     name = "num_runs_go_test",
@@ -467,4 +466,18 @@ build_rule(
 plz_e2e_test(
     name = "non_test_target_with_test_fields_set_test",
     cmd = "plz test //test:non_test_target_with_test_fields_set",
+)
+
+gentest(
+    name = "shell_output_test_case",
+    labels = ["manual"],
+    no_test_output = True,
+    test_cmd = "echo '$TEST'; exit 1",
+)
+
+plz_e2e_test(
+    name = "shell_output_test",
+    cmd = "plz test //test:shell_output_test_case",
+    expect_output_contains = "$TEST",
+    expected_failure = True,
 )
