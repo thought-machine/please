@@ -1180,9 +1180,6 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	s := state.Copy()
 
 	configPath := ".plzconfig_" + arch.String()
-	if state.CurrentSubrepo != "" {
-		configPath = filepath.Join(state.Graph.SubrepoOrDie(state.CurrentSubrepo).Root, configPath)
-	}
 
 	config := state.Config.copyConfig()
 	if err := readConfigFile(config, configPath, false); err != nil {
