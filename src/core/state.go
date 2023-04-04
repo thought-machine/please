@@ -1179,12 +1179,23 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// Duplicate & alter configuration
 	s := state.Copy()
 
+	configPath := ".plzconfig_" + arch.String()
+	if state.CurrentSubrepo != "" {
+		configPath = filepath.Join(state.Graph.SubrepoOrDie(state.CurrentSubrepo).Root, configPath)
+	}
+
 	config := state.Config.copyConfig()
-	if err := readConfigFile(config, ".plzconfig_"+arch.String(), false); err != nil {
+	if err := readConfigFile(config, configPath, false); err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	repoConfig := state.Config.copyConfig()
+	if err := readConfigFile(repoConfig, configPath, false); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	s.Config = config
+	s.RepoConfig = repoConfig
 	s.Arch = arch
 
 	state.progress.allStates = append(state.progress.allStates, s)
