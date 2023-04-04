@@ -209,9 +209,20 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 	if _, ok := s.config.overlay[key]; ok {
 		return
 	}
+	s.config.overlay[key] = &pyConfig{base: i.pluginConfig(key, pluginState, s.state)}
+}
 
-	cfg := pluginConfig(pluginState, s.state)
-	s.config.overlay[key] = cfg
+func (i *interpreter) pluginConfig(name string, pluginState *core.BuildState, pkgState *core.BuildState) *pyConfigBase {
+	key := pluginConfigKey{Name: name, State: pkgState}
+	if cfg, wait, first := i.pluginConfigs.GetOrWait(key); cfg != nil {
+		return cfg
+	} else if !first {
+		<-wait
+		return i.pluginConfigs.Get(key)
+	}
+	cfg := &pyConfigBase{dict: pluginConfig(pluginState, pkgState)}
+	i.pluginConfigs.Set(key, cfg)
+	return cfg
 }
 
 func toPyObject(key, val, toType string) pyObject {

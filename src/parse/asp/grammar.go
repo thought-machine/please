@@ -114,7 +114,7 @@ type OptimisedExpression struct {
 	// Similarly applied to optimise simple lookups of local variables.
 	Local string
 	// And similarly applied to optimise lookups into configuration.
-	Config string
+	Config, SubConfig string
 }
 
 // An OpExpression is a operator combined with its following expression.
