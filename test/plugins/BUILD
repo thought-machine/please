@@ -115,6 +115,15 @@ please_repo_e2e_test(
     expected_output = {
         "plz-out/gen/test/test.txt": "foo",
     },
-    plz_command = "plz build  -o plugin.foo.modulepath:something //test/... --profile e2e",
+    plz_command = "plz build  -o plugin.foo.modulepath:something //test/...",
     repo = "self_referencing_plugin",
+)
+
+
+plugin_e2e_test(
+    name = "arch_test",
+    expected_output = {
+        "plz-out/gen/foo_bar66/fooc.txt": "bar66",
+    },
+    plz_command = "plz build -o plugin.foo.modulepath:something --arch foo_bar66 //:output_fooc",
 )
