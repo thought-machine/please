@@ -1,11 +1,5 @@
-# Binary downloads are not available for FreeBSD - will have to be added with 'pkg install protobuf'.
-[proto]
-protoctool = protoc
-protocflag = -I/usr/include
-
 [Plugin "cc"]
 cctool = cc
 cpptool = c++
 
-[go]
-CgoCCTool = cc
+

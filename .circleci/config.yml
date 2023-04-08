@@ -74,6 +74,9 @@ jobs:
              - parse_perf_test.pex
        - store_artifacts:
            path: plz-out/log
+       - run:
+           name: Test perf framework
+           command: plz-out/bin/tools/performance/gen_parse_tree.pex --plz plz-out/bin/src/please --size 1 && plz-out/bin/tools/performance/parse_perf_test.pex --plz plz-out/bin/src/please -n 1
        - save_cache:
            key: go-mod-linux-v7-{{ checksum "go.mod" }}
            paths:
@@ -243,7 +246,7 @@ jobs:
      working_directory: ~/please
      docker:
        - image: thoughtmachine/please_ubuntu:20220516
-     resource_class: large
+     resource_class: xlarge
      steps:
        - checkout
        - attach_workspace:
@@ -335,7 +338,7 @@ workflows:
             - build-alpine
       - build-darwin-arm64:
           requires:
-            - build-darwin
+            - build-alpine
       - release:
           requires:
             - build-alpine
