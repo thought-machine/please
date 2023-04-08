@@ -121,11 +121,15 @@ def main(argv):
         f.write("""
 [Plugin "python"]
 Target = //plugins:python
+
 [Plugin "cc"]
 Target = //plugins:cc
 TestMain = ///pleasings//cc:unittest_main
+
 [Plugin "go"]
 Target = //plugins:go
+FeatureFlags = go_get
+
 [parse]
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///cc//build_defs:cc
