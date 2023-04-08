@@ -860,12 +860,17 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	if err != nil {
 		return nil, nil, err
 	}
+	root := target.Label.PackageName
+	if target.Subrepo != nil {
+		root = filepath.Join(target.Subrepo.PackageRoot, root)
+	}
+
 	ar := &pb.ActionResult{}
 	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		inputDir.Build(ch)
 		for _, out := range command.OutputPaths {
-			if d, f := inputDir.Node(filepath.Join(target.Label.PackageName, out)); d != nil {
+			if d, f := inputDir.Node(filepath.Join(root, out)); d != nil {
 				entry, digest := c.protoEntry(inputDir.Tree(filepath.Join(target.Label.PackageName, out)))
 				ch <- entry
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
