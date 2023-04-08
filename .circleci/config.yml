@@ -217,7 +217,7 @@ jobs:
            command: ./.circleci/setup_osx.sh
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+           command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml --skip_tests
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
@@ -338,7 +338,7 @@ workflows:
             - build-alpine
       - build-darwin-arm64:
           requires:
-            - build-alpine
+            - build-darwin
       - release:
           requires:
             - build-alpine
