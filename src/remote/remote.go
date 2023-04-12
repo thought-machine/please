@@ -865,8 +865,8 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 		defer close(ch)
 		inputDir.Build(ch)
 		for _, out := range command.OutputPaths {
-			if d, f := inputDir.Node(filepath.Join(target.Label.PackageName, out)); d != nil {
-				entry, digest := c.protoEntry(inputDir.Tree(filepath.Join(target.Label.PackageName, out)))
+			if d, f := inputDir.Node(filepath.Join(target.PackageDir(), out)); d != nil {
+				entry, digest := c.protoEntry(inputDir.Tree(filepath.Join(target.PackageDir(), out)))
 				ch <- entry
 				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
 					Path:       out,
