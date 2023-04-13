@@ -223,18 +223,17 @@ func pkg(s *scope, args []pyObject) pyObject {
 
 		// Merge in the existing config for dictionaries
 		if overrides, ok := v.(pyDict); ok {
-			if pluginConfig, ok := configVal.(*pyConfig); ok {
-				if pluginConfig.overlay == nil {
-					pluginConfig.overlay = make(pyDict, len(overrides))
-				}
+			if pluginConfig, ok := configVal.(pyDict); ok {
+				newPluginConfig := pluginConfig.Copy()
 				for pluginKey, override := range overrides {
 					pluginKey = strings.ToUpper(pluginKey)
-					if _, ok := pluginConfig.base.dict[pluginKey]; !ok {
+					if _, ok := newPluginConfig[pluginKey]; !ok {
 						s.Error("error calling package(): %s.%s is not a known config value", k, pluginKey)
 					}
-					pluginConfig.overlay[pluginKey] = override
+
+					newPluginConfig.IndexAssign(pyString(pluginKey), override)
 				}
-				continue
+				v = newPluginConfig
 			} else {
 				s.Error("error calling package(): can't assign a dict to %s as it's not a dict", k)
 			}
