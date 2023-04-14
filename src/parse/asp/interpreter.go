@@ -6,7 +6,6 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cmap"
@@ -20,19 +19,13 @@ type interpreter struct {
 	parser      *Parser
 	subincludes *cmap.Map[string, pyDict]
 
-	configs       map[*core.BuildState]*pyConfig
-	configsMutex  sync.RWMutex
-	pluginConfigs *cmap.Map[pluginConfigKey, *pyConfigBase]
+	configs      map[*core.BuildState]*pyConfig
+	configsMutex sync.RWMutex
 
 	breakpointMutex sync.Mutex
 	limiter         semaphore
 
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
-}
-
-type pluginConfigKey struct {
-	Name  string
-	State *core.BuildState
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -42,21 +35,19 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
-	i := &interpreter{
-		scope:   s,
-		parser:  p,
-		configs: map[*core.BuildState]*pyConfig{},
-		limiter: make(semaphore, state.Config.Parse.NumThreads),
-	}
 	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
+	var subincludes *cmap.Map[string, pyDict]
 	if p.interpreter != nil {
-		i.subincludes = p.interpreter.subincludes
-		i.pluginConfigs = p.interpreter.pluginConfigs
+		subincludes = p.interpreter.subincludes
 	} else {
-		i.subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
-		i.pluginConfigs = cmap.New[pluginConfigKey, *pyConfigBase](cmap.SmallShardCount, func(key pluginConfigKey) uint64 {
-			return cmap.XXHash(key.Name) ^ uint64(uintptr(unsafe.Pointer(key.State)))
-		})
+		subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
+	}
+	i := &interpreter{
+		scope:       s,
+		parser:      p,
+		subincludes: subincludes,
+		configs:     map[*core.BuildState]*pyConfig{},
+		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
@@ -245,14 +236,9 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
 				expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
 				return false
-			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil {
-				if prop := expr.Val.Ident.Action[0].Property; len(prop.Action) == 0 {
-					expr.Optimised = &OptimisedExpression{Config: prop.Name}
-					expr.Val = nil
-				} else if len(prop.Action) == 1 && prop.Action[0].Property != nil && len(prop.Action[0].Property.Action) == 0 {
-					expr.Optimised = &OptimisedExpression{Config: prop.Name, SubConfig: prop.Action[0].Property.Name}
-					expr.Val = nil
-				}
+			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
+				expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
+				expr.Val = nil
 				return false
 			}
 		}
@@ -547,8 +533,6 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 			return expr.Optimised.Constant
 		} else if expr.Optimised.Local != "" {
 			return s.Lookup(expr.Optimised.Local)
-		} else if expr.Optimised.SubConfig != "" {
-			return s.config.Property(s, expr.Optimised.Config).Property(s, expr.Optimised.SubConfig)
 		}
 		return s.config.Property(s, expr.Optimised.Config)
 	}
