@@ -224,6 +224,7 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, dg *pb.Digest, me
 		for _, d := range ar.OutputDirectories {
 			t := pb.Tree{}
 			if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), &t); err == nil {
+				tree.Children = append(tree.Children, t.Root)
 				tree.Children = append(tree.Children, t.Children...)
 			}
 		}
