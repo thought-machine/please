@@ -161,7 +161,7 @@ func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.Outpu
 
 // readDirectory reads a Directory proto, possibly using a local cache, otherwise going to the remote
 func (c *Client) readDirectory(dg *pb.Digest) (*pb.Directory, error) {
-	if dir, present := c.downloads.Load(dg.Hash); present {
+	if dir, present := c.directories.Load(dg.Hash); present {
 		directoriesRetrieved.Inc()
 		return dir.(*pb.Directory), nil
 	}
@@ -228,6 +228,9 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, dg *pb.Digest, me
 				tree.Children = append(tree.Children, t.Children...)
 			}
 		}
+		for _, dir := range tree.Children {
+			c.directories.Store(c.digestMessage(dir).Hash, dir)
+		}
 		directoriesStored.Add(float64(len(tree.Children)))
 		data, _ := proto.Marshal(&tree)
 		metadata.RemoteOutputs = data
@@ -253,7 +256,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 					tree := pb.Tree{}
 					if err := proto.Unmarshal(metadata.RemoteOutputs, &tree); err == nil {
 						for _, dir := range tree.Children {
-							c.downloads.Store(c.digestMessage(dir).Hash, dir)
+							c.directories.Store(c.digestMessage(dir).Hash, dir)
 						}
 					}
 				}
