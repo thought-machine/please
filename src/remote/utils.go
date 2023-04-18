@@ -36,6 +36,24 @@ var downloadErrors = metrics.NewCounter(
 	"Number of times the an error has been seen during a tree digest download",
 )
 
+var directoriesStored = metrics.NewCounter(
+	"remote",
+	"dirs_stored_total",
+	"Number of directories cached locally",
+)
+
+var directoriesRetrieved = metrics.NewCounter(
+	"remote",
+	"dirs_retrieved_total",
+	"Number of directories retrieved from cache",
+)
+
+var directoriesDownloaded = metrics.NewCounter(
+	"remote",
+	"dirs_downloaded_total",
+	"Number of directories downloaded from remote",
+)
+
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
 
@@ -144,10 +162,12 @@ func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.Outpu
 // readDirectory reads a Directory proto, possibly using a local cache, otherwise going to the remote
 func (c *Client) readDirectory(dg *pb.Digest) (*pb.Directory, error) {
 	if dir, present := c.downloads.Load(dg.Hash); present {
+		directoriesRetrieved.Inc()
 		return dir.(*pb.Directory), nil
 	}
 	dir := &pb.Directory{}
 	_, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir)
+	directoriesDownloaded.Inc()
 	return dir, err
 }
 
@@ -207,6 +227,7 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, dg *pb.Digest, me
 				tree.Children = append(tree.Children, t.Children...)
 			}
 		}
+		directoriesStored.Add(float64(len(tree.Children)))
 		data, _ := proto.Marshal(&tree)
 		metadata.RemoteOutputs = data
 	}
