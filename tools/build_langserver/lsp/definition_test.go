@@ -25,7 +25,7 @@ func TestDefinition(t *testing.T) {
 	assert.Equal(t, []lsp.Location{
 		{
 			URI:   lsp.DocumentURI("file://" + filepath.Join(cacheDir, "please/misc_rules.build_defs")),
-			Range: xrng(0, 0, 144, 5),
+			Range: xrng(3, 0, 144, 5),
 		},
 	}, locs)
 }
@@ -45,7 +45,7 @@ func TestDefinitionStatement(t *testing.T) {
 	assert.Equal(t, []lsp.Location{
 		{
 			URI:   lsp.DocumentURI("file://" + filepath.Join(cacheDir, "please/misc_rules.build_defs")),
-			Range: xrng(0, 0, 144, 5),
+			Range: xrng(3, 0, 144, 5),
 		},
 	}, locs)
 }
