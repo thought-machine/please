@@ -1,10 +1,15 @@
 #include <stdbool.h>
 
+#define FLAG_SANDBOX_NET (1 << 0)
+#define FLAG_SANDBOX_FS  (1 << 1)
+
+#define FLAG_SANDBOX_ALL (FLAG_SANDBOX_NET | FLAG_SANDBOX_FS)
+
 // contain separates the process into new namespaces to sandbox it.
-// It should be passed the argv for the new process, and booleans indicating
-// whether it should move to new network and mount namespaces.
+// It should be passed the argv for the new process, and a bit mask of FLAG_*s
+// indicating which sandboxing features should be enabled.
 // It returns an exit code (so 0 on success, nonzero on failure).
-int contain(char* argv[], bool net, bool mount);
+int contain(char* argv[], int flags);
 
 // exec_name returns the name of the new binary to exec() as.
 // old_name is the current name; if it's within old_dir it will be re-prefixed to new_dir.

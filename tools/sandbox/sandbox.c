@@ -178,10 +178,9 @@ int mount_proc() {
 }
 
 typedef struct _clone_arg {
-  uid_t uid;
-  uid_t gid;
-  bool  net;
-  bool  mount;
+  uid_t  uid;
+  uid_t  gid;
+  int    flags;
   char** argv;
 } clone_arg;
 
@@ -195,7 +194,7 @@ int contain_child(void* p) {
       map_ids(arg->gid, "/proc/self/gid_map") != 0) {
     return 1;
   }
-  if (arg->mount) {
+  if (arg->flags & FLAG_SANDBOX_FS) {
     if (mount_tmp(&arg->argv[0]) != 0) {
       return 1;
     }
@@ -203,7 +202,7 @@ int contain_child(void* p) {
       return 1;
     }
   }
-  if (arg->net) {
+  if (arg->flags & FLAG_SANDBOX_NET) {
     if (lo_up() != 0) {
       return 1;
     }
@@ -219,13 +218,12 @@ int contain_child(void* p) {
 }
 
 // contain separates the process into new namespaces to sandbox it.
-int contain(char* argv[], bool net, bool mount) {
+int contain(char* argv[], int flags) {
   clone_arg arg;
   arg.uid = getuid();
   arg.gid = getgid();
   arg.argv = argv;
-  arg.net = net;
-  arg.mount = mount;
+  arg.flags = flags;
 
   static const int stack_size = 100 * 1024;
   char* stack = mmap(NULL, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
@@ -233,7 +231,13 @@ int contain(char* argv[], bool net, bool mount) {
     perror("mmap");
     return 1;
   }
-  const int ns = CLONE_NEWUSER | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | (net ? CLONE_NEWNET : 0) | (mount ? CLONE_NEWNS : 0);
+  int ns = CLONE_NEWUSER | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID;
+  if (flags & FLAG_SANDBOX_NET) {
+    ns |= CLONE_NEWNET;
+  }
+  if (flags & FLAG_SANDBOX_FS) {
+    ns |= CLONE_NEWNS;
+  }
   pid_t pid = clone(contain_child, stack + stack_size, ns | SIGCHLD, &arg);
   if (pid == -1) {
     perror("clone");
@@ -259,7 +263,7 @@ int contain(char* argv[], bool net, bool mount) {
 
 // On non-Linux systems contain simply execs a subprocess.
 // It's not really expected to be used there, this is simply to make it compile.
-int contain(char* argv[], bool net, bool mount) {
+int contain(char* argv[], int flags) {
   return execvp(argv[0], argv);
 }
 

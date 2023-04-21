@@ -13,5 +13,5 @@ int main(int argc, char* argv[]) {
         fputs("Usage: nonet_sandbox command args...\n", stderr);
         return 1;
     }
-    return contain(&argv[1], false, true);
+    return contain(&argv[1], FLAG_SANDBOX_ALL & ~FLAG_SANDBOX_NET);
 }
