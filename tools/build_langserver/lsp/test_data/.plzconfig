@@ -1,3 +1,6 @@
 [parse]
 buildfilename = test.build
 builddefsdir = build_defs
+
+[Plugin "go"]
+target = //plugins:go
