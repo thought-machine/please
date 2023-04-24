@@ -68,7 +68,8 @@ go_test(
     labels = ["manual"],
 )
 
-# This test runs the test above, which panics, and checks that we capture the panic output.
+# This test runs the test above (go_test_panic_output_test), which panics, and checks that
+# we capture the panic output.
 plz_e2e_test(
     name = "go_test_output_test",
     cmd = "plz test //src/test:go_test_panic_output_test",
