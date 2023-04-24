@@ -60,7 +60,7 @@ go_test(
 )
 
 go_test(
-    name = "go_test_panic_output_test",
+    name = "go_test_panic",
     srcs = ["go_test_panic.go"],
     deps = [
         "//third_party/go:testify",
@@ -72,7 +72,7 @@ go_test(
 # we capture the panic output.
 plz_e2e_test(
     name = "go_test_output_test",
-    cmd = "plz test //src/test:go_test_panic_output_test",
+    cmd = "plz test //src/test:go_test_panic",
     expected_failure = True,
     expect_output_contains = "panic:",
 )
