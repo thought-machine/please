@@ -8,9 +8,8 @@ go_library(
             "*_test.go",
             "version.go",
         ],
-    ) + [
-        ":version",
-    ],
+        allow_empty = True,
+    ),
     visibility = ["PUBLIC"],
     deps = [
         "//third_party/go:gcfg",
@@ -21,7 +20,7 @@ go_library(
 go_test(
     name = "config_test",
     srcs = ["config_test.go"],
-    data = glob(["test_data/*.plzconfig*"]),
+    data = glob(["test_data/*.plzconfig*"], allow_empty = True),
     deps = [
         ":core",
     ],
