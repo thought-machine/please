@@ -10,6 +10,6 @@ func foo() {
 	panic("goodbye world")
 }
 
-func TestFoo(t *testing.T) {
+func TestFoo(t *testing.T) { //nolint
 	foo()
 }
