@@ -219,7 +219,7 @@ func (c *Client) locallyCacheResults(target *core.BuildTarget, dg *pb.Digest, me
 	metadata.RemoteAction = data
 	metadata.Timestamp = time.Now()
 
-	if c.state.Config.FeatureFlags.CacheRemoteDirs && len(ar.OutputDirectories) > 0 {
+	if len(ar.OutputDirectories) > 0 {
 		tree := pb.Tree{}
 		for _, d := range ar.OutputDirectories {
 			t := pb.Tree{}
@@ -252,7 +252,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
-				if c.state.Config.FeatureFlags.CacheRemoteDirs && len(metadata.RemoteOutputs) > 0 {
+				if len(metadata.RemoteOutputs) > 0 {
 					tree := pb.Tree{}
 					if err := proto.Unmarshal(metadata.RemoteOutputs, &tree); err == nil {
 						for _, dir := range tree.Children {
