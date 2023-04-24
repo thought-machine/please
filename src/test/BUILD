@@ -74,5 +74,5 @@ plz_e2e_test(
     name = "go_test_output_test",
     cmd = "plz test //src/test:go_test_panic",
     expected_failure = True,
-    expect_output_contains = "panic:",
+    expect_output_contains = "panic: goodbye world",
 )
