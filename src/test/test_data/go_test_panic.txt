@@ -1,0 +1,25 @@
+=== RUN   TestPass
+2023/04/24 14:44:01 baguette
+--- PASS: TestPass (0.00s)
+=== RUN   TestFoo
+2023/04/24 14:44:01 hello world
+--- FAIL: TestFoo (0.00s)
+panic: goodbye world [recovered]
+        panic: goodbye world
+
+goroutine 7 [running]:
+testing.tRunner.func1.2({0x512f20, 0x565c50})
+        /home/swestmoreland/please_dev/please/plz-out/bin/third_party/go/toolchain/src/testing/testing.go:1396 +0x24e
+testing.tRunner.func1()
+        /home/swestmoreland/please_dev/please/plz-out/bin/third_party/go/toolchain/src/testing/testing.go:1399 +0x39f
+panic({0x512f20, 0x565c50})
+        /home/swestmoreland/please_dev/please/plz-out/bin/third_party/go/toolchain/src/runtime/panic.go:884 +0x212
+go_test_lib.foo(...)
+        test/misc_rules/test.go:12
+go_test_lib.TestFoo(0x0?)
+        test/misc_rules/test.go:20 +0x4d
+testing.tRunner(0xc000118b60, 0x542408)
+        /home/swestmoreland/please_dev/please/plz-out/bin/third_party/go/toolchain/src/testing/testing.go:1446 +0x10b
+created by testing.(*T).Run
+        /home/swestmoreland/please_dev/please/plz-out/bin/third_party/go/toolchain/src/testing/testing.go:1493 +0x35f
+
