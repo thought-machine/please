@@ -11,6 +11,10 @@ sh_binary(
 filegroup(
     name = "build_defs",
     srcs = ["test.build_defs"],
+    visibility = [
+        "//test/...",
+        "//src/test/...",
+    ],
 )
 
 filegroup(
