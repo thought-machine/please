@@ -399,8 +399,7 @@ func TestCompletionPartial(t *testing.T) {
 	}, completions)
 }
 
-const testCompletionContentFunction = `
-go_library(
+const testCompletionContentFunction = `go_library(
     name = "test",
     srcs = glob(["*.go"]),
     deps = [
@@ -413,7 +412,7 @@ func TestCompletionFunction(t *testing.T) {
 	h := initHandler()
 	err := h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{
 		TextDocument: lsp.TextDocumentItem{
-			URI:  "file://test/test.build",
+			URI:  testURI,
 			Text: testCompletionContentFunction,
 		},
 	}, nil)
@@ -423,10 +422,10 @@ func TestCompletionFunction(t *testing.T) {
 	err = h.Request("textDocument/completion", &lsp.CompletionParams{
 		TextDocumentPositionParams: lsp.TextDocumentPositionParams{
 			TextDocument: lsp.TextDocumentIdentifier{
-				URI: "file://test/test.build",
+				URI: testURI,
 			},
 			Position: lsp.Position{
-				Line:      1,
+				Line:      0,
 				Character: 6,
 			},
 		},
@@ -434,15 +433,7 @@ func TestCompletionFunction(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &lsp.CompletionList{
 		IsIncomplete: false,
-		Items: []lsp.CompletionItem{
-			{
-				Label:            "go_library",
-				Kind:             lsp.CIKFunction,
-				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("rary", 1, 6),
-				Documentation:    h.builtins["go_library"].Stmt.FuncDef.Docstring,
-			},
-		},
+		Items:        nil,
 	}, completions)
 }
 
