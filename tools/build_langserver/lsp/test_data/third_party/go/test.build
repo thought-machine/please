@@ -1,5 +1,4 @@
 package(default_visibility = ["PUBLIC"])
-subinclude("///go//build_defs:go")
 
 go_module(
     name = "spew",

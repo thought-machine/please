@@ -2,6 +2,7 @@
 buildfilename = test.build
 buildfilename = BUILD
 builddefsdir = build_defs
+preloadsubincludes = ///go//build_defs:go
 
 [Plugin "go"]
 target = //plugins:go

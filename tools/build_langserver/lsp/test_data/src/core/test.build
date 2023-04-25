@@ -1,5 +1,3 @@
-subinclude("///go//build_defs:go")
-
 go_library(
     name = "core",
     srcs = glob(
