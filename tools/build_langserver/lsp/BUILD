@@ -23,7 +23,6 @@ go_test(
     size = "medium",
     srcs = glob(["*_test.go"]),
     data = ["test_data"],
-    labels = ["manual"],  # TODO(#1412): find out why this flakes
     deps = [
         ":lsp",
         "//src/cli",
