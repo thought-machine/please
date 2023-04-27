@@ -169,9 +169,8 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
-		Port     int    `short:"p" long:"port" description:"Debugging server port"`
-		Args     struct {
+		Port int `short:"p" long:"port" description:"Debugging server port"`
+		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
 		} `positional-args:"true"`
@@ -512,10 +511,6 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"debug": func() int {
-		if len(opts.Debug.Debugger) > 0 {
-			log.Warningf("--debugger has been deprecated in favour of build rule specific config fields and will be removed in v17.")
-		}
-
 		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
 		if !success {
 			return toExitCode(success, state)
