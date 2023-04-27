@@ -25,7 +25,7 @@ func TestDefinition(t *testing.T) {
 	assert.Equal(t, []lsp.Location{
 		{
 			URI:   lsp.DocumentURI("file://" + filepath.Join(cacheDir, "please/misc_rules.build_defs")),
-			Range: xrng(0, 0, 144, 5),
+			Range: xrng(3, 0, 144, 5),
 		},
 	}, locs)
 }
@@ -45,7 +45,7 @@ func TestDefinitionStatement(t *testing.T) {
 	assert.Equal(t, []lsp.Location{
 		{
 			URI:   lsp.DocumentURI("file://" + filepath.Join(cacheDir, "please/misc_rules.build_defs")),
-			Range: xrng(0, 0, 144, 5),
+			Range: xrng(3, 0, 144, 5),
 		},
 	}, locs)
 }
@@ -71,7 +71,9 @@ func TestDefinitionBuiltin(t *testing.T) {
 }
 
 func TestDefinitionBuildLabel(t *testing.T) {
-	h := initHandlerText("go_bindata(\n    deps = ['//src/core'],\n)")
+	h := initHandlerText(`go_bindata(
+    deps = ['//src/core'],
+)`)
 	h.WaitForPackageTree()
 	var locs []lsp.Location
 	err := h.Request("textDocument/definition", &lsp.TextDocumentPositionParams{
@@ -84,7 +86,7 @@ func TestDefinitionBuildLabel(t *testing.T) {
 	assert.Equal(t, []lsp.Location{
 		{
 			URI:   lsp.DocumentURI("file://" + filepath.Join(os.Getenv("TEST_DIR"), "tools/build_langserver/lsp/test_data/src/core/test.build")),
-			Range: xrng(1, 1, 17, 2),
+			Range: xrng(1, 1, 18, 2),
 		},
 	}, locs)
 }

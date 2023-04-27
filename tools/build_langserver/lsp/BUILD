@@ -31,7 +31,6 @@ go_test(
         "symbols_test.go",
     ],
     data = ["test_data"],
-    labels = ["manual"],  # TODO(#1412): find out why this flakes
     deps = [
         ":lsp",
         "///third_party/go/github.com_sourcegraph_go-lsp//:go-lsp",

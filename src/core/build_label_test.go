@@ -171,6 +171,14 @@ func TestParseSubrepoLabelWithExtraColon(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSingleSlash(t *testing.T) {
+	// https://github.com/thought-machine/please/issues/2773
+	label := BuildLabel{}
+	err := label.UnmarshalFlag("/common/go/pool")
+	assert.NoError(t, err)
+	assert.Equal(t, BuildLabel{PackageName: "common/go/pool", Name: "pool"}, label)
+}
+
 func TestMain(m *testing.M) {
 	// Used to support TestComplete, the function it's testing re-execs
 	// itself thinking that it's actually plz.

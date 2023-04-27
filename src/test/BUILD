@@ -1,3 +1,5 @@
+subinclude("//test/build_defs")
+
 go_library(
     name = "test",
     srcs = [
@@ -40,4 +42,22 @@ go_test(
         "///third_party/go/github.com_stretchr_testify//require",
         "//src/core",
     ],
+)
+
+go_test(
+    name = "go_test_panic",
+    srcs = ["go_test_panic.go"],
+    deps = [
+        "//third_party/go:testify",
+    ],
+    labels = ["manual"],
+)
+
+# This test runs the test above (go_test_panic), which panics, and checks that
+# we capture the panic output.
+plz_e2e_test(
+    name = "go_test_output_test",
+    cmd = "plz test //src/test:go_test_panic",
+    expected_failure = True,
+    expect_output_contains = "panic: goodbye world",
 )

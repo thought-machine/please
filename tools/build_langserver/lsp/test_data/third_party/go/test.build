@@ -1,41 +1,41 @@
 package(default_visibility = ["PUBLIC"])
 
-go_get(
+go_module(
     name = "spew",
-    get = "github.com/davecgh/go-spew/spew",
+    module = "github.com/davecgh/go-spew/spew",
     patch = "spew_omit_empty.patch",
-    revision = "ecdeabc65495df2dec95d7c4a4c3e021903035e5",
+    version = "v1.1.1",
 )
 
-go_get(
+go_module(
     name = "testify",
-    get = "github.com/stretchr/testify",
+    module = "github.com/stretchr/testify",
     install = [
         "assert",
         "require",
         "vendor/github.com/davecgh/go-spew/spew",
         "vendor/github.com/pmezard/go-difflib/difflib",
     ],
-    revision = "f390dcf405f7b83c997eac1b06768bb9f44dec18",
+    version = "v1.8.2",
     deps = [":spew"],
 )
 
-go_get(
+go_module(
     name = "logging",
-    get = "gopkg.in/op/go-logging.v1",
-    revision = "b2cb9fa56473e98db8caba80237377e83fe44db5",
+    module = "gopkg.in/op/go-logging.v1",
+    version = "v1",
 )
 
-go_get(
+go_module(
     name = "warnings",
-    get = "gopkg.in/warnings.v0",
-    revision = "v0.1.2",
+    module = "gopkg.in/warnings.v0",
+    version = "v0.1.2",
 )
 
-go_get(
+go_module(
     name = "gcfg",
-    get = "github.com/peterebden/gcfg/...",
-    revision = "v1.3.0",
+    module = "github.com/peterebden/gcfg",
+    version = "v1.3.0",
     deps = [
         ":warnings",
     ],
