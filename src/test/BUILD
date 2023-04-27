@@ -48,7 +48,7 @@ go_test(
     name = "go_test_panic",
     srcs = ["go_test_panic.go"],
     deps = [
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
     labels = ["manual"],
 )
