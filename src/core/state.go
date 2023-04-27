@@ -10,7 +10,6 @@ import (
 	"io"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -236,9 +235,6 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 		// If we are the root repo, or an cross-compilation of that, we don't want to re-load the config files. That's
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
-			if strings.HasPrefix(state.CurrentSubrepo, "third_party/go/github.com_bazelbuild_remote-apis-sdks") {
-				log.Debug("")
-			}
 			state.RepoConfig = &Configuration{}
 			err = readConfigFilesInto(state.RepoConfig, append(subrepo.AdditionalConfigFiles, filepath.Join(subrepo.Root, ".plzconfig")))
 			if err != nil {

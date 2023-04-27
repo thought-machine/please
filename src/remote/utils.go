@@ -56,9 +56,6 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 
 // setOutputs sets the outputs for a previously executed target.
 func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error {
-	if target.Label.String() == "///third_party/go/github.com_cespare_xxhash_v2//:_v2#abi" {
-		log.Debug("")
-	}
 	o := &pb.Directory{
 		Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
 		Directories: make([]*pb.DirectoryNode, 0, len(ar.OutputDirectories)),

@@ -226,7 +226,6 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 				// This is just How Things Are, so mimic it here.
 				pkgName = "."
 			}
-
 			// Recall that (as noted in setOutputs) these can have full paths on them, which
 			// we now need to sort out again to create well-formed Directory protos.
 			for _, f := range o.Files {
