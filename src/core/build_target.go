@@ -247,7 +247,8 @@ type BuildMetadata struct {
 	// Standard output & error
 	Stdout, Stderr []byte
 	// Serialised build action metadata.
-	RemoteAction []byte
+	RemoteAction  []byte
+	RemoteOutputs []byte
 	// Time this action was written. Used for remote execution to determine if
 	// the action is stale and needs re-checking or not.
 	Timestamp time.Time

@@ -278,8 +278,8 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 
 // addChildDirs adds a set of child directories to a builder.
 func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
-	dir := &pb.Directory{}
-	if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir); err != nil {
+	dir, err := c.readDirectory(dg)
+	if err != nil {
 		return err
 	}
 	d := b.Dir(name)
