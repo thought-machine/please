@@ -170,7 +170,7 @@ func TestFormatting(t *testing.T) {
 		{
 			Range: lsp.Range{
 				Start: lsp.Position{Line: 3, Character: 0},
-				End:   lsp.Position{Line: 3, Character: 47},
+				End:   lsp.Position{Line: 3, Character: 76},
 			},
 			NewText: `    deps = [`,
 		},
