@@ -498,8 +498,12 @@ var buildFunctions = map[string]func() int{
 			}
 			stats = test.CalculateIncrementalStats(state, lines)
 		}
-		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
-		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
+		if opts.Cover.CoverageResultsFile != "" {
+			test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
+		}
+		if opts.Cover.CoverageXMLReport != "" {
+			test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
+		}
 
 		if opts.Cover.LineCoverageReport && success {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
