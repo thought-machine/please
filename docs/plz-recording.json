@@ -103,7 +103,7 @@
     ],
     [
       9.6e-05,
-      "\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//third_party/java:slf4j-api \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[36;1m//src/mock:parse \u001b[37;1mParsing...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//third_party/java:slf4j-api \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[36;1m//src/mock:parse \u001b[37;1mParsing...\u001b[K"
     ],
     [
       5.6e-05,
@@ -135,7 +135,7 @@
     ],
     [
       4.1e-05,
-      "\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       2.6e-05,
@@ -227,7 +227,7 @@
     ],
     [
       5.8e-05,
-      "\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       5.1e-05,
@@ -255,7 +255,7 @@
     ],
     [
       7e-05,
-      "\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/cache/proto:rpc_cache \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mStoring...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/cache/proto:rpc_cache \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mStoring...\u001b[K"
     ],
     [
       6.3e-05,
@@ -275,7 +275,7 @@
     ],
     [
       0.054208,
-      "\u001b[11ABuilding [163/360, 0.4s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/cache/proto:rpc_cache \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//test/system_deps:source_context \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/mock:parse \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc/clang:embedded_files \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc/clang:test_binary \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//third_party/java:logback-core \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[0m\u001b]0;plz: 163 / 360 tasks, 0.4s\u0007"
+      "\u001b[11ABuilding [163/360, 0.4s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/cache/proto:rpc_cache \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//test/system_deps:source_context \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/mock:parse \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc/clang:embedded_files \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc/clang:test_binary \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//third_party/java:logback-core \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[0m\u001b]0;plz: 163 / 360 tasks, 0.4s\u0007"
     ],
     [
       0.045374,
@@ -283,7 +283,7 @@
     ],
     [
       3.5e-05,
-      "Building [165/360, 0.5s]:\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//third_party/java:logback-classic \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n"
+      "Building [165/360, 0.5s]:\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//third_party/java:logback-classic \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n"
     ],
     [
       2.1e-05,
@@ -319,7 +319,7 @@
     ],
     [
       1.6e-05,
-      "\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n"
     ],
     [
       1.7e-05,
@@ -351,7 +351,7 @@
     ],
     [
       4e-05,
-      "Building [207/363, 0.6s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//third_party/java:logback-classic \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "Building [207/363, 0.6s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//third_party/java:logback-classic \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2.2e-05,
@@ -371,7 +371,7 @@
     ],
     [
       3.6e-05,
-      "\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[35m//third_party/java:guava \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/system_deps:source_context \u001b[37;1mStoring...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[35m//third_party/java:guava \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/system_deps:source_context \u001b[37;1mStoring...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2.3e-05,
@@ -383,7 +383,7 @@
     ],
     [
       0.049618,
-      "\u001b[11ABuilding [222/363, 0.7s]:\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[11ABuilding [222/363, 0.7s]:\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       3.8e-05,
@@ -395,7 +395,7 @@
     ],
     [
       3.2e-05,
-      "Building [227/363, 0.7s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n"
+      "Building [227/363, 0.7s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n"
     ],
     [
       1.9e-05,
@@ -427,7 +427,7 @@
     ],
     [
       0.00013,
-      "\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       6.6e-05,
@@ -443,7 +443,7 @@
     ],
     [
       3.4e-05,
-      "\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc/clang:embed_file_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n"
     ],
     [
       2.1e-05,
@@ -467,7 +467,7 @@
     ],
     [
       0.000425,
-      "\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       2.8e-05,
@@ -483,7 +483,7 @@
     ],
     [
       0.000194,
-      "\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       0.000136,
@@ -503,7 +503,7 @@
     ],
     [
       0.000198,
-      "\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/system_deps:source_context \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       0.000149,
@@ -523,7 +523,7 @@
     ],
     [
       6.1e-05,
-      "\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       5.7e-05,
@@ -543,7 +543,7 @@
     ],
     [
       0.049869,
-      "\u001b[11ABuilding [237/363, 1.1s]:\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[0m\u001b]0;plz: 237 / 363 tasks, 1.1s\u0007"
+      "\u001b[11ABuilding [237/363, 1.1s]:\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[33m//src/build/java:zip_writer_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[0m\u001b]0;plz: 237 / 363 tasks, 1.1s\u0007"
     ],
     [
       0.049588,
@@ -555,7 +555,7 @@
     ],
     [
       6.6e-05,
-      "\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
+      "\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
     ],
     [
       3.5e-05,
@@ -567,7 +567,7 @@
     ],
     [
       0.00012,
-      "Building [237/363, 1.2s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n"
+      "Building [237/363, 1.2s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n"
     ],
     [
       6.1e-05,
@@ -587,7 +587,7 @@
     ],
     [
       4.6e-05,
-      "\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
     ],
     [
       6.2e-05,
@@ -623,7 +623,7 @@
     ],
     [
       6e-05,
-      "\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
     ],
     [
       5.9e-05,
@@ -651,7 +651,7 @@
     ],
     [
       5.7e-05,
-      "\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
     ],
     [
       6.6e-05,
@@ -683,7 +683,7 @@
     ],
     [
       6.2e-05,
-      "\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       4.8e-05,
@@ -707,7 +707,7 @@
     ],
     [
       0.000122,
-      "\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n"
     ],
     [
       4.9e-05,
@@ -719,7 +719,7 @@
     ],
     [
       4.7e-05,
-      "\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       3.3e-05,
@@ -735,7 +735,7 @@
     ],
     [
       0.00015,
-      "Building [241/363, 1.5s]:\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "Building [241/363, 1.5s]:\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       0.000109,
@@ -755,7 +755,7 @@
     ],
     [
       8.6e-05,
-      "\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
     ],
     [
       2.7e-05,
@@ -767,7 +767,7 @@
     ],
     [
       3.2e-05,
-      "Building [241/363, 1.6s]:\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
+      "Building [241/363, 1.6s]:\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       2.3e-05,
@@ -791,7 +791,7 @@
     ],
     [
       3.7e-05,
-      "\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       2e-05,
@@ -815,7 +815,7 @@
     ],
     [
       0.000154,
-      "Building [242/363, 1.7s]:\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "Building [242/363, 1.7s]:\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       0.0001,
@@ -835,7 +835,7 @@
     ],
     [
       3.9e-05,
-      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       2.4e-05,
@@ -867,7 +867,7 @@
     ],
     [
       0.000117,
-      "\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
     ],
     [
       0.000124,
@@ -891,7 +891,7 @@
     ],
     [
       0.000134,
-      "\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       0.000135,
@@ -915,7 +915,7 @@
     ],
     [
       0.000127,
-      "\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       5.9e-05,
@@ -931,7 +931,7 @@
     ],
     [
       9.7e-05,
-      "\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K"
     ],
     [
       6.7e-05,
@@ -951,7 +951,7 @@
     ],
     [
       8.5e-05,
-      "\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
     ],
     [
       2.7e-05,
@@ -963,7 +963,7 @@
     ],
     [
       0.00011,
-      "Building [243/363, 2.1s]:\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "Building [243/363, 2.1s]:\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[33m//test/system_deps:go_system_dep_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       6.2e-05,
@@ -983,7 +983,7 @@
     ],
     [
       3.6e-05,
-      "\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
+      "\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
     ],
     [
       2.2e-05,
@@ -1011,7 +1011,7 @@
     ],
     [
       5.5e-05,
-      "\r\n\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       5.7e-05,
@@ -1035,7 +1035,7 @@
     ],
     [
       9.2e-05,
-      "\r\n\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       4.8e-05,
@@ -1051,7 +1051,7 @@
     ],
     [
       0.000158,
-      "\r\n\u001b[37;1m=> [ 2.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 2.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
     ],
     [
       0.000148,
@@ -1067,7 +1067,7 @@
     ],
     [
       7.3e-05,
-      "\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n"
     ],
     [
       4.1e-05,
@@ -1079,7 +1079,7 @@
     ],
     [
       3.7e-05,
-      "Building [253/363, 2.4s]:\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n"
+      "Building [253/363, 2.4s]:\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n"
     ],
     [
       2.7e-05,
@@ -1107,7 +1107,7 @@
     ],
     [
       9.9e-05,
-      "\r\n\u001b[37;1m=> [ 2.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 2.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       7.8e-05,
@@ -1127,7 +1127,7 @@
     ],
     [
       9.1e-05,
-      "\r\n\u001b[37;1m=> [ 2.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 2.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       7.6e-05,
@@ -1147,7 +1147,7 @@
     ],
     [
       9.8e-05,
-      "\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
     ],
     [
       5.7e-05,
@@ -1171,7 +1171,7 @@
     ],
     [
       0.000111,
-      "\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       7.1e-05,
@@ -1191,7 +1191,7 @@
     ],
     [
       3.5e-05,
-      "\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:embedded_files \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2e-05,
@@ -1215,7 +1215,7 @@
     ],
     [
       4.1e-05,
-      "\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
+      "\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
     ],
     [
       0.00129,
@@ -1235,7 +1235,7 @@
     ],
     [
       2e-05,
-      "\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
+      "\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
     ],
     [
       4.3e-05,
@@ -1267,7 +1267,7 @@
     ],
     [
       9.2e-05,
-      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:test_binary \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[0m\u001b]0;plz: 256 / 363 tasks, 2.8s\u0007"
+      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:test_binary \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[0m\u001b]0;plz: 256 / 363 tasks, 2.8s\u0007"
     ],
     [
       0.049832,
@@ -1275,7 +1275,7 @@
     ],
     [
       3.9e-05,
-      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:test_binary \u001b[37;1mCompiling...\u001b[K"
+      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:test_binary \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       2.1e-05,
@@ -1287,7 +1287,7 @@
     ],
     [
       3.6e-05,
-      "\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2.2e-05,
@@ -1307,7 +1307,7 @@
     ],
     [
       3.6e-05,
-      "\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       2.6e-05,
@@ -1319,7 +1319,7 @@
     ],
     [
       0.050468,
-      "\u001b[11ABuilding [262/363, 3.0s]:\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.7s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mBuilding pex...\u001b[K\r\n\u001b[0m\u001b]0;plz: 262 / 363 t"
+      "\u001b[11ABuilding [262/363, 3.0s]:\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.7s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mBuilding pex...\u001b[K\r\n\u001b[0m\u001b]0;plz: 262 / 363 t"
     ],
     [
       7.8e-05,
@@ -1331,7 +1331,7 @@
     ],
     [
       3.6e-05,
-      "\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2.2e-05,
@@ -1351,7 +1351,7 @@
     ],
     [
       7.1e-05,
-      "\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 2.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K"
     ],
     [
       0.000123,
@@ -1375,7 +1375,7 @@
     ],
     [
       6.8e-05,
-      "\r\n\u001b[37;1m=> [ 2.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 2.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.4s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       4.8e-05,
@@ -1395,7 +1395,7 @@
     ],
     [
       7.2e-05,
-      "\r\n\u001b[37;1m=> [ 3.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K"
     ],
     [
       8.5e-05,
@@ -1415,7 +1415,7 @@
     ],
     [
       9.4e-05,
-      "\r\n\u001b[37;1m=> [ 3.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.0s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.5s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.0s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
     ],
     [
       3e-05,
@@ -1427,7 +1427,7 @@
     ],
     [
       0.000128,
-      "Building [264/363, 3.3s]:\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "Building [264/363, 3.3s]:\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       6.9e-05,
@@ -1447,7 +1447,7 @@
     ],
     [
       7.1e-05,
-      "\r\n\u001b[37;1m=> [ 3.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K"
     ],
     [
       0.000109,
@@ -1463,7 +1463,7 @@
     ],
     [
       0.000153,
-      "Building [264/363, 3.4s]:\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "Building [264/363, 3.4s]:\r\n\u001b[37;1m=> [ 1.3s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       8.5e-05,
@@ -1483,7 +1483,7 @@
     ],
     [
       8.7e-05,
-      "\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K"
     ],
     [
       2.6e-05,
@@ -1499,7 +1499,7 @@
     ],
     [
       0.000164,
-      "\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mTesting...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.2s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mTesting...\u001b[K"
     ],
     [
       9.7e-05,
@@ -1515,7 +1515,7 @@
     ],
     [
       0.000144,
-      "\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
     ],
     [
       6e-05,
@@ -1531,7 +1531,7 @@
     ],
     [
       0.000236,
-      "\r\n\u001b[37;1m=> [ 3.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc:cc_binary_test \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc:cc_binary_test \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 3.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K"
     ],
     [
       5.1e-05,
@@ -1547,7 +1547,7 @@
     ],
     [
       0.000109,
-      "\r\n\u001b[37;1m=> [ 3.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K"
     ],
     [
       5.2e-05,
@@ -1563,7 +1563,7 @@
     ],
     [
       0.000108,
-      "\r\n\u001b[37;1m=> [ 3.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[37m//src/build/cc:so_test \u001b[37;1mLinking...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:test_coverage_test...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       5.5e-05,
@@ -1575,7 +1575,7 @@
     ],
     [
       3.2e-05,
-      "\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc:cc_binary_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
+      "\u001b[37;1m=> [ 1.6s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc:cc_binary_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       2e-05,
@@ -1595,7 +1595,7 @@
     ],
     [
       0.054487,
-      "\u001b[11ABuilding [274/365, 3.8s]:\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[0m\u001b]0;plz: 274 / 365 tasks, 3.8s\u0007"
+      "\u001b[11ABuilding [274/365, 3.8s]:\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mPreparing...\u001b[K\r\n\u001b[37;1m=> [ 0.9s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[32m//src/build/cc/clang:shared_object_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[0m\u001b]0;plz: 274 / 365 tasks, 3.8s\u0007"
     ],
     [
       0.045559,
@@ -1603,7 +1603,7 @@
     ],
     [
       4.6e-05,
-      "Building [276/385, 3.8s]:\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
+      "Building [276/385, 3.8s]:\r\n\u001b[37;1m=> [ 1.7s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n"
     ],
     [
       2.6e-05,
@@ -1623,7 +1623,7 @@
     ],
     [
       3.6e-05,
-      "\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 1.8s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 1.1s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_test \u001b[37;1m...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2.1e-05,
@@ -1647,7 +1647,7 @@
     ],
     [
       6.7e-05,
-      "\r\n\u001b[37;1m=> [ 3.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//test/proto_rules:test_proto \u001b[37;1mBuilding...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//test/proto_rules:test_proto \u001b[37;1mBuilding...\u001b[K"
     ],
     [
       6.3e-05,
@@ -1667,7 +1667,7 @@
     ],
     [
       6.6e-05,
-      "\r\n\u001b[37;1m=> [ 3.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//test/proto_rules:test_proto \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.2s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 3.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//_remote:plz_e2e_test_build_defs \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[37m//test/proto_rules:test_proto \u001b[37;1mBuilding...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.2s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K"
     ],
     [
       5.9e-05,
@@ -1687,7 +1687,7 @@
     ],
     [
       5.7e-05,
-      "\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 1.9s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K"
     ],
     [
       6e-05,
@@ -1711,7 +1711,7 @@
     ],
     [
       3.8e-05,
-      "\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2.2e-05,
@@ -1731,11 +1731,11 @@
     ],
     [
       8.3e-05,
-      "\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.9s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 282 / 394 tasks, 4.1s\u0007"
+      "\u001b[37;1m=> [ 2.0s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 3.9s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 1.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:junit_runner_param...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 282 / 394 tasks, 4.1s\u0007"
     ],
     [
       0.052376,
-      "\u001b[11ABuilding [284/394, 4.2s]:\r\n\u001b[37;1m=> [ 2.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 4.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//test/python_rules:test_proto \u001b[37;1mStoring...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 285 / 394 tasks, 4.2s\u0007"
+      "\u001b[11ABuilding [284/394, 4.2s]:\r\n\u001b[37;1m=> [ 2.1s] \u001b[0m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 4.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.4s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[37m//test/python_rules:test_proto \u001b[37;1mStoring...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 285 / 394 tasks, 4.2s\u0007"
     ],
     [
       0.051009,
@@ -1747,7 +1747,7 @@
     ],
     [
       4.5e-05,
-      "\u001b[37;1m=> [ 4.0s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 4.0s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n"
     ],
     [
       2.9e-05,
@@ -1767,7 +1767,7 @@
     ],
     [
       0.053076,
-      "\u001b[11ABuilding [287/394, 4.3s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCollecting outputs...\u001b[K\r\n"
+      "\u001b[11ABuilding [287/394, 4.3s]:\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.5s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mCollecting outputs...\u001b[K\r\n"
     ],
     [
       6e-05,
@@ -1779,7 +1779,7 @@
     ],
     [
       0.000269,
-      "\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.1s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mStoring...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 287 / 394 tasks, 4.3s\u0007"
+      "\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.1s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:please_coverage_cl...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.6s] \u001b[0m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 2.6s] \u001b[0m\u001b[1m\u001b[33m//src/build:incrementality_test \u001b[37;1mStoring...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//third_party/python:protobuf \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:test_proto \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 287 / 394 tasks, 4.3s\u0007"
     ],
     [
       0.048199,
@@ -1791,7 +1791,7 @@
     ],
     [
       9.2e-05,
-      "\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/proto_rules:test_proto \u001b[37;1mCompressing...\u001b[K"
     ],
     [
       9e-05,
@@ -1815,7 +1815,7 @@
     ],
     [
       8e-05,
-      "\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.2s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.2s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       6.8e-05,
@@ -1855,7 +1855,7 @@
     ],
     [
       7.4e-05,
-      "\u001b[37;1m=> [ 4.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\u001b[37;1m=> [ 4.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       6.2e-05,
@@ -1883,7 +1883,7 @@
     ],
     [
       6.9e-05,
-      "\r\n\u001b[37;1m=> [ 4.3s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 4.3s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n"
     ],
     [
       5.1e-05,
@@ -1911,7 +1911,7 @@
     ],
     [
       2.1e-05,
-      "\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       1.9e-05,
@@ -1959,7 +1959,7 @@
     ],
     [
       3.5e-05,
-      "\u001b[37;1m=> [ 4.4s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\u001b[37;1m=> [ 4.4s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       2.3e-05,
@@ -2039,7 +2039,7 @@
     ],
     [
       0.05532,
-      "\u001b[11ABuilding [319/461, 4.7s]:\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/go_rules:empty_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:proto_lib \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 319 / 461 tasks, 4.7s\u0007"
+      "\u001b[11ABuilding [319/461, 4.7s]:\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[37m//src/build/cc:embed_file_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/go_rules:empty_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/python_rules:proto_lib \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mBuilding...\u001b[K\r\n\u001b[0m\u001b]0;plz: 319 / 461 tasks, 4.7s\u0007"
     ],
     [
       0.043898,
@@ -2051,7 +2051,7 @@
     ],
     [
       0.000134,
-      "\u001b[37;1m=> [ 4.5s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 4.5s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n"
     ],
     [
       2.6e-05,
@@ -2075,7 +2075,7 @@
     ],
     [
       4.9e-05,
-      "\r\n\u001b[37;1m=> [ 4.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mStoring...\u001b[K\r\n"
+      "\r\n\u001b[37;1m=> [ 4.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mStoring...\u001b[K\r\n"
     ],
     [
       2.6e-05,
@@ -2103,7 +2103,7 @@
     ],
     [
       5.2e-05,
-      "\u001b[37;1m=> [ 4.6s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K"
+      "\u001b[37;1m=> [ 4.6s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K"
     ],
     [
       3.5e-05,
@@ -2191,7 +2191,7 @@
     ],
     [
       3.2e-05,
-      "\u001b[37;1m=> [ 4.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n"
+      "\u001b[37;1m=> [ 4.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n"
     ],
     [
       2.6e-05,
@@ -2211,7 +2211,7 @@
     ],
     [
       0.00012,
-      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.7s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/system_deps:system_dep_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:proto_lib \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCreating pex...\u001b[K\r\n\u001b[0m\u001b]0;plz: 328 / 461 tasks, 4.9s\u0007"
+      "\u001b[37;1m=> [ 0.7s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.7s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mFetching...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/system_deps:system_dep_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/python_rules:proto_lib \u001b[37;1mCompressing...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCreating pex...\u001b[K\r\n\u001b[0m\u001b]0;plz: 328 / 461 tasks, 4.9s\u0007"
     ],
     [
       0.049951,
@@ -2219,11 +2219,11 @@
     ],
     [
       0.00011,
-      "Building [329/461, 5.0s]:\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/system_deps:system_dep_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//test/go_rules:empty_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCreating pex...\u001b[K\r\n\u001b[0m\u001b]0;plz: 329 / 461 tasks, 5.0s\u0007"
+      "Building [329/461, 5.0s]:\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[32m//test/system_deps:system_dep_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[33m//test/go_rules:empty_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[1m\u001b[32m//test/python_rules:rule_main_pex \u001b[37;1mCreating pex...\u001b[K\r\n\u001b[0m\u001b]0;plz: 329 / 461 tasks, 5.0s\u0007"
     ],
     [
       0.052093,
-      "\u001b[11ABuilding [333/461, 5.0s]:\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.8s] \u001b[0m\u001b[33m///third_party/go/github.com_stretchr_testify//assert \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/system_deps:system_dep_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/go_rules:empty_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//test/python_rules:rule_main_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[0m\u001b]0;plz: 333 / 461 tasks, 5.0s\u0007"
+      "\u001b[11ABuilding [333/461, 5.0s]:\r\n\u001b[37;1m=> [ 0.8s] \u001b[0m\u001b[32m//test/python_rules:empty_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 4.8s] \u001b[0m\u001b[33m//third_party/go:testify \u001b[37;1mCollecting outputs...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[32m//test/parse_test:require_provide_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.4s] \u001b[0m\u001b[33m//src/cache/server:http_server_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[1m\u001b[31m//src/build/java/net/thoughtmachine/please/test:resources_root_tes...\u001b[37;1m\u001b[K\r\n\u001b[37;1m=> [ 0.3s] \u001b[0m\u001b[32m//test/proto_rules:specific_out_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.5s] \u001b[0m\u001b[1m\u001b[33m//test/parse_test:additional_output_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.2s] \u001b[0m\u001b[32m//test/system_deps:system_dep_test \u001b[37;1mCreating pex info...\u001b[K\r\n\u001b[37;1m=> [ 0.1s] \u001b[0m\u001b[33m//test/go_rules:empty_test \u001b[37;1mCompiling...\u001b[K\r\n\u001b[37;1m=> [ 0.0s] \u001b[0m\u001b[1m\u001b[37m//test/python_rules:rule_main_test \u001b[37;1mTesting...\u001b[K\r\n\u001b[0m\u001b]0;plz: 333 / 461 tasks, 5.0s\u0007"
     ],
     [
       0.047745,
