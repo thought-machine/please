@@ -21,8 +21,8 @@ go_mod_download(
 )
 
 go_get(
-    module = "github.com/bazelbuild/buildtools",
     download = ":build_tools_dl",
+    module = "github.com/bazelbuild/buildtools",
 )
 
 go_get(
@@ -52,8 +52,8 @@ go_get(
 
 go_get(
     module = "github.com/matttproud/golang_protobuf_extensions",
-    version = "v1.0.1",
     requirements = ["github.com/golang/protobuf"],
+    version = "v1.0.1",
 )
 
 go_get(
@@ -316,7 +316,6 @@ go_get(
     version = "v0.2.3",
 )
 
-
 go_get(
     module = "github.com/mattn/go-colorable",
     version = "v0.1.8",
@@ -344,12 +343,12 @@ go_get(
 
 go_get(
     module = "github.com/juju/ansiterm",
-    version = "720a0952cc2ac777afc295d9861263e2a4cf96a1",
     requirements = [
         "github.com/lunixbochs/vtclean",
         "github.com/mattn/go-colorable",
         "github.com/mattn/go-isatty",
     ],
+    version = "720a0952cc2ac777afc295d9861263e2a4cf96a1",
 )
 
 go_get(
@@ -439,6 +438,7 @@ go_get(
 
 go_get(
     module = "github.com/golang/glog",
+    patch = ["glog_disable.patch"],
     version = "v0.0.0-20160126235308-23def4e6c14b",
 )
 
@@ -469,8 +469,8 @@ go_get(
 
 go_get(
     module = "gopkg.in/square/go-jose.v2",
+    requirements = ["golang.org/x/crypto"],
     version = "v2.6.0",
-    requirements = ["golang.org/x/crypto"]
 )
 
 go_get(
