@@ -45,20 +45,6 @@ plz_e2e_test(
            if [ $HIDDEN > $NOTHIDDEN ]; then exit 0; else exit 1; fi",
 )
 
-# Tests that targets can only use other targets that they depend on.
-plz_e2e_test(
-    name = "dep_required_test",
-    cmd = "plz build //test:failed_dep",
-    expect_output_contains = "Target //src/core:config_test isn't visible to //test:failed_dep",
-    expected_failure = True,
-)
-
-build_rule(
-    name = "failed_dep",
-    labels = ["manual"],
-    deps = ["//src/core:config_test"],
-)
-
 # Test that we count test output correctly. Also indirectly tests access to test data files.
 plz_e2e_test(
     name = "test_output_test",

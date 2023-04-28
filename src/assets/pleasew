@@ -1,1 +1,1 @@
-dummy
+needed for `go build src/please.go`

@@ -34,7 +34,7 @@ go_test(
         "//rules",
         "//src/core",
         "//third_party/go:logging",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 

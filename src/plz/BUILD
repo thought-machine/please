@@ -3,6 +3,7 @@ go_library(
     srcs = ["plz.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_peterebden_go-cli-init_v5//flags",
         "//src/build",
         "//src/cli",
         "//src/cli/logging",
@@ -12,7 +13,6 @@ go_library(
         "//src/parse",
         "//src/remote",
         "//src/test",
-        "//third_party/go:cli-init",
     ],
 )
 
@@ -23,6 +23,6 @@ go_test(
         ":plz",
         "//src/cli",
         "//src/core",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

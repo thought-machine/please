@@ -16,7 +16,7 @@ go_test(
     srcs = ["clean_test.go"],
     deps = [
         ":clean",
+        "///third_party/go/github.com_stretchr_testify//assert",
         "//src/fs",
-        "//third_party/go:testify",
     ],
 )

@@ -1,9 +1,6 @@
 go_library(
     name = "debug",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
+    srcs = ["debug.go"],
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli/logging",

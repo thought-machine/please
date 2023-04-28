@@ -40,7 +40,7 @@ LANGUAGES = list(LANGUAGE_EXTENSIONS.keys())
 # This is a little fiddly but a nice touch of realism: some targets have very high fan-out
 TEST_DEPS = {
     'python': [],
-    'go': ['//third_party/go:testify'],
+    'go': ['///third_party/go/github.com_stretchr_testify//assert'],
     'cc': [],
 }
 
@@ -121,11 +121,15 @@ def main(argv):
         f.write("""
 [Plugin "python"]
 Target = //plugins:python
+
 [Plugin "cc"]
 Target = //plugins:cc
 TestMain = ///pleasings//cc:unittest_main
+
 [Plugin "go"]
 Target = //plugins:go
+FeatureFlags = go_get
+
 [parse]
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///cc//build_defs:cc

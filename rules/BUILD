@@ -14,6 +14,6 @@ go_test(
     visibility = ["PUBLIC"],
     deps = [
         ":rules",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
