@@ -852,7 +852,7 @@ func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) 
 func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
 	if label, ok := source.nonOutputLabel(); ok {
 		ret := []string{}
-		for _, providedLabel := range graph.TargetOrDie(label).ProvideFor(target) {
+		for _, providedLabel := range recursivelyProvideFor(graph, target, graph.TargetOrDie(label), label) {
 			ret = append(ret, f(providedLabel, graph)...)
 		}
 		return ret
