@@ -851,8 +851,8 @@ func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) 
 // sourcePaths returns the source paths for a single source.
 func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
 	if label, ok := source.nonOutputLabel(); ok {
-		ret := []string{}
-		for _, providedLabel := range recursivelyProvideFor(graph, target, graph.TargetOrDie(label), label) {
+		var ret []string
+		for _, providedLabel := range recursivelyProvideFor(graph, target, target, label) {
 			ret = append(ret, f(providedLabel, graph)...)
 		}
 		return ret
