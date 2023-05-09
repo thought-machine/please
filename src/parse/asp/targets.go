@@ -500,8 +500,15 @@ func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 		s.Assert(ok, "Argument %s must be a dict, not %s, %v", name, obj.Type(), obj)
 		for k, v := range d {
 			str, ok := v.(pyString)
-			s.Assert(ok, "%s values must be strings", name)
-			t.AddProvide(k, checkLabel(s, s.parseLabelInPackage(string(str), s.pkg)))
+			if ok {
+				t.AddProvide(k, []core.BuildLabel{checkLabel(s, s.parseLabelInPackage(string(str), s.pkg))})
+				continue
+			}
+			_, ok = v.(pyList)
+			s.Assert(ok, "%s values must be strings or a lists of strings", name)
+			addStrings(s, name, v, func(str string) {
+				t.AddProvide(k, []core.BuildLabel{checkLabel(s, s.parseLabelInPackage(str, s.pkg))})
+			})
 		}
 	}
 }

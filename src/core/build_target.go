@@ -166,7 +166,7 @@ type BuildTarget struct {
 	// one rule but only compile the appropriate code for each library that consumes it).
 	Requires []string
 	// Dependent rules this rule provides for each language. Matches up to Requires as described above.
-	Provides map[string]BuildLabel
+	Provides map[string][]BuildLabel
 	// Stores the hash of this build rule before any post-build function is run.
 	RuleHash []byte `name:"exported_deps"` // bit of a hack to call this exported_deps...
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
@@ -1146,9 +1146,9 @@ func (target *BuildTarget) ShouldInclude(includes, excludes []string) bool {
 }
 
 // AddProvide adds a new provide entry to this target.
-func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
+func (target *BuildTarget) AddProvide(language string, label []BuildLabel) {
 	if target.Provides == nil {
-		target.Provides = map[string]BuildLabel{language: label}
+		target.Provides = map[string][]BuildLabel{language: label}
 	} else {
 		target.Provides[language] = label
 	}
@@ -1181,11 +1181,11 @@ func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
 	}
 	var ret []BuildLabel
 	for _, require := range other.Requires {
-		if label, present := target.Provides[require]; present {
+		if labels, present := target.Provides[require]; present {
 			if ret == nil {
 				ret = make([]BuildLabel, 0, len(other.Requires))
 			}
-			ret = append(ret, label)
+			ret = append(ret, labels...)
 		}
 	}
 	return ret

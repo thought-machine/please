@@ -241,14 +241,16 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		h.Write([]byte(require))
 	}
 	// Indeterminate iteration order, yay...
-	languages := []string{}
+	var provides []string
 	for k := range target.Provides {
-		languages = append(languages, k)
+		provides = append(provides, k)
 	}
-	sort.Strings(languages)
-	for _, lang := range languages {
-		h.Write([]byte(lang))
-		h.Write([]byte(target.Provides[lang].String()))
+	sort.Strings(provides)
+	for _, p := range provides {
+		h.Write([]byte(p))
+		for _, l := range target.Provides[p] {
+			h.Write([]byte(l.String()))
+		}
 	}
 	// We don't need to hash the functions themselves because they get rerun every time -
 	// we just need to check whether one is added or removed, which is good since it's

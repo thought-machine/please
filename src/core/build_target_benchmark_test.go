@@ -22,7 +22,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	})
 
 	target1.Requires = []string{"go"}
-	target2.AddProvide("py", target3.Label)
+	target2.AddProvide("py", []BuildLabel{target3.Label})
 	b.Run("NoMatch", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -30,8 +30,8 @@ func BenchmarkProvideFor(b *testing.B) {
 		}
 	})
 
-	target2.AddProvide("go", target3.Label)
-	target2.AddProvide("go_src", target4.Label)
+	target2.AddProvide("go", []BuildLabel{target3.Label})
+	target2.AddProvide("go_src", []BuildLabel{target4.Label})
 	b.Run("OneMatch", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -48,7 +48,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	})
 
 	target1.Requires = []string{"go", "go_src", "py", "py_src"}
-	target2.AddProvide("py_src", target5.Label)
+	target2.AddProvide("py_src", []BuildLabel{target5.Label})
 	b.Run("FourMatches", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {

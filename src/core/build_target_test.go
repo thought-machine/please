@@ -221,7 +221,7 @@ func TestProvideFor(t *testing.T) {
 	target2 := makeTarget1("//src/core:target2", "PUBLIC", target1)
 	assert.Equal(t, []BuildLabel{target1.Label}, target1.ProvideFor(target2))
 	// Now have target2 provide target1. target3 will get target1 instead.
-	target2.Provides = map[string]BuildLabel{"whatevs": target1.Label}
+	target2.Provides = map[string][]BuildLabel{"whatevs": {target1.Label}}
 	target3 := makeTarget1("//src/core:target3", "PUBLIC", target2)
 	target3.Requires = append(target3.Requires, "whatevs")
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
@@ -238,7 +238,7 @@ func TestAddProvide(t *testing.T) {
 	target2 := makeTarget1("//src/core:target2", "PUBLIC", target1)
 	target3 := makeTarget1("//src/core:target3", "PUBLIC", target2)
 	target2.AddDependency(target1.Label)
-	target2.AddProvide("go", ParseBuildLabel(":target1", "src/core"))
+	target2.AddProvide("go", []BuildLabel{ParseBuildLabel(":target1", "src/core")})
 	target3.Requires = append(target3.Requires, "go")
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
 }
