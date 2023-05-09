@@ -241,7 +241,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 		h.Write([]byte(require))
 	}
 	// Indeterminate iteration order, yay...
-	var provides []string
+	provides := make([]string, 0, len(target.Provides))
 	for k := range target.Provides {
 		provides = append(provides, k)
 	}
