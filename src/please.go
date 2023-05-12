@@ -1341,7 +1341,7 @@ func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 }
 
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
-	binary := opts.Query.Completions.Cmd == "run"
+	binary := opts.Query.Completions.Cmd == "run" || opts.Query.Completions.Cmd == "exec"
 	isTest := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
 
 	completions := query.CompletePackages(config, qry)
