@@ -8,11 +8,15 @@ import (
 
 // SomePath finds and returns a path between two targets, or between one and a set of targets.
 // Useful for a "why on earth do I depend on this thing" type query.
-func SomePath(graph *core.BuildGraph, from, to []core.BuildLabel, showHidden bool) error {
+func SomePath(graph *core.BuildGraph, from, to, except []core.BuildLabel, showHidden bool) error {
 	s := somepath{
 		graph:  graph,
 		hidden: showHidden,
+		except: make(map[core.BuildLabel]struct{}, len(except)),
 		memo:   map[core.BuildLabel]map[core.BuildLabel]struct{}{},
+	}
+	for _, ex := range except {
+		s.except[ex] = struct{}{}
 	}
 	for _, l1 := range expandAllTargets(graph, from) {
 		for _, l2 := range expandAllTargets(graph, to) {
@@ -50,6 +54,7 @@ type somepath struct {
 	graph  *core.BuildGraph
 	hidden bool
 	memo   map[core.BuildLabel]map[core.BuildLabel]struct{}
+	except map[core.BuildLabel]struct{}
 }
 
 func (s *somepath) SomePath(target1, target2 core.BuildLabel) []core.BuildLabel {
@@ -66,10 +71,10 @@ func (s *somepath) somePath(target1, target2 core.BuildLabel) []core.BuildLabel 
 		m = map[core.BuildLabel]struct{}{}
 		s.memo[target2] = m
 	}
-	return somePath(s.graph, s.hidden, s.graph.TargetOrDie(target1), s.graph.TargetOrDie(target2), m)
+	return somePath(s.graph, s.hidden, s.graph.TargetOrDie(target1), s.graph.TargetOrDie(target2), m, s.except)
 }
 
-func somePath(graph *core.BuildGraph, hidden bool, target1, target2 *core.BuildTarget, seen map[core.BuildLabel]struct{}) []core.BuildLabel {
+func somePath(graph *core.BuildGraph, hidden bool, target1, target2 *core.BuildTarget, seen, except map[core.BuildLabel]struct{}) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
 	} else if !hidden && target1.Parent(graph) == target2 {
@@ -82,8 +87,11 @@ func somePath(graph *core.BuildGraph, hidden bool, target1, target2 *core.BuildT
 	}
 	for _, dep := range target1.DeclaredDependencies() {
 		if t := graph.Target(dep); t != nil {
+			if _, present := except[t.Label]; present {
+				continue
+			}
 			for _, l := range t.ProvideFor(target1) {
-				if path := somePath(graph, hidden, graph.TargetOrDie(l), target2, seen); len(path) != 0 {
+				if path := somePath(graph, hidden, graph.TargetOrDie(l), target2, seen, except); len(path) != 0 {
 					return append([]core.BuildLabel{target1.Label}, path...)
 				}
 			}
