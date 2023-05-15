@@ -200,9 +200,6 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 	} else {
 		// Wait if another process is currently building this target
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
-		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
-		defer core.ReleaseFileLock(file)
 		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
 
 		// Ensure we have downloaded any previous dependencies if that's relevant.
@@ -210,11 +207,36 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			return err
 		}
 
+		// Special case for filegroups:
 		// We don't record rule hashes for filegroups since we know the implementation and the check
 		// is just "are these the same file" which we do anyway, and it means we don't have to worry
 		// about two rules outputting the same file.
+		if target.IsFilegroup {
+			state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
+			file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+			defer core.AcquireSharedLockOnOpenFile(file)
+
+			log.Debug("Building %s...", target.Label)
+			changed, err := buildFilegroup(state, target)
+			if err != nil {
+				return err
+			}
+			if changed {
+				if _, err := calculateAndCheckRuleHash(state, target); err != nil {
+					return err
+				}
+				target.SetState(core.Built)
+				state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
+			} else {
+				target.SetState(core.Unchanged)
+				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
+			}
+			buildLinks(state, target)
+			return nil
+		}
+
 		haveRunPostBuildFunction := false
-		if !target.IsFilegroup && !needsBuilding(state, target, false) {
+		if !needsBuilding(state, target, false) {
 			log.Debug("Not rebuilding %s, nothing's changed", target.Label)
 
 			// If running the build could update the target,(e.g. via a post build action) we need to restore those
@@ -249,25 +271,17 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 			log.Debug("Rebuilding %s after post-build function", target.Label)
 			haveRunPostBuildFunction = true
 		}
-		if target.IsFilegroup {
-			log.Debug("Building %s...", target.Label)
-			changed, err := buildFilegroup(state, target)
-			if err != nil {
-				return err
+
+		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
+		file, success := core.TryAcquireExclusiveLockFile(target.BuildLockFile())
+		if !success {
+			core.AcquireSharedLockOnOpenFile(file)
+			if needsBuilding(state, target, false) {
+				log.Fatalf("woe is me")
 			}
-			if changed {
-				if _, err := calculateAndCheckRuleHash(state, target); err != nil {
-					return err
-				}
-				target.SetState(core.Built)
-				state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
-			} else {
-				target.SetState(core.Unchanged)
-				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
-			}
-			buildLinks(state, target)
 			return nil
 		}
+		defer core.AcquireSharedLockOnOpenFile(file)
 
 		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)

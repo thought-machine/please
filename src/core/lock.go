@@ -76,15 +76,32 @@ func openRepoLockFile() error {
 // AcquireExclusiveFileLock opens a file to acquire an exclusive lock.
 // Dies if the lock cannot be successfully acquired.
 func AcquireExclusiveFileLock(filePath string) *os.File {
-	lockFile, err := acquireOpenFileLock(filePath, syscall.LOCK_EX)
+	lockFile, err := openAndAcquireLockFile(filePath, syscall.LOCK_EX)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return lockFile
 }
 
+// TryAcquireExclusiveLockFile tries to lock the file but is non blocking. Returns whether the lock was successful and
+// opened file.
+func TryAcquireExclusiveLockFile(filepath string) (*os.File, bool) {
+	lockFile, err := openLockFile(filepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return lockFile, tryAcquireLockFile(lockFile, syscall.LOCK_EX)
+}
+
+func AcquireSharedLockOnOpenFile(file *os.File) {
+	if err := acquireFileLock(file, syscall.LOCK_SH, log.Debug); err != nil {
+		log.Fatal(err)
+	}
+}
+
 // Base function that allows to set up different lock modes and facilitate testing.
-func acquireOpenFileLock(filePath string, how int) (*os.File, error) {
+func openAndAcquireLockFile(filePath string, how int) (*os.File, error) {
 	lockFile, err := openLockFile(filePath)
 	if err != nil {
 		return nil, err
@@ -104,15 +121,16 @@ func ReleaseFileLock(file *os.File) {
 		return
 	}
 
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_UN); err != nil {
-		log.Errorf("Failed to release lock for %s: %s", file.Name(), err) // No point making this fatal really
-	}
 	if err := file.Close(); err != nil {
 		log.Errorf("Failed to close lock file %s: %s", file.Name(), err)
 	}
 }
 
 type logFunc func(format string, args ...interface{})
+
+func tryAcquireLockFile(file *os.File, how int) bool {
+	return syscall.Flock(int(file.Fd()), how|syscall.LOCK_NB) == nil
+}
 
 func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	// Try a non-blocking acquire first so we can warn the user if we're waiting.

@@ -146,7 +146,7 @@ func TestAcquireExclusiveFileLock(t *testing.T) {
 // This attempts to mimic how 1 plz process acquires an exclusive file lock and another tries to do the same thing to the same file.
 func TestAcquireExclusiveFileLockTwice(t *testing.T) {
 	// 1st process.
-	fd1, err := acquireOpenFileLock("path/to/file", syscall.LOCK_EX|syscall.LOCK_NB)
+	fd1, err := openAndAcquireLockFile("path/to/file", syscall.LOCK_EX|syscall.LOCK_NB)
 	assert.NoError(t, err)
 
 	// Keep file descriptor reference alive.
@@ -155,7 +155,7 @@ func TestAcquireExclusiveFileLockTwice(t *testing.T) {
 
 	// 2nd process.
 	// It errors immediately trying to acquire an exclusive lock as the same lock mode was already placed by process 1.
-	fd2, err := acquireOpenFileLock("path/to/file", syscall.LOCK_EX|syscall.LOCK_NB)
+	fd2, err := openAndAcquireLockFile("path/to/file", syscall.LOCK_EX|syscall.LOCK_NB)
 	assert.Error(t, err)
 
 	ReleaseFileLock(fd2)
