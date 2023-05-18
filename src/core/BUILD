@@ -2,194 +2,86 @@ subinclude("//build_defs:benchmark")
 
 go_library(
     name = "core",
-    srcs = glob(
-        ["*.go"],
-        exclude = [
-            "*_benchmark.go",
-            "*_test.go",
-        ],
-    ),
+    srcs = [
+        "atomic_bool.go",
+        "atomic_float32.go",
+        "build_env.go",
+        "build_input.go",
+        "build_label.go",
+        "build_target.go",
+        "cache.go",
+        "command_replacements.go",
+        "config.go",
+        "config_flags.go",
+        "cycle_detector.go",
+        "graph.go",
+        "lock.go",
+        "package.go",
+        "previous_op.go",
+        "resources.go",
+        "stamp.go",
+        "state.go",
+        "subrepo.go",
+        "test_results.go",
+        "utils.go",
+        "version.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_cespare_xxhash_v2//:v2",
+        "///third_party/go/github.com_coreos_go-semver//semver",
+        "///third_party/go/github.com_google_shlex//:shlex",
+        "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
+        "///third_party/go/github.com_pkg_xattr//:xattr",
+        "///third_party/go/github.com_please-build_gcfg//:gcfg",
+        "///third_party/go/github.com_please-build_gcfg//types",
+        "///third_party/go/github.com_shirou_gopsutil_v3//cpu",
+        "///third_party/go/github.com_shirou_gopsutil_v3//mem",
+        "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
+        "///third_party/go/github.com_zeebo_blake3//:blake3",
+        "///third_party/go/golang.org_x_sync//errgroup",
         "//src/cli",
         "//src/cli/logging",
         "//src/cmap",
         "//src/fs",
         "//src/process",
         "//src/scm",
-        "//third_party/go:blake3",
-        "//third_party/go:deferred_regex",
-        "//third_party/go:errgroup",
-        "//third_party/go:gcfg",
-        "//third_party/go:go-flags",
-        "//third_party/go:godirwalk",
-        "//third_party/go:psutil",
-        "//third_party/go:semver",
-        "//third_party/go:shlex",
-        "//third_party/go:xattr",
-        "//third_party/go:xxhash",
     ],
 )
 
 go_test(
-    name = "config_test",
-    srcs = ["config_test.go"],
-    data = glob(["test_data/*.plzconfig*"]),
+    name = "core_test",
+    srcs = [
+        "build_env_test.go",
+        "build_input_test.go",
+        "build_label_fuzz_test.go",
+        "build_label_test.go",
+        "build_target_benchmark_test.go",
+        "build_target_test.go",
+        "command_replacements_test.go",
+        "config_test.go",
+        "cycle_detector_test.go",
+        "graph_benchmark_test.go",
+        "graph_test.go",
+        "label_parse_test.go",
+        "lock_test.go",
+        "package_test.go",
+        "previous_op_test.go",
+        "stamp_test.go",
+        "state_test.go",
+        "subrepo_test.go",
+        "test_results_test.go",
+        "utils_benchmark_test.go",
+        "utils_test.go",
+    ],
+    data = ["test_data"],
     filter_srcs = False,  # As above
     deps = [
         ":core",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
+        "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
         "//src/cli",
-        "//third_party/go:go-flags",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "label_parse_test",
-    srcs = ["label_parse_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "graph_test",
-    srcs = ["graph_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "state_test",
-    srcs = ["state_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "build_target_test",
-    srcs = ["build_target_test.go"],
-    data = ["test_data"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "package_test",
-    srcs = ["package_test.go"],
-    data = ["test_data"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "build_env_test",
-    srcs = ["build_env_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "utils_test",
-    srcs = ["utils_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "lock_test",
-    srcs = ["lock_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "previous_op_test",
-    srcs = ["previous_op_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "build_label_test",
-    srcs = [
-        "build_label_fuzz_test.go",
-        "build_label_test.go",
-    ],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "test_results_test",
-    srcs = ["test_results_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "build_input_test",
-    srcs = ["build_input_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "subrepo_test",
-    srcs = ["subrepo_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "command_replacements_test",
-    srcs = ["command_replacements_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "stamp_test",
-    srcs = ["stamp_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "cycle_detector_test",
-    srcs = ["cycle_detector_test.go"],
-    deps = [
-        ":core",
-        "//third_party/go:testify",
     ],
 )
 

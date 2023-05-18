@@ -57,14 +57,18 @@ const DefaultPleaseLocation = "~/.please"
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
 // readConfigFileOnly reads a single config file into the config struct
-func readConfigFileOnly(config *Configuration, filename string) error {
+func readConfigFileOnly(config *Configuration, filename string, quiet bool) error {
 	log.Debug("Attempting to read config from %s...", filename)
 	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
 		return nil // It's not an error to not have the file at all.
 	} else if gcfg.FatalOnly(err) != nil {
 		return err
 	} else if err != nil {
-		log.Warning("Error in config file: %s", err)
+		if quiet {
+			log.Debug("Error in config file %s: %s", filename, err)
+		} else {
+			log.Warning("Error in config file %s: %s", filename, err)
+		}
 	} else {
 		log.Debug("Read config from %s", filename)
 	}
@@ -77,7 +81,7 @@ func readConfigFile(config *Configuration, filename string, subrepo bool) error 
 	plugins := config.Plugin
 	config.Plugin = map[string]*Plugin{}
 
-	if err := readConfigFileOnly(config, filename); err != nil {
+	if err := readConfigFileOnly(config, filename, subrepo); err != nil {
 		return err
 	}
 
@@ -166,11 +170,11 @@ func defaultConfigFiles() []string {
 // ReadConfigFilesOnly reads all the config locations, in order, and merges them into a config object.
 func ReadConfigFilesOnly(config *Configuration, filenames []string, profiles []string) error {
 	for _, filename := range filenames {
-		if err := readConfigFileOnly(config, filename); err != nil {
+		if err := readConfigFileOnly(config, filename, false); err != nil {
 			return err
 		}
 		for _, profile := range profiles {
-			if err := readConfigFileOnly(config, filename+"."+profile); err != nil {
+			if err := readConfigFileOnly(config, filename+"."+profile, false); err != nil {
 				return err
 			}
 		}
@@ -601,7 +605,7 @@ type Configuration struct {
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
 		LDFlags          string `help:"Sets the LDFLAGS env var for go rules." var:"GO_LD_FLAGS"`
-	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths." exclude_flag:"ExcludeGoRules"`
+	}
 	Python struct {
 		PipTool             string   `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
 		PipFlags            string   `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
@@ -617,7 +621,7 @@ type Configuration struct {
 		WheelNameScheme     []string `help:"Defines a custom templatized wheel naming scheme. Templatized variables should be surrounded in curly braces, and the available options are: url_base, package_name, version and initial (the first character of package_name). The default search pattern is '{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl' along with a few common variants." var:"PYTHON_WHEEL_NAME_SCHEME"`
 		InterpreterOptions  string   `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
 		DisableVendorFlags  bool     `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." var:"DISABLE_VENDOR_FLAGS"`
-	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude_flag:"ExcludePythonRules"`
+	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude:"true"`
 	Java struct {
 		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
 		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
@@ -633,7 +637,7 @@ type Configuration struct {
 		JavacTestFlags     string    `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" var:"JAVAC_TEST_FLAGS"`
 		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
 		Toolchain          string    `help:"A label identifying a java_toolchain." var:"JAVA_TOOLCHAIN"`
-	} `help:"Please has built-in support for compiling Java.\nIt builds uber-jars for binary and test rules which contain all dependencies and can be easily deployed, and with the help of some of Please's additional tools they are deterministic as well.\n\nWe've only tested support for Java 7 and 8, although it's likely newer versions will work with little or no change." exclude_flag:"ExcludeJavaRules"`
+	}
 	Cpp struct {
 		CCTool             string     `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
 		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
@@ -650,7 +654,7 @@ type Configuration struct {
 		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
 		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." var:"DSYM_TOOL"`
-	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage." exclude_flag:"ExcludeCCRules"`
+	}
 	Proto struct {
 		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." var:"PROTOC_TOOL"`
 		ProtocGoPlugin   string   `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.\nWe've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example." var:"PROTOC_GO_PLUGIN"`
@@ -667,7 +671,7 @@ type Configuration struct {
 		JavaGrpcDep      string   `help:"An in-repo dependency that's applied to any Java gRPC libraries." var:"GRPC_JAVA_DEP"`
 		GoGrpcDep        string   `help:"An in-repo dependency that's applied to any Go gRPC libraries." var:"GRPC_GO_DEP"`
 		ProtocFlag       []string `help:"Flags to pass to protoc i.e. the location of well known types. Can be repeated." var:"PROTOC_FLAGS"`
-	} `help:"Please has built-in support for compiling protocol buffers, which are a form of codegen to define common data types which can be serialised and communicated between different languages.\nSee https://developers.google.com/protocol-buffers/ for more information.\n\nThere is also support for gRPC, which is an implementation of protobuf's RPC framework. See http://www.grpc.io/ for more information.\n\nNote that you must have the protocol buffers compiler (and gRPC plugins, if needed) installed on your machine to make use of these rules." exclude_flag:"ExcludeProtoRules"`
+	}
 	Licences struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
@@ -689,18 +693,6 @@ type Configuration struct {
 	buildEnvStored *storedBuildEnv
 
 	FeatureFlags struct {
-		PackageOutputsStrictness bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
-		PythonWheelHashing       bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
-		NoIterSourcesMarked      bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
-		ExcludePythonRules       bool `help:"Whether to include the python rules or use the plugin"`
-		ExcludeJavaRules         bool `help:"Whether to include the java rules or use the plugin"`
-		ExcludeCCRules           bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
-		ExcludeGoRules           bool `help:"Whether to include the go rules rules or require use of the plugin"`
-		ExcludeShellRules        bool `help:"Whether to include the shell rules rules or require use of the plugin"`
-		ExcludeProtoRules        bool `help:"Whether to include the proto rules or require use of the plugin"`
-		ExcludeSymlinksInGlob    bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
-		GoDontCollapseImportPath bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
-		ErrorOnEmptyGlob         bool `help:"Error out if a glob doesn't match anything" var:"FF_ERROR_ON_EMPTY_GLOB"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`

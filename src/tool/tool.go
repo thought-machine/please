@@ -1,7 +1,8 @@
 // Package tool implements running Please's sub-tools (via "plz tool arcat" etc).
 //
 // N.B. This is not how they are invoked during the build; that runs them directly.
-// This is only a convenience thing at the command line.
+//
+//	This is only a convenience thing at the command line.
 package tool
 
 import (
@@ -54,7 +55,6 @@ func knownTools(config *core.Configuration) map[string]string {
 		"junitrunner": config.Java.JUnitRunner,
 		"langserver":  "//_please:build_langserver",
 		"lps":         "//_please:build_langserver",
-		"pex":         config.Python.PexTool,
 		"sandbox":     "please_sandbox",
 	}
 }

@@ -32,7 +32,6 @@ DIRNAMES = [
 LANGUAGE_EXTENSIONS = {
     'python': 'py',
     'go': 'go',
-    'java': 'java',
     'cc': 'cc',
 }
 
@@ -41,21 +40,22 @@ LANGUAGES = list(LANGUAGE_EXTENSIONS.keys())
 # This is a little fiddly but a nice touch of realism: some targets have very high fan-out
 TEST_DEPS = {
     'python': [],
-    'go': ['//third_party/go:testify'],
-    'java': ['//third_party/java:junit', '//third_party/java:hamcrest'],
+    'go': ['///third_party/go/github.com_stretchr_testify//assert'],
     'cc': [],
 }
 
 LANGUAGE_TEMPLATE = """
+subinclude("///{lang}//build_defs:{lang}")
+
 {lang}_library(
     name = "{name}",
-    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"]),
+    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"], allow_empty=True),
     deps = {deps},
 )
 
 {lang}_test(
     name = "{name}_test",
-    srcs = glob(["*_test.{ext}"]),
+    srcs = glob(["*_test.{ext}"], allow_empty=True),
     deps = {test_deps},
 )
 """
@@ -116,15 +116,33 @@ def main(argv):
     os.mkdir(os.path.join(FLAGS.root, 'build_defs'))
     with open('build_defs/BUILD') as fr, open(os.path.join(FLAGS.root, 'build_defs/BUILD'), 'w') as fw:
         fw.write(fr.read().replace('//:version', 'VERSION'))
-    shutil.copy('build_defs/multiversion_wheel.build_defs',
-                os.path.join(FLAGS.root, 'build_defs/multiversion_wheel.build_defs'))
     # Create the .plzconfig in the new root
     with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
         f.write("""
-[Plugin "java"]
-Target = //plugins:java
-    """)
-        pass
+[Plugin "python"]
+Target = //plugins:python
+
+[Plugin "cc"]
+Target = //plugins:cc
+TestMain = ///pleasings//cc:unittest_main
+
+[Plugin "go"]
+Target = //plugins:go
+FeatureFlags = go_get
+
+[parse]
+preloadsubincludes = ///python//build_defs:python
+preloadsubincludes = ///cc//build_defs:cc
+preloadsubincludes = ///go//build_defs:go
+        """)
+    with open(os.path.join(FLAGS.root, 'BUILD.plz'), 'w') as f:
+        f.write("""
+github_repo(
+    name = "pleasings",
+    repo = "thought-machine/pleasings",
+    revision = "v1.1.0",
+)
+        """)
     if FLAGS.format:
         # Format them all up (in chunks to avoid 'argument too long')
         n = 1000

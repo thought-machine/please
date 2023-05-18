@@ -94,6 +94,9 @@ func allConfigHelp(config *core.Configuration) helpSection {
 					continue
 				}
 			}
+			if tf.Tag.Get("exclude") == "true" {
+				continue
+			}
 			help += "\n"
 			if len(subfields) > 0 {
 				help += "\n${YELLOW}This option has the following sub-fields:${RESET}\n${GREEN}" + strings.Join(subfields, "\n") + "${RESET}\n"

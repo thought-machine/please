@@ -17,8 +17,8 @@ go_test(
     ],
     deps = [
         ":hashes",
+        "///third_party/go/github.com_stretchr_testify//assert",
         "//src/core",
         "//src/fs",
-        "//third_party/go:testify",
     ],
 )

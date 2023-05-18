@@ -5,7 +5,7 @@ def codelab(name : str, codelab_md: str):
         deps = ["//docs/build_defs:codelab_template"],
         cmd = "$TOOLS export -f $(location //docs/build_defs:codelab_template) $SRC",
         outs = [f"{name}"],
-        tools = ["//third_party/go:claat"],
+        tools = ["///third_party/go/github.com_googlecodelabs_tools_claat//:claat"],
         visibility = ["//docs/..."],
     )
 

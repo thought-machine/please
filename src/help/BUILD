@@ -1,19 +1,22 @@
 go_library(
     name = "help",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
+    srcs = [
+        "completion.go",
+        "config.go",
+        "help.go",
+        "misc_topics.go",
+        "rules.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
+        "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
         "//rules",
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/parse/asp",
         "//src/plz",
-        "//third_party/go:deferred_regex",
-        "//third_party/go:go-flags",
     ],
 )
 
@@ -25,6 +28,7 @@ go_test(
     ],
     deps = [
         ":help",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "//src/core",
     ],
 )

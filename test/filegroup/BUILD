@@ -23,3 +23,31 @@ sh_test(
     src = "hash_filegroup_test.sh",
     data = [":hashed"],
 )
+
+text_file(
+    name = "wibble",
+    content = "wibblewibblewibble",
+)
+
+text_file(
+    name = "wobble",
+    content = "wobblewobblewobble",
+)
+
+filegroup(
+    name = "named",
+    srcs = {
+        "wibble": [":wibble"],
+        "wobble": [":wobble"],
+    },
+)
+
+sh_test(
+    name = "named_test",
+    src = "named_test.sh",
+    data = {
+        "wibble": [":named|wibble"],
+        "wobble": [":named|wobble"],
+        "all": [":named"],
+    },
+)

@@ -17,7 +17,7 @@ filegroup(
 go_binary(
     name = "codelab_templator",
     srcs = ["codelab_template.go"],
-    deps = ["//third_party/go:cli-init"],
+    deps = ["///third_party/go/github.com_peterebden_go-cli-init_v5//flags"],
 )
 
 genrule(

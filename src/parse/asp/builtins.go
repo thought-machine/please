@@ -278,7 +278,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(filename, l), false)
+	s.SetAll(s.interpreter.Subinclude(s, filename, l), false)
 	return None
 }
 
@@ -314,7 +314,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.interpreter.loadPluginConfig(s, incPkgState)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(filepath.Join(t.OutDir(), out), t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label), false)
 		}
 	}
 	return None
@@ -573,7 +573,7 @@ func glob(s *scope, args []pyObject) pyObject {
 	}
 
 	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
-	if s.state.Config.FeatureFlags.ErrorOnEmptyGlob && !allowEmpty && len(glob) == 0 {
+	if !allowEmpty && len(glob) == 0 {
 		// Strip build file name from exclude list for error message
 		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]
 		log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
@@ -1121,6 +1121,8 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		}
 		state = state.ForArch(arch)
 		isCrossCompile = true
+	} else if state.Arch != arch {
+		state = state.ForArch(arch)
 	}
 	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile)
 	if args[PackageRootIdx].IsTruthy() {

@@ -8,6 +8,8 @@ go_binary(
     },
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
+        "///third_party/go/go.uber.org_automaxprocs//maxprocs",
         "//src/assets",
         "//src/build",
         "//src/cache",
@@ -36,8 +38,6 @@ go_binary(
         "//src/tool",
         "//src/update",
         "//src/watch",
-        "//third_party/go:automaxprocs",
-        "//third_party/go:go-flags",
     ],
 )
 

@@ -344,9 +344,8 @@ Hopefully you now have an idea as to how to build Python with Please. Please is 
 
 - [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this
 tutorial in more detail.
-- [python plugin rules](/plugins.html#python) - See the rest of the Python plugin rules and config.
-- [Built-in rules](/lexicon.html#go) - See the rest of the built in rules.
-- [Config](/config.html) - See the available config options for Please.
+- [Plugin rules](/plugin.html#python) - See the rest of the Python rules in the python plugin.
+- [Config](/config.html#python) - See the available config options for Please, especially those relating to Python.
 - [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
 determine files changes since master, watch rules and build them automatically as things change and much more! Use
 `plz help`, and explore this rich set of commands!

@@ -79,13 +79,13 @@ func TestFilePosition(t *testing.T) {
 		},
 		{
 			Offset: 1039,
-			Line:   50,
+			Line:   48,
 			Column: 2,
 		},
 		{
 			Offset: 1040,
-			Line:   51,
-			Column: 1,
+			Line:   48,
+			Column: 3,
 		},
 	} {
 		pos.Filename = filename
