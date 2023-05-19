@@ -33,17 +33,17 @@ Duration: 2
 
 The easiest way to get started is from an existing Go module:
 
-```
+```text
 $ mkdir getting_started_go && cd getting_started_go
 $ plz init 
 $ plz init plugin go
-$ go mod init example_module
+$ go mod init github.com/example/module 
 ```
 
 
 ### So what just happened?
 You will see this has created a number of files in your working folder:
-```
+```text
 $ tree -a
   .
   ├── go.mod
@@ -90,10 +90,10 @@ As we're initialised a Go module, all imports should be resolved relative to the
 use this import path, we have to configure the Go plugin as such:
 
 ### `.plzconfig`
-```
+```text
 [Plugin "go"]
 Target = //plugins:go
-ImportPath = example_module ; Should match the module name in go.mod
+ImportPath = github.com/example/module ; Should match the module name in go.mod
 ```
 
 ## Setting up your toolchain
@@ -118,10 +118,10 @@ go_toolchain(
 
 And then configure the go plugin to use it like so:
 ### `.plzconfig`
-```
+```text
 [Plugin "go"]
 Target = //plugins:go
-ImportPath = example_module
+ImportPath = github.com/example/module
 GoTool = //third_party/go:toolchain|go
 ```
 
@@ -135,7 +135,7 @@ By default, Please will look for Go in the following locations:
 If you have Please installed elsewhere, you must configure the path like so:
 
 ### `.plzconfig`
-```
+```text
 [Build]
 Path = /usr/local/go/bin:/usr/local/bin:/usr/bin:/bin
 ```
@@ -143,7 +143,7 @@ Path = /usr/local/go/bin:/usr/local/bin:/usr/bin:/bin
 Additionally, from version 1.20, golang no longer includes the standard library with its distribution. To use 1.20 from
 the path with Please, you must install it. This can be done like so: 
 
-```
+```text
 $ GODEBUG="installgoroot=all" go install std
 ```
 
@@ -175,7 +175,7 @@ go_binary(
 ```
 
 That's it! You can now run this with:
-```
+```text
 $ plz run //src:main
 Hello, world!
 ```
@@ -222,13 +222,10 @@ go_library(
     visibility = ["//src/..."],
 )
 ```
-NB: Unlike many popular build systems, Please doesn't just have one metadata file in the root of the project. Please will
-typically have one `BUILD` file per "compilation unit", which in Go terms means one per package. It's not uncommon to
-see a `BUILD` file in every folder of your project.
 
 We can then build it like so:
 
-```
+```text
 $ plz build //src/greetings
 Build finished; total time 290ms, incrementality 50.0%. Outputs:
 //src/greetings:greetings:
@@ -270,7 +267,7 @@ package main
 import (
     "fmt"
 
-    "example_module/src/greetings"
+    "github.com/example/module/src/greetings"
 )
 
 func main(){
@@ -280,7 +277,7 @@ func main(){
 
 Give it a whirl:
 
-```
+```text
 $ plz run //src:main
 Bonjour, world!
 ```
@@ -321,7 +318,7 @@ go_test(
 ```
 
 We've used `go_test()`. This is a special build rule that is considered a test. These rules can be executed as such:
-```
+```text
 $ plz test //src/...
 //src/greetings:greetings_test 1 test run in 3ms; 1 passed
 1 test target and 1 test run in 3ms; 1 passed. Total time 90ms.
@@ -340,10 +337,10 @@ they have a different package. Please supports this through the `external = True
 package greetings_test
 
 import (
-	"testing"
-
-    // We now need to import the "production" package
-	"example_module/src/greetings"
+    "testing"
+    
+    // We now need to import the "production" package 
+    "github.com/example/module/src/greetings"
 )
 
 func TestGreeting(t *testing.T) {
@@ -370,7 +367,7 @@ go_test(
 ```
 
 Check if it works:
-```
+```text
 $ plz test //src/...
 //src/greetings:greetings_test 1 test run in 3ms; 1 passed
   1 test target and 1 test run in 3ms; 1 passed. Total time 90ms.
@@ -378,17 +375,23 @@ $ plz test //src/...
 ## Third-party dependencies
 Duration: 7
 
-To add third party dependencies to Please, the easiest way is to use `///go//tools:please_go` to resolve them, and then add them to 
-`third_party/go/BUILD`. Let's add testify:
+To add third party dependencies to Please, the easiest way is to use `///go//tools:please_go` to resolve them, and then
+add them to `third_party/go/BUILD`. Let's add `github.com/stretchr/testify`:
 
-```
-$ plz run ///go//tools:please_go -- get github.com/stretchr/testify@v1.8.2
+```text
+$ plz run ///go//tools/please_go -- get github.com/stretchr/testify@v1.8.2
+go_repo(module="github.com/stretchr/objx", version="v0.5.0")
+go_repo(module="gopkg.in/yaml.v3", version="v3.0.1")
+go_repo(module="gopkg.in/check.v1", version="v0.0.0-20161208181325-20d25e280405")
+go_repo(module="github.com/stretchr/testify", version="v1.8.2")
+go_repo(module="github.com/davecgh/go-spew", version="v1.1.1")
+go_repo(module="github.com/pmezard/go-difflib", version="v1.0.0")
 ```
 
 We can then add them to `third_party/go/BUILD`:
-```
+```python
 # We give direct modules a name, and install list so we can reference them nicely
-go_get(
+go_repo(
     name = "testify",
     module = "github.com/stretchr/testify", 
     version="v1.8.2",
@@ -400,19 +403,20 @@ go_get(
 )
 
 # Indirect modules are referenced internally, so we don't have to name them if we don't want to. They can still be 
-# referece by the following build label naming convention: ///third_party/go/module_name//package.
+# referece by the following build label naming convention: ///third_party/go/github.com_owner_repo//package.
 #
 # NB: Any slashes in the module name will be replaced by _ 
-go_get(module = "github.com/davecgh/go-spew", version="v1.1.1")
-go_get(module = "github.com/pmezard/go-difflib", version="v1.0.0")
-go_get(module = "github.com/stretchr/objx", version="v0.5.0")
-go_get(module = "gopkg.in/yaml.v3", version="v3.0.1")
+go_repo(module="github.com/davecgh/go-spew", version="v1.1.1")
+go_repo(module="github.com/pmezard/go-difflib", version="v1.0.0")
+go_repo(module="github.com/stretchr/objx", version="v0.5.0")
+go_repo(module="gopkg.in/yaml.v3", version="v3.0.1")
+go_repo(module="gopkg.in/check.v1", version="v0.0.0-20161208181325-20d25e280405")
 ```
 
-More information as to how `go_get` works can be found 
-[here](https://github.com/please-build/go-rules/blob/master/build_defs/go.build_defs#L1080).
+More information as to how `go_repo` works can be found 
+[here](/plugins.html#go_repo).
 
-
+NB: This build label looks a little different. That's because it's referencing a build target in a subrepo. 
 ### Updating our tests
 
 We can now use this library in our tests:
@@ -426,7 +430,7 @@ import (
 
     "github.com/stretchr/testify/assert"
 
-    "example_module/src/greetings"
+    "github.com/example/module/src/greetings"
 )
 
 func TestGreeting(t *testing.T) {
@@ -447,10 +451,19 @@ go_test(
     srcs = ["greetings_test.go"],
     deps = [
         ":greetings",
+        # Could use a subrepo label i.e. ///third_party/go/github.com_stretchr_testify//assert instead if we want
         "//third_party/go:testify",
     ],
     external = True,
 )
+```
+
+And then we can check it all works:
+```text
+$ plz test
+//src/greetings:greetings_test 1 test run in 3ms; 1 passed
+1 test target and 1 test run; 1 passed.
+Total time: 480ms real, 0s compute.
 ```
 
 ## What next?
