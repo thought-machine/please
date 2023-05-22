@@ -390,7 +390,7 @@ go_repo(module="github.com/pmezard/go-difflib", version="v1.0.0")
 
 We can then add them to `third_party/go/BUILD`:
 ```python
-# We give direct modules a name, and install list so we can reference them nicely
+# We give direct modules a name and install list so we can reference them nicely
 go_repo(
     name = "testify",
     module = "github.com/stretchr/testify", 
