@@ -1020,7 +1020,8 @@ type ConfigOverrides map[string]string
 
 // Complete implements the flags.Completer interface.
 func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
-	return core.DefaultConfiguration().Completions(match)
+	config := readConfig()
+	return config.Completions(match)
 }
 
 // Get an absolute path from a relative path.

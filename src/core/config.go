@@ -1006,8 +1006,27 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 
 // Completions returns a list of possible completions for the given option prefix.
 func (config *Configuration) Completions(prefix string) []flags.Completion {
+	return config.completions(strings.Split(prefix, "."), reflect.ValueOf(config).Elem(), reflect.TypeOf(config).Elem())
+}
+
+func (config *Configuration) completions(parts []string, v *reflect.Value, t reflect.Type) []flags.Completion {
+	if kind := t.Kind(); kind == reflect.Struct {
+		return config.structCompletions(parts, v, t)
+	} else if kind == reflect.Map {
+		return config.MapCompletions(parts, v, t)
+	}
+	return nil
+}
+
+func (config *Configuration) structCompletions(parts []string, v *reflect.Value, t reflect.Type) []flags.Completion {
+	if len(parts) > 1 {
+		// We have a complete prefix, so we must match it exactly
+	}
+}
+
+func (config *Configuration) blahCompletions(parts []string, v *reflect.Value, t reflect.Type) []flags.Completion {
 	ret := []flags.Completion{}
-	t := reflect.TypeOf(config).Elem()
+
 	for i := 0; i < t.NumField(); i++ {
 		if field := t.Field(i); field.Type.Kind() == reflect.Struct {
 			for j := 0; j < field.Type.NumField(); j++ {
@@ -1021,6 +1040,11 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 					} else {
 						ret = append(ret, flags.Completion{Item: name + ":", Description: help})
 					}
+				}
+			}
+		} else if field.Type.Kind() == reflect.Map {
+			for _, k := range v.Field(i).MapKeys() {
+				if name := strings.ToLower(field.Name + "." + k.String()); strings.HasPrefix(name, prefix) {
 				}
 			}
 		}
