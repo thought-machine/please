@@ -1011,26 +1011,38 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 	ret := []flags.Completion{}
 	for i := 0; i < t.NumField(); i++ {
 		if field := t.Field(i); field.Type.Kind() == reflect.Struct {
-			for j := 0; j < field.Type.NumField(); j++ {
-				subfield := field.Type.Field(j)
-				if name := strings.ToLower(field.Name + "." + subfield.Name); strings.HasPrefix(name, prefix) {
-					help := subfield.Tag.Get("help")
-					if options := subfield.Tag.Get("options"); options != "" {
-						for _, option := range strings.Split(options, ",") {
-							ret = append(ret, flags.Completion{Item: name + ":" + option, Description: help})
-						}
-					} else {
-						ret = append(ret, flags.Completion{Item: name + ":", Description: help})
-					}
-				}
-			}
+			ret = append(ret, config.structCompletions(field.Name, prefix, field.Type)...)
 		} else if field.Type.Kind() == reflect.Map {
 			iter := v.Field(i).MapRange()
 			for iter.Next() {
 				k := iter.Key().String()
+				v := iter.Value()
 				if name := strings.ToLower(field.Name + "." + k); strings.HasPrefix(name, prefix) {
-					ret = append(ret, flags.Completion{Item: name + ":"})
+					if kind := v.Type().Kind(); kind == reflect.Pointer {
+						ret = append(ret, config.structCompletions(name, prefix, v.Elem().Type())...)
+					} else {
+						// assume it's a map[string]string so we just need to complete its name
+						ret = append(ret, flags.Completion{Item: name + ":"})
+					}
 				}
+			}
+		}
+	}
+	return ret
+}
+
+func (config *Configuration) structCompletions(name, prefix string, t reflect.Type) []flags.Completion {
+	ret := []flags.Completion{}
+	for j := 0; j < t.NumField(); j++ {
+		subfield := t.Field(j)
+		if name := strings.ToLower(name + "." + subfield.Name); strings.HasPrefix(name, prefix) {
+			help := subfield.Tag.Get("help")
+			if options := subfield.Tag.Get("options"); options != "" {
+				for _, option := range strings.Split(options, ",") {
+					ret = append(ret, flags.Completion{Item: name + ":" + option, Description: help})
+				}
+			} else {
+				ret = append(ret, flags.Completion{Item: name + ":", Description: help})
 			}
 		}
 	}
