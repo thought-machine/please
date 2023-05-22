@@ -473,7 +473,7 @@ Hopefully you now have an idea as to how to build Go with Please. Please is capa
 
 - [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this
 tutorial in more detail.
-- [go plugin rules](/plugins.html#go) - See the rest of the Go plugin rules and config.
+- [Go plugin rules](/plugins.html#go) - See the rest of the Go plugin rules and config.
 - [Built-in rules](/lexicon.html#go) - See the rest of the built in rules.
 - [Config](/config.html) - See the available config options for Please.
 - [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
