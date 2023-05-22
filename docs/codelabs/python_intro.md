@@ -16,7 +16,7 @@ Duration: 4
 - Python must be installed: [Install Python](https://www.python.org/downloads/)
 
 ### What You’ll Learn
-- Configuring Please for Python using the python plugin
+- Configuring Please for Python using the Python plugin
 - Creating an executable Python binary
 - Authoring Python modules in your project
 - Testing your code
