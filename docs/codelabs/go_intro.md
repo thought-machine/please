@@ -86,7 +86,7 @@ Finally, the `plz-out` directory contains artifacts built by plz.
 ## Setting up our import path
 Duration: 1
 
-As we're initialised a Go module, all imports should be resolved relative to the module name. To instruct Please to
+As we've initialised a Go module, all imports should be resolved relative to the module name. To instruct Please to
 use this import path, we have to configure the Go plugin as such:
 
 ### `.plzconfig`
