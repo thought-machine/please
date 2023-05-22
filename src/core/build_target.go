@@ -718,6 +718,17 @@ func (target *BuildTarget) DeclaredOutputNames() []string {
 	return ret
 }
 
+// DeclaredSourceNames is a convenience function to return the names of the declared
+// sources in a consistent order.
+func (target *BuildTarget) DeclaredSourceNames() []string {
+	ret := make([]string, 0, len(target.NamedSources))
+	for name, _ := range target.NamedSources {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
+}
+
 func (target *BuildTarget) filegroupOutputs(srcs []BuildInput) []string {
 	ret := make([]string, 0, len(srcs))
 	// Filegroups just re-output their inputs.

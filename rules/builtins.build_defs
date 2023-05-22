@@ -235,6 +235,8 @@ def add_out(target:str, name:str, out:str=''):
     pass
 def get_outs(target:str):
     pass
+def get_named_outs(target:str) -> dict:
+    pass
 def add_licence(target:str, licence:str):
     pass
 def get_licences(target:str):
