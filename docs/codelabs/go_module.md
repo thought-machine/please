@@ -329,7 +329,7 @@ tutorial in more detail.
 - [Built-in rules](/lexicon.html#go) - See the rest of the built in rules.
 - [Config](/config.html) - See the available config options for Please.
 - [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
-determine files changes since master, watch rules and build them automatically as things change and much more! Use
+determine file changes since master, watch rules and build them automatically as things change, and much more! Use
 `plz help`, and explore this rich set of commands!
 
 Otherwise, why not try one of the other codelabs!
