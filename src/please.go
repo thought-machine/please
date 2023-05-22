@@ -783,6 +783,23 @@ var buildFunctions = map[string]func() int{
 				help.Topics(fragments[0], config)
 			}
 			return 0
+		} else if opts.Query.Completions.Cmd == "plugin_config" {
+			// Completing for plugin config
+			targets := make([]core.BuildLabel, 0, len(config.Plugin))
+			for _, plugin := range config.Plugin {
+				targets = append(targets, plugin.Target)
+			}
+			return runQuery(true, targets, func(state *core.BuildState) {
+				for _, subrepo := range state.Graph.AllSubrepos() {
+					for _, frag := range fragments {
+						for k := range subrepo.State.RepoConfig.PluginConfig {
+							if name := "plugin." + subrepo.Name + "." + k; strings.HasPrefix(name, frag) {
+								fmt.Printf("%s:\n", name)
+							}
+						}
+					}
+				}
+			})
 		}
 
 		var qry string

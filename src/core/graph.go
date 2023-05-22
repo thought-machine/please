@@ -136,6 +136,15 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 	return targets
 }
 
+// AllSubrepos returns a consistently ordered slice of all the subrepos in the graph
+func (graph *BuildGraph) AllSubrepos() []*Subrepo {
+	subrepos := graph.subrepos.Values()
+	sort.Slice(subrepos, func(i, j int) bool {
+		return subrepos[i].Name < subrepos[j].Name
+	})
+	return subrepos
+}
+
 // PackageMap returns a copy of the graph's internal map of name to package.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	packages := map[string]*Package{}
