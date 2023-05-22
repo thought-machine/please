@@ -1037,6 +1037,23 @@ type ConfigOverrides map[string]string
 
 // Complete implements the flags.Completer interface.
 func (overrides ConfigOverrides) Complete(match string) []flags.Completion {
+	if strings.HasPrefix(match, "plugin.") {
+		// We aren't in a good position to handle plugin config here (we need to invoke build
+		// machinery, which we're far too early to do). Chuck it out to a subprocess.
+		os.Unsetenv("GO_FLAGS_COMPLETION")
+		exec, _ := os.Executable()
+		out, _, err := process.New().ExecWithTimeout(context.Background(), nil, "", os.Environ(), 10*time.Second, false, false, false, false, process.NoSandbox, []string{exec, "query", "completions", "--cmd", "plugin_config", match})
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+		var ret []flags.Completion
+		for _, line := range strings.Split(string(out), "\n") {
+			if strings.HasPrefix(line, match) {
+				ret = append(ret, flags.Completion{Item: line, Description: "PluginConfig"})
+			}
+		}
+		return ret
+	}
 	return readConfig().Completions(match)
 }
 
@@ -1335,7 +1352,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 func handleCompletions(parser *flags.Parser, items []flags.Completion) {
 	cli.InitLogging(cli.MinVerbosity)  // Ensure this is quiet
 	opts.BehaviorFlags.NoUpdate = true // Ensure we don't try to update
-	if len(items) > 0 && items[0].Description == "BuildLabel" {
+	if len(items) > 0 && (items[0].Description == "BuildLabel" || items[0].Description == "PluginConfig") {
 		// Don't muck around with the config if we're predicting build labels.
 		cli.PrintCompletions(items)
 	} else if config := mustReadConfigAndSetRoot(false); config.AttachAliasFlags(parser) {
