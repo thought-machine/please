@@ -403,7 +403,7 @@ go_repo(
 )
 
 # Indirect modules are referenced internally, so we don't have to name them if we don't want to. They can still be 
-# referece by the following build label naming convention: ///third_party/go/github.com_owner_repo//package.
+# referenced by the following build label naming convention: ///third_party/go/github.com_owner_repo//package.
 #
 # NB: Any slashes in the module name will be replaced by _ 
 go_repo(module="github.com/davecgh/go-spew", version="v1.1.1")
