@@ -395,20 +395,30 @@ func objLen(obj pyObject) pyInt {
 
 func isinstance(s *scope, args []pyObject) pyObject {
 	obj := args[0]
-	types := args[1]
-	if f, ok := types.(*pyFunc); ok && isType(obj, f.name) {
+	typesArg := args[1]
+
+	var types pyList
+
+	if l, ok := typesArg.(pyList); ok {
+		types = l
+	} else {
+		types = pyList{typesArg}
+	}
+
+	for _, li := range types {
 		// Special case for 'str' and so forth that are functions but also types.
-		return True
-	} else if l, ok := types.(pyList); ok {
-		for _, li := range l {
-			if lif, ok := li.(*pyFunc); ok && isType(obj, lif.name) {
-				return True
-			} else if reflect.TypeOf(obj) == reflect.TypeOf(li) {
-				return True
-			}
+		if lif, ok := li.(*pyFunc); ok && isType(obj, lif.name) {
+			return True
+		} else if _, ok := obj.(*pyFunc); ok {
+			continue // reflect would always return true
+		} else if reflect.TypeOf(obj) == reflect.TypeOf(li) {
+			return True
 		}
 	}
-	return newPyBool(reflect.TypeOf(obj) == reflect.TypeOf(types))
+	if _, ok := obj.(*pyFunc); ok {
+		return False // reflect would always return true
+	}
+	return newPyBool(reflect.TypeOf(obj) == reflect.TypeOf(typesArg))
 }
 
 func isType(obj pyObject, name string) bool {
@@ -425,6 +435,8 @@ func isType(obj pyObject, name string) bool {
 		return name == "dict"
 	case *pyConfig:
 		return name == "config"
+	case *pyFunc:
+		return name == "callable"
 	}
 	return false
 }
