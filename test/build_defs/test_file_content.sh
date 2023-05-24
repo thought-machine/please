@@ -1,13 +1,16 @@
 #!/bin/sh
 
-if ! test -f "$1"; then
-  echo "$1" doesnt exist
+file=$1
+
+if ! test -f "$file"; then
+  echo "$file" doesnt exist
   exit 1
 fi
 
-CONTENT=$(cat "$1")
+CONTENT=$(cat "$file")
+shift 1
 
-if [ "$CONTENT" != "$2" ]; then
-  echo "$1" doesnt contain "$2", it contains "$CONTENT"
+if [ "$CONTENT" != "$@" ]; then
+  echo "$file" doesnt contain "$@", it contains "$CONTENT"
   exit 1
 fi
