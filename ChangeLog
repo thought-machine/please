@@ -14,6 +14,7 @@ Version 17.0.0
     * Auth before releasing website and binaries (#2684)
     * Fix typo in gcloud command (#2685)
     * Exclude targets in subrepos from `plz query changes` (#2723)
+    * `plz exec` now follows a similar argument pattern to `plz run` (#2793)
 
 
 Version 16.27.1

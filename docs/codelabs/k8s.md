@@ -109,16 +109,16 @@ Unlike `python_lbrary()` the docker image build rules aren't built in. They are 
 
 To use the pleasings rules, we need to add pleasings to our project:
 ```
-$ plz init pleasings
+$ plz init pleasings --revision v1.1.0
 ```
 
-This will add the pleasings subrepo to the build graph via the `github_repo()` built in:
+This will add the pleasings subrepo to the build graph via the `github_repo()` built-in:
 ```
 $ cat BUILD
 github_repo(
   name = "pleasings",
   repo = "thought-machine/pleasings",
-  revision = "master",
+  revision = "v1.1.0",
 )
 ```
 
