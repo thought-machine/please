@@ -21,9 +21,9 @@ import (
 var log = logging.Log
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
-func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, args []string, foreground bool, sandbox process.SandboxConfig) int {
+func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs, additionalArgs []string, foreground bool, sandbox process.SandboxConfig) int {
 	target := state.Graph.TargetOrDie(label.BuildLabel)
-	return exitCode(exec(state, process.Default, target, dir, env, args, label.Annotation, foreground, sandbox))
+	return exitCode(exec(state, process.Default, target, dir, env, overrideCmdArgs, additionalArgs, label.Annotation, foreground, sandbox))
 }
 
 // Sequential executes a series of targets in sequence, stopping when one fails.
@@ -33,7 +33,7 @@ func Sequential(state *core.BuildState, outputMode process.OutputMode, labels []
 		log.Notice("Executing %s...", label)
 		target := state.Graph.TargetOrDie(label.BuildLabel)
 		sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-		if err := exec(state, outputMode, target, target.ExecDir(), env, args, label.Annotation, false, sandbox); err != nil {
+		if err := exec(state, outputMode, target, target.ExecDir(), env, nil, args, label.Annotation, false, sandbox); err != nil {
 			return exitCode(err)
 		}
 	}
@@ -74,7 +74,7 @@ func Parallel(state *core.BuildState, outputMode process.OutputMode, updateFrequ
 			atomic.AddInt64(&started, 1)
 			defer atomic.AddInt64(&done, 1)
 			sandbox := process.NewSandboxConfig(target.Sandbox && !shareNetwork, target.Sandbox && !shareMount)
-			return exec(state, outputMode, target, target.ExecDir(), env, args, annotation, false, sandbox)
+			return exec(state, outputMode, target, target.ExecDir(), env, nil, args, annotation, false, sandbox)
 		})
 	}
 	return exitCode(g.Wait())
@@ -92,17 +92,17 @@ func exitCode(err error) int {
 }
 
 // exec runs the given command in the given directory, with the given environment and arguments.
-func exec(state *core.BuildState, outputMode process.OutputMode, target *core.BuildTarget, runtimeDir string, env []string, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
+func exec(state *core.BuildState, outputMode process.OutputMode, target *core.BuildTarget, runtimeDir string, env []string, overrideCmdArgs, additionalArgs []string, entrypoint string, foreground bool, sandbox process.SandboxConfig) error {
 	if err := process.RunWithOutput(outputMode, target.Label.String(), func() ([]byte, error) {
-		if !target.IsBinary {
-			return nil, fmt.Errorf("Target %s to be executed is not marked as binary", target)
+		if !target.IsBinary && len(overrideCmdArgs) == 0 {
+			return nil, fmt.Errorf("Either the target needs to be a binary or an override command must be provided")
 		}
 
 		if err := core.PrepareRuntimeDir(state, target, runtimeDir); err != nil {
 			return nil, err
 		}
 
-		cmd, err := resolveCmd(state, target, entrypoint, runtimeDir, sandbox)
+		cmd, err := resolveCmd(state, target, overrideCmdArgs, entrypoint, runtimeDir, sandbox)
 		if err != nil {
 			return nil, err
 		}
@@ -121,13 +121,17 @@ func exec(state *core.BuildState, outputMode process.OutputMode, target *core.Bu
 }
 
 // resolveCmd resolves the command to run for the given target.
-func resolveCmd(state *core.BuildState, target *core.BuildTarget, entrypoint string, runtimeDir string, sandbox process.SandboxConfig) (string, error) {
+func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArgs []string, entrypoint string, runtimeDir string, sandbox process.SandboxConfig) (string, error) {
 	if entrypoint != "" {
 		if ep, ok := target.EntryPoints[entrypoint]; ok {
-			return core.ReplaceSequences(state, target, ep)
+			overrideCmdArgs = []string{ep}
 		} else {
-			return "", fmt.Errorf("%s has no such entry point %s", target, entrypoint)
+			log.Fatalf("%v has no such entry point %v", target, entrypoint)
 		}
+	}
+	// The override command takes precedence if provided
+	if len(overrideCmdArgs) > 0 {
+		return core.ReplaceSequences(state, target, strings.Join(overrideCmdArgs, " "))
 	}
 
 	outs := target.Outputs()
