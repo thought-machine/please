@@ -100,7 +100,10 @@ loop:
 		}
 		msgs, totalMessages, actualMessages := cli.CurrentBackend.GetMessageHistory()
 		if actualMessages > 0 && !plainOutput {
-			printf("Messages:\n%s\n", strings.Join(msgs, "\n"))
+			printf("Messages:\n")
+			for _, msg := range msgs {
+				printf("%s\n", msg)
+			}
 			if totalMessages != actualMessages {
 				printf("plus %d more... see plz-out/log/build.log\n", totalMessages-actualMessages)
 			}

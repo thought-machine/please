@@ -3,8 +3,8 @@ go_library(
     srcs = ["signer.go"],
     visibility = ["//tools/release_signer"],
     deps = [
-        "//third_party/go:go-crypto",
-        "//third_party/go:sigstore",
+        "///third_party/go/github.com_ProtonMail_go-crypto//openpgp",
+        "///third_party/go/github.com_sigstore_sigstore//pkg/signature",
     ],
 )
 
@@ -14,7 +14,9 @@ go_test(
     data = ["test_data"],
     deps = [
         ":signer",
-        "//third_party/go:go-crypto",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_ProtonMail_go-crypto//openpgp",
+        "///third_party/go/github.com_sigstore_sigstore//pkg/cryptoutils",
+        "///third_party/go/github.com_sigstore_sigstore//pkg/signature",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

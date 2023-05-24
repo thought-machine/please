@@ -13,7 +13,7 @@ func TestRuleArgs(t *testing.T) {
 	funcMap := getFunctionsFromState(core.NewDefaultBuildState())
 	env := getRuleArgs(funcMap)
 	assert.True(t, len(env.Functions) > 20) // Don't care exactly how many there are, but it should have a fair few.
-	rule := env.Functions["cc_library"]
+	rule := env.Functions["http_archive"]
 	assert.True(t, len(rule.Args) > 5)
 	assert.NotEqual(t, "", rule.Comment)
 	assert.NotEqual(t, "", rule.Docstring)
@@ -24,13 +24,13 @@ func TestRuleArgs(t *testing.T) {
 	assert.True(t, arg.Required)
 	assert.False(t, arg.Deprecated)
 	assert.Equal(t, []string{"str"}, arg.Types)
-	assert.Equal(t, "Name of the rule", arg.Comment)
-	arg = rule.Args[3]
-	assert.Equal(t, "hdrs", arg.Name)
+	assert.Equal(t, "Name of the rule.", arg.Comment)
+	arg = rule.Args[4]
+	assert.Equal(t, "labels", arg.Name)
 	assert.False(t, arg.Required)
 	assert.False(t, arg.Deprecated)
 	assert.Equal(t, []string{"list"}, arg.Types)
-	assert.Equal(t, "Header files. These will be made available to dependent rules, so the distinction between srcs and hdrs is important.", arg.Comment)
+	assert.Equal(t, "Labels to apply to this rule.", arg.Comment)
 }
 
 func TestMultilineComment(t *testing.T) {

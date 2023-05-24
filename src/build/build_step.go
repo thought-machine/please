@@ -18,7 +18,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/shlex"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-retryablehttp"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
-	"github.com/thought-machine/please/src/worker"
 )
 
 var log = logging.Log
@@ -41,8 +39,6 @@ var errStop = fmt.Errorf("stopping build")
 var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
 var httpClientLimiter chan struct{}
-
-var magicSourcesWorkerKey = "WORKER"
 
 var successfulRemoteTargetBuildDuration = metrics.NewHistogram(
 	"remote",
@@ -315,7 +311,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 
 		state.LogBuildResult(tid, target, core.TargetBuilding, target.BuildingDescription)
-		metadata, err = buildMaybeRemotely(state, target, cacheKey)
+		metadata, err = build(state, target, cacheKey)
 		if err != nil {
 			return err
 		}
@@ -598,7 +594,7 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 		}
 	}
 	if target.Stamp {
-		if err := fs.WriteFile(bytes.NewReader(core.StampFile(target)), filepath.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
+		if err := fs.WriteFile(bytes.NewReader(core.StampFile(state.Config, target)), filepath.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
 			return err
 		}
 	}
@@ -990,21 +986,8 @@ func runPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 // checkLicences checks the licences for the target match what we've accepted / rejected in the config
 // and panics if they don't match.
 func checkLicences(state *core.BuildState, target *core.BuildTarget) {
-	for _, licence := range target.Licences {
-		for _, reject := range state.Config.Licences.Reject {
-			if strings.EqualFold(reject, licence) {
-				panic(fmt.Sprintf("Target %s is licensed %s, which is explicitly rejected for this repository", target.Label, licence))
-			}
-		}
-		for _, accept := range state.Config.Licences.Accept {
-			if strings.EqualFold(accept, licence) {
-				log.Info("Licence %s is accepted in this repository", licence)
-				return // Note licences are assumed to be an 'or', ie. any one of them can be accepted.
-			}
-		}
-	}
-	if len(target.Licences) > 0 && len(state.Config.Licences.Accept) > 0 {
-		panic(fmt.Sprintf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", ")))
+	if _, err := target.CheckLicences(state.Config); err != nil {
+		panic(err)
 	}
 }
 
@@ -1215,57 +1198,16 @@ func (r *progressReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
-// buildMaybeRemotely builds a target, either sending it to a remote worker if needed,
-// or locally if not.
-func buildMaybeRemotely(state *core.BuildState, target *core.BuildTarget, inputHash []byte) (*core.BuildMetadata, error) {
+// build builds a target locally, it errors if a remote worker is needed since this has beeen removed.
+func build(state *core.BuildState, target *core.BuildTarget, inputHash []byte) (*core.BuildMetadata, error) {
 	metadata := new(core.BuildMetadata)
 
-	workerCmd, workerArgs, localCmd, err := core.WorkerCommandAndArgs(state, target)
+	workerCmd, _, localCmd, err := core.WorkerCommandAndArgs(state, target)
 	if err != nil {
 		return nil, err
 	} else if workerCmd == "" {
 		metadata.Stdout, err = runBuildCommand(state, target, localCmd, inputHash)
 		return metadata, err
 	}
-	// The scheme here is pretty minimal; remote workers currently have quite a bit less info than
-	// local ones get. Over time we'll probably evolve it to add more information.
-	opts, err := shlex.Split(workerArgs)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("Sending remote build request for %s to %s; opts %s", target.Label, workerCmd, workerArgs)
-
-	// Allow callers to specify only a subset of sources to send to the worker
-	// If they don't do this, send all sources.
-
-	var workerSources []string
-	workerSourceInputs, present := target.NamedSources[magicSourcesWorkerKey]
-	if !present {
-		workerSources = target.AllSourcePaths(state.Graph)
-	} else {
-		workerSources = target.SourcePaths(state.Graph, workerSourceInputs)
-	}
-
-	resp, err := worker.BuildRemotely(state, target, workerCmd, &worker.Request{
-		Rule:    target.Label.String(),
-		Labels:  target.Labels,
-		TempDir: filepath.Join(core.RepoRoot, target.TmpDir()),
-		Sources: workerSources,
-		Options: opts,
-	})
-	if err != nil {
-		return nil, err
-	}
-	out := strings.Join(resp.Messages, "\n")
-	if !resp.Success {
-		return nil, fmt.Errorf("Error building target %s: %s", target.Label, out)
-	}
-	// Okay, now we might need to do something locally too...
-	if localCmd != "" {
-		out2, err := runBuildCommand(state, target, localCmd, inputHash)
-		metadata.Stdout = append([]byte(out+"\n"), out2...)
-		return metadata, err
-	}
-	metadata.Stdout = []byte(out)
-	return metadata, nil
+	return nil, fmt.Errorf("Persistent workers are no longer supported, found worker command: %s", workerCmd)
 }

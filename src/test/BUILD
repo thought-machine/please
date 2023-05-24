@@ -1,59 +1,63 @@
+subinclude("//test/build_defs")
+
 go_library(
     name = "test",
-    srcs = glob(
-        ["*.go"],
-        exclude = [
-            "*_test.go",
-        ],
-    ),
+    srcs = [
+        "coverage.go",
+        "gcov_coverage.go",
+        "go_coverage.go",
+        "go_results.go",
+        "istanbul_coverage.go",
+        "results.go",
+        "surefire.go",
+        "test_step.go",
+        "xml_coverage.go",
+        "xml_results.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
+        "///third_party/go/github.com_peterebden_tools//cover",
         "//src/build",
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//src/worker",
-        "//third_party/go:cover",
-        "//third_party/go:deferred_regex",
     ],
 )
 
 go_test(
-    name = "results_test",
-    srcs = ["results_test.go"],
-    data = glob(["test_data/*"]),
+    name = "test_test",
+    srcs = [
+        "coverage_test.go",
+        "results_test.go",
+        "xml_results_test.go",
+    ],
+    data = ["test_data"],
     deps = [
         ":test",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "coverage_test",
-    srcs = ["coverage_test.go"],
-    data = [
-        "test_data/gcov_coverage.gcov",
-        "test_data/go_coverage.txt",
-        "test_data/go_coverage_2.txt",
-        "test_data/go_coverage_3.txt",
-        "test_data/istanbul_coverage.json",
-        "test_data/istanbul_coverage_2.json",
-        "test_data/python-coverage.xml",
-    ],
-    deps = [
-        ":test",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "xml_results_test",
-    srcs = ["xml_results_test.go"],
-    deps = [
-        ":test",
+        "///third_party/go/github.com_peterebden_tools//cover",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/core",
-        "//third_party/go:testify",
     ],
+)
+
+go_test(
+    name = "go_test_panic",
+    srcs = ["go_test_panic.go"],
+    deps = [
+        "///third_party/go/github.com_stretchr_testify//assert",
+    ],
+    labels = ["manual"],
+)
+
+# This test runs the test above (go_test_panic), which panics, and checks that
+# we capture the panic output.
+plz_e2e_test(
+    name = "go_test_output_test",
+    cmd = "plz test //src/test:go_test_panic",
+    expected_failure = True,
+    expect_output_contains = "panic: goodbye world",
 )

@@ -21,9 +21,9 @@ import (
 var log = logging.Log
 
 // Exec allows the execution of a target or override command in a sandboxed environment that can also be configured to have some namespaces shared.
-func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs []string, foreground bool, sandbox process.SandboxConfig) int {
+func Exec(state *core.BuildState, label core.AnnotatedOutputLabel, dir string, env, overrideCmdArgs, additionalArgs []string, foreground bool, sandbox process.SandboxConfig) int {
 	target := state.Graph.TargetOrDie(label.BuildLabel)
-	return exitCode(exec(state, process.Default, target, dir, env, overrideCmdArgs, nil, label.Annotation, foreground, sandbox))
+	return exitCode(exec(state, process.Default, target, dir, env, overrideCmdArgs, additionalArgs, label.Annotation, foreground, sandbox))
 }
 
 // Sequential executes a series of targets in sequence, stopping when one fails.

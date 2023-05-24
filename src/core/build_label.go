@@ -217,6 +217,9 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 	// Try the ones that don't need locating the repo root first.
 	startsWithColon := strings.HasPrefix(target, ":")
 	if !startsWithColon {
+		if !strings.HasPrefix(target, "//") && strings.HasPrefix(target, "/") {
+			target = "/" + target
+		}
 		if label, err := TryParseBuildLabel(target, "", ""); err == nil || strings.HasPrefix(target, "//") {
 			return label, err
 		}

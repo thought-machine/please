@@ -65,7 +65,6 @@ var pageTitles = map[string]string{
 	"require_provide.html":    "Require & Provide",
 	"quickstart.html":         "Please quickstart",
 	"tests.html":              "Testing with Please",
-	"workers.html":            "Persistent worker processes",
 }
 
 func mustRead(filename string) string {

@@ -1,7 +1,3 @@
-[proto]
-protoctool = protoc
-protocflag = -I/usr/include
-
 [Plugin "go"]
 DefaultStatic = true
 GoTool = go

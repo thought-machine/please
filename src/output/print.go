@@ -11,7 +11,9 @@ import (
 // initPrintf sets up the replacements used by printf.
 func initPrintf(config *core.Configuration) {
 	if !cli.ShowColouredOutput {
-		replacements = map[string]string{}
+		for k := range replacements {
+			replacements[k] = ""
+		}
 	} else {
 		if config.Display.ColourScheme == "light" {
 			for k, v := range lightOverrides {
@@ -31,7 +33,10 @@ func printf(format string, args ...interface{}) {
 }
 
 func replace(s string) string {
-	return replacements[s]
+	if repl, present := replacements[s]; present {
+		return repl
+	}
+	return "$" + s
 }
 
 // These are the standard set of replacements we use.

@@ -248,32 +248,6 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 	return
 }
 
-// ExcludedBuiltinRules returns a set of rules to exclude based on the feature flags
-func (state *BuildState) ExcludedBuiltinRules() map[string]struct{} {
-	// TODO(jpoole): remove this function, including the changes to rules.AllAssets() in v17
-	ret := make(map[string]struct{})
-	if state.Config.FeatureFlags.ExcludePythonRules {
-		ret["python_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeJavaRules {
-		ret["java_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeCCRules {
-		ret["c_rules.build_defs"] = struct{}{}
-		ret["cc_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeGoRules {
-		ret["go_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeShellRules {
-		ret["sh_rules.build_defs"] = struct{}{}
-	}
-	if state.Config.FeatureFlags.ExcludeProtoRules {
-		ret["proto_rules.build_defs"] = struct{}{}
-	}
-	return ret
-}
-
 // A stateProgress records various points of progress for a State.
 // This is split out from above so we can share it between multiple instances.
 type stateProgress struct {
@@ -1193,7 +1167,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	defer state.progress.mutex.Unlock()
 
 	for _, s := range state.progress.allStates {
-		if s.Arch == arch {
+		if s.Arch == arch && s.CurrentSubrepo == state.CurrentSubrepo {
 			return s
 		}
 	}
@@ -1205,14 +1179,21 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	// Duplicate & alter configuration
 	s := state.Copy()
 
+	configPath := ".plzconfig_" + arch.String()
+
 	config := state.Config.copyConfig()
-	if err := readConfigFile(config, ".plzconfig_"+arch.String(), false); err != nil {
+	if err := readConfigFile(config, configPath, false); err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	repoConfig := state.Config.copyConfig()
+	if err := readConfigFile(repoConfig, configPath, false); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	s.Config = config
+	s.RepoConfig = repoConfig
 	s.Arch = arch
-
 	state.progress.allStates = append(state.progress.allStates, s)
 
 	return s

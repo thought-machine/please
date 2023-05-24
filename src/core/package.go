@@ -151,10 +151,7 @@ func (pkg *Package) RegisterOutput(state *BuildState, fileName string, target *B
 		// Only local files are available as outputs to filegroups at this stage, so unless both targets are filegroups
 		// then the same output isn't allowed.
 		if !target.IsFilegroup || !existing.IsFilegroup {
-			// TODO(tiagovtristao): This condition exists for backwards compatibility and can be _fully_ deleted when the FF is removed.
-			if state.Config.FeatureFlags.PackageOutputsStrictness || !target.IsFilegroup && !existing.IsFilegroup {
-				return fmt.Errorf("rules %s and %s in %s both attempt to output the same file: %s", existing.Label, target.Label, pkg.Filename, originalFileName)
-			}
+			return fmt.Errorf("rules %s and %s in %s both attempt to output the same file: %s", existing.Label, target.Label, pkg.Filename, originalFileName)
 		}
 	}
 

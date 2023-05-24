@@ -30,10 +30,6 @@ func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 		"XOS=" + state.Arch.XOS(),
 	}
 
-	if !state.Config.FeatureFlags.ExcludeGoRules {
-		env = append(env, "GOARCH="+state.Arch.GoArch(), "GOOS="+state.Arch.OS)
-	}
-
 	if state.Config.Cpp.PkgConfigPath != "" {
 		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)
 	}

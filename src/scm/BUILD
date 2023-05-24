@@ -1,14 +1,15 @@
 go_library(
     name = "scm",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
+    srcs = [
+        "git.go",
+        "scm.go",
+        "stub.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_sourcegraph_go-diff//diff",
         "//src/cli/logging",
         "//src/fs",
-        "//third_party/go:diff",
     ],
 )
 
@@ -18,6 +19,6 @@ go_test(
     data = ["test_data"],
     deps = [
         ":scm",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )

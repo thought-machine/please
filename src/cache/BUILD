@@ -1,22 +1,24 @@
 go_library(
     name = "cache",
-    srcs = glob(
-        ["*.go"],
-        exclude = [
-            "*_test.go",
-        ],
-    ),
+    srcs = [
+        "async_cache.go",
+        "cache.go",
+        "cmd_cache.go",
+        "dir_cache.go",
+        "http_cache.go",
+        "noop.go",
+    ],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_djherbis_atime//:atime",
+        "///third_party/go/github.com_dustin_go-humanize//:go-humanize",
+        "///third_party/go/github.com_hashicorp_go-retryablehttp//:go-retryablehttp",
         "//src/clean",
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//third_party/go:atime",
-        "//third_party/go:go-retryablehttp",
-        "//third_party/go:humanize",
     ],
 )
 
@@ -27,40 +29,17 @@ filegroup(
 )
 
 go_test(
-    name = "http_cache_test",
-    srcs = ["http_cache_test.go"],
+    name = "cache_test",
+    srcs = [
+        "async_cache_test.go",
+        "cmd_cache_test.go",
+        "dir_cache_test.go",
+        "http_cache_test.go",
+    ],
     data = [":test_data"],
     deps = [
         ":cache",
-        "//src/cli/logging",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "async_cache_test",
-    srcs = ["async_cache_test.go"],
-    deps = [
-        ":cache",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "dir_cache_test",
-    srcs = ["dir_cache_test.go"],
-    deps = [
-        ":cache",
-        "//third_party/go:testify",
-    ],
-)
-
-go_test(
-    name = "cmd_cache_test",
-    srcs = ["cmd_cache_test.go"],
-    data = [":test_data"],
-    deps = [
-        ":cache",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "//src/core",
     ],
 )

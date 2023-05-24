@@ -6,6 +6,7 @@ go_library(
             "*_test.go",
             "version.go",
         ],
+        allow_empty = True,
     ) + [
         ":version",
     ],
@@ -19,7 +20,7 @@ go_library(
 go_test(
     name = "config_test",
     srcs = ["config_test.go"],
-    data = glob(["test_data/*.plzconfig*"]),
+    data = glob(["test_data/*.plzconfig*"], allow_empty = True),
     deps = [
         ":core",
     ],

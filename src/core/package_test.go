@@ -35,7 +35,6 @@ func TestRegisterOutput(t *testing.T) {
 
 func TestRegisterOutputNonFilegroupTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.Config.FeatureFlags.PackageOutputsStrictness = true
 
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
@@ -47,7 +46,6 @@ func TestRegisterOutputNonFilegroupTargets(t *testing.T) {
 
 func TestRegisterOutputFilegroupAndNonFilegroupTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.Config.FeatureFlags.PackageOutputsStrictness = true
 
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
@@ -63,7 +61,6 @@ func TestRegisterOutputFilegroupAndNonFilegroupTargets(t *testing.T) {
 
 func TestRegisterOutputFilegroupTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.Config.FeatureFlags.PackageOutputsStrictness = true
 
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target1.IsFilegroup = true

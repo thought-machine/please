@@ -216,23 +216,10 @@
                   <li class="pl4" role="menuitem">
                     <a
                             class="silver no-underline"
-                            href="/lexicon.html#cc"
+                            href="/plugins.html#cc"
                     >C++ rules</a
                     >
                   </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="silver no-underline"
-                            href="/lexicon.html#go"
-                    >Go rules</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="silver no-underline"
-                            href="/lexicon.html#java"
-                    >Java rules</a
-                    >
                   </li>
                   <li class="pl4" role="menuitem">
                     <a
@@ -244,15 +231,8 @@
                   <li class="pl4" role="menuitem">
                     <a
                             class="silver no-underline"
-                            href="/lexicon.html#proto"
+                            href="/plugins.html#proto"
                     >Protobuf rules</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="silver no-underline"
-                            href="/lexicon.html#python"
-                    >Python rules</a
                     >
                   </li>
                   <li class="pl4" role="menuitem">
@@ -294,7 +274,7 @@
                   <li class="pl4" role="menuitem">
                     <a
                             class="silver no-underline"
-                            href="/plugins.html#go-proto"
+                            href="/plugins.html#go_proto"
                     >Go-proto</a
                     >
                   </li>
@@ -330,7 +310,7 @@
               {{end}}
             </li>
 
-            {{$isItemActive := matches .Filename "build_rules.html" "tests.html" "workers.html" "post_build.html" "require_provide.html"}}
+            {{$isItemActive := matches .Filename "build_rules.html" "tests.html" "post_build.html" "require_provide.html"}}
             <li
                     class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"
                     role="menuitem">
@@ -353,13 +333,6 @@
                             class="{{isFilenameOption "tests.html" "white" "silver"}} no-underline"
                             href="/tests.html"
                     >Testing with Please</a
-                    >
-                  </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="{{isFilenameOption "workers.html" "white" "silver"}} no-underline"
-                            href="/workers.html"
-                    >Persistent workers</a
                     >
                   </li>
                   <li class="pl4" role="menuitem">
