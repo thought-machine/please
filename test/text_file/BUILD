@@ -6,6 +6,16 @@ text_file(
 )
 
 text_file(
+    name = "multilines_file",
+    strip = True,
+    content = """
+        This is a multi lines file,
+        use strip option to remove first empty newline
+        and all empty spaces on the left of the text.
+    """,
+)
+
+text_file(
     name = "expand_file",
     content = "$(location :file)",
     deps = [":file"],
@@ -17,6 +27,20 @@ gentest(
     labels = ["rex"],
     no_test_output = True,
     test_cmd = "$TOOL $(location :file) wibble",
+    test_tools = ["//test/build_defs:content_checker"],
+)
+
+gentest(
+    name = "multilines_file_test",
+    data = [":multilines_file"],
+    labels = ["rex"],
+    no_test_output = True,
+    test_cmd = """
+        $TOOL $(location :multilines_file) \
+            'This is a multi lines file,' \
+            'use strip option to remove first empty newline' \
+            'and all empty spaces on the left of the text.'
+    """,
     test_tools = ["//test/build_defs:content_checker"],
 )
 
