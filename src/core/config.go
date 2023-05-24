@@ -282,20 +282,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
 	}
 
-	// Deal with the various sandbox settings that are moving.
-	if config.Build.Sandbox {
-		log.Warning("build.sandbox in config is deprecated, use sandbox.build instead")
-		config.Sandbox.Build = true
-	}
-	if config.Test.Sandbox {
-		log.Warning("test.sandbox in config is deprecated, use sandbox.test instead")
-		config.Sandbox.Test = true
-	}
-	if config.Build.PleaseSandboxTool != "" {
-		log.Warning("build.pleasesandboxtool in config is deprecated, use sandbox.tool instead")
-		config.Sandbox.Tool = config.Build.PleaseSandboxTool
-	}
-
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
@@ -513,9 +499,7 @@ type Configuration struct {
 		Config               string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig       string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
 		Lang                 string       `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
-		Sandbox              bool         `help:"Deprecated, use sandbox.build instead."`
 		Xattrs               bool         `help:"True (the default) to attempt to use xattrs to record file metadata. If false Please will fall back to using additional files where needed, which is more compatible but has slightly worse performance."`
-		PleaseSandboxTool    string       `help:"Deprecated, use sandbox.tool instead."`
 		Nonce                string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
@@ -548,7 +532,6 @@ type Configuration struct {
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		Sandbox                  bool         `help:"Deprecated, use sandbox.test instead."`
 		DisableCoverage          []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 		Upload                   cli.URL      `help:"URL to upload test results to (in XML format)"`
 		UploadGzipped            bool         `help:"True to upload the test results gzipped."`
