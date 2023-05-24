@@ -6,6 +6,7 @@ import (
 	htmltemplate "html/template"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -28,11 +29,27 @@ var opts struct {
 	} `positional-args:"true"`
 }
 
+type Plugins []*plugin.Plugin
+
+func (p Plugins) Len() int {
+	return len(p)
+}
+
+func (p Plugins) Less(i, j int) bool {
+	return strings.Compare(p[i].Name, p[j].Name) < 0
+}
+
+func (p Plugins) Swap(i, j int) {
+	iVal := p[i]
+	p[i] = p[j]
+	p[j] = iVal
+}
+
 func main() {
 	flags.ParseFlagsOrDie("Docs template", &opts, nil)
 	basename := filepath.Base(opts.PluginsTemplate)
 
-	plugins := map[string]*plugin.Plugin{}
+	var plugins Plugins
 	allRules := &rules.Rules{Functions: map[string]*rules.Rule{}}
 	for _, rulesFile := range opts.Args.Plugins {
 		b, err := os.ReadFile(rulesFile)
@@ -40,11 +57,13 @@ func main() {
 
 		p := &plugin.Plugin{}
 		must(json.Unmarshal(b, p))
-		plugins[p.Name] = p
+		plugins = append(plugins, p)
 		for k, v := range p.Rules.Functions {
 			allRules.Functions[k] = v
 		}
 	}
+
+	sort.Sort(plugins)
 
 	tmpl, err := template.New(basename).Funcs(template.FuncMap{
 		"join": strings.Join,

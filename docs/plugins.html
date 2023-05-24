@@ -31,9 +31,9 @@ where <code class="code">//plugins:python</code> is the target that builds the p
 There are some first-class plugins that are supported and maintained by the Please team. These are listed below.
 </p>
 
-{{ range $pluginID, $plugin := . }}
+{{ range $plugin := . }}
 <section class="mt4">
-    <h1 class="title-1" id="{{$pluginID}}">
+    <h1 class="title-1" id="{{$plugin.Name}}">
         {{formatName $plugin.Name}} rules
     </h1>
     <p>
@@ -42,13 +42,13 @@ There are some first-class plugins that are supported and maintained by the Plea
     {{ range $key, $_ := $plugin.Rules.Functions }}
     {{ template "lexicon_entry.html" $plugin.Rules.Named $key }}
     {{end}}
-    <h2 id="please" class="title-2">[Plugin "{{$pluginID}}"]</h2>
+    <h2 id="please" class="title-2">[Plugin "{{$plugin.Name}}"]</h2>
     <ul class="bulleted-list">
         {{ range $_, $field := $plugin.Config }}
 
         <li>
             <div>
-                <h3 class="mt1 f6 lh-title" id="{{$pluginID}}}.{{$field.Name}}">
+                <h3 class="mt1 f6 lh-title" id="{{$plugin.Name}}}.{{$field.Name}}">
                     {{$field.Name}} ({{if $field.Repeatable}}repeatable {{end}}{{if $field.Optional}}optional {{end}}{{$field.Type}})
                 </h3>
                 <p>
