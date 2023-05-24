@@ -655,15 +655,6 @@
   </p>
 
   <p>
-    How the target result gets executed can be customised after <code class="code"
-    >--</code>, where the <code class="code">$OUT</code> (or <code class="code"
-    >$TEST</code> for a test target) environment variable points to its location -
-    ie. <code class="code">plz exec //:target -- echo ./\$OUT</code>. This gives
-    the flexibility of the binary to be called with a set of flags, be wrapped in
-    another command, or something different.
-  </p>
-
-  <p>
     The <code class="code">--share_network</code> and <code class="code">--share_mount</code
     > flags are available (Linux only) for greater control over the sandboxed environment
     where the target is run. The <code class="code">--share_network</code> flag is useful
@@ -685,8 +676,9 @@
   </p>
 
   <p>
-    Because of how this command works and the options it offers, only a single target is supported
-    per execution.
+    Only a single command is supported per execution with <code>plz exec</code>.
+    Multiple can be run with <code>plz exec sequential</code> or <code>plz exec parallel</code>,
+    which are analogous to their <code>plz run</code> equivalents.
   </p>
 </section>
 

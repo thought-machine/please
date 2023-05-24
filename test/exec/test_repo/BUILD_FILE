@@ -1,7 +1,8 @@
 genrule(
     name = "dummy",
-    cmd = "touch $OUT",
+    cmd = "echo 'echo test > out.txt' > $OUT",
     outs = ["dummy"],
+    binary = True,
 )
 
 genrule(
