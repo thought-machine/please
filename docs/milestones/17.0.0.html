@@ -1,7 +1,7 @@
 <h1 class="title-1">Please 17.0.0</h1>
 
 <p>
-    This document describes the developments and breaking changes in v17, and how to migrate. You can find the complete
+    This document describes the delopments and breaking changes in v17, and how to migrate. You can find the complete
     changelog <a class="copy-link" href="https://github.com/thought-machine/please/releases/tag/v17.0.0">here</a>.
 </p>
 
@@ -31,7 +31,7 @@
     </p>
     <h3 class="title-3">Minor changes to import paths</h3>
     <p>
-        Previously, the Go rules that would let you import a package using two different import paths,
+        Previously, the Go rules would let you import a package using two different import paths,
         <code class="code">example.com/owner/repo/package</code>, and
         <code class="code">example.com/owner/repo/package/package</code>. This was a bug that has now been resolved. To
         help migration, use the <code class="code">LegacyImports</code> config option, under
@@ -94,14 +94,14 @@
     </pre>
     <p>
         Additionally, dependencies between modules must be explicitly defined, along with the packages that we need from
-        that module. This resulting in a slow, iterative cycle of building, waiting for the next compiler error to
+        that module. This results in a slow, iterative cycle of building, and waiting for the next compiler error to
         figure out which package or module we're missing. We also often end up relying on wildcards, compiling more of t
         he module than we actually need because figuring out the set of packages we actually need is so hard.
     </p>
     <p>
         Compiling large modules with a single rule like this can also take a long time. Some modules such and the AWS
-        SDK can take upwards for 4 minutes to compile. This happens in a single build task to often can't take advantage
-        of multi-core systems.
+        SDK can take upwards for 4 minutes to compile. This happens in a single build task so often can't take advantage
+        of multicore systems.
     </p>
     <p>
         In the Go plugin, we have introduced a brand new build rule called <code class="code">go_repo()</code>, which
@@ -151,7 +151,7 @@
         <code class="code">///third_party/go/github.com_stretchr_testify//assert</code>.
     </p>
     <p>
-        As these build labels are quite cumbersom, you may pass a name and install list to
+        As these build labels are quite cumbersome, you may pass a name and install list to
         <code class="code">go_repo()</code>:
     </p>
     <pre class="code-container">
@@ -172,7 +172,7 @@
     </p>
     <h3 class="title-3">Improvements to the toolchain and standard library</h3>
     <p>
-        In go v1.20, they stopped distributing the SDK im binary form with the SDK. The Go rules depend on these
+        In go v1.20, they stopped distributing the SDK in binary form with the SDK. The Go rules depend on these
         binaries. The simplest way to work with go v1.20 is to use the <code class="code">go_toolchain()</code> rule,
         which now compiles the SDK for you.
     </p>
