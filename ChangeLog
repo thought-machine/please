@@ -1,5 +1,39 @@
 Version 17.0.0
 ---------------
+    * Remove all the built in language rules rules in favour of plugins. Use
+      `plz init plugin [plugin name]` to migrate e.g. `plz init plugin go`
+      (#2668, #2674, #2651, #2695, #2739)
+    * Support code completions for `plz exec` (#2786)
+    * Add `patches` parameters to the subrepo rules to apply a patch file to
+      the repo (#2745)
+    * Remove `ExcludeSymlinksInGlob` feature flag, making `glob()` exclude
+      symlinks by default. This makes it play better with `plz generate`,
+      however if you need a glob to match symlinks, pass
+      `include_symlinks = True`. (#2747)
+    * Remove `PackageOutputsStrictness` feature flag, making Please fail the
+      build instead of logging when it detects a conflict in package outputs.
+      (#2736)
+    * Delete the `ErrorOnEmptyGlob` feature flag, making glob throw and
+      exception if it matches no files. Pass `allow_empty = True` to `glob()`
+      to change this behavior (#2730)
+    * Support named outputs on filegroups (#2709)
+    * Remove persistent workers (#2690)
+    * Remove `plz query roots` (#2678)
+    * Remove the `--quiet` flag from `plz run parallel` (#2675)
+    * Rename the config options `java.jarcat` to `build.arcat` represent the
+      fact it has evolved to be a more general archiving tool (#2667
+    * Remove the deprecated exception types from the build language (#2150)
+    * Remove `--in_wd` from `plz run` in favour of `--wd .` (#2677)
+    * Change the way preloaded subincludes work to resolve a number of
+      race conditions. Subincludes are no longer preloaded when parsing
+      a BUILD file for subinclude. This means you will have to add
+      subincludes to `.build_def` files, and the BUILD file that contains
+      the subinclude target. (#2658)
+    * Remove JavaBinaryExecutableByDefault feature making Java binaries
+      self executable by default (#2662)
+    * Remove --prepare flag from `plz build` (#2666)
+    * Remove SingleSHA1Hash feature flag making sha1 behave the same as
+      other algorithms (#2135)
     * Change asp.Position to just be an int (#2650)
     * Fix stack overflow in asp parser stack unwind (#2659)
     * Add plugin documentation to website (#2657)

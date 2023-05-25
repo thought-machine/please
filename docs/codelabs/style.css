@@ -4,10 +4,6 @@ google-codelab div#main {
     background: #202328;
 }
 
-#main {
-    font-family: "EssentialPragmataPro", monospace !important;
-}
-
 google-codelab-step div.instructions {
     color: #999999;
     background: #202328 !important;
@@ -85,7 +81,6 @@ a {
     box-shadow: none !important;
     font-size: 100%;
     font-weight: normal;
-    font-family: "EssentialPragmataPro", monospace;
 }
 
 #previous-step:before {

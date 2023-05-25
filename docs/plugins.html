@@ -1,19 +1,26 @@
 <h1 class="title-1">Please Plugins</h1>
 
 <p>
-  Please plugins are a way to extend Please's functionality. They can be loaded into Please by adding them to the <code class="code">.plzconfig</code> file. For example, to load the <code class="code">python</code> plugin, add the following to your <code class="code">.plzconfig</code> file:
+    Plugins are a way to extend Please with build rules for additional languages or technologies. The quickest way to get
+    started is by running <code class="code">plz init plugin [go|python|java]</code>. The full list of available plugins
+    can be found <a href="https://github.com/please-build/please-rules" class="copy-link">here</a>.
+</p>
+<p>
+    Plugins are configured in your <code class="code">.plzconfig</code> file. For example, to load the
+    <code class="code">python</code> plugin, add the following to your <code class="code">.plzconfig</code> file:
 </p>
 
 <pre class="code-container">
     <!-- prettier-ignore -->
     <code class="language-config">
     [Plugin "python"]
-    target = //plugins:python
+    Target = //plugins:python
+    DefaultInterpreter = python3 # Optional config
     </code>
 </pre>
 
 <p>
-where <code class="code">//plugins:python</code> is the target that builds the plugin. For example:
+    Where <code class="code">Target = //plugins:python</code> is the <code class="code">plugin_repo()</code> target for your plugin. For example:
 </p>
 
 <pre class="code-container">
@@ -21,7 +28,6 @@ where <code class="code">//plugins:python</code> is the target that builds the p
     <code class="language-python">
     plugin_repo(
         name = "python",
-        plugin = "python-rules",
         revision = "v0.1.0",
     )
     </code>
