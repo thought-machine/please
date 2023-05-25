@@ -353,7 +353,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
-			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Except []core.BuildLabel `long:"except" description:"Targets to exclude from path calculation"`
+			Hidden bool              `long:"hidden" description:"Show hidden targets as well"`
 			Args   struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
 				Target2 core.BuildLabel `positional-arg-name:"target2" description:"Second build target" required:"true"`
@@ -745,7 +746,7 @@ var buildFunctions = map[string]func() int{
 		a := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
 		b := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
-			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Hidden); err != nil {
+			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Except, opts.Query.SomePath.Hidden); err != nil {
 				fmt.Printf("%s\n", err)
 				os.Exit(1)
 			}
