@@ -990,6 +990,11 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				return err
 			}
 		} else if len(split) == 2 {
+			switch split[0] {
+			case "go", "cpp", "java", "python", "proto":
+				log.Warning("You're overriding field %s which is deprecated in plz v17+; this will have no effect.", k)
+				log.Warning("Hint: try -o plugin.%s:%s instead", k, v)
+			}
 			if err := applyOverride(configValue, split[0], split[1], v); err != nil {
 				return err
 			}
