@@ -31,211 +31,42 @@ where <code class="code">//plugins:python</code> is the target that builds the p
 There are some first-class plugins that are supported and maintained by the Please team. These are listed below.
 </p>
 
+{{ range $plugin := . }}
 <section class="mt4">
-    <h2 class="title-2" id="cc">
-        C/C++ rules
-    </h2>
-
+    <h1 class="title-1" id="{{$plugin.Name}}">
+        {{formatName $plugin.Name}} rules
+    </h1>
     <p>
-        The cc-rules plugin provides rules for building C/C++ code.
+        {{$plugin.Help}}
     </p>
+    {{ range $key, $_ := $plugin.Rules.Functions }}
+    {{ template "lexicon_entry.html" $plugin.Rules.Named $key }}
+    {{end}}
+    <h2 id="please" class="title-2">[Plugin "{{$plugin.Name}}"]</h2>
+    <ul class="bulleted-list">
+        {{ range $_, $field := $plugin.Config }}
 
-    <!-- prettier-ignore -->
-    {{ template "lexicon_entry.html" .Named "c_library" }}
-    {{ template "lexicon_entry.html" .Named "c_static_library" }}
-    {{ template "lexicon_entry.html" .Named "c_shared_object" }}
-    {{ template "lexicon_entry.html" .Named "c_binary" }}
-    {{ template "lexicon_entry.html" .Named "c_test" }}
-    {{ template "lexicon_entry.html" .Named "c_embed_binary" }}
-    {{ template "lexicon_entry.html" .Named "c_object" }}
-    {{ template "lexicon_entry.html" .Named "cc_module" }}
+        <li>
+            <div>
+                <h3 class="mt1 f6 lh-title" id="{{$plugin.Name}}}.{{$field.Name}}">
+                    {{$field.Name}} ({{if $field.Repeatable}}repeatable {{end}}{{if $field.Optional}}optional {{end}}{{$field.Type}})
+                </h3>
+                <p>
+                    {{$field.Help}}
+                </p>
+                {{if $field.Inherit}}
+                <p>
+                    If set, {{$field.Name}} is inherited from the host repo.
+                </p>
+                {{end}}
+                {{if $field.Inherit}}
+                <p>
+                    Defaults to <code class="code">{{$field.DefaultValue}}</code>
+                </p>
+                {{end}}
+            </div>
+        </li>
+        {{end}}
+    </ul>
 </section>
-
-<section class="mt4">
-    <h2 class="title-2" id="go">
-        Go rules
-    </h2>
-
-    <p>
-        The go-rules plugin provides rules for building Go code.
-    </p>
-
-    <!-- prettier-ignore -->
-    {{ template "lexicon_entry.html" .Named "go_toolchain" }}
-    {{ template "lexicon_entry.html" .Named "go_library" }}
-    {{ template "lexicon_entry.html" .Named "cgo_library" }}
-    {{ template "lexicon_entry.html" .Named "go_binary" }}
-    {{ template "lexicon_entry.html" .Named "go_test" }}
-    {{ template "lexicon_entry.html" .Named "go_repo" }}
-    {{ template "lexicon_entry.html" .Named "go_benchmark" }}
-    {{ template "lexicon_entry.html" .Named "cgo_test" }}
-    {{ template "lexicon_entry.html" .Named "go_test_main" }}
-    {{ template "lexicon_entry.html" .Named "go_module" }}
-    {{ template "lexicon_entry.html" .Named "go_mod_download" }}
-    {{ template "lexicon_entry.html" .Named "merge_cgo_obj" }}
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="go-proto">
-    Go-proto rules
-  </h2>
-
-  <p>
-  The go-proto-rules plugin provides rules for building golang protobuf code.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "go_proto_library" }}
-  {{ template "lexicon_entry.html" .Named "go_grpc_library" }}
-  {{ template "lexicon_entry.html" .Named "go_grpc_language" }}
-  {{ template "lexicon_entry.html" .Named "go_proto_language" }}
-</section>
-
-<section class="mt4">
-    <h2 class="title-2" id="java">
-        Java rules
-    </h2>
-
-    <p>
-        The java-rules plugin provides rules for building Java code.
-    </p>
-
-    <!-- prettier-ignore -->
-    {{ template "lexicon_entry.html" .Named "java_library" }}
-    {{ template "lexicon_entry.html" .Named "java_module" }}
-    {{ template "lexicon_entry.html" .Named "java_binary" }}
-    {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
-    {{ template "lexicon_entry.html" .Named "java_test" }}
-    {{ template "lexicon_entry.html" .Named "maven_jar" }}
-    {{ template "lexicon_entry.html" .Named "java_toolchain" }}
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="proto">
-    Proto rules
-  </h2>
-
-  <p>
-  The proto-rules plugin provides rules for building protobuf code.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "merge_languages" }}
-  {{ template "lexicon_entry.html" .Named "proto_library" }}
-  {{ template "lexicon_entry.html" .Named "grpc_library" }}
-  {{ template "lexicon_entry.html" .Named "protoc_binary" }}
-</section>
-
-<section class="mt4">
-  <h2 class="title-2" id="python">
-    Python rules
-  </h2>
-
-  <p>
-  The python-rules plugin provides rules for building Python code.
-  </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "python_library" }}
-  {{ template "lexicon_entry.html" .Named "python_binary" }}
-  {{ template "lexicon_entry.html" .Named "python_test" }}
-  {{ template "lexicon_entry.html" .Named "pip_library" }}
-  {{ template "lexicon_entry.html" .Named "python_wheel" }}
-  {{ template "lexicon_entry.html" .Named "python_multiversion_wheel" }}
-</section>
-
-<section class="mt4">
-    <h2 class="title-2" id="cc">
-        C/C++ rules
-    </h2>
-
-    <p>
-        The cc-rules plugin provides rules for building C/C++ targets.
-    </p>
-
-    <p>
-      The process of building C or C++ code is fairly complex so while these rules
-      do their best to keep things reasonably simple, there's a lot of scope for
-      things going wrong.
-    </p>
-
-    <p>
-      There is very little difference between the <code class="code">c_</code> and
-      <code class="code">cc_</code> variants of each rule, in nearly all cases
-      they simply use different tools and flags in the
-      <a class="copy-link" href="/plugins.html#cc">relevant config section</a>.
-    </p>
-
-    <!-- prettier-ignore -->
-    {{ template "lexicon_entry.html" .Named "c_library" }}
-    {{ template "lexicon_entry.html" .Named "c_static_library" }}
-    {{ template "lexicon_entry.html" .Named "c_shared_object" }}
-    {{ template "lexicon_entry.html" .Named "c_binary" }}
-    {{ template "lexicon_entry.html" .Named "c_test" }}
-    {{ template "lexicon_entry.html" .Named "c_embed_binary" }}
-    {{ template "lexicon_entry.html" .Named "c_object" }}
-    {{ template "lexicon_entry.html" .Named "cc_module" }}
-</section>
-
-<section class="mt4">
-    <h2 class="title-2" id="go">
-        Go rules
-    </h2>
-
-    <p>
-        The go-rules plugin provides rules for building Go code.
-    </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "go_toolchain" }}
-  {{ template "lexicon_entry.html" .Named "go_library" }}
-  {{ template "lexicon_entry.html" .Named "cgo_library" }}
-  {{ template "lexicon_entry.html" .Named "go_binary" }}
-  {{ template "lexicon_entry.html" .Named "go_test" }}
-  {{ template "lexicon_entry.html" .Named "go_benchmark" }}
-  {{ template "lexicon_entry.html" .Named "cgo_test" }}
-  {{ template "lexicon_entry.html" .Named "go_test_main" }}
-  {{ template "lexicon_entry.html" .Named "go_module" }}
-  {{ template "lexicon_entry.html" .Named "go_mod_download" }}
-  {{ template "lexicon_entry.html" .Named "merge_cgo_obj" }}
-</section>
-
-<section class="mt4">
-    <h2 class="title-2" id="java">
-        Java rules
-    </h2>
-
-    <p>
-        The java-rules plugin provides rules for building Java code.
-    </p>
-
-  <!-- prettier-ignore -->
-  {{ template "lexicon_entry.html" .Named "java_library" }}
-  {{ template "lexicon_entry.html" .Named "java_module" }}
-  {{ template "lexicon_entry.html" .Named "java_binary" }}
-  {{ template "lexicon_entry.html" .Named "java_runtime_image" }}
-  {{ template "lexicon_entry.html" .Named "java_test" }}
-  {{ template "lexicon_entry.html" .Named "maven_jar" }}
-  {{ template "lexicon_entry.html" .Named "java_toolchain" }}
-</section>
-<section class="mt4">
-    <h2 class="title-2" id="shell">
-        Shell rules
-    </h2>
-
-    <p>
-        The shell-rules plugin provides rules for building shell scripts.
-    </p>
-
-    <p>
-      Note that these do pretty much nothing beyond collecting the files. In
-      future we might implement something more advanced (ala .sar files or
-      whatever).
-    </p>
-
-    <!-- prettier-ignore -->
-    {{ template "lexicon_entry.html" .Named "sh_library" }}
-    {{ template "lexicon_entry.html" .Named "sh_binary" }}
-    {{ template "lexicon_entry.html" .Named "sh_cmd" }}
-    {{ template "lexicon_entry.html" .Named "sh_test" }}
-</section>
+{{ end }}
