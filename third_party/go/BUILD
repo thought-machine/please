@@ -11,7 +11,12 @@ go_toolchain(
         "698ef3243972a51ddb4028e4a1ac63dc6d60821bf18e59a807e051fee0a385bd",  # linux-amd64.tar.gz
         "105889992ee4b1d40c7c108555222ca70ae43fccb42e20fbf1eebb822f5e72c6",  # linux-arm64.tar.gz
     ],
+    install_std = False,
     version = "1.20.4",
+)
+
+go_stdlib(
+    name = "std",
 )
 
 go_mod_download(

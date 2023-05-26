@@ -10,6 +10,7 @@ Target = //plugins:go
 pleasegotool = ///go//tools/please_go:bootstrap
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
+stdlib = //third_party/go:std
 FeatureFlags = go_get
 
 [Plugin "cc"]
