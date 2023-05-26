@@ -93,6 +93,7 @@ func TestLooksLikeABuildLabel(t *testing.T) {
 }
 
 func TestComplete(t *testing.T) {
+	os.Unsetenv("RESULTS_FILE")
 	label := BuildLabel{}
 	completions := label.Complete("//src/c")
 	assert.Equal(t, 4, len(completions))

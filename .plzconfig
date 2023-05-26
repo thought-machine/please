@@ -12,6 +12,7 @@ importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 stdlib = //third_party/go:std
 FeatureFlags = go_get
+coverageredesign = true
 
 [Plugin "cc"]
 target = //plugins:cc
