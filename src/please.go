@@ -338,6 +338,7 @@ var opts struct {
 
 	Query struct {
 		Deps struct {
+			DOT    bool `long:"dot" description:"Output in dot format"`
 			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
 			Level  int  `long:"level" default:"-1" description:"Levels of the dependencies to retrieve."`
 			Unique bool `long:"unique" hidden:"true" description:"Has no effect, only exists for compatibility."`
@@ -395,7 +396,7 @@ var opts struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
 			} `positional-args:"true"`
-		} `command:"graph" description:"Prints a JSON representation of the build graph."`
+		} `command:"graph" description:"Prints a representation of the build graph."`
 		WhatInputs struct {
 			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
@@ -733,7 +734,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
+			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level, opts.Query.Deps.DOT)
 		})
 	},
 	"query.revdeps": func() int {
