@@ -345,7 +345,7 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         outs = [name],
         cmd = " && ".join([
           '$TOOL x "$SRCS" -o _tmp',
-          "mv $(dirname $(ls _tmp/*/.plzconfig)) $OUT",
+          'mv $(dirname $(ls _tmp/*/.plzconfig)) "$OUT"',
         ]),
         _subrepo = True,
     )
