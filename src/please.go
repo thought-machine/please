@@ -246,8 +246,9 @@ var opts struct {
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
 
 	Watch struct {
-		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
-		Args struct {
+		Run    bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
+		NoTest bool `long:"notest" description:"If set, no tests will be ran. The targets will only be re-built."`
+		Args   struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to watch for changes"`
 			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Additional targets to watch, or test selectors"`
 		} `positional-args:"true" required:"true"`
@@ -944,7 +945,7 @@ var buildFunctions = map[string]func() int{
 		// Don't ask it to test now since we don't know if any of them are tests yet.
 		success, state := runBuild(targets, true, false, false)
 		state.NeedRun = opts.Watch.Run
-		watch.Watch(state, state.ExpandOriginalLabels(), args, runPlease)
+		watch.Watch(state, state.ExpandOriginalLabels(), args, opts.Watch.NoTest, runPlease)
 		return toExitCode(success, state)
 	},
 	"generate": func() int {
