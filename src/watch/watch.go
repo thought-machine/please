@@ -28,9 +28,11 @@ type CallbackFunc func(*core.BuildState, []core.BuildLabel)
 // Watch starts watching the sources of the given labels for changes and triggers
 // rebuilds whenever they change.
 // It never returns successfully, it will either watch forever or die.
-func Watch(state *core.BuildState, labels core.BuildLabels, testArgs []string, callback CallbackFunc) {
+func Watch(state *core.BuildState, labels core.BuildLabels, testArgs []string, noTest bool, callback CallbackFunc) {
 	// This hasn't been set before, do it now.
-	state.NeedTests = anyTests(state, labels)
+	if !noTest {
+		state.NeedTests = anyTests(state, labels)
+	}
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("Error setting up watcher: %s", err)
