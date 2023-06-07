@@ -1,0 +1,21 @@
+# true:
+t1 = any([True])
+t2 = any([1])
+t3 = any(["1"])
+t4 = any([{"1": "one"}])
+t5 = any([[1]])
+t6 = any([False, True])
+t7 = any([0, 1])
+t8 = any(["0", "1"])
+t9 = any([[0], [1]])
+
+# false:
+f1 = any([False])
+f2 = any([0])
+f3 = any([""])
+f4 = any([{}])
+f5 = any([[]])
+f6 = any([False, False, False])
+f7 = any([0, 0, 0])
+f8 = any(["", "", ""])
+f9 = any([[], [], []])

@@ -389,6 +389,32 @@ func TestFormat(t *testing.T) {
 	assert.EqualValues(t, `ARCH="linux_amd64"`, s.Lookup("arch2"))
 }
 
+func TestAny(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/any.build")
+		assert.NoError(t, err)
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(true), s.Lookup(fmt.Sprintf("t%d", i)))
+		}
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(false), s.Lookup(fmt.Sprintf("f%d", i)))
+		}
+	})
+}
+
+func TestAll(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/all.build")
+		assert.NoError(t, err)
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(true), s.Lookup(fmt.Sprintf("t%d", i)))
+		}
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(false), s.Lookup(fmt.Sprintf("f%d", i)))
+		}
+	})
+}
+
 func TestIsSemver(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		s, err := parseFile("src/parse/asp/test_data/interpreter/is_semver.build")
