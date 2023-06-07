@@ -344,8 +344,8 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         tools = [CONFIG.ARCAT_TOOL],
         outs = [name],
         cmd = " && ".join([
-          "$TOOL x $SRCS -o _tmp",
-          "mv $(dirname $(ls _tmp/*/.plzconfig)) $OUT",
+          '$TOOL x "$SRCS" -o _tmp',
+          'mv $(dirname $(ls _tmp/*/.plzconfig)) "$OUT"',
         ]),
         _subrepo = True,
     )
