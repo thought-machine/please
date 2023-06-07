@@ -78,17 +78,12 @@ def isinstance(obj, types:function|list) -> bool:
 
 def range(start:int, stop:int=None, step:int=1) -> str:
     pass
-def any(seq:list) -> bool:
-    for x in seq:
-        if x:
-            return True
-    return False
-def all(seq:list) -> bool:
-    for x in seq:
-        if not x:
-            return False
-    return True
 
+def any(seq:list) -> bool:
+    pass
+
+def all(seq:list) -> bool:
+    pass
 
 def bool(b) -> bool:
     pass

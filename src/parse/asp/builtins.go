@@ -39,6 +39,8 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "range", pyRange)
 	setNativeCode(s, "enumerate", enumerate)
 	setNativeCode(s, "zip", zip, varargs)
+	setNativeCode(s, "any", anyFunc)
+	setNativeCode(s, "all", allFunc)
 	setNativeCode(s, "len", lenFunc)
 	setNativeCode(s, "glob", glob)
 	setNativeCode(s, "bool", boolType)
@@ -784,6 +786,28 @@ func enumerate(s *scope, args []pyObject) pyObject {
 		ret[i] = pyList{pyInt(i), li}
 	}
 	return ret
+}
+
+func anyFunc(s *scope, args []pyObject) pyObject {
+	l, ok := args[0].(pyList)
+	s.Assert(ok, "Argument to any must be a list, not %s", args[0].Type())
+	for _, li := range l {
+		if li.IsTruthy() {
+			return True
+		}
+	}
+	return False
+}
+
+func allFunc(s *scope, args []pyObject) pyObject {
+	l, ok := args[0].(pyList)
+	s.Assert(ok, "Argument to all must be a list, not %s", args[0].Type())
+	for _, li := range l {
+		if !li.IsTruthy() {
+			return False
+		}
+	}
+	return True
 }
 
 func zip(s *scope, args []pyObject) pyObject {
