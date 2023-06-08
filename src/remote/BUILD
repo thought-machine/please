@@ -17,6 +17,7 @@ go_library(
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/asset/v1",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/execution/v2",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/semver",
+        "///third_party/go/github.com_google_uuid//:uuid",
         "///third_party/go/github.com_grpc-ecosystem_go-grpc-middleware//retry",
         "///third_party/go/golang.org_x_sync//errgroup",
         "///third_party/go/google.golang.org_genproto//googleapis/rpc/status",
