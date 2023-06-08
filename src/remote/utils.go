@@ -631,7 +631,7 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 	const key = "build.bazel.remote.execution.v2.requestmetadata-bin" // as defined by the proto
 	b, _ := proto.Marshal(&pb.RequestMetadata{
 		ActionId:                target.Label.String(),
-		CorrelatedInvocationsId: c.state.Config.Remote.BuildID,
+		CorrelatedInvocationsId: c.buildID,
 		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
 			ToolVersion: core.PleaseVersion,

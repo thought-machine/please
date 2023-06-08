@@ -22,6 +22,7 @@ import (
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
+	"github.com/google/uuid"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -96,6 +97,9 @@ type Client struct {
 	// User's home directory.
 	userHome string
 
+	// Remote build ID
+	buildID string
+
 	// Stats used to report RPC data rates
 	stats *statsHandler
 
@@ -146,7 +150,9 @@ func New(state *core.BuildState) *Client {
 		},
 		fileMetadataCache: filemetadata.NewNoopCache(),
 		shellPath:         state.Config.Remote.Shell,
+		buildID:           state.Config.Remote.BuildID,
 	}
+
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
@@ -184,6 +190,10 @@ func (c *Client) init() {
 
 // initExec initialiases the remote execution client.
 func (c *Client) initExec() error {
+	if c.buildID == "" {
+		id, _ := uuid.NewRandom()
+		c.buildID = id.String()
+	}
 	// Create a copy of the state where we can modify the config
 	dialOpts, err := c.dialOpts()
 	if err != nil {

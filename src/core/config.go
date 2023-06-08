@@ -561,7 +561,7 @@ type Configuration struct {
 		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
-		BuildID       string       `help:"ID of the build action that's being run, to attach to remote requests."`
+		BuildID       string       `help:"ID of the build action that's being run, to attach to remote requests. If not set then one is automatically generated."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
