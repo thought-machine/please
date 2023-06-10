@@ -124,12 +124,12 @@ func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, d
 }
 
 // RunPreBuildFunction stub
-func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
+func (fake *fakeParser) RunPreBuildFunction(state *core.BuildState, target *core.BuildTarget) error {
 	return nil
 }
 
 // RunPostBuildFunction stub
-func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
+func (fake *fakeParser) RunPostBuildFunction(state *core.BuildState, target *core.BuildTarget, output string) error {
 	if f, present := fake.PostBuildFunctions[target]; present {
 		return f(target, output)
 	}

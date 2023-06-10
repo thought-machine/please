@@ -69,9 +69,9 @@ type Parser interface {
 	// ParseReader parses a single BUILD file into the given package.
 	ParseReader(pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel, forSubinclude bool) error
 	// RunPreBuildFunction runs a pre-build function for a target.
-	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
+	RunPreBuildFunction(state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
-	RunPostBuildFunction(threadID int, state *BuildState, target *BuildTarget, output string) error
+	RunPostBuildFunction(state *BuildState, target *BuildTarget, output string) error
 	// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
 	BuildRuleArgOrder() map[string]int
 }
