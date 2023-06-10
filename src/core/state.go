@@ -510,7 +510,6 @@ func (state *BuildState) LogParseResult(label BuildLabel, status BuildResultStat
 		return // We don't notify anything else on these.
 	}
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       label,
 		Status:      status,
 		Err:         nil,
@@ -521,7 +520,6 @@ func (state *BuildState) LogParseResult(label BuildLabel, status BuildResultStat
 // LogBuildResult logs the result of a target building.
 func (state *BuildState) LogBuildResult(target *BuildTarget, status BuildResultStatus, description string) {
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       target.Label,
 		target:      target,
 		Status:      status,
@@ -547,7 +545,6 @@ func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 // LogTestResult logs the result of a target once its tests have completed.
 func (state *BuildState) LogTestResult(target *BuildTarget, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       target.Label,
 		target:      target,
 		Status:      status,
@@ -563,7 +560,6 @@ func (state *BuildState) LogTestResult(target *BuildTarget, status BuildResultSt
 // LogBuildError logs a failure for a target to parse, build or test.
 func (state *BuildState) LogBuildError(label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       label,
 		Status:      status,
 		Err:         err,
@@ -660,7 +656,7 @@ func (state *BuildState) WaitForPreloadedSubincludeTargetsAndEnsureDownloaded() 
 // checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
 func (state *BuildState) checkForCycles() {
 	if err := state.progress.cycleDetector.Check(); err != nil {
-		state.LogBuildError(0, err.Cycle[0].Label, TargetBuildFailed, err, "")
+		state.LogBuildError(err.Cycle[0].Label, TargetBuildFailed, err, "")
 		state.Stop()
 	}
 }
@@ -1148,7 +1144,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 // asyncError reports an error that's happened in an asynchronous function.
 func (state *BuildState) asyncError(label BuildLabel, err error) {
 	log.Error("Error queuing %s: %s", label, err)
-	state.LogBuildError(0, label, TargetBuildFailed, err, "")
+	state.LogBuildError(label, TargetBuildFailed, err, "")
 	state.Stop()
 }
 
@@ -1398,8 +1394,6 @@ func NewDefaultBuildState() *BuildState {
 // A BuildResult represents a single event in the build process, i.e. a target starting or finishing
 // building, or reaching some milestone within those steps.
 type BuildResult struct {
-	// Thread id (or goroutine id, really) that generated this result.
-	ThreadID int
 	// Timestamp of this event
 	Time time.Time
 	// Target which has just changed
