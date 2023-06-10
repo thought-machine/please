@@ -121,7 +121,7 @@ func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 	localActive, remoteActive := countActive(targets)
 	totalActive := localActive + remoteActive
 	if d.numRemote > 0 {
-		d.printf("Building [%d/%d, %2d/%2d local, %3d/%3d remote, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), localActive, d.numWorkers, remoteActive, d.numRemote, time.Since(d.state.StartTime).Seconds())
+		d.printf("Building [%d/%d, %2d/%d local, %3d/%d remote, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), localActive, d.numWorkers, remoteActive, d.numRemote, time.Since(d.state.StartTime).Seconds())
 	} else {
 		d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
 	}
@@ -143,7 +143,7 @@ func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 	}
 	workers := 0
 	for i := 0; i < len(targets) && d.lines < d.maxRows && workers < d.maxWorkers; i++ {
-		workers += d.printRow(&targets[i], now, true)
+		workers += d.printRow(&targets[i], now)
 		d.lines++
 	}
 	if workers < totalActive {
@@ -153,12 +153,16 @@ func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 	d.printf("${RESET}")
 }
 
-func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, remote bool) int {
+func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time) int {
 	label := target.Label.Parent()
 	duration := now.Sub(target.Started).Seconds()
 	progress := float32(0.0)
 	if target.Target != nil {
 		progress = target.Target.Progress.Load()
+	}
+	c := '='
+	if target.Remote {
+		c = '-'
 	}
 	if target.Active && target.Target.ShouldShowProgress() && progress > 0.0 {
 		if progress > 1.0 && progress < 100.0 && progress != target.LastProgress {
@@ -176,34 +180,32 @@ func (d *interactiveDisplay) printRow(target *buildingTarget, now time.Time, rem
 		}
 		if target.Eta > 0 {
 			if target.BPS != 0.0 {
-				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, %s/s, est %s remaining)${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description, target.Target.Progress.Load(), humanize.Bytes(uint64(target.BPS)), target.Eta)
+				d.printf("${BOLD_WHITE}%c> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, %s/s, est %s remaining)${ERASE_AFTER}\n",
+					c, duration, target.Colour, label, target.Description, target.Target.Progress.Load(), humanize.Bytes(uint64(target.BPS)), target.Eta)
 			} else {
-				d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
-					duration, target.Colour, label, target.Description, target.Target.Progress.Load(), target.Eta)
+				d.printf("${BOLD_WHITE}%c> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%, est %s remaining)${ERASE_AFTER}\n",
+					c, duration, target.Colour, label, target.Description, target.Target.Progress.Load(), target.Eta)
 			}
 		} else {
-			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%% complete)${ERASE_AFTER}\n",
-				duration, target.Colour, label, target.Description, target.Target.Progress.Load())
+			d.printf("${BOLD_WHITE}%c> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%% complete)${ERASE_AFTER}\n",
+				c, duration, target.Colour, label, target.Description, target.Target.Progress.Load())
 		}
 	} else if target.Active {
-		d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
-			duration, target.Colour, label, target.Description)
+		d.printf("${BOLD_WHITE}%c> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
+			c, duration, target.Colour, label, target.Description)
 	} else if time.Since(target.Finished).Seconds() < 0.5 {
 		// Only display finished targets for half a second after they're done.
 		duration := target.Finished.Sub(target.Started).Seconds()
 		if target.Failed {
-			d.printf("${BOLD_RED}=> [%4.1fs] ${RESET}%s%s ${BOLD_RED}Failed${ERASE_AFTER}\n",
-				duration, target.Colour, label)
+			d.printf("${BOLD_RED}%c> [%4.1fs] ${RESET}%s%s ${BOLD_RED}Failed${ERASE_AFTER}\n",
+				c, duration, target.Colour, label)
 		} else if target.Cached {
-			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_GREY}%s${ERASE_AFTER}\n",
-				duration, target.Colour, label, target.Description)
+			d.printf("${BOLD_WHITE}%c> [%4.1fs] ${RESET}%s%s ${BOLD_GREY}%s${ERASE_AFTER}\n",
+				c, duration, target.Colour, label, target.Description)
 		} else {
-			d.printf("${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${WHITE}%s${ERASE_AFTER}\n",
-				duration, target.Colour, label, target.Description)
+			d.printf("${BOLD_WHITE}%c> [%4.1fs] ${RESET}%s%s ${WHITE}%s${ERASE_AFTER}\n",
+				c, duration, target.Colour, label, target.Description)
 		}
-	} else if !remote {
-		d.printf("${BOLD_GREY}=|${ERASE_AFTER}\n")
 	} else {
 		d.lines-- // Didn't print it
 		return 0
