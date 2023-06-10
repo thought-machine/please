@@ -28,16 +28,25 @@ type buildingTargets struct {
 	plain          bool
 	state          *core.BuildState
 	targets        []buildingTarget
+	currentTargets map[core.BuildLabel]int
+	available      []int
 	FailedTargets  map[core.BuildLabel]error
 	FailedNonTests []core.BuildLabel
 }
 
 func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTargets {
+	n := state.Config.Please.NumThreads + state.Config.NumRemoteExecutors()
+	available := make([]int, n)
+	for i := 0; i < n; i++ {
+		available[i] = n - i // Do them backwards so the earliest indices are the first we'll take
+	}
 	return &buildingTargets{
-		plain:         plainOutput,
-		state:         state,
-		targets:       make([]buildingTarget, state.Config.Please.NumThreads+state.Config.NumRemoteExecutors()),
-		FailedTargets: map[core.BuildLabel]error{},
+		plain:          plainOutput,
+		state:          state,
+		targets:        make([]buildingTarget, n),
+		currentTargets: make(map[core.BuildLabel]int, n),
+		available:      available,
+		FailedTargets:  map[core.BuildLabel]error{},
 	}
 }
 
@@ -51,10 +60,11 @@ func (bt *buildingTargets) Targets() (local []buildingTarget, remote []buildingT
 // It returns the label that was in this slot previously.
 func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLabel {
 	label := result.Label
-	prev := bt.targets[result.ThreadID].Label
-	if !result.Status.IsParse() { // Parse tasks happen on a different set of threads.
+	idx := bt.index(label)
+	prev := bt.targets[idx].Label
+	if !result.Status.IsParse() { // Parse tasks aren't displayed here
 		if t := bt.state.Graph.Target(label); t != nil {
-			bt.updateTarget(result, t)
+			bt.updateTarget(idx, result, t)
 		}
 	}
 	if result.Status.IsFailure() {
@@ -86,9 +96,25 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLab
 	return prev
 }
 
+// index returns the index to use for a result
+func (bt *buildingTargets) index(label core.BuildLabel) int {
+	if idx, present := bt.currentTargets[label]; present {
+		return idx
+	}
+	// Grab whatever is available
+	if len(bt.available) > 0 {
+		n := len(bt.available) - 1
+		idx := bt.available[n]
+		bt.available = bt.available[:n]
+		return idx
+	}
+	// Nothing available. This theoretically shouldn't happen - let's see in practice...
+	return len(bt.currentTargets) - 1
+}
+
 // updateTarget updates a single target with a new result.
-func (bt *buildingTargets) updateTarget(result *core.BuildResult, t *core.BuildTarget) {
-	target := &bt.targets[result.ThreadID]
+func (bt *buildingTargets) updateTarget(idx int, result *core.BuildResult, t *core.BuildTarget) {
+	target := &bt.targets[idx]
 	target.Label = result.Label
 	target.Description = result.Description
 	active := result.Status.IsActive()
@@ -114,6 +140,12 @@ func (bt *buildingTargets) updateTarget(result *core.BuildResult, t *core.BuildT
 		} else {
 			log.Info("%s: %s", result.Label, result.Description)
 		}
+	}
+	if !active {
+		bt.available = append(bt.available, idx)
+		delete(bt.currentTargets, t.Label)
+	} else {
+		bt.currentTargets[t.Label] = idx
 	}
 }
 
