@@ -21,11 +21,13 @@ type buildingTarget struct {
 	Active       bool
 	Failed       bool
 	Cached       bool
+	Remote       bool
 }
 
 // Collects all the currently building targets.
 type buildingTargets struct {
 	plain          bool
+	anyRemote      bool
 	state          *core.BuildState
 	targets        []buildingTarget
 	currentTargets map[core.BuildLabel]int
@@ -38,10 +40,11 @@ func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTarge
 	n := state.Config.Please.NumThreads + state.Config.NumRemoteExecutors()
 	available := make([]int, n)
 	for i := 0; i < n; i++ {
-		available[i] = n - i // Do them backwards so the earliest indices are the first we'll take
+		available[i] = n - i - 1 // Do them backwards so the earliest indices are the first we'll take
 	}
 	return &buildingTargets{
 		plain:          plainOutput,
+		anyRemote:      state.Config.NumRemoteExecutors() > 0,
 		state:          state,
 		targets:        make([]buildingTarget, n),
 		currentTargets: make(map[core.BuildLabel]int, n),
@@ -50,10 +53,9 @@ func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTarge
 	}
 }
 
-// Targets returns the set of currently known building targets, split into local and remote.
-func (bt *buildingTargets) Targets() (local []buildingTarget, remote []buildingTarget) {
-	n := bt.state.Config.Please.NumThreads
-	return bt.targets[:n], bt.targets[n:]
+// Targets returns the set of currently known building targets.
+func (bt *buildingTargets) Targets() []buildingTarget {
+	return bt.targets
 }
 
 // ProcessResult updates with a single result.
@@ -109,7 +111,7 @@ func (bt *buildingTargets) index(label core.BuildLabel) int {
 		return idx
 	}
 	// Nothing available. This theoretically shouldn't happen - let's see in practice...
-	return len(bt.currentTargets) - 1
+	return len(bt.targets) - 1
 }
 
 // updateTarget updates a single target with a new result.
@@ -132,6 +134,7 @@ func (bt *buildingTargets) updateTarget(idx int, result *core.BuildResult, t *co
 	target.Err = result.Err
 	target.Colour = targetColour(t)
 	target.Target = t
+	target.Remote = bt.anyRemote && !t.Local
 
 	if bt.plain {
 		if !active {

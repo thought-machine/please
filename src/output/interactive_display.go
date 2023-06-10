@@ -21,7 +21,7 @@ var terminalClaimsToBeXterm = strings.HasPrefix(os.Getenv("TERM"), "xterm")
 
 // A displayer is the interface to display things on screen while a build is running.
 type displayer interface {
-	Update(local, remote []buildingTarget)
+	Update(targets []buildingTarget)
 	Close()
 	Frequency() time.Duration
 }
@@ -44,20 +44,22 @@ type plainDisplay struct {
 	state *core.BuildState
 }
 
-func (d *plainDisplay) Update(local, remote []buildingTarget) {
-	localbusy := countActive(local)
-	remotebusy := countActive(remote)
+func (d *plainDisplay) Update(targets []buildingTarget) {
+	localbusy, remotebusy := countActive(targets)
 	log.Notice("Build running for %s, %d / %d tasks done, %s busy", time.Since(d.state.StartTime).Round(time.Second), d.state.NumDone(), d.state.NumActive(), pluralise(localbusy+remotebusy, "worker", "workers"))
 }
 
-func countActive(targets []buildingTarget) int {
-	busy := 0
+func countActive(targets []buildingTarget) (local int, remote int) {
 	for _, t := range targets {
 		if t.Active {
-			busy++
+			if t.Remote {
+				remote++
+			} else {
+				local++
+			}
 		}
 	}
-	return busy
+	return local, remote
 }
 
 func (d *plainDisplay) Frequency() time.Duration {
@@ -86,10 +88,10 @@ func (d *interactiveDisplay) Frequency() time.Duration {
 	return 50 * time.Millisecond
 }
 
-func (d *interactiveDisplay) Update(local, remote []buildingTarget) {
+func (d *interactiveDisplay) Update(targets []buildingTarget) {
 	d.maxRows, d.maxCols = cli.CurrentBackend.MaxDimensions()
 	d.moveToFirstLine()
-	d.printLines(local, remote)
+	d.printLines(targets)
 	for _, line := range cli.CurrentBackend.Output() {
 		d.printf("${ERASE_AFTER}%s\n", line)
 		d.lines++
@@ -114,9 +116,15 @@ func (d *interactiveDisplay) moveToFirstLine() {
 	}
 }
 
-func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
+func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 	now := time.Now()
-	d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
+	localActive, remoteActive := countActive(targets)
+	totalActive := localActive + remoteActive
+	if d.numRemote > 0 {
+		d.printf("Building [%d/%d, %2d/%2d local, %3d/%3d remote, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), localActive, d.numWorkers, remoteActive, d.numRemote, time.Since(d.state.StartTime).Seconds())
+	} else {
+		d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
+	}
 	d.lines++
 	if d.stats {
 		stats := d.state.SystemStats()
@@ -134,23 +142,13 @@ func (d *interactiveDisplay) printLines(local, remote []buildingTarget) {
 		d.lines++
 	}
 	workers := 0
-	anyRemote := d.numRemote > 0
-	for i := 0; i < d.numWorkers && i < d.maxRows && workers < d.maxWorkers; i++ {
-		workers += d.printRow(&local[i], now, anyRemote)
+	for i := 0; i < len(targets) && d.lines < d.maxRows && workers < d.maxWorkers; i++ {
+		workers += d.printRow(&targets[i], now, true)
 		d.lines++
 	}
-	if anyRemote {
-		active := countActive(remote)
-		d.printf("Remote processes [%3d/%3d active]:   ${ERASE_AFTER}\n", active, d.numRemote)
+	if workers < totalActive {
+		d.printf("${RESET}   [%2d more...]${ERASE_AFTER}\n", totalActive-workers)
 		d.lines++
-		for i := 0; i < d.numRemote && d.lines < d.maxRows && workers < d.maxWorkers; i++ {
-			workers += d.printRow(&remote[i], now, true)
-			d.lines++
-		}
-		if workers < active {
-			d.printf("${RESET}   [%2d more...]${ERASE_AFTER}\n", active-workers)
-			d.lines++
-		}
 	}
 	d.printf("${RESET}")
 }

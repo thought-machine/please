@@ -386,7 +386,7 @@ func (c *Client) Run(target *core.BuildTarget) error {
 		return err
 	}
 	// 24 hours is kind of an arbitrarily long timeout. Basically we just don't want to limit it here.
-	_, _, err = c.execute(0, target, cmd, digest, false, false)
+	_, _, err = c.execute(target, cmd, digest, false, false)
 	return err
 }
 

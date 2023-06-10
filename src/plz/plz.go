@@ -49,7 +49,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		// They manage concurrency control themselves.
 		for task := range parses {
 			go func(task core.ParseTask) {
-				parse.Parse(0, state, task.Label, task.Dependent, task.ForSubinclude)
+				parse.Parse(state, task.Label, task.Dependent, task.ForSubinclude)
 				state.TaskDone()
 			}(task)
 		}
@@ -103,7 +103,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false)
+		parse.Parse(state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false)
 	}
 	if arch.Arch != "" && arch != cli.HostArch() {
 		// Set up a new subrepo for this architecture.
