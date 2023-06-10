@@ -86,7 +86,7 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, state.Config, cli.HostArch())
 }
 
-func doTasks(tid int, state *core.BuildState, actions <-chan core.Task, remote bool) {
+func doTasks(state *core.BuildState, actions <-chan core.Task, remote bool) {
 	for task := range actions {
 		switch task.Type {
 		case core.TestTask:

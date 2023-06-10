@@ -322,7 +322,7 @@ func (c *Client) digestEnum() pb.DigestFunction_Value {
 }
 
 // Build executes a remote build of the given target.
-func (c *Client) Build(tid int, target *core.BuildTarget) (*core.BuildMetadata, error) {
+func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
@@ -391,7 +391,7 @@ func (c *Client) Run(target *core.BuildTarget) error {
 }
 
 // build implements the actual build of a target.
-func (c *Client) build(tid int, target *core.BuildTarget) (*core.BuildMetadata, *pb.ActionResult, *pb.Digest, error) {
+func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.ActionResult, *pb.Digest, error) {
 	needStdout := target.PostBuildFunction != nil
 	// If we're gonna stamp the target, first check the unstamped equivalent that we store results under.
 	// This implements the rules of stamp whereby we don't force rebuilds every time e.g. the SCM revision changes.
@@ -540,7 +540,7 @@ func moveDirToOutDir(target *core.BuildTarget, dir string) error {
 
 // Test executes a remote test of the given target.
 // It returns the results (and coverage if appropriate) as bytes to be parsed elsewhere.
-func (c *Client) Test(tid int, target *core.BuildTarget, run int) (metadata *core.BuildMetadata, err error) {
+func (c *Client) Test(target *core.BuildTarget, run int) (metadata *core.BuildMetadata, err error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
@@ -595,7 +595,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 
 // maybeRetrieveResults is like retrieveResults but only retrieves if we aren't forcing a rebuild of the target
 // (i.e. not if we're doing plz build --rebuild or plz test --rerun).
-func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
+func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
 	if !c.state.ShouldRebuild(target) && !(c.state.NeedTests && isTest && c.state.ForceRerun) {
 		c.state.LogBuildResult(tid, target, core.TargetBuilding, "Checking remote...")
 		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest); metadata != nil {
@@ -607,7 +607,7 @@ func (c *Client) maybeRetrieveResults(tid int, target *core.BuildTarget, command
 
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
-func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(tid, target, command, digest, isTest, needStdout); metadata != nil {
 			return metadata, ar, nil
@@ -638,7 +638,7 @@ func (c *Client) execute(tid int, target *core.BuildTarget, command *pb.Command,
 
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
-func (c *Client) reallyExecute(tid int, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	executing := false
 	building := target.State() <= core.Built
 	if building {
@@ -827,7 +827,7 @@ func (c *Client) DataRate() (int, int, int, int) {
 }
 
 // fetchRemoteFile sends a request to fetch a file using the remote asset API.
-func (c *Client) fetchRemoteFile(tid int, target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	c.state.LogBuildResult(tid, target, core.TargetBuilding, "Downloading...")
 	urls := target.AllURLs(c.state)
 	req := &fpb.FetchBlobRequest{

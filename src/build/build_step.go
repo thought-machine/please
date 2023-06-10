@@ -55,7 +55,7 @@ var successfulLocalTargetBuildDuration = metrics.NewHistogram(
 )
 
 // Build implements the core logic for building a single target.
-func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
+func Build(state *core.BuildState, label core.BuildLabel, remote bool) {
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
@@ -114,7 +114,7 @@ func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel 
 	return srcs
 }
 
-func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) error {
+func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup {
 		potentialTargets := findFilegroupSourcesWithTmpDir(target)
 		if len(potentialTargets) > 0 {
@@ -152,7 +152,7 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 //     b) attempt to fetch the outputs from the cache based on the output hash
 //  3. Actually build the rule
 //  4. Store result in the cache
-func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -448,7 +448,7 @@ func storeInCache(cache core.Cache, target *core.BuildTarget, key []byte, files 
 //  1. if there are no declared outputs, return true; there's nothing to be done
 //  2. pull all the declared outputs from the cache has based on the short hash of the target
 //  3. check that pulling the artifacts changed the output hash and set the build state accordingly
-func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget, oldOutputHash []byte) bool {
+func retrieveArtifacts(state *core.BuildState, target *core.BuildTarget, oldOutputHash []byte) bool {
 	// If there aren't any outputs, we don't have to do anything right now.
 	// Checks later will handle the case of something with a post-build function that
 	// later tries to add more outputs.
@@ -969,7 +969,7 @@ func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, h
 // In some cases it may have already run; if so we compare the previous output and warn
 // if the two differ (they must be deterministic to ensure it's a pure function, since there
 // are a few different paths through here and we guarantee to only run them once).
-func runPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, output, prevOutput string) error {
+func runPostBuildFunction(state *core.BuildState, target *core.BuildTarget, output, prevOutput string) error {
 	if prevOutput != "" {
 		if output != prevOutput {
 			log.Warning("The build output for %s differs from what we got back from the cache earlier.\n"+

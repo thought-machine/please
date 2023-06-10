@@ -79,9 +79,9 @@ type Parser interface {
 // A RemoteClient is the interface to a remote execution service.
 type RemoteClient interface {
 	// Build invokes a build of the target remotely.
-	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
+	Build(target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
-	Test(tid int, target *BuildTarget, run int) (metadata *BuildMetadata, err error)
+	Test(target *BuildTarget, run int) (metadata *BuildMetadata, err error)
 	// Run executes the target remotely.
 	Run(target *BuildTarget) error
 	// Download downloads the outputs for the given target that has already been built remotely.
@@ -497,7 +497,7 @@ func (state *BuildState) OutputHashCheckers() []*fs.PathHasher {
 }
 
 // LogParseResult logs the result of a target parsing.
-func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
+func (state *BuildState) LogParseResult(label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
 		// We may have parse tasks waiting for this package to exist, check for them.
 		key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
@@ -519,7 +519,7 @@ func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildR
 }
 
 // LogBuildResult logs the result of a target building.
-func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status BuildResultStatus, description string) {
+func (state *BuildState) LogBuildResult(target *BuildTarget, status BuildResultStatus, description string) {
 	state.logResult(&BuildResult{
 		ThreadID:    tid,
 		Label:       target.Label,
@@ -545,7 +545,7 @@ func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 }
 
 // LogTestResult logs the result of a target once its tests have completed.
-func (state *BuildState) LogTestResult(tid int, target *BuildTarget, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
+func (state *BuildState) LogTestResult(target *BuildTarget, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
 		ThreadID:    tid,
 		Label:       target.Label,
@@ -561,7 +561,7 @@ func (state *BuildState) LogTestResult(tid int, target *BuildTarget, status Buil
 }
 
 // LogBuildError logs a failure for a target to parse, build or test.
-func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
+func (state *BuildState) LogBuildError(label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
 		ThreadID:    tid,
 		Label:       label,
@@ -1250,7 +1250,7 @@ func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
 }
 
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
-func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
+func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime bool) error {
 	if state.RemoteClient != nil {
 		state.LogBuildResult(tid, target, TargetBuilding, "Downloading inputs...")
 		for input := range state.IterInputs(target, runtime) {

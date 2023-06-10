@@ -27,13 +27,13 @@ var log = logging.Log
 // targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
 // 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
 // even when we're not otherwise building targets.
-func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) {
+func Parse(state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) {
 	if err := parse(tid, state, label, dependent, forSubinclude); err != nil {
 		state.LogBuildError(tid, label, core.ParseFailed, err, "Failed to parse package")
 	}
 }
 
-func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
+func parse(state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
 	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
-func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
+func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
 	if label.Subrepo == "" {
 		return nil, nil
 	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
@@ -117,7 +117,7 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
-func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, dependent core.BuildLabel) (*core.Subrepo, error) {
+func parseSubrepoPackage(state *core.BuildState, pkg, subrepo string, dependent core.BuildLabel) (*core.Subrepo, error) {
 	if state.Graph.Package(pkg, subrepo) == nil {
 		// Don't have it already, must parse.
 		label := core.BuildLabel{Subrepo: subrepo, PackageName: pkg, Name: "all"}

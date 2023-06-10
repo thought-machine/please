@@ -33,7 +33,7 @@ var numUploadFailures int64
 const maxUploadFailures int64 = 10
 
 // Test runs the tests for a single target.
-func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, run int) {
+func Test(state *core.BuildState, label core.BuildLabel, remote bool, run int) {
 	target := state.Graph.TargetOrDie(label)
 
 	// Defer this so that no matter what happens in this test run, we always call target.CompleteRun
@@ -56,7 +56,7 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 	test(tid, state.ForTarget(target), label, target, remote, run)
 }
 
-func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
+func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
 	target.StartTestSuite()
 
 	hash, err := runtimeHash(tid, state, target, runRemotely, run)
@@ -242,7 +242,7 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget, hash []
 }
 
 // doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test
-func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
+func doFlakeRun(state *core.BuildState, target *core.BuildTarget, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
 	coverage := &core.TestCoverage{}
 	results := core.TestSuite{}
 
@@ -284,7 +284,7 @@ func getRunStatus(run int, numRuns int) string {
 	return fmt.Sprintf("Testing (run %d of %d)...", run, numRuns)
 }
 
-func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage, run int) {
+func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage, run int) {
 	if target.Test.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
@@ -318,7 +318,7 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 	state.LogTestResult(tid, target, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
 }
 
-func logTestSuccess(state *core.BuildState, tid int, target *core.BuildTarget, results *core.TestSuite, coverage *core.TestCoverage) {
+func logTestSuccess(state *core.BuildState, target *core.BuildTarget, results *core.TestSuite, coverage *core.TestCoverage) {
 	var description string
 	tests := pluralise("test", results.Tests())
 	if results.Skips() != 0 {
@@ -357,7 +357,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 	return stderr, err
 }
 
-func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
+func doTest(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
 	startTime := time.Now()
 	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
 	duration := time.Since(startTime)
@@ -373,7 +373,7 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 	}, coverage
 }
 
-func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
+func doTestResults(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
 	var err error
 	var metadata *core.BuildMetadata
 
@@ -407,7 +407,7 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
-func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
+func prepareAndRunTest(state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
 	if err = core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
 		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
 		return []byte{}, err
@@ -546,7 +546,7 @@ func moveOutputFile(state *core.BuildState, hash []byte, from, to, dummy string)
 }
 
 // verifyWorkerNotNeeded returns an error if a persistent worker is needed.
-func verifyWorkerNotNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
+func verifyWorkerNotNeeded(state *core.BuildState, target *core.BuildTarget) error {
 	workerCmd, _, _, err := core.TestWorkerCommand(state, target)
 	if err != nil {
 		return err
@@ -562,7 +562,7 @@ func verifyHash(state *core.BuildState, filename string, hash []byte) bool {
 }
 
 // runtimeHash returns the runtime hash of a target, or an empty slice if running remotely.
-func runtimeHash(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) ([]byte, error) {
+func runtimeHash(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) ([]byte, error) {
 	if runRemotely {
 		return nil, nil
 	}
