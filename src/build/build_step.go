@@ -55,8 +55,7 @@ var successfulLocalTargetBuildDuration = metrics.NewHistogram(
 )
 
 // Build implements the core logic for building a single target.
-func Build(state *core.BuildState, label core.BuildLabel, remote bool) {
-	target := state.Graph.TargetOrDie(label)
+func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	start := time.Now()
@@ -66,7 +65,7 @@ func Build(state *core.BuildState, label core.BuildLabel, remote bool) {
 			state.LogBuildResult(target, core.TargetBuildStopped, "Build stopped")
 			return
 		}
-		state.LogBuildError(label, core.TargetBuildFailed, err, "Build failed: %s", err)
+		state.LogBuildError(target.Label, core.TargetBuildFailed, err, "Build failed: %s", err)
 		if err := RemoveOutputs(target); err != nil {
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}

@@ -45,10 +45,9 @@ const (
 
 // A Task is the type for the queue of build/test tasks.
 type Task struct {
-	Label  BuildLabel
+	Target *BuildTarget
 	Type   TaskType
 	Run    uint32 // Only present for tests (the run of a build is always zero)
-	Remote bool
 }
 
 // A OutputDownloadOption is the option for how outputs should be downloaded.
@@ -196,8 +195,6 @@ type BuildState struct {
 	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
-	// True if we have any remote executors configured.
-	anyRemote bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
 	NumTestRuns uint16
 	// Experimental directories
@@ -334,7 +331,7 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		state.pendingActions <- Task{Label: target.Label, Type: BuildTask, Remote: state.anyRemote && !target.Local}
+		state.pendingActions <- Task{Target: target, Type: BuildTask}
 	}()
 }
 
@@ -354,7 +351,7 @@ func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 			recover() // Prevent death on 'send on closed channel'
 		}()
 		for run := 1; run <= numRuns; run++ {
-			state.pendingActions <- Task{Label: target.Label, Run: uint32(run), Type: TestTask, Remote: state.anyRemote && !target.Local}
+			state.pendingActions <- Task{Target: target, Run: uint32(run), Type: TestTask}
 		}
 	}()
 }
@@ -1348,7 +1345,6 @@ func NewBuildState(config *Configuration) *BuildState {
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,
-		anyRemote:       config.NumRemoteExecutors() > 0,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		TargetArch:      config.Build.Arch,
 		Arch:            cli.HostArch(),

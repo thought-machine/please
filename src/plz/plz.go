@@ -43,6 +43,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 	localLimiter := make(limiter, config.Please.NumThreads)
 	remoteLimiter := make(limiter, config.NumRemoteExecutors())
+	anyRemote := config.NumRemoteExecutors() > 0
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
@@ -59,7 +60,8 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	go func() {
 		for task := range actions {
 			go func(task core.Task) {
-				if task.Remote {
+				remote := anyRemote && !task.Target.Local
+				if remote {
 					remoteLimiter.Acquire()
 					defer remoteLimiter.Release()
 				} else {
@@ -68,9 +70,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 				}
 				switch task.Type {
 				case core.TestTask:
-					test.Test(state, task.Label, task.Remote, int(task.Run))
+					test.Test(state, task.Target, remote, int(task.Run))
 				case core.BuildTask:
-					build.Build(state, task.Label, task.Remote)
+					build.Build(state, task.Target, remote)
 				}
 				state.TaskDone()
 			}(task)
