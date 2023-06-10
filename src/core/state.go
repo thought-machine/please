@@ -110,8 +110,8 @@ type TargetHasher interface {
 type BuildState struct {
 	Graph *BuildGraph
 	// Streams of pending tasks
-	pendingParses                        chan ParseTask
-	pendingActions, pendingRemoteActions chan Task
+	pendingParses  chan ParseTask
+	pendingActions chan Task
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -195,8 +195,6 @@ type BuildState struct {
 	DebugFailingTests bool
 	// True if we think the underlying filesystem supports xattrs (which affects how we write some metadata).
 	XattrsSupported bool
-	// True if we have any remote executors configured.
-	anyRemote bool
 	// Number of times to run each test target. 1 == once each, plus flakes if necessary.
 	NumTestRuns uint16
 	// Experimental directories
@@ -333,11 +331,7 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		if state.anyRemote && !target.Local {
-			state.pendingRemoteActions <- Task{Label: target.Label, Type: BuildTask}
-		} else {
-			state.pendingActions <- Task{Label: target.Label, Type: BuildTask}
-		}
+		state.pendingActions <- Task{Label: target.Label, Type: BuildTask}
 	}()
 }
 
@@ -356,19 +350,15 @@ func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		ch := state.pendingActions
-		if state.anyRemote && !target.Local {
-			ch = state.pendingRemoteActions
-		}
 		for run := 1; run <= numRuns; run++ {
-			ch <- Task{Label: target.Label, Run: uint32(run), Type: TestTask}
+			state.pendingActions <- Task{Label: target.Label, Run: uint32(run), Type: TestTask}
 		}
 	}()
 }
 
 // TaskQueues returns a set of channels to listen on for tasks of various types.
-func (state *BuildState) TaskQueues() (parses <-chan ParseTask, actions, remoteActions <-chan Task) {
-	return state.pendingParses, state.pendingActions, state.pendingRemoteActions
+func (state *BuildState) TaskQueues() (parses <-chan ParseTask, actions <-chan Task) {
+	return state.pendingParses, state.pendingActions
 }
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
@@ -391,7 +381,6 @@ func (state *BuildState) Stop() {
 	state.progress.closeOnce.Do(func() {
 		close(state.pendingParses)
 		close(state.pendingActions)
-		close(state.pendingRemoteActions)
 	})
 }
 
@@ -1337,10 +1326,9 @@ func executorFromConfig(config *Configuration) *process.Executor {
 func NewBuildState(config *Configuration) *BuildState {
 	graph := NewGraph()
 	state := &BuildState{
-		Graph:                graph,
-		pendingParses:        make(chan ParseTask, 10000),
-		pendingActions:       make(chan Task, 1000),
-		pendingRemoteActions: make(chan Task, 1000),
+		Graph:          graph,
+		pendingParses:  make(chan ParseTask, 10000),
+		pendingActions: make(chan Task, 1000),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),
@@ -1357,7 +1345,6 @@ func NewBuildState(config *Configuration) *BuildState {
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,
-		anyRemote:       config.NumRemoteExecutors() > 0,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		TargetArch:      config.Build.Arch,
 		Arch:            cli.HostArch(),

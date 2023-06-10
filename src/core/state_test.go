@@ -109,7 +109,7 @@ func TestAddTargetFilegroupPackageOutputs(t *testing.T) {
 
 func TestAddDepsToTarget(t *testing.T) {
 	state := NewDefaultBuildState()
-	_, builds, _ := state.TaskQueues()
+	_, builds := state.TaskQueues()
 	pkg := NewPackage("src/core")
 	target1 := addTargetDeps(state, pkg, "//src/core:target1", "//src/core:target2")
 	target2 := addTargetDeps(state, pkg, "//src/core:target2")
