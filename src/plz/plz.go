@@ -57,13 +57,13 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}()
 	for i := 0; i < config.Please.NumThreads; i++ {
 		go func(tid int) {
-			doTasks(tid, state, actions, false)
+			doTasks(state, actions, false)
 			wg.Done()
 		}(i)
 	}
 	for i := 0; i < config.NumRemoteExecutors(); i++ {
 		go func(tid int) {
-			doTasks(tid, state, remoteActions, true)
+			doTasks(state, remoteActions, true)
 			wg.Done()
 		}(config.Please.NumThreads + i)
 	}
@@ -90,9 +90,9 @@ func doTasks(state *core.BuildState, actions <-chan core.Task, remote bool) {
 	for task := range actions {
 		switch task.Type {
 		case core.TestTask:
-			test.Test(tid, state, task.Label, remote, int(task.Run))
+			test.Test(state, task.Label, remote, int(task.Run))
 		case core.BuildTask:
-			build.Build(tid, state, task.Label, remote)
+			build.Build(state, task.Label, remote)
 		}
 		state.TaskDone()
 	}

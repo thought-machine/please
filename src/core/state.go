@@ -1252,7 +1252,7 @@ func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
 func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime bool) error {
 	if state.RemoteClient != nil {
-		state.LogBuildResult(tid, target, TargetBuilding, "Downloading inputs...")
+		state.LogBuildResult(target, TargetBuilding, "Downloading inputs...")
 		for input := range state.IterInputs(target, runtime) {
 			if l, ok := input.Label(); ok {
 				dep := state.Graph.TargetOrDie(l)
