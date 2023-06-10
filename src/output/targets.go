@@ -61,14 +61,20 @@ func (bt *buildingTargets) Targets() []buildingTarget {
 // ProcessResult updates with a single result.
 // It returns the label that was in this slot previously and a 'thread id' for it (which is relevant for trace output)
 func (bt *buildingTargets) ProcessResult(result *core.BuildResult) (core.BuildLabel, int) {
-	label := result.Label
-	idx := bt.index(label)
-	prev := bt.targets[idx].Label
-	if !result.Status.IsParse() { // Parse tasks aren't displayed here
-		if t := bt.state.Graph.Target(label); t != nil {
-			bt.updateTarget(idx, result, t)
-		}
+	defer bt.handleOutput(result)
+	if result.Status.IsParse() { // Parse tasks aren't displayed here
+		return core.BuildLabel{}, 0
 	}
+	idx := bt.index(result.Label)
+	prev := bt.targets[idx].Label
+	if t := bt.state.Graph.Target(result.Label); t != nil {
+		bt.updateTarget(idx, result, t)
+	}
+	return prev, idx
+}
+
+func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
+	label := result.Label
 	if result.Status.IsFailure() {
 		bt.FailedTargets[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
@@ -95,7 +101,6 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) (core.BuildLa
 			}
 		}
 	}
-	return prev, idx
 }
 
 // index returns the index to use for a result
