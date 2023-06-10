@@ -31,16 +31,16 @@ type buildingTargets struct {
 	state          *core.BuildState
 	targets        []buildingTarget
 	currentTargets map[core.BuildLabel]int
-	available      []int
+	available      map[int]struct{}
 	FailedTargets  map[core.BuildLabel]error
 	FailedNonTests []core.BuildLabel
 }
 
 func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTargets {
 	n := state.Config.Please.NumThreads + state.Config.NumRemoteExecutors()
-	available := make([]int, n)
+	available := make(map[int]struct{}, n)
 	for i := 0; i < n; i++ {
-		available[i] = n - i - 1 // Do them backwards so the earliest indices are the first we'll take
+		available[i] = struct{}{}
 	}
 	return &buildingTargets{
 		plain:          plainOutput,
@@ -104,10 +104,8 @@ func (bt *buildingTargets) index(label core.BuildLabel) int {
 		return idx
 	}
 	// Grab whatever is available
-	if len(bt.available) > 0 {
-		n := len(bt.available) - 1
-		idx := bt.available[n]
-		bt.available = bt.available[:n]
+	for idx := range bt.available {
+		delete(bt.available, idx)
 		return idx
 	}
 	// Nothing available. This theoretically shouldn't happen - let's see in practice...
@@ -145,7 +143,7 @@ func (bt *buildingTargets) updateTarget(idx int, result *core.BuildResult, t *co
 		}
 	}
 	if !active {
-		bt.available = append(bt.available, idx)
+		bt.available[idx] = struct{}{}
 		delete(bt.currentTargets, t.Label)
 	} else {
 		bt.currentTargets[t.Label] = idx
