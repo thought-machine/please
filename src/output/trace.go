@@ -51,19 +51,19 @@ func (tw *traceWriter) Close() error {
 }
 
 // AddTrace adds a single trace to this writer.
-func (tw *traceWriter) AddTrace(result *core.BuildResult, previous core.BuildLabel, active bool) {
+func (tw *traceWriter) AddTrace(threadID int, result *core.BuildResult, previous core.BuildLabel, active bool) {
 	// It's a bit fiddly to keep all the phases in line here.
 	if !active {
-		tw.writeEvent(result, "E")
+		tw.writeEvent(threadID, result, "E")
 	} else if result.Label != previous {
-		tw.writeEvent(result, "B")
+		tw.writeEvent(threadID, result, "B")
 	} else {
-		tw.writeEvent(result, "E")
-		tw.writeEvent(result, "B")
+		tw.writeEvent(threadID, result, "E")
+		tw.writeEvent(threadID, result, "B")
 	}
 }
 
-func (tw *traceWriter) writeEvent(result *core.BuildResult, phase string) {
+func (tw *traceWriter) writeEvent(threadID int, result *core.BuildResult, phase string) {
 	if !tw.first {
 		tw.first = true
 	} else {
@@ -77,7 +77,7 @@ func (tw *traceWriter) writeEvent(result *core.BuildResult, phase string) {
 		Ts:    result.Time.UnixNano() / 1000,
 		Cname: "thread_state_runnable", // Colours have to fit available names, this is blueish.
 	}
-	entry.Tid = fmt.Sprintf("Builder %d", result.ThreadID)
+	entry.Tid = fmt.Sprintf("Builder %d", threadID)
 	entry.Args.Description = result.Description
 	if result.Err != nil {
 		entry.Args.Err = fmt.Sprintf("%s", result.Err)

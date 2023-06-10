@@ -57,8 +57,8 @@ func (bt *buildingTargets) Targets() (local []buildingTarget, remote []buildingT
 }
 
 // ProcessResult updates with a single result.
-// It returns the label that was in this slot previously.
-func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLabel {
+// It returns the label that was in this slot previously and a 'thread id' for it (which is relevant for trace output)
+func (bt *buildingTargets) ProcessResult(result *core.BuildResult) (core.BuildLabel, int) {
 	label := result.Label
 	idx := bt.index(label)
 	prev := bt.targets[idx].Label
@@ -93,7 +93,7 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLab
 			}
 		}
 	}
-	return prev
+	return prev, idx
 }
 
 // index returns the index to use for a result
