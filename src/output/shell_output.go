@@ -53,8 +53,8 @@ loop:
 			if !ok || (state.DebugFailingTests && result.Status == core.TargetTesting) {
 				break loop
 			}
-			if prev, threadID := bt.ProcessResult(result); tw != nil && !result.Status.IsParse() {
-				tw.AddTrace(threadID, result, prev, result.Status.IsActive())
+			if threadID := bt.ProcessResult(result); tw != nil && !result.Status.IsParse() {
+				tw.AddTrace(threadID, result, result.Status.IsActive())
 			}
 			if streamTestResults && (result.Status == core.TargetTested || result.Status == core.TargetTestFailed) {
 				os.Stdout.Write(test.SerialiseResultsToXML(state.Graph.TargetOrDie(result.Label), false, state.Config.Test.StoreTestOutputOnSuccess))

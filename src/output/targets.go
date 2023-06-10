@@ -59,18 +59,17 @@ func (bt *buildingTargets) Targets() []buildingTarget {
 }
 
 // ProcessResult updates with a single result.
-// It returns the label that was in this slot previously and a 'thread id' for it (which is relevant for trace output)
-func (bt *buildingTargets) ProcessResult(result *core.BuildResult) (core.BuildLabel, int) {
+// It returns a 'thread id' for it (which is relevant for trace output)
+func (bt *buildingTargets) ProcessResult(result *core.BuildResult) int {
 	defer bt.handleOutput(result)
-	if result.Status.IsParse() { // Parse tasks aren't displayed here
-		return core.BuildLabel{}, 0
+	if result.Status.IsParse() { // Parse tasks don't take a slot here
+		return 0
 	}
 	idx := bt.index(result.Label)
-	prev := bt.targets[idx].Label
 	if t := bt.state.Graph.Target(result.Label); t != nil {
 		bt.updateTarget(idx, result, t)
 	}
-	return prev, idx
+	return idx
 }
 
 func (bt *buildingTargets) handleOutput(result *core.BuildResult) {

@@ -17,9 +17,10 @@ var log = logging.Log
 
 // A traceWriter is responsible for writing the JSON trace info.
 type traceWriter struct {
-	b     *bufio.Writer
-	f     *os.File
-	first bool // have we written the first record
+	b      *bufio.Writer
+	f      *os.File
+	active map[core.BuildLabel]struct{}
+	first  bool // have we written the first record
 }
 
 // newTraceWriter returns a new traceWriter writing to the given file.
@@ -35,8 +36,9 @@ func newTraceWriter(filename string) *traceWriter {
 	// This is more robust than the object format and we don't write anything of use into that anyway.
 	b.Write([]byte("[\n"))
 	return &traceWriter{
-		b: b,
-		f: f,
+		b:      b,
+		f:      f,
+		active: map[core.BuildLabel]struct{}{},
 	}
 }
 
@@ -51,15 +53,16 @@ func (tw *traceWriter) Close() error {
 }
 
 // AddTrace adds a single trace to this writer.
-func (tw *traceWriter) AddTrace(threadID int, result *core.BuildResult, previous core.BuildLabel, active bool) {
+func (tw *traceWriter) AddTrace(threadID int, result *core.BuildResult, active bool) {
 	// It's a bit fiddly to keep all the phases in line here.
 	if !active {
-		tw.writeEvent(threadID, result, "E")
-	} else if result.Label != previous {
-		tw.writeEvent(threadID, result, "B")
+		tw.writeEvent(threadID, result, "E") // end the span for this target
+		delete(tw.active, result.Label)
+	} else if _, present := tw.active[result.Label]; !present {
+		tw.writeEvent(threadID, result, "B") // begin a new span for this target
+		tw.active[result.Label] = struct{}{}
 	} else {
-		tw.writeEvent(threadID, result, "E")
-		tw.writeEvent(threadID, result, "B")
+		tw.writeEvent(threadID, result, "i")
 	}
 }
 
