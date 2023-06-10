@@ -155,7 +155,7 @@ func getAllPending(state *core.BuildState) ([]string, []string) {
 				builds = nil
 				break
 			}
-			pendingBuilds = append(pendingBuilds, t.Label.String())
+			pendingBuilds = append(pendingBuilds, t.Target.Label.String())
 		}
 	}
 	return pendingParses, pendingBuilds
