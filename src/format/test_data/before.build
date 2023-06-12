@@ -1,3 +1,30 @@
+def no_type(arg):
+    pass
+
+def one_type(arg: str):
+    pass
+
+def multiple_types(arg: int | str):
+    pass
+
+def one_type_default(arg: str = 10):
+    pass
+
+def multiple_types_default(arg: int | str = 10):
+    pass
+
+def one_alias(arg: int | str & oldarg):
+    pass
+
+def multiple_aliases(arg: int | str & oldarg & oldarg2):
+    pass
+
+def one_alias_with_default(arg: int | str & oldarg = 10):
+    pass
+
+def multiple_aliases_with_default(arg: int | str & oldarg & oldarg2 = 10):
+    pass
+
 go_library(
 deps = ["//src/core"],
 name=f'{name}_lib',
