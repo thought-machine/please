@@ -33,9 +33,7 @@ var numUploadFailures int64
 const maxUploadFailures int64 = 10
 
 // Test runs the tests for a single target.
-func Test(state *core.BuildState, label core.BuildLabel, remote bool, run int) {
-	target := state.Graph.TargetOrDie(label)
-
+func Test(state *core.BuildState, target *core.BuildTarget, remote bool, run int) {
 	// Defer this so that no matter what happens in this test run, we always call target.CompleteRun
 	defer func() {
 		runsAllCompleted := target.CompleteRun(state)
@@ -53,7 +51,7 @@ func Test(state *core.BuildState, label core.BuildLabel, remote bool, run int) {
 	}()
 
 	state.LogBuildResult(target, core.TargetTesting, "Testing...")
-	test(state.ForTarget(target), label, target, remote, run)
+	test(state.ForTarget(target), target.Label, target, remote, run)
 }
 
 func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
