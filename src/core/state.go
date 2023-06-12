@@ -45,9 +45,10 @@ const (
 
 // A Task is the type for the queue of build/test tasks.
 type Task struct {
-	Label BuildLabel
-	Type  TaskType
-	Run   uint32 // Only present for tests (the run of a build is always zero)
+	Label  BuildLabel
+	Type   TaskType
+	Run    uint32 // Only present for tests (the run of a build is always zero)
+	Remote bool
 }
 
 // A OutputDownloadOption is the option for how outputs should be downloaded.
@@ -69,9 +70,9 @@ type Parser interface {
 	// ParseReader parses a single BUILD file into the given package.
 	ParseReader(pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel, forSubinclude bool) error
 	// RunPreBuildFunction runs a pre-build function for a target.
-	RunPreBuildFunction(threadID int, state *BuildState, target *BuildTarget) error
+	RunPreBuildFunction(state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
-	RunPostBuildFunction(threadID int, state *BuildState, target *BuildTarget, output string) error
+	RunPostBuildFunction(state *BuildState, target *BuildTarget, output string) error
 	// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
 	BuildRuleArgOrder() map[string]int
 }
@@ -79,9 +80,9 @@ type Parser interface {
 // A RemoteClient is the interface to a remote execution service.
 type RemoteClient interface {
 	// Build invokes a build of the target remotely.
-	Build(tid int, target *BuildTarget) (*BuildMetadata, error)
+	Build(target *BuildTarget) (*BuildMetadata, error)
 	// Test invokes a test run of the target remotely.
-	Test(tid int, target *BuildTarget, run int) (metadata *BuildMetadata, err error)
+	Test(target *BuildTarget, run int) (metadata *BuildMetadata, err error)
 	// Run executes the target remotely.
 	Run(target *BuildTarget) error
 	// Download downloads the outputs for the given target that has already been built remotely.
@@ -110,8 +111,8 @@ type TargetHasher interface {
 type BuildState struct {
 	Graph *BuildGraph
 	// Streams of pending tasks
-	pendingParses                        chan ParseTask
-	pendingActions, pendingRemoteActions chan Task
+	pendingParses  chan ParseTask
+	pendingActions chan Task
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -333,11 +334,7 @@ func (state *BuildState) addPendingBuild(target *BuildTarget) {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		if state.anyRemote && !target.Local {
-			state.pendingRemoteActions <- Task{Label: target.Label, Type: BuildTask}
-		} else {
-			state.pendingActions <- Task{Label: target.Label, Type: BuildTask}
-		}
+		state.pendingActions <- Task{Label: target.Label, Type: BuildTask, Remote: state.anyRemote && !target.Local}
 	}()
 }
 
@@ -356,19 +353,15 @@ func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		ch := state.pendingActions
-		if state.anyRemote && !target.Local {
-			ch = state.pendingRemoteActions
-		}
 		for run := 1; run <= numRuns; run++ {
-			ch <- Task{Label: target.Label, Run: uint32(run), Type: TestTask}
+			state.pendingActions <- Task{Label: target.Label, Run: uint32(run), Type: TestTask, Remote: state.anyRemote && !target.Local}
 		}
 	}()
 }
 
 // TaskQueues returns a set of channels to listen on for tasks of various types.
-func (state *BuildState) TaskQueues() (parses <-chan ParseTask, actions, remoteActions <-chan Task) {
-	return state.pendingParses, state.pendingActions, state.pendingRemoteActions
+func (state *BuildState) TaskQueues() (parses <-chan ParseTask, actions <-chan Task) {
+	return state.pendingParses, state.pendingActions
 }
 
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
@@ -391,7 +384,6 @@ func (state *BuildState) Stop() {
 	state.progress.closeOnce.Do(func() {
 		close(state.pendingParses)
 		close(state.pendingActions)
-		close(state.pendingRemoteActions)
 	})
 }
 
@@ -497,7 +489,7 @@ func (state *BuildState) OutputHashCheckers() []*fs.PathHasher {
 }
 
 // LogParseResult logs the result of a target parsing.
-func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildResultStatus, description string) {
+func (state *BuildState) LogParseResult(label BuildLabel, status BuildResultStatus, description string) {
 	if status == PackageParsed {
 		// We may have parse tasks waiting for this package to exist, check for them.
 		key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
@@ -510,7 +502,6 @@ func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildR
 		return // We don't notify anything else on these.
 	}
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       label,
 		Status:      status,
 		Err:         nil,
@@ -519,9 +510,8 @@ func (state *BuildState) LogParseResult(tid int, label BuildLabel, status BuildR
 }
 
 // LogBuildResult logs the result of a target building.
-func (state *BuildState) LogBuildResult(tid int, target *BuildTarget, status BuildResultStatus, description string) {
+func (state *BuildState) LogBuildResult(target *BuildTarget, status BuildResultStatus, description string) {
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       target.Label,
 		target:      target,
 		Status:      status,
@@ -545,9 +535,8 @@ func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 }
 
 // LogTestResult logs the result of a target once its tests have completed.
-func (state *BuildState) LogTestResult(tid int, target *BuildTarget, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
+func (state *BuildState) LogTestResult(target *BuildTarget, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       target.Label,
 		target:      target,
 		Status:      status,
@@ -561,9 +550,8 @@ func (state *BuildState) LogTestResult(tid int, target *BuildTarget, status Buil
 }
 
 // LogBuildError logs a failure for a target to parse, build or test.
-func (state *BuildState) LogBuildError(tid int, label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
+func (state *BuildState) LogBuildError(label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
-		ThreadID:    tid,
 		Label:       label,
 		Status:      status,
 		Err:         err,
@@ -660,7 +648,7 @@ func (state *BuildState) WaitForPreloadedSubincludeTargetsAndEnsureDownloaded() 
 // checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
 func (state *BuildState) checkForCycles() {
 	if err := state.progress.cycleDetector.Check(); err != nil {
-		state.LogBuildError(0, err.Cycle[0].Label, TargetBuildFailed, err, "")
+		state.LogBuildError(err.Cycle[0].Label, TargetBuildFailed, err, "")
 		state.Stop()
 	}
 }
@@ -1148,7 +1136,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 // asyncError reports an error that's happened in an asynchronous function.
 func (state *BuildState) asyncError(label BuildLabel, err error) {
 	log.Error("Error queuing %s: %s", label, err)
-	state.LogBuildError(0, label, TargetBuildFailed, err, "")
+	state.LogBuildError(label, TargetBuildFailed, err, "")
 	state.Stop()
 }
 
@@ -1250,9 +1238,9 @@ func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
 }
 
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
-func (state *BuildState) DownloadInputsIfNeeded(tid int, target *BuildTarget, runtime bool) error {
+func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime bool) error {
 	if state.RemoteClient != nil {
-		state.LogBuildResult(tid, target, TargetBuilding, "Downloading inputs...")
+		state.LogBuildResult(target, TargetBuilding, "Downloading inputs...")
 		for input := range state.IterInputs(target, runtime) {
 			if l, ok := input.Label(); ok {
 				dep := state.Graph.TargetOrDie(l)
@@ -1341,10 +1329,9 @@ func executorFromConfig(config *Configuration) *process.Executor {
 func NewBuildState(config *Configuration) *BuildState {
 	graph := NewGraph()
 	state := &BuildState{
-		Graph:                graph,
-		pendingParses:        make(chan ParseTask, 10000),
-		pendingActions:       make(chan Task, 1000),
-		pendingRemoteActions: make(chan Task, 1000),
+		Graph:          graph,
+		pendingParses:  make(chan ParseTask, 10000),
+		pendingActions: make(chan Task, 1000),
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),
@@ -1398,8 +1385,6 @@ func NewDefaultBuildState() *BuildState {
 // A BuildResult represents a single event in the build process, i.e. a target starting or finishing
 // building, or reaching some milestone within those steps.
 type BuildResult struct {
-	// Thread id (or goroutine id, really) that generated this result.
-	ThreadID int
 	// Timestamp of this event
 	Time time.Time
 	// Target which has just changed

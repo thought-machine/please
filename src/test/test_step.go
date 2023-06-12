@@ -33,7 +33,7 @@ var numUploadFailures int64
 const maxUploadFailures int64 = 10
 
 // Test runs the tests for a single target.
-func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, run int) {
+func Test(state *core.BuildState, label core.BuildLabel, remote bool, run int) {
 	target := state.Graph.TargetOrDie(label)
 
 	// Defer this so that no matter what happens in this test run, we always call target.CompleteRun
@@ -52,16 +52,16 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel, remote bool, r
 		}
 	}()
 
-	state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
-	test(tid, state.ForTarget(target), label, target, remote, run)
+	state.LogBuildResult(target, core.TargetTesting, "Testing...")
+	test(state.ForTarget(target), label, target, remote, run)
 }
 
-func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
+func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
 	target.StartTestSuite()
 
-	hash, err := runtimeHash(tid, state, target, runRemotely, run)
+	hash, err := runtimeHash(state, target, runRemotely, run)
 	if err != nil {
-		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to calculate target hash")
+		state.LogBuildError(label, core.TargetTestFailed, err, "Failed to calculate target hash")
 		return
 	}
 
@@ -71,16 +71,16 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareOnly {
-		if err := state.DownloadInputsIfNeeded(tid, target, true); err != nil {
-			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to download test inputs")
+		if err := state.DownloadInputsIfNeeded(target, true); err != nil {
+			state.LogBuildError(label, core.TargetTestFailed, err, "Failed to download test inputs")
 			return
 		}
 		if err := core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
-			state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to prepare test directory")
+			state.LogBuildError(label, core.TargetTestFailed, err, "Failed to prepare test directory")
 			return
 		}
 		target.SetState(core.Stopped)
-		state.LogBuildResult(tid, target, core.TargetTestStopped, "Test stopped")
+		state.LogBuildResult(target, core.TargetTestStopped, "Test stopped")
 		return
 	}
 
@@ -100,7 +100,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			state.Cache.Clean(target)
 			return nil
 		} else {
-			logTestSuccess(state, tid, target, &results, coverage)
+			logTestSuccess(state, target, &results, coverage)
 		}
 		return &results
 	}
@@ -118,13 +118,13 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 		outs := []string{filepath.Base(target.TestResultsFile())}
 		if err := moveOutputFile(state, hash, outputFile, target.TestResultsFile(), dummyOutput); err != nil {
-			state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
+			state.LogTestResult(target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 			return false
 		}
 
 		if needCoverage || core.PathExists(coverageFile) {
 			if err := moveOutputFile(state, hash, coverageFile, target.CoverageFile(), dummyCoverage); err != nil {
-				state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
+				state.LogTestResult(target, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
 				return false
 			}
 			outs = append(outs, filepath.Base(target.CoverageFile()))
@@ -133,7 +133,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 			tmpFile := filepath.Join(target.TestDir(run), output)
 			outFile := filepath.Join(target.OutDir(), output)
 			if err := moveOutputFile(state, hash, tmpFile, outFile, ""); err != nil {
-				state.LogTestResult(tid, target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
+				state.LogTestResult(target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 				return false
 			}
 			outs = append(outs, output)
@@ -171,10 +171,10 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 	}
 
 	// Wait if another process is currently testing this target
-	state.LogBuildResult(tid, target, core.TargetTesting, "Acquiring target lock...")
+	state.LogBuildResult(target, core.TargetTesting, "Acquiring target lock...")
 	file := core.AcquireExclusiveFileLock(target.TestLockFile(run))
 	defer core.ReleaseFileLock(file)
-	state.LogBuildResult(tid, target, core.TargetTesting, "Testing...")
+	state.LogBuildResult(target, core.TargetTesting, "Testing...")
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
@@ -186,18 +186,18 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 
 	// Remove any cached test result file.
 	if err := RemoveTestOutputs(target); err != nil {
-		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to remove test output files")
+		state.LogBuildError(label, core.TargetTestFailed, err, "Failed to remove test output files")
 		return
 	}
-	if err := verifyWorkerNotNeeded(tid, state, target); err != nil {
-		state.LogBuildError(tid, label, core.TargetTestFailed, err, "Failed to verify worker not needed")
+	if err := verifyWorkerNotNeeded(state, target); err != nil {
+		state.LogBuildError(label, core.TargetTestFailed, err, "Failed to verify worker not needed")
 		return
 	}
 
 	coverage := &core.TestCoverage{}
 	if state.NumTestRuns == 1 {
 		var results core.TestSuite
-		results, coverage = doFlakeRun(tid, state, target, runRemotely)
+		results, coverage = doFlakeRun(state, target, runRemotely)
 		target.AddTestResults(results)
 
 		if target.Test.Results.TestCases.AllSucceeded() {
@@ -206,19 +206,19 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		}
 	} else if state.TestSequentially {
 		for run := 1; run <= int(state.NumTestRuns); run++ {
-			state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
+			state.LogBuildResult(target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
 			var results core.TestSuite
-			results, coverage = doTest(tid, state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
+			results, coverage = doTest(state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
 			target.AddTestResults(results)
 		}
 	} else {
-		state.LogBuildResult(tid, target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
+		state.LogBuildResult(target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
 		var results core.TestSuite
-		results, coverage = doTest(tid, state, target, runRemotely, run)
+		results, coverage = doTest(state, target, runRemotely, run)
 		target.AddTestResults(results)
 	}
 
-	logTargetResults(tid, state, target, coverage, run)
+	logTargetResults(state, target, coverage, run)
 }
 
 func retrieveFromCache(state *core.BuildState, target *core.BuildTarget, hash []byte, files []string) bool {
@@ -242,15 +242,15 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget, hash []
 }
 
 // doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test
-func doFlakeRun(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
+func doFlakeRun(state *core.BuildState, target *core.BuildTarget, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
 	coverage := &core.TestCoverage{}
 	results := core.TestSuite{}
 
 	// New group of test cases for each group of flaky runs
 	for flakes := 1; flakes <= int(target.Test.Flakiness); flakes++ {
-		state.LogBuildResult(tid, target, core.TargetTesting, getFlakeStatus(flakes, int(target.Test.Flakiness)))
+		state.LogBuildResult(target, core.TargetTesting, getFlakeStatus(flakes, int(target.Test.Flakiness)))
 
-		testSuite, cov := doTest(tid, state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
+		testSuite, cov := doTest(state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
 
 		results.TimedOut = results.TimedOut || testSuite.TimedOut
 		results.Properties = testSuite.Properties
@@ -284,7 +284,7 @@ func getRunStatus(run int, numRuns int) string {
 	return fmt.Sprintf("Testing (run %d of %d)...", run, numRuns)
 }
 
-func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage, run int) {
+func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage, run int) {
 	if target.Test.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
@@ -292,7 +292,7 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
-		logTestSuccess(state, tid, target, target.Test.Results, coverage)
+		logTestSuccess(state, target, target.Test.Results, coverage)
 		return
 	}
 	var resultErr error
@@ -315,10 +315,10 @@ func logTargetResults(tid int, state *core.BuildState, target *core.BuildTarget,
 		resultErr = fmt.Errorf("unknown error")
 		resultMsg = "Something went wrong"
 	}
-	state.LogTestResult(tid, target, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
+	state.LogTestResult(target, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
 }
 
-func logTestSuccess(state *core.BuildState, tid int, target *core.BuildTarget, results *core.TestSuite, coverage *core.TestCoverage) {
+func logTestSuccess(state *core.BuildState, target *core.BuildTarget, results *core.TestSuite, coverage *core.TestCoverage) {
 	var description string
 	tests := pluralise("test", results.Tests())
 	if results.Skips() != 0 {
@@ -327,7 +327,7 @@ func logTestSuccess(state *core.BuildState, tid int, target *core.BuildTarget, r
 	} else {
 		description = fmt.Sprintf("%d %s passed.", len(results.TestCases), tests)
 	}
-	state.LogTestResult(tid, target, core.TargetTested, results, coverage, nil, description)
+	state.LogTestResult(target, core.TargetTested, results, coverage, nil, description)
 }
 
 func pluralise(word string, quantity int) string {
@@ -357,9 +357,9 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 	return stderr, err
 }
 
-func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
+func doTest(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
 	startTime := time.Now()
-	metadata, resultsData, coverage, err := doTestResults(tid, state, target, runRemotely, run)
+	metadata, resultsData, coverage, err := doTestResults(state, target, runRemotely, run)
 	duration := time.Since(startTime)
 	parsedSuite := parseTestOutput(string(metadata.Stdout), string(metadata.Stderr), err, duration, target, resultsData)
 	return core.TestSuite{
@@ -373,18 +373,18 @@ func doTest(tid int, state *core.BuildState, target *core.BuildTarget, runRemote
 	}, coverage
 }
 
-func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
+func doTestResults(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
 	var err error
 	var metadata *core.BuildMetadata
 
 	if runRemotely {
-		metadata, err = state.RemoteClient.Test(tid, target, run)
+		metadata, err = state.RemoteClient.Test(target, run)
 		if metadata == nil {
 			metadata = new(core.BuildMetadata)
 		}
 	} else {
 		var stdout []byte
-		stdout, err = prepareAndRunTest(tid, state, target, run)
+		stdout, err = prepareAndRunTest(state, target, run)
 		metadata = &core.BuildMetadata{Stdout: stdout}
 	}
 
@@ -407,9 +407,9 @@ func doTestResults(tid int, state *core.BuildState, target *core.BuildTarget, ru
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
-func prepareAndRunTest(tid int, state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
+func prepareAndRunTest(state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
 	if err = core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
-		state.LogBuildError(tid, target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
+		state.LogBuildError(target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
 		return []byte{}, err
 	}
 	return runTest(state, target, run)
@@ -546,7 +546,7 @@ func moveOutputFile(state *core.BuildState, hash []byte, from, to, dummy string)
 }
 
 // verifyWorkerNotNeeded returns an error if a persistent worker is needed.
-func verifyWorkerNotNeeded(tid int, state *core.BuildState, target *core.BuildTarget) error {
+func verifyWorkerNotNeeded(state *core.BuildState, target *core.BuildTarget) error {
 	workerCmd, _, _, err := core.TestWorkerCommand(state, target)
 	if err != nil {
 		return err
@@ -562,13 +562,13 @@ func verifyHash(state *core.BuildState, filename string, hash []byte) bool {
 }
 
 // runtimeHash returns the runtime hash of a target, or an empty slice if running remotely.
-func runtimeHash(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) ([]byte, error) {
+func runtimeHash(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) ([]byte, error) {
 	if runRemotely {
 		return nil, nil
 	}
 	if target.Local {
 		// If the test is marked to run locally, download the inputs as we need these to calculate the runtime hash.
-		if err := state.DownloadInputsIfNeeded(tid, target, true); err != nil {
+		if err := state.DownloadInputsIfNeeded(target, true); err != nil {
 			return nil, err
 		}
 	}

@@ -17,9 +17,10 @@ var log = logging.Log
 
 // A traceWriter is responsible for writing the JSON trace info.
 type traceWriter struct {
-	b     *bufio.Writer
-	f     *os.File
-	first bool // have we written the first record
+	b      *bufio.Writer
+	f      *os.File
+	active map[core.BuildLabel]struct{}
+	first  bool // have we written the first record
 }
 
 // newTraceWriter returns a new traceWriter writing to the given file.
@@ -35,8 +36,9 @@ func newTraceWriter(filename string) *traceWriter {
 	// This is more robust than the object format and we don't write anything of use into that anyway.
 	b.Write([]byte("[\n"))
 	return &traceWriter{
-		b: b,
-		f: f,
+		b:      b,
+		f:      f,
+		active: map[core.BuildLabel]struct{}{},
 	}
 }
 
@@ -51,19 +53,20 @@ func (tw *traceWriter) Close() error {
 }
 
 // AddTrace adds a single trace to this writer.
-func (tw *traceWriter) AddTrace(result *core.BuildResult, previous core.BuildLabel, active bool) {
+func (tw *traceWriter) AddTrace(threadID int, result *core.BuildResult, active bool) {
 	// It's a bit fiddly to keep all the phases in line here.
 	if !active {
-		tw.writeEvent(result, "E")
-	} else if result.Label != previous {
-		tw.writeEvent(result, "B")
+		tw.writeEvent(threadID, result, "E") // end the span for this target
+		delete(tw.active, result.Label)
+	} else if _, present := tw.active[result.Label]; !present {
+		tw.writeEvent(threadID, result, "B") // begin a new span for this target
+		tw.active[result.Label] = struct{}{}
 	} else {
-		tw.writeEvent(result, "E")
-		tw.writeEvent(result, "B")
+		tw.writeEvent(threadID, result, "i")
 	}
 }
 
-func (tw *traceWriter) writeEvent(result *core.BuildResult, phase string) {
+func (tw *traceWriter) writeEvent(threadID int, result *core.BuildResult, phase string) {
 	if !tw.first {
 		tw.first = true
 	} else {
@@ -77,7 +80,7 @@ func (tw *traceWriter) writeEvent(result *core.BuildResult, phase string) {
 		Ts:    result.Time.UnixNano() / 1000,
 		Cname: "thread_state_runnable", // Colours have to fit available names, this is blueish.
 	}
-	entry.Tid = fmt.Sprintf("Builder %d", result.ThreadID)
+	entry.Tid = fmt.Sprintf("Builder %d", threadID)
 	entry.Args.Description = result.Description
 	if result.Err != nil {
 		entry.Args.Err = fmt.Sprintf("%s", result.Err)

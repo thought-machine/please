@@ -39,34 +39,44 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)
 
-	parses, actions, remoteActions := state.TaskQueues()
+	parses, actions := state.TaskQueues()
+
+	localLimiter := make(limiter, config.Please.NumThreads)
+	remoteLimiter := make(limiter, config.NumRemoteExecutors())
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
-	wg.Add(1 + config.Please.NumThreads + config.NumRemoteExecutors())
+	wg.Add(2)
 	go func() {
-		// All parses happen async on separate goroutines so we don't have to worry about them blocking.
-		// They manage concurrency control themselves.
 		for task := range parses {
 			go func(task core.ParseTask) {
-				parse.Parse(0, state, task.Label, task.Dependent, task.ForSubinclude)
+				parse.Parse(state, task.Label, task.Dependent, task.ForSubinclude)
 				state.TaskDone()
 			}(task)
 		}
 		wg.Done()
 	}()
-	for i := 0; i < config.Please.NumThreads; i++ {
-		go func(tid int) {
-			doTasks(tid, state, actions, false)
-			wg.Done()
-		}(i)
-	}
-	for i := 0; i < config.NumRemoteExecutors(); i++ {
-		go func(tid int) {
-			doTasks(tid, state, remoteActions, true)
-			wg.Done()
-		}(config.Please.NumThreads + i)
-	}
+	go func() {
+		for task := range actions {
+			go func(task core.Task) {
+				if task.Remote {
+					remoteLimiter.Acquire()
+					defer remoteLimiter.Release()
+				} else {
+					localLimiter.Acquire()
+					defer localLimiter.Release()
+				}
+				switch task.Type {
+				case core.TestTask:
+					test.Test(state, task.Label, task.Remote, int(task.Run))
+				case core.BuildTask:
+					build.Build(state, task.Label, task.Remote)
+				}
+				state.TaskDone()
+			}(task)
+		}
+		wg.Done()
+	}()
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	wg.Wait()
 	if state.Cache != nil {
@@ -86,24 +96,12 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, state.Config, cli.HostArch())
 }
 
-func doTasks(tid int, state *core.BuildState, actions <-chan core.Task, remote bool) {
-	for task := range actions {
-		switch task.Type {
-		case core.TestTask:
-			test.Test(tid, state, task.Label, remote, int(task.Run))
-		case core.BuildTask:
-			build.Build(tid, state, task.Label, remote)
-		}
-		state.TaskDone()
-	}
-}
-
 // findOriginalTasks finds the original parse tasks for the original set of targets.
 func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildLabel, arch cli.Arch) {
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		parse.Parse(0, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false)
+		parse.Parse(state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false)
 	}
 	if arch.Arch != "" && arch != cli.HostArch() {
 		// Set up a new subrepo for this architecture.
@@ -247,4 +245,16 @@ func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
 		}
 	}
 	return ret
+}
+
+// A limiter allows only a certain number of concurrent tasks
+// TODO(peterebden): We have about four of these now, commonise this somewhere
+type limiter chan struct{}
+
+func (l limiter) Acquire() {
+	l <- struct{}{}
+}
+
+func (l limiter) Release() {
+	<-l
 }

@@ -21,42 +21,59 @@ type buildingTarget struct {
 	Active       bool
 	Failed       bool
 	Cached       bool
+	Remote       bool
 }
 
 // Collects all the currently building targets.
 type buildingTargets struct {
 	plain          bool
+	anyRemote      bool
 	state          *core.BuildState
 	targets        []buildingTarget
+	currentTargets map[core.BuildLabel]int
+	available      map[int]struct{}
 	FailedTargets  map[core.BuildLabel]error
 	FailedNonTests []core.BuildLabel
 }
 
 func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTargets {
+	n := state.Config.Please.NumThreads + state.Config.NumRemoteExecutors()
+	available := make(map[int]struct{}, n)
+	for i := 0; i < n; i++ {
+		available[i] = struct{}{}
+	}
 	return &buildingTargets{
-		plain:         plainOutput,
-		state:         state,
-		targets:       make([]buildingTarget, state.Config.Please.NumThreads+state.Config.NumRemoteExecutors()),
-		FailedTargets: map[core.BuildLabel]error{},
+		plain:          plainOutput,
+		anyRemote:      state.Config.NumRemoteExecutors() > 0,
+		state:          state,
+		targets:        make([]buildingTarget, n),
+		currentTargets: make(map[core.BuildLabel]int, n),
+		available:      available,
+		FailedTargets:  map[core.BuildLabel]error{},
 	}
 }
 
-// Targets returns the set of currently known building targets, split into local and remote.
-func (bt *buildingTargets) Targets() (local []buildingTarget, remote []buildingTarget) {
-	n := bt.state.Config.Please.NumThreads
-	return bt.targets[:n], bt.targets[n:]
+// Targets returns the set of currently known building targets.
+func (bt *buildingTargets) Targets() []buildingTarget {
+	return bt.targets
 }
 
 // ProcessResult updates with a single result.
-// It returns the label that was in this slot previously.
-func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLabel {
-	label := result.Label
-	prev := bt.targets[result.ThreadID].Label
-	if !result.Status.IsParse() { // Parse tasks happen on a different set of threads.
-		if t := bt.state.Graph.Target(label); t != nil {
-			bt.updateTarget(result, t)
-		}
+// It returns a 'thread id' for it (which is relevant for trace output)
+func (bt *buildingTargets) ProcessResult(result *core.BuildResult) int {
+	defer bt.handleOutput(result)
+	if result.Status.IsParse() { // Parse tasks don't take a slot here
+		return 0
 	}
+	idx := bt.index(result.Label)
+	if t := bt.state.Graph.Target(result.Label); t != nil {
+		bt.updateTarget(idx, result, t)
+	}
+	return idx
+}
+
+func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
+	label := result.Label
 	if result.Status.IsFailure() {
 		bt.FailedTargets[label] = result.Err
 		// Don't stop here after test failure, aggregate them for later.
@@ -83,12 +100,25 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) core.BuildLab
 			}
 		}
 	}
-	return prev
+}
+
+// index returns the index to use for a result
+func (bt *buildingTargets) index(label core.BuildLabel) int {
+	if idx, present := bt.currentTargets[label]; present {
+		return idx
+	}
+	// Grab whatever is available
+	for idx := range bt.available {
+		delete(bt.available, idx)
+		return idx
+	}
+	// Nothing available. This theoretically shouldn't happen - let's see in practice...
+	return len(bt.targets) - 1
 }
 
 // updateTarget updates a single target with a new result.
-func (bt *buildingTargets) updateTarget(result *core.BuildResult, t *core.BuildTarget) {
-	target := &bt.targets[result.ThreadID]
+func (bt *buildingTargets) updateTarget(idx int, result *core.BuildResult, t *core.BuildTarget) {
+	target := &bt.targets[idx]
 	target.Label = result.Label
 	target.Description = result.Description
 	active := result.Status.IsActive()
@@ -106,6 +136,7 @@ func (bt *buildingTargets) updateTarget(result *core.BuildResult, t *core.BuildT
 	target.Err = result.Err
 	target.Colour = targetColour(t)
 	target.Target = t
+	target.Remote = bt.anyRemote && !t.Local
 
 	if bt.plain {
 		if !active {
@@ -114,6 +145,12 @@ func (bt *buildingTargets) updateTarget(result *core.BuildResult, t *core.BuildT
 		} else {
 			log.Info("%s: %s", result.Label, result.Description)
 		}
+	}
+	if !active {
+		bt.available[idx] = struct{}{}
+		delete(bt.currentTargets, t.Label)
+	} else {
+		bt.currentTargets[t.Label] = idx
 	}
 }
 

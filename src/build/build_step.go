@@ -55,18 +55,18 @@ var successfulLocalTargetBuildDuration = metrics.NewHistogram(
 )
 
 // Build implements the core logic for building a single target.
-func Build(tid int, state *core.BuildState, label core.BuildLabel, remote bool) {
+func Build(state *core.BuildState, label core.BuildLabel, remote bool) {
 	target := state.Graph.TargetOrDie(label)
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	start := time.Now()
-	if err := buildTarget(tid, state, target, remote); err != nil {
+	if err := buildTarget(state, target, remote); err != nil {
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
-			state.LogBuildResult(tid, target, core.TargetBuildStopped, "Build stopped")
+			state.LogBuildResult(target, core.TargetBuildStopped, "Build stopped")
 			return
 		}
-		state.LogBuildError(tid, label, core.TargetBuildFailed, err, "Build failed: %s", err)
+		state.LogBuildError(label, core.TargetBuildFailed, err, "Build failed: %s", err)
 		if err := RemoveOutputs(target); err != nil {
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}
@@ -114,7 +114,7 @@ func findFilegroupSourcesWithTmpDir(target *core.BuildTarget) []core.BuildLabel 
 	return srcs
 }
 
-func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) error {
+func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup {
 		potentialTargets := findFilegroupSourcesWithTmpDir(target)
 		if len(potentialTargets) > 0 {
@@ -124,7 +124,7 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 		return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 	}
 	// Ensure we have downloaded any previous dependencies if that's relevant.
-	if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
+	if err := state.DownloadInputsIfNeeded(target, false); err != nil {
 		return err
 	}
 	if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
@@ -152,7 +152,7 @@ func prepareOnly(tid int, state *core.BuildState, target *core.BuildTarget) erro
 //     b) attempt to fetch the outputs from the cache based on the output hash
 //  3. Actually build the rule
 //  4. Store result in the cache
-func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -173,15 +173,15 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	// This must run before we can leave this function successfully by any path.
 	if target.PreBuildFunction != nil {
 		log.Debug("Running pre-build function for %s", target.Label)
-		if err := state.Parser.RunPreBuildFunction(tid, state, target); err != nil {
+		if err := state.Parser.RunPreBuildFunction(state, target); err != nil {
 			return err
 		}
 		log.Debug("Finished pre-build function for %s", target.Label)
 	}
 
-	state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
+	state.LogBuildResult(target, core.TargetBuilding, "Preparing...")
 	if state.PrepareOnly && state.IsOriginalTarget(target) && !state.NeedTests {
-		return prepareOnly(tid, state, target)
+		return prepareOnly(state, target)
 	}
 
 	var postBuildOutput string
@@ -194,19 +194,19 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 
 	if runRemotely {
-		metadata, err = state.RemoteClient.Build(tid, target)
+		metadata, err = state.RemoteClient.Build(target)
 		if err != nil {
 			return err
 		}
 	} else {
 		// Wait if another process is currently building this target
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Acquiring target lock...")
+		state.LogBuildResult(target, core.TargetBuilding, "Acquiring target lock...")
 		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
 		defer core.ReleaseFileLock(file)
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
+		state.LogBuildResult(target, core.TargetBuilding, "Preparing...")
 
 		// Ensure we have downloaded any previous dependencies if that's relevant.
-		if err := state.DownloadInputsIfNeeded(tid, target, false); err != nil {
+		if err := state.DownloadInputsIfNeeded(target, false); err != nil {
 			return err
 		}
 
@@ -229,7 +229,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 				addOutDirOutsFromMetadata(target, metadata)
 
 				if target.PostBuildFunction != nil {
-					if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), ""); err != nil {
+					if err := runPostBuildFunction(state, target, string(metadata.Stdout), ""); err != nil {
 						log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
 					}
 				}
@@ -242,7 +242,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 					copyFilegroupHashes(state, target)
 				}
 				target.SetState(core.Reused)
-				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
+				state.LogBuildResult(target, core.TargetCached, "Unchanged")
 				buildLinks(state, target)
 				return nil // Nothing needs to be done.
 			}
@@ -260,10 +260,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 					return err
 				}
 				target.SetState(core.Built)
-				state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
+				state.LogBuildResult(target, core.TargetBuilt, "Built")
 			} else {
 				target.SetState(core.Unchanged)
-				state.LogBuildResult(tid, target, core.TargetCached, "Unchanged")
+				state.LogBuildResult(target, core.TargetCached, "Unchanged")
 			}
 			buildLinks(state, target)
 			return nil
@@ -289,28 +289,28 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 					addOutDirOutsFromMetadata(target, metadata)
 					if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 						postBuildOutput = string(metadata.Stdout)
-						if err := runPostBuildFunction(tid, state, target, postBuildOutput, ""); err != nil {
+						if err := runPostBuildFunction(state, target, postBuildOutput, ""); err != nil {
 							return err
 						}
 					}
 					// Now that we've updated the rule, retrieve the artifacts with the new output hash
-					if retrieveArtifacts(tid, state, target, oldOutputHash) {
+					if retrieveArtifacts(state, target, oldOutputHash) {
 						return writeRuleHash(state, target)
 					}
 				}
-			} else if retrieveArtifacts(tid, state, target, oldOutputHash) {
+			} else if retrieveArtifacts(state, target, oldOutputHash) {
 				return nil
 			}
 		}
 		if err := target.CheckSecrets(); err != nil {
 			return err
 		}
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Preparing...")
+		state.LogBuildResult(target, core.TargetBuilding, "Preparing...")
 		if err := prepareSources(state, state.Graph, target); err != nil {
 			return fmt.Errorf("Error preparing sources for %s: %s", target.Label, err)
 		}
 
-		state.LogBuildResult(tid, target, core.TargetBuilding, target.BuildingDescription)
+		state.LogBuildResult(target, core.TargetBuilding, target.BuildingDescription)
 		metadata, err = build(state, target, cacheKey)
 		if err != nil {
 			return err
@@ -331,14 +331,14 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 
 	if target.PostBuildFunction != nil {
 		outs := target.Outputs()
-		if err := runPostBuildFunction(tid, state, target, string(metadata.Stdout), postBuildOutput); err != nil {
+		if err := runPostBuildFunction(state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
 		}
 
 		if runRemotely && len(outs) != len(target.Outputs()) {
 			// postBuildFunction has changed the target - must rebuild it
 			log.Info("Rebuilding %s after post-build function", target)
-			metadata, err = state.RemoteClient.Build(tid, target)
+			metadata, err = state.RemoteClient.Build(target)
 			if err != nil {
 				return err
 			}
@@ -350,10 +350,10 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	if runRemotely {
 		if metadata.Cached {
 			target.SetState(core.ReusedRemotely)
-			state.LogBuildResult(tid, target, core.TargetBuilt, "Reused existing action")
+			state.LogBuildResult(target, core.TargetBuilt, "Reused existing action")
 		} else {
 			target.SetState(core.BuiltRemotely)
-			state.LogBuildResult(tid, target, core.TargetBuilt, "Built remotely")
+			state.LogBuildResult(target, core.TargetBuilt, "Built remotely")
 		}
 		if state.ShouldDownload(target) {
 			if err := state.EnsureDownloaded(target); err != nil {
@@ -366,7 +366,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		return fmt.Errorf("failed to store target build metadata for %s: %w", target.Label, err)
 	}
 
-	state.LogBuildResult(tid, target, core.TargetBuilding, "Collecting outputs...")
+	state.LogBuildResult(target, core.TargetBuilding, "Collecting outputs...")
 	outs, outputsChanged, err := moveOutputs(state, target)
 	if err != nil {
 		return fmt.Errorf("error moving outputs for target %s: %w", target.Label, err)
@@ -381,7 +381,7 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 	}
 	buildLinks(state, target)
 	if state.Cache != nil {
-		state.LogBuildResult(tid, target, core.TargetBuilding, "Storing...")
+		state.LogBuildResult(target, core.TargetBuilding, "Storing...")
 		newCacheKey := mustShortTargetHash(state, target)
 
 		// If the build could modify the target, store the metadata in the cache based on the original state of the
@@ -403,9 +403,9 @@ func buildTarget(tid int, state *core.BuildState, target *core.BuildTarget, runR
 		}
 	}
 	if outputsChanged {
-		state.LogBuildResult(tid, target, core.TargetBuilt, "Built")
+		state.LogBuildResult(target, core.TargetBuilt, "Built")
 	} else {
-		state.LogBuildResult(tid, target, core.TargetBuilt, "Built (unchanged)")
+		state.LogBuildResult(target, core.TargetBuilt, "Built (unchanged)")
 	}
 	return nil
 }
@@ -448,16 +448,16 @@ func storeInCache(cache core.Cache, target *core.BuildTarget, key []byte, files 
 //  1. if there are no declared outputs, return true; there's nothing to be done
 //  2. pull all the declared outputs from the cache has based on the short hash of the target
 //  3. check that pulling the artifacts changed the output hash and set the build state accordingly
-func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget, oldOutputHash []byte) bool {
+func retrieveArtifacts(state *core.BuildState, target *core.BuildTarget, oldOutputHash []byte) bool {
 	// If there aren't any outputs, we don't have to do anything right now.
 	// Checks later will handle the case of something with a post-build function that
 	// later tries to add more outputs.
 	if len(target.DeclaredOutputs()) == 0 && len(target.DeclaredNamedOutputs()) == 0 {
 		target.SetState(core.Unchanged)
-		state.LogBuildResult(tid, target, core.TargetCached, "Nothing to do")
+		state.LogBuildResult(target, core.TargetCached, "Nothing to do")
 		return true
 	}
-	state.LogBuildResult(tid, target, core.TargetBuilding, "Checking cache...")
+	state.LogBuildResult(target, core.TargetBuilding, "Checking cache...")
 
 	cacheKey := mustShortTargetHash(state, target)
 
@@ -476,10 +476,10 @@ func retrieveArtifacts(tid int, state *core.BuildState, target *core.BuildTarget
 			return false
 		} else if oldOutputHash == nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 			target.SetState(core.Cached)
-			state.LogBuildResult(tid, target, core.TargetCached, "Cached")
+			state.LogBuildResult(target, core.TargetCached, "Cached")
 		} else {
 			target.SetState(core.Unchanged)
-			state.LogBuildResult(tid, target, core.TargetCached, "Cached (unchanged)")
+			state.LogBuildResult(target, core.TargetCached, "Cached (unchanged)")
 		}
 		buildLinks(state, target)
 
@@ -969,7 +969,7 @@ func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, h
 // In some cases it may have already run; if so we compare the previous output and warn
 // if the two differ (they must be deterministic to ensure it's a pure function, since there
 // are a few different paths through here and we guarantee to only run them once).
-func runPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTarget, output, prevOutput string) error {
+func runPostBuildFunction(state *core.BuildState, target *core.BuildTarget, output, prevOutput string) error {
 	if prevOutput != "" {
 		if output != prevOutput {
 			log.Warning("The build output for %s differs from what we got back from the cache earlier.\n"+
@@ -980,7 +980,7 @@ func runPostBuildFunction(tid int, state *core.BuildState, target *core.BuildTar
 		}
 		return nil
 	}
-	return state.Parser.RunPostBuildFunction(tid, state, target, output)
+	return state.Parser.RunPostBuildFunction(state, target, output)
 }
 
 // checkLicences checks the licences for the target match what we've accepted / rejected in the config
