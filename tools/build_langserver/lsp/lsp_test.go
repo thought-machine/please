@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bazelbuild/buildtools/build"
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
 	"github.com/stretchr/testify/assert"
@@ -196,6 +197,35 @@ func TestFormatting(t *testing.T) {
 			NewText: "    ],\n)\n",
 		},
 	}, edits)
+}
+
+const testFormattingMalformedContent = `go_test(
+    name = "lsp_test",
+    srcs = ["lsp_test.go"]  # no comma
+    deps = [":lsp","///third_party/go/github.com_stretchr_testify//assert"],
+)
+`
+
+func TestFormattingMalformedContent(t *testing.T) {
+	h := initHandler()
+	err := h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{
+		TextDocument: lsp.TextDocumentItem{
+			URI:  "file://test/test.build",
+			Text: testFormattingMalformedContent,
+		},
+	}, nil)
+	assert.NoError(t, err)
+	edits := []lsp.TextEdit{}
+	err = h.Request("textDocument/formatting", &lsp.DocumentFormattingParams{
+		TextDocument: lsp.TextDocumentIdentifier{
+			URI: "file://test/test.build",
+		},
+	}, &edits)
+	assert.Error(t, err)
+
+	// check that it's a ParseError
+	_, ok := err.(build.ParseError)
+	assert.True(t, ok)
 }
 
 func TestShutdown(t *testing.T) {
