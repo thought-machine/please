@@ -30,7 +30,6 @@ for OUTPUT in $OUTPUTS; do
     chmod 0775 "$TARGET"
 done
 ln -sf "${DEST}/please" "${DEST}/plz"
-chmod 0664 "${DEST}/junit_runner.jar"
 
 echo "Please installed into $DEST"
 
