@@ -169,7 +169,8 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Port int `short:"p" long:"port" description:"Debugging server port"`
+		Port int               `short:"p" long:"port" description:"Debugging server port"`
+		Env  map[string]string `short:"e" long:"env" description:"Environment variables to set for the debugged process"`
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
@@ -522,7 +523,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args)
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args, exec.ConvertEnv(opts.Debug.Env))
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target.BuildLabel}, true, false, false)
