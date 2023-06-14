@@ -28,3 +28,11 @@ remote_file(
     binary = True,
     url = f"https://github.com/Tatskaari/go-deps/releases/download/{GO_DEPS_VERSION}/go_deps_{GO_DEPS_VERSION}_{CONFIG.OS}_{CONFIG.ARCH}",
 )
+
+PUKU_VERSION = "0.1.0"
+
+remote_file(
+    name = "puku",
+    url = f"https://github.com/please-build/puku/releases/download/v{PUKU_VERSION}/puku-{PUKU_VERSION}-{CONFIG.OS}_{CONFIG.ARCH}",
+    binary = True,
+)

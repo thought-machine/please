@@ -35,9 +35,9 @@ keep = //test/...
 keep = //docs:all
 keep = //package:all
 
-[alias "autofix"]
-desc = Generates generated code and applies lint fixes
-cmd = run //:autofix
+[alias "puku"]
+desc = Runs puku, the golang build file automation tool
+cmd = run //third_party/binary:puku --
 
 [alias "bootstrap"]
 desc = Bootstraps Please from scratch
