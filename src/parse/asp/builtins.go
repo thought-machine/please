@@ -1031,17 +1031,20 @@ func getNamedOuts(s *scope, args []pyObject) pyObject {
 		target = getTargetPost(s, name)
 	}
 
-	var outs []string
+	var outs map[string][]string
 	if target.IsFilegroup {
-		outs = target.DeclaredSourceNames()
+		outs = target.DeclaredNamedSources()
 	} else {
-		outs = target.DeclaredOutputNames()
+		outs = target.DeclaredNamedOutputs()
 	}
 
 	ret := make(pyDict, len(outs))
-	for _, k := range outs {
-		t := core.AnnotatedOutputLabel{target.Label, k}
-		ret[k] = pyList{pyString(t.String())}
+	for k, v := range outs {
+		list := make(pyList, len(v))
+		for i, out := range v {
+			list[i] = pyString(out)
+		}
+		ret[k] = list
 	}
 	return ret
 }

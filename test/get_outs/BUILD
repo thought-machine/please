@@ -33,17 +33,17 @@ def assert_dict(l1, l2):
 assert_dict({}, get_named_outs(nonamedouts))
 
 assert_dict({
-    "wibble": ["//test/get_outs:genrule_getouts|wibble"],
-    "wobble": ["//test/get_outs:genrule_getouts|wobble"],
+    "wibble": ["wibble_file1"],
+    "wobble": ["wobble_file1"],
 }, get_named_outs(gr_getouts))
 
 assert_dict({
-    "wibble": ["//test/get_outs:filegroup_getouts|wibble"],
-    "wobble": ["//test/get_outs:filegroup_getouts|wobble"],
+    "wibble": ["//test/get_outs:wibble_file2"],
+    "wobble": ["//test/get_outs:wobble_file2"],
 }, get_named_outs(fg_getouts))
 
-gr_subtargets = get_named_outs(gr_getouts)
-fg_subtargets = get_named_outs(fg_getouts)
+gr_subtargets = { k: [f'{gr_getouts}|{k}'] for k, _ in get_named_outs(gr_getouts).items() }
+fg_subtargets = { k: [f'{fg_getouts}|{k}'] for k, _ in get_named_outs(fg_getouts).items() }
 
 gentest(
     name = "get_outs_gr_wibble_test",
