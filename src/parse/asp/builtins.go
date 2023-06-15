@@ -57,6 +57,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_data", addData)
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "get_outs", getOuts)
+	setNativeCode(s, "get_named_outs", getNamedOuts)
 	setNativeCode(s, "add_licence", addLicence)
 	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
@@ -1016,6 +1017,34 @@ func getOuts(s *scope, args []pyObject) pyObject {
 	ret := make(pyList, len(outs))
 	for i, out := range outs {
 		ret[i] = pyString(out)
+	}
+	return ret
+}
+
+// getNamedOuts gets the named outputs of a target
+func getNamedOuts(s *scope, args []pyObject) pyObject {
+	var target *core.BuildTarget
+	if name := args[0].String(); core.LooksLikeABuildLabel(name) {
+		label := core.ParseBuildLabel(name, s.pkg.Name)
+		target = s.state.Graph.TargetOrDie(label)
+	} else {
+		target = getTargetPost(s, name)
+	}
+
+	var outs map[string][]string
+	if target.IsFilegroup {
+		outs = target.DeclaredNamedSources()
+	} else {
+		outs = target.DeclaredNamedOutputs()
+	}
+
+	ret := make(pyDict, len(outs))
+	for k, v := range outs {
+		list := make(pyList, len(v))
+		for i, out := range v {
+			list[i] = pyString(out)
+		}
+		ret[k] = list
 	}
 	return ret
 }

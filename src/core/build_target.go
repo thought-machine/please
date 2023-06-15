@@ -718,6 +718,29 @@ func (target *BuildTarget) DeclaredOutputNames() []string {
 	return ret
 }
 
+// DeclaredNamedSources returns the named sources from this target's original declaration.
+func (target *BuildTarget) DeclaredNamedSources() map[string][]string {
+	ret := make(map[string][]string, len(target.NamedSources))
+	for k, v := range target.NamedSources {
+		ret[k] = make([]string, len(v))
+		for i, bi := range v {
+			ret[k][i] = bi.String()
+		}
+	}
+	return ret
+}
+
+// DeclaredSourceNames is a convenience function to return the names of the declared
+// sources in a consistent order.
+func (target *BuildTarget) DeclaredSourceNames() []string {
+	ret := make([]string, 0, len(target.NamedSources))
+	for name := range target.NamedSources {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
+}
+
 func (target *BuildTarget) filegroupOutputs(srcs []BuildInput) []string {
 	ret := make([]string, 0, len(srcs))
 	// Filegroups just re-output their inputs.
