@@ -440,3 +440,12 @@ func TestPluginConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
 }
+
+func TestOverrideArchField(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{
+		"build.hostarch": "linux_arm64",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, cli.NewArch("linux", "arm64"), config.Build.HostArch)
+}

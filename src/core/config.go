@@ -925,6 +925,11 @@ func applyOverrideOnSectionField(field reflect.Value, tag reflect.StructTag, val
 			}
 			field.Set(reflect.ValueOf(parts))
 		}
+	case reflect.Struct:
+		if unmarshaler, ok := field.Addr().Interface().(flags.Unmarshaler); ok {
+			return unmarshaler.UnmarshalFlag(value)
+		}
+		fallthrough
 	default:
 		return fmt.Errorf("can't override config field of type %v", field.Kind())
 	}
