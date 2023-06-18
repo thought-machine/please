@@ -236,7 +236,7 @@ func HostArch() Arch {
 }
 
 // String prints this Arch to its string representation.
-func (arch *Arch) String() string {
+func (arch Arch) String() string {
 	return arch.OS + "_" + arch.Arch
 }
 
