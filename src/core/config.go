@@ -737,6 +737,7 @@ func (config *Configuration) Hash() []byte {
 	// Note that container settings are handled separately.
 	h.Write([]byte(config.Build.Lang))
 	h.Write([]byte(config.Build.Nonce))
+	h.Write([]byte(config.Build.HostArch))
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
