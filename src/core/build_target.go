@@ -1655,7 +1655,7 @@ func (target *BuildTarget) toolPath(abs bool, namedOutput string) string {
 			if abs {
 				ret[i] = filepath.Join(RepoRoot, target.OutDir(), o)
 			} else {
-				ret[i] = filepath.Join(target.Label.PackageName, o)
+				ret[i] = filepath.Join(target.PackageDir(), o)
 			}
 		}
 		return strings.Join(ret, " ")
