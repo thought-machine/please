@@ -862,7 +862,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.changes": func() int {
 		// query changes always excludes 'manual' targets.
-		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
+		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+config.Build.HostArch().String())
 		includeSubrepos := opts.Query.Changes.IncludeSubrepos
 		level := opts.Query.Changes.Level // -2 means unset -1 means all transitive
 		transitive := opts.Query.Changes.IncludeDependees == "transitive"
@@ -1249,7 +1249,7 @@ func readConfig() *core.Configuration {
 // Which phases get run are controlled by shouldBuild and shouldTest.
 func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) (bool, *core.BuildState) {
 	if !isQuery {
-		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
+		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+config.Build.HostArch().String())
 	}
 	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !plz.ReadingStdin(targets) {
 		if len(targets) == 0 {

@@ -26,9 +26,6 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-// OsArch is the os/arch pair, like linux_amd64 etc.
-const OsArch = runtime.GOOS + "_" + runtime.GOARCH
-
 // ConfigName is the base name for config files.
 const ConfigName string = "plzconfig"
 
@@ -37,7 +34,7 @@ const ConfigFileName string = ".plzconfig"
 
 // ArchConfigFileName is the architecture-specific config file which overrides the repo one.
 // Also normally checked in if needed.
-const ArchConfigFileName string = ".plzconfig_" + OsArch
+const ArchConfigFileName string = ".plzconfig_" + runtime.GOOS + "_" + runtime.GOARCH
 
 // LocalConfigFileName is the file name for the local repo config - this is not normally checked
 // in and used to override settings on the local machine.
