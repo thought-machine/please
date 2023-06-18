@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/thought-machine/please/src/cli/logging"
@@ -41,7 +40,7 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 		}
 	}
 	for pkg, hashes := range m {
-		if err := rewriteHashes(state, pkg.Filename, runtime.GOOS+"_"+runtime.GOARCH, hashes); err != nil {
+		if err := rewriteHashes(state, pkg.Filename, state.Config.Build.HostArch.String(), hashes); err != nil {
 			log.Fatalf("%s\n", err)
 		}
 	}

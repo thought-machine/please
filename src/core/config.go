@@ -365,7 +365,8 @@ func DefaultConfiguration() *Configuration {
 	config.Please.NumThreads = runtime.NumCPU() + 2
 	config.Parse.NumThreads = config.Please.NumThreads
 	config.Parse.GitFunctions = true
-	config.Build.Arch = cli.NewArch(runtime.GOOS, runtime.GOARCH)
+	config.Build.HostArch = cli.HostArch()
+	config.Build.Arch = cli.HostArch()
 	config.Build.Lang = "en_GB.UTF-8" // Not the language of the UI, the language passed to rules.
 	config.Build.Nonce = "1402"       // Arbitrary nonce to invalidate config when needed.
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
@@ -495,6 +496,7 @@ type Configuration struct {
 	Colours map[string]string `help:"Colour code overrides for the targets in interactive output. These colours are map labels on targets to colours e.g. go -> ${YELLOW}."`
 	Build   struct {
 		Arch                 cli.Arch     `help:"The target architecture to compile for. Defaults to the host architecture."`
+		HostArch             cli.Arch     `help:"The host architecture of the machine. Defaults to the actual host architecture."`
 		Timeout              cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
 		Path                 []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
 		Config               string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`

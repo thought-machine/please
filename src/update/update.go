@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -229,7 +228,7 @@ func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 		ext = ".tar.xz"
 	}
 	v := config.Please.Version.VersionString()
-	url = fmt.Sprintf("%s/%s_%s/%s/please_%s%s", url, runtime.GOOS, runtime.GOARCH, v, v, ext)
+	url = fmt.Sprintf("%s/%s/%s/please_%s%s", url, cli.HostArch().String(), v, v, ext)
 	pleaseReadCloser := mustDownload(url, progress)
 	defer mustClose(pleaseReadCloser)
 	var pleaseReader io.Reader = bufio.NewReader(pleaseReadCloser)
