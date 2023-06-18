@@ -95,7 +95,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 // RunHost is a convenience function that uses the host architecture, the given state's
 // configuration and no pre targets. It is otherwise identical to Run.
 func RunHost(targets []core.BuildLabel, state *core.BuildState) {
-	Run(targets, nil, state, state.Config, cli.HostArch())
+	Run(targets, nil, state, state.Config, state.Config.Build.HostArch)
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
@@ -105,7 +105,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		// This is a bit crap really since it inhibits parallelism for the first step.
 		parse.Parse(state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, false)
 	}
-	if arch.Arch != "" && arch != cli.HostArch() {
+	if arch.Arch != "" && arch != state.Config.Build.HostArch {
 		// Set up a new subrepo for this architecture.
 		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
 	}
@@ -146,17 +146,17 @@ func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.B
 	}
 	label.Subrepo = strings.TrimPrefix(label.Subrepo, config.PluginDefinition.Name+"_")
 
-	hostArch := cli.HostArch()
-	if label.Subrepo == hostArch.String() {
+	hostArch := config.Build.HostArch.String()
+	if label.Subrepo == hostArch {
 		label.Subrepo = ""
 	}
-	label.Subrepo = strings.TrimSuffix(label.Subrepo, "_"+hostArch.String())
+	label.Subrepo = strings.TrimSuffix(label.Subrepo, "_"+hostArch)
 
 	return label
 }
 
 func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool, arch cli.Arch) {
-	if arch != cli.HostArch() {
+	if arch != state.Config.Build.HostArch {
 		target = core.LabelToArch(target, arch)
 	}
 	target = stripHostRepoName(state.Config, target)

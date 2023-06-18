@@ -10,7 +10,6 @@ import (
 
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/rules/bazel"
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/parse/asp"
 )
@@ -99,7 +98,7 @@ func createBazelSubrepo(state *core.BuildState) {
 		return
 	}
 	dir := filepath.Join(core.OutDir, "bazel_tools")
-	state.Graph.AddSubrepo(core.NewSubrepo(state, "bazel_tools", dir, nil, cli.HostArch(), false))
+	state.Graph.AddSubrepo(core.NewSubrepo(state, "bazel_tools", dir, nil, state.Config.Build.HostArch, false))
 	// TODO(peterebden): This is a bit yuck... would be nice if we could avoid hardcoding all
 	//                   this upfront and add a build target to do it for us.
 	dir = filepath.Join(dir, "tools/build_defs/repo")

@@ -4,7 +4,6 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/golang.org_x_sync//errgroup",
-        "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",

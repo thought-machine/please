@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

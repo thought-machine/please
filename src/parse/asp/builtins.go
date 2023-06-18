@@ -15,7 +15,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -1175,7 +1174,7 @@ func subrepo(s *scope, args []pyObject) pyObject {
 
 	// Arch
 	isCrossCompile := s.pkg.Subrepo != nil && s.pkg.Subrepo.IsCrossCompile
-	arch := cli.HostArch()
+	arch := state.Config.Build.HostArch
 	if s.pkg.Subrepo != nil {
 		arch = s.pkg.Subrepo.Arch
 	}

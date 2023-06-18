@@ -14,7 +14,6 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -99,7 +98,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 	// This is a bit strange as normally if you run a binary for another platform, this will fail. In some cases
 	// this can be quite useful though e.g. to compile a binary for a target arch, then run an .sh script to
 	// push that to docker.
-	if state.TargetArch != cli.HostArch() {
+	if state.TargetArch != state.Config.Build.HostArch {
 		label.Subrepo = state.TargetArch.String()
 	}
 

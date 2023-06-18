@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cmap"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -290,7 +289,7 @@ func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildL
 	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
 		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
 			subrepo = pkg.SubrepoName
-		} else if arch := cli.HostArch(); strings.Contains(subrepo, "_"+arch.String()) {
+		} else if arch := s.state.Config.Build.HostArch; strings.Contains(subrepo, "_"+arch.String()) {
 			subrepo = strings.TrimSuffix(subrepo, "_"+arch.String())
 		} else if subrepo == arch.String() {
 			subrepo = ""
