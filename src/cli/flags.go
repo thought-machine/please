@@ -260,17 +260,6 @@ func (arch *Arch) UnmarshalFlag(in string) error {
 	return fmt.Errorf("Can't parse architecture %s (should be a Go-style arch pair, like 'linux_amd64' etc)", in)
 }
 
-// HostOS returns the OS of the host (machine doing the building).
-// Configuring certain tools (e.g. pip) requires this information, even when cross-compiling.
-func (arch *Arch) HostOS() string {
-	return runtime.GOOS
-}
-
-// HostArch returns the architecture of the host (machine doing the building).
-func (arch *Arch) HostArch() string {
-	return runtime.GOARCH
-}
-
 // XOS returns the "alternative" OS spelling which some things prefer.
 // The difference here is that "darwin" is instead returned as "osx".
 func (arch *Arch) XOS() string {

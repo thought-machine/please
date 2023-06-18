@@ -97,11 +97,3 @@ func TestGoArch(t *testing.T) {
 	a = NewArch("linux", "x86")
 	assert.Equal(t, "386", a.GoArch())
 }
-
-func TestHostArch(t *testing.T) {
-	a := NewArch("cross_compile_os", "cross_compile_arch")
-	assert.Equal(t, "cross_compile_os", a.OS)
-	assert.Equal(t, "cross_compile_arch", a.Arch)
-	assert.Equal(t, runtime.GOOS, a.HostOS())
-	assert.Equal(t, runtime.GOARCH, a.HostArch())
-}
