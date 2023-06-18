@@ -7,6 +7,11 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/honeycombio/honeycomb-opentelemetry-go"
+	"github.com/honeycombio/otel-config-go/otelconfig"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"path/filepath"
 	"strings"
@@ -205,15 +210,16 @@ func (c *Client) initExec() error {
 		NoSecurity:         !c.state.Config.Remote.Secure,
 		TransportCredsOnly: c.state.Config.Remote.Secure,
 		DialOpts:           dialOpts,
-	}, client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(map[string]time.Duration{
-		"default":          time.Duration(c.state.Config.Remote.Timeout),
-		"GetCapabilities":  5 * time.Second,
-		"BatchUpdateBlobs": time.Minute,
-		"BatchReadBlobs":   time.Minute,
-		"GetTree":          time.Minute,
-		"Execute":          0,
-		"WaitExecution":    0,
-	}))
+	},
+		client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(map[string]time.Duration{
+			"default":          time.Duration(c.state.Config.Remote.Timeout),
+			"GetCapabilities":  5 * time.Second,
+			"BatchUpdateBlobs": time.Minute,
+			"BatchReadBlobs":   time.Minute,
+			"GetTree":          time.Minute,
+			"Execute":          0,
+			"WaitExecution":    0,
+		}))
 	if err != nil {
 		return err
 	}
@@ -366,6 +372,7 @@ func (c *Client) downloadData(target *core.BuildTarget) error {
 
 // Run runs a target on the remote executors.
 func (c *Client) Run(target *core.BuildTarget) error {
+
 	if err := c.CheckInitialised(); err != nil {
 		return err
 	}
@@ -596,13 +603,41 @@ func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Comm
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+
+	bsp := honeycomb.NewBaggageSpanProcessor()
+
+	// use honeycomb distro to setup OpenTelemetry SDK
+	otelShutdown, err := otelconfig.ConfigureOpenTelemetry(
+		otelconfig.WithSpanProcessor(bsp),
+	)
+	if err != nil {
+		defer otelShutdown()
+	} else {
+		log.Warningf("Failed to set up tracing, continuing anyway")
+	}
+	tracer := otel.Tracer("test-tracer")
+	// Attributes represent additional key-value descriptors that can be bound
+	// to a metric observer or recorder.
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("attrA", "chocolate"),
+		attribute.String("attrB", "raspberry"),
+		attribute.String("attrC", "vanilla"),
+	}
+
+	// work begins
+	_, span := tracer.Start(
+		context.Background(),
+		"please-execution",
+		trace.WithAttributes(commonAttrs...))
+	defer span.End()
+
 	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(target, command, digest, isTest, needStdout); metadata != nil {
 			return metadata, ar, nil
 		}
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
-	command, digest, err := c.uploadAction(target, isTest, false)
+	command, digest, err = c.uploadAction(target, isTest, false)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}

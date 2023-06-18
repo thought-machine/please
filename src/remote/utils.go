@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"os"
 	"path/filepath"
 	"sort"
@@ -583,10 +584,13 @@ func reencodeSRI(target *core.BuildTarget, h string) string {
 
 // dialOpts returns a set of dial options to apply based on the config.
 func (c *Client) dialOpts() ([]grpc.DialOption, error) {
+
 	opts := []grpc.DialOption{
 		grpc.WithStatsHandler(c.stats),
 		// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	}
 	if c.state.Config.Remote.TokenFile == "" {
 		return opts, nil
