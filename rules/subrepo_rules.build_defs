@@ -202,9 +202,19 @@ def github_repo(name:str, repo:str, revision:str, build_file:str=None, labels:li
     org, _, repo = repo.partition('/')
     assert repo, "Must pass a valid Github repo argument, e.g. thought-machine/please"
 
-    # If it looks like semver, we need to remove the v from it because github formats their zips differently for semver
-    # tags
-    if is_semver(revision):
+    # If revision looks like a version number, we need to strip any "v" prefix from it because
+    # GitHub also strips it from the top-level directory name for zips generated for tags that
+    # look like version numbers
+    def is_dotted_version_number(v):
+        v = v.removeprefix("v")
+        num = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        for p in v.split("."):
+            for n in num:
+                p = p.replace(n, "")
+            if p != "":
+                return False
+        return True
+    if is_semver(revision) or is_dotted_version_number(revision):
         prefix = revision.removeprefix('v')
     else:
         prefix = revision
