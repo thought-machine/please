@@ -1,3 +1,22 @@
+Version 17.1.0
+---------------
+    * Handle function calls in `isinstace` (#2796)
+    * Allow `plz query deps` to outout the deps as a dotviz graph (#2801)
+    * Added a `--notest` flag to `plz watch`, which will then only build test targets.
+      This can be useful to do a quick smoke test. (#2810)
+    * Handle malformed input better in the language server to avoid crashes (#2810)
+    * Improve performance by implementing the `any` and `all` list functions in
+      Go (#2813)
+    * Added `--env` to `plz debug` to allow setting env variables in the debug
+      environment (#2819)
+    * Support function parameter aliases in `plz fmt` (#2822)
+    * Added `get_named_outs` which returns the named outputs of a target as a
+      dictionary (#2808)
+    * Fixed issues with race conditions in remote execution due to targets
+      being marked built too early (#2826)
+    * Fixed issue with finding the package directory with remote execution
+      when subrepos define a package root e.g. `go_repo` (#2828)
+
 Version 17.0.0
 ---------------
     * Remove all the built in language rules rules in favour of plugins. Use
