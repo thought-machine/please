@@ -715,7 +715,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 			return nil, nil, err
 		}
 		if response.CachedResult {
-			c.state.LogBuildResult(target, core.TargetCached, "Cached")
+			c.state.LogBuildResult(target, core.TargetBuilding, "Cached")
 		}
 		for k, v := range response.ServerLogs {
 			log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
@@ -837,7 +837,7 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to download file: %s", err)
 	}
-	c.state.LogBuildResult(target, core.TargetBuilt, "Downloaded.")
+	c.state.LogBuildResult(target, core.TargetBuilding, "Downloaded.")
 	// If we get here, the blob exists in the CAS. Create an ActionResult corresponding to it.
 	outs := target.Outputs()
 	ar := &pb.ActionResult{
