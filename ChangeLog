@@ -1,6 +1,6 @@
 Version 17.1.0
 ---------------
-    * Handle function calls in `isinstace` (#2796)
+    * Handle function calls in `isinstance` (#2796)
     * Allow `plz query deps` to outout the deps as a dotviz graph (#2801)
     * Added a `--notest` flag to `plz watch`, which will then only build test targets.
       This can be useful to do a quick smoke test. (#2810)
