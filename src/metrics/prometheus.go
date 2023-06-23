@@ -26,7 +26,7 @@ func Push(config *core.Configuration) {
 		return
 	}
 
-	if config.Metrics.PushHostinfo {
+	if config.Metrics.PushHostInfo {
 		name, _ := os.Hostname()
 		gauge := prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: "plz",
@@ -34,7 +34,7 @@ func Push(config *core.Configuration) {
 			Name:      "hostinfo",
 			Help:      "Please host running info",
 			ConstLabels: prometheus.Labels{
-				"remote":   strconv.FormatBool(config.Remote.URL != ""),
+				"remote":   strconv.FormatBool(config.IsRemoteExecutution()),
 				"hostname": name,
 			},
 		})
