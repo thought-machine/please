@@ -2,6 +2,8 @@ package metrics
 
 import (
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,6 +24,23 @@ var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 func Push(config *core.Configuration) {
 	if config.Metrics.PrometheusGatewayURL == "" {
 		return
+	}
+
+	if config.Metrics.PushHostinfo {
+		name, _ := os.Hostname()
+		gauge := prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: "plz",
+			Subsystem: "metrics",
+			Name:      "hostinfo",
+			Help:      "Please host running info",
+			ConstLabels: prometheus.Labels{
+				"remote":   strconv.FormatBool(config.Remote.URL != ""),
+				"version":  config.Please.Version.String(),
+				"hostname": name,
+			},
+		})
+		MustRegister(gauge)
+		gauge.Set(1)
 	}
 
 	if err := push.New(config.Metrics.PrometheusGatewayURL, "please").
