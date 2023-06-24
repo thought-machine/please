@@ -1,4 +1,4 @@
-subinclude("///cc//build_defs:c")
+subinclude("///cc//build_defs:c", "///cc//build_defs:cc")
 
 c_library(
     name = "sandbox",
