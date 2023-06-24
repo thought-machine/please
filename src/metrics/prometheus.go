@@ -28,7 +28,7 @@ func Push(config *core.Configuration) {
 
 	if config.Metrics.PushHostInfo {
 		name, _ := os.Hostname()
-		gauge := prometheus.NewGauge(prometheus.GaugeOpts{
+		counter := prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "plz",
 			Subsystem: "metrics",
 			Name:      "hostinfo",
@@ -38,8 +38,8 @@ func Push(config *core.Configuration) {
 				"hostname": name,
 			},
 		})
-		MustRegister(gauge)
-		gauge.Set(1)
+		MustRegister(counter)
+		counter.Inc()
 	}
 
 	if err := push.New(config.Metrics.PrometheusGatewayURL, "please").
