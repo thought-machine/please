@@ -939,7 +939,7 @@ func (state *BuildState) ShouldRebuild(target *BuildTarget) bool {
 
 // WillRunRemotely returns true if the given target will be run on a remote executor.
 func (state *BuildState) WillRunRemotely(target *BuildTarget) bool {
-	return state.RemoteClient != nil && state.Config.NumRemoteExecutors() > 0 && !target.Local
+	return state.RemoteClient != nil && state.Config.IsRemoteExecutution() && !target.Local
 }
 
 // EnsureDownloaded ensures that a target has been downloaded when built remotely.
@@ -1377,7 +1377,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,
-		anyRemote:       config.NumRemoteExecutors() > 0,
+		anyRemote:       config.IsRemoteExecutution(),
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		TargetArch:      config.Build.Arch,
 		Arch:            cli.HostArch(),
