@@ -6,3 +6,4 @@ target = //plugins:shell
 
 [Plugin "go"]
 target = //plugins:go
+stdlib = //third_party/go:std
