@@ -1,3 +1,0 @@
-Found path:
-  //test/cc_rules:lib2
-  //test/cc_rules:lib1
