@@ -10,6 +10,6 @@ please_repo_e2e_test(
     plz_command = "plz -o plugin.go.gotool:$TOOLS_GO test",
     repo = "test_repo",
     tools = {
-        "go": [CONFIG.GO_TOOL],
+        "go": [CONFIG.GO.GO_TOOL],
     },
 )
