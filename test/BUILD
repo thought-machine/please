@@ -136,7 +136,7 @@ filegroup(
 # Simulates a code generating rule to test the require / provide mechanism.
 plz_e2e_test(
     name = "require_provide_test",
-    cmd = "plz build //test/moar:require_provide_check -v 2 -p",
+    cmd = "plz build //test/moar:require_provide_check -v 1 -p",
     expected_output = "require_provide_test.txt",
 )
 
