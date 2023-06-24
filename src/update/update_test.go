@@ -188,6 +188,8 @@ func makeConfig(dir string) *core.Configuration {
 }
 
 func TestMain(m *testing.M) {
+	os.Mkdir("fake_coverdir", 0755)
+	os.Setenv("GOCOVERDIR", "fake_coverdir")
 	// Reset this so it panics instead of exiting on Fatal messages
 	logging.SetBackend(&fakeLogBackend{})
 	httpClient = retryablehttp.NewClient()

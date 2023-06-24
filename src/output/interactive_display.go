@@ -103,6 +103,7 @@ func (d *interactiveDisplay) Update(targets []buildingTarget) {
 		}
 		d.printf("\x1b[%dA", d.lastLines-d.lines) // Move back up again
 	}
+	log.Debug("print cols %d", d.maxCols)
 	setWindowTitle(d.state, true)
 	d.flush()
 }
