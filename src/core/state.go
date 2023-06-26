@@ -1345,7 +1345,6 @@ func NewBuildState(config *Configuration) *BuildState {
 		VerifyHashes:    true,
 		NeedBuild:       true,
 		XattrsSupported: config.Build.Xattrs,
-		anyRemote:       config.NumRemoteExecutors() > 0,
 		Coverage:        TestCoverage{Files: map[string][]LineCoverage{}},
 		TargetArch:      config.Build.Arch,
 		Arch:            cli.HostArch(),
