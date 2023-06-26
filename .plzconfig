@@ -1,9 +1,6 @@
 [parse]
 BlacklistDirs = tree ; The performance test repo
 preloadsubincludes = ///go//build_defs:go
-# TODO(jpoole): We only need this to make cc_library available for the test main above. We should respect the pre-loaded
-# subincldues they define so we don't need this here.
-preloadsubincludes = ///cc//build_defs:cc
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///shell//build_defs:shell
 
@@ -23,12 +20,6 @@ Target = //plugins:python
 ; Other projects using Please wouldn't normally need to do anything like this.
 moduledir = third_party.python
 DisableVendorFlags = true
-
-[Plugin "cc"]
-target = //plugins:cc
-defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
-defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
-TestMain = ///pleasings//cc:unittest_main
 
 [gc]
 keep = //test/...
@@ -91,4 +82,3 @@ accept = Artistic License
 accept = ISC
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice
-
