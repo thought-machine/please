@@ -19,7 +19,7 @@ go_test(
     data = ['test_data'],
     deps = [
         ':asp',
-        '//third_party/go:testify',
+        '///third_party/go/github.com_stretchr_testify//assert',
     ],
 )
 
@@ -29,7 +29,7 @@ go_test(
     deps = [
         ':asp',
         '//third_party/go:participle',
-        '//third_party/go:testify',
+        '///third_party/go/github.com_stretchr_testify//assert',
     ],
 )
 
@@ -38,6 +38,6 @@ go_test(
     srcs = ['util_test.go'],
     deps = [
         ':util',
-        '//third_party/go:testify',
+        '///third_party/go/github.com_stretchr_testify//assert',
     ],
 )

@@ -286,7 +286,7 @@ func TestInterpreterFStrings(t *testing.T) {
 func TestInterpreterSubincludeConfig(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
-	s.SetAll(s.interpreter.Subinclude("src/parse/asp/test_data/interpreter/subinclude_config.build", core.NewPackage("test").Label()), false)
+	s.SetAll(s.interpreter.Subinclude(s, "src/parse/asp/test_data/interpreter/subinclude_config.build", core.NewPackage("test").Label()), false)
 	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }
 
@@ -387,6 +387,32 @@ func TestFormat(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, `LLVM_NATIVE_ARCH=\"x86\"`, s.Lookup("arch"))
 	assert.EqualValues(t, `ARCH="linux_amd64"`, s.Lookup("arch2"))
+}
+
+func TestAny(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/any.build")
+		assert.NoError(t, err)
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(true), s.Lookup(fmt.Sprintf("t%d", i)))
+		}
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(false), s.Lookup(fmt.Sprintf("f%d", i)))
+		}
+	})
+}
+
+func TestAll(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/all.build")
+		assert.NoError(t, err)
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(true), s.Lookup(fmt.Sprintf("t%d", i)))
+		}
+		for i := 1; i <= 9; i++ {
+			assert.EqualValues(t, pyBool(false), s.Lookup(fmt.Sprintf("f%d", i)))
+		}
+	})
 }
 
 func TestIsSemver(t *testing.T) {

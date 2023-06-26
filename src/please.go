@@ -153,8 +153,8 @@ var opts struct {
 		IncludeFile         cli.Filepaths `long:"include_file" description:"Filenames to filter coverage display to. Supports shell pattern matching e.g. file/path/*."`
 		TestResultsFile     cli.Filepath  `long:"test_results_file" default:"plz-out/log/test_results.xml" description:"File to write combined test results to."`
 		SurefireDir         cli.Filepath  `long:"surefire_dir" default:"plz-out/surefire-reports" description:"Directory to copy XML test results to."`
-		CoverageResultsFile cli.Filepath  `long:"coverage_results_file" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
-		CoverageXMLReport   cli.Filepath  `long:"coverage_xml_report" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
+		CoverageResultsFile cli.Filepath  `long:"coverage_results_file" env:"COVERAGE_RESULTS_FILE" default:"plz-out/log/coverage.json" description:"File to write combined coverage results to."`
+		CoverageXMLReport   cli.Filepath  `long:"coverage_xml_report" env:"COVERAGE_XML_REPORT" default:"plz-out/log/coverage.xml" description:"XML File to write combined coverage results to."`
 		Incremental         bool          `short:"i" long:"incremental" description:"Calculates summary statistics for incremental coverage, i.e. stats for just the lines currently modified."`
 		ShowOutput          bool          `short:"s" long:"show_output" description:"Always show output of tests, even on success."`
 		DebugFailingTest    bool          `short:"d" long:"debug" description:"Allows starting an interactive debugger on test failure. Does not work with all test types (currently only python/pytest). Implies -c dbg unless otherwise set."`
@@ -169,9 +169,9 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Debugger string `short:"d" long:"debugger" description:"Name of supported debugger"`
-		Port     int    `short:"p" long:"port" description:"Debugging server port"`
-		Args     struct {
+		Port int               `short:"p" long:"port" description:"Debugging server port"`
+		Env  map[string]string `short:"e" long:"env" description:"Environment variables to set for the debugged process"`
+		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
 			Args   []string        `positional-arg-name:"arguments" description:"Arguments to pass to target"`
 		} `positional-args:"true"`
@@ -220,8 +220,8 @@ var opts struct {
 			Mount   bool `long:"share_mount" description:"Share mount namespace"`
 		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Args struct {
-			Target              core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
-			OverrideCommandArgs []string                  `positional-arg-name:"override_command" description:"Override command"`
+			Target core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to execute"`
+			Args   []string                  `positional-arg-name:"arg" description:"Arguments to the executed command"`
 		} `positional-args:"true"`
 		Sequential struct {
 			Args struct {
@@ -247,9 +247,11 @@ var opts struct {
 	} `command:"clean" description:"Cleans build artifacts" subcommands-optional:"true"`
 
 	Watch struct {
-		Run  bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
-		Args struct {
-			Targets []core.BuildLabel `positional-arg-name:"targets" required:"true" description:"Targets to watch the sources of for changes"`
+		Run    bool `short:"r" long:"run" description:"Runs the specified targets when they change (default is to build or test as appropriate)."`
+		NoTest bool `long:"notest" description:"If set, no tests will be ran. The targets will only be re-built."`
+		Args   struct {
+			Target core.BuildLabel `positional-arg-name:"target" description:"Target to watch for changes"`
+			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Additional targets to watch, or test selectors"`
 		} `positional-args:"true" required:"true"`
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
 
@@ -338,6 +340,7 @@ var opts struct {
 
 	Query struct {
 		Deps struct {
+			DOT    bool `long:"dot" description:"Output in dot format"`
 			Hidden bool `long:"hidden" short:"h" description:"Output internal / hidden dependencies too"`
 			Level  int  `long:"level" default:"-1" description:"Levels of the dependencies to retrieve."`
 			Unique bool `long:"unique" hidden:"true" description:"Has no effect, only exists for compatibility."`
@@ -353,7 +356,8 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
 		SomePath struct {
-			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
+			Except []core.BuildLabel `long:"except" description:"Targets to exclude from path calculation"`
+			Hidden bool              `long:"hidden" description:"Show hidden targets as well"`
 			Args   struct {
 				Target1 core.BuildLabel `positional-arg-name:"target1" description:"First build target" required:"true"`
 				Target2 core.BuildLabel `positional-arg-name:"target2" description:"Second build target" required:"true"`
@@ -394,7 +398,7 @@ var opts struct {
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to render graph for"`
 			} `positional-args:"true"`
-		} `command:"graph" description:"Prints a JSON representation of the build graph."`
+		} `command:"graph" description:"Prints a representation of the build graph."`
 		WhatInputs struct {
 			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
@@ -497,8 +501,12 @@ var buildFunctions = map[string]func() int{
 			}
 			stats = test.CalculateIncrementalStats(state, lines)
 		}
-		test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
-		test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
+		if opts.Cover.CoverageResultsFile != "" {
+			test.WriteCoverageToFileOrDie(state.Coverage, string(opts.Cover.CoverageResultsFile), stats)
+		}
+		if opts.Cover.CoverageXMLReport != "" {
+			test.WriteXMLCoverageToFileOrDie(targets, state.Coverage, string(opts.Cover.CoverageXMLReport))
+		}
 
 		if opts.Cover.LineCoverageReport && success {
 			output.PrintLineCoverageReport(state, opts.Cover.IncludeFile.AsStrings())
@@ -511,15 +519,11 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"debug": func() int {
-		if len(opts.Debug.Debugger) > 0 {
-			log.Warningf("--debugger has been deprecated in favour of build rule specific config fields and will be removed in v17.")
-		}
-
 		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
 		if !success {
 			return toExitCode(success, state)
 		}
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args)
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args, exec.ConvertEnv(opts.Debug.Env))
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target.BuildLabel}, true, false, false)
@@ -530,7 +534,7 @@ var buildFunctions = map[string]func() int{
 		target := state.Graph.TargetOrDie(opts.Exec.Args.Target.BuildLabel)
 		dir := target.ExecDir()
 		shouldSandbox := target.Sandbox
-		if code := exec.Exec(state, opts.Exec.Args.Target, dir, exec.ConvertEnv(opts.Exec.Env), opts.Exec.Args.OverrideCommandArgs, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
+		if code := exec.Exec(state, opts.Exec.Args.Target, dir, exec.ConvertEnv(opts.Exec.Env), nil, opts.Exec.Args.Args, false, process.NewSandboxConfig(shouldSandbox && !opts.Exec.Share.Network, shouldSandbox && !opts.Exec.Share.Mount)); code != 0 {
 			return code
 		}
 
@@ -732,7 +736,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level)
+			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level, opts.Query.Deps.DOT)
 		})
 	},
 	"query.revdeps": func() int {
@@ -745,7 +749,7 @@ var buildFunctions = map[string]func() int{
 		a := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
 		b := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
-			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Hidden); err != nil {
+			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Except, opts.Query.SomePath.Hidden); err != nil {
 				fmt.Printf("%s\n", err)
 				os.Exit(1)
 			}
@@ -938,10 +942,11 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"watch": func() int {
+		targets, args := testTargets(opts.Watch.Args.Target, opts.Watch.Args.Args, false, "")
 		// Don't ask it to test now since we don't know if any of them are tests yet.
-		success, state := runBuild(opts.Watch.Args.Targets, true, false, false)
+		success, state := runBuild(targets, true, false, false)
 		state.NeedRun = opts.Watch.Run
-		watch.Watch(state, state.ExpandOriginalLabels(), runPlease)
+		watch.Watch(state, state.ExpandOriginalLabels(), args, opts.Watch.NoTest, runPlease)
 		return toExitCode(success, state)
 	},
 	"generate": func() int {
@@ -1092,7 +1097,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
-	state.Watch = len(opts.Watch.Args.Targets) > 0
+	state.Watch = !opts.Watch.Args.Target.IsEmpty()
 	state.CleanWorkdirs = !opts.BehaviorFlags.KeepWorkdirs
 	state.ForceRebuild = opts.Build.Rebuild || opts.Run.Rebuild
 	state.ForceRerun = opts.Test.Rerun || opts.Cover.Rerun
@@ -1340,7 +1345,7 @@ func additionalUsageInfo(parser *flags.Parser, wr io.Writer) {
 }
 
 func getCompletions(qry string) (*query.CompletionPackages, []string) {
-	binary := opts.Query.Completions.Cmd == "run"
+	binary := opts.Query.Completions.Cmd == "run" || opts.Query.Completions.Cmd == "exec"
 	isTest := opts.Query.Completions.Cmd == "test" || opts.Query.Completions.Cmd == "cover"
 
 	completions := query.CompletePackages(config, qry)

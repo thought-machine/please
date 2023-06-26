@@ -3,3 +3,9 @@ plugin_repo(
     plugin = "shell-rules",
     revision = "v0.1.1",
 )
+
+plugin_repo(
+    name = "go",
+    plugin = "go-rules",
+    revision = "v1.2.1",
+)

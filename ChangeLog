@@ -1,5 +1,58 @@
+Version 17.1.0
+---------------
+    * Handle function calls in `isinstance` (#2796)
+    * Allow `plz query deps` to outout the deps as a dotviz graph (#2801)
+    * Added a `--notest` flag to `plz watch`, which will then only build test targets.
+      This can be useful to do a quick smoke test. (#2810)
+    * Handle malformed input better in the language server to avoid crashes (#2810)
+    * Improve performance by implementing the `any` and `all` list functions in
+      Go (#2813)
+    * Added `--env` to `plz debug` to allow setting env variables in the debug
+      environment (#2819)
+    * Support function parameter aliases in `plz fmt` (#2822)
+    * Added `get_named_outs` which returns the named outputs of a target as a
+      dictionary (#2808)
+    * Fixed issues with race conditions in remote execution due to targets
+      being marked built too early (#2826)
+    * Fixed issue with finding the package directory with remote execution
+      when subrepos define a package root e.g. `go_repo` (#2828)
+
 Version 17.0.0
 ---------------
+    * Remove all the built in language rules rules in favour of plugins. Use
+      `plz init plugin [plugin name]` to migrate e.g. `plz init plugin go`
+      (#2668, #2674, #2651, #2695, #2739)
+    * Support code completions for `plz exec` (#2786)
+    * Add `patches` parameters to the subrepo rules to apply a patch file to
+      the repo (#2745)
+    * Remove `ExcludeSymlinksInGlob` feature flag, making `glob()` exclude
+      symlinks by default. This makes it play better with `plz generate`,
+      however if you need a glob to match symlinks, pass
+      `include_symlinks = True`. (#2747)
+    * Remove `PackageOutputsStrictness` feature flag, making Please fail the
+      build instead of logging when it detects a conflict in package outputs.
+      (#2736)
+    * Delete the `ErrorOnEmptyGlob` feature flag, making glob throw and
+      exception if it matches no files. Pass `allow_empty = True` to `glob()`
+      to change this behavior (#2730)
+    * Support named outputs on filegroups (#2709)
+    * Remove persistent workers (#2690)
+    * Remove `plz query roots` (#2678)
+    * Remove the `--quiet` flag from `plz run parallel` (#2675)
+    * Rename the config options `java.jarcat` to `build.arcat` represent the
+      fact it has evolved to be a more general archiving tool (#2667
+    * Remove the deprecated exception types from the build language (#2150)
+    * Remove `--in_wd` from `plz run` in favour of `--wd .` (#2677)
+    * Change the way preloaded subincludes work to resolve a number of
+      race conditions. Subincludes are no longer preloaded when parsing
+      a BUILD file for subinclude. This means you will have to add
+      subincludes to `.build_def` files, and the BUILD file that contains
+      the subinclude target. (#2658)
+    * Remove JavaBinaryExecutableByDefault feature making Java binaries
+      self executable by default (#2662)
+    * Remove --prepare flag from `plz build` (#2666)
+    * Remove SingleSHA1Hash feature flag making sha1 behave the same as
+      other algorithms (#2135)
     * Change asp.Position to just be an int (#2650)
     * Fix stack overflow in asp parser stack unwind (#2659)
     * Add plugin documentation to website (#2657)
@@ -14,6 +67,7 @@ Version 17.0.0
     * Auth before releasing website and binaries (#2684)
     * Fix typo in gcloud command (#2685)
     * Exclude targets in subrepos from `plz query changes` (#2723)
+    * `plz exec` now follows a similar argument pattern to `plz run` (#2793)
 
 
 Version 16.27.1

@@ -23,8 +23,8 @@ release_file() {
     aws s3 cp $file s3://please-releases/$path
     gsutil cp $file gs://get.please.build/$path
   else
-    aws s3 cp $file s3://please-releases//$path --content-type $content_type
-    gsutil cp -h "Content-Type:$content_type" $file gs://get.please.build/$path
+    aws s3 cp $file s3://please-releases/$path --content-type $content_type
+    gsutil -h "Content-Type:$content_type" cp $file gs://get.please.build/$path
   fi
 }
 

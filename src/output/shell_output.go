@@ -53,9 +53,8 @@ loop:
 			if !ok || (state.DebugFailingTests && result.Status == core.TargetTesting) {
 				break loop
 			}
-			prev := bt.ProcessResult(result)
-			if tw != nil && !result.Status.IsParse() {
-				tw.AddTrace(result, prev, result.Status.IsActive())
+			if threadID := bt.ProcessResult(result); tw != nil && !result.Status.IsParse() {
+				tw.AddTrace(threadID, result, result.Status.IsActive())
 			}
 			if streamTestResults && (result.Status == core.TargetTested || result.Status == core.TargetTestFailed) {
 				os.Stdout.Write(test.SerialiseResultsToXML(state.Graph.TargetOrDie(result.Label), false, state.Config.Test.StoreTestOutputOnSuccess))
@@ -100,7 +99,10 @@ loop:
 		}
 		msgs, totalMessages, actualMessages := cli.CurrentBackend.GetMessageHistory()
 		if actualMessages > 0 && !plainOutput {
-			printf("Messages:\n%s\n", strings.Join(msgs, "\n"))
+			printf("Messages:\n")
+			for _, msg := range msgs {
+				printf("%s\n", msg)
+			}
 			if totalMessages != actualMessages {
 				printf("plus %d more... see plz-out/log/build.log\n", totalMessages-actualMessages)
 			}

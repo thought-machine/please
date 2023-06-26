@@ -282,20 +282,6 @@ func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, err
 		os.Setenv("HTTP_PROXY", config.Build.HTTPProxy.String())
 	}
 
-	// Deal with the various sandbox settings that are moving.
-	if config.Build.Sandbox {
-		log.Warning("build.sandbox in config is deprecated, use sandbox.build instead")
-		config.Sandbox.Build = true
-	}
-	if config.Test.Sandbox {
-		log.Warning("test.sandbox in config is deprecated, use sandbox.test instead")
-		config.Sandbox.Test = true
-	}
-	if config.Build.PleaseSandboxTool != "" {
-		log.Warning("build.pleasesandboxtool in config is deprecated, use sandbox.tool instead")
-		config.Sandbox.Tool = config.Build.PleaseSandboxTool
-	}
-
 	// We can only verify options by reflection (we need struct tags) so run them quickly through this.
 	return config, config.ApplyOverrides(map[string]string{
 		"build.hashfunction": config.Build.HashFunction,
@@ -410,6 +396,7 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.VerifyOutputs = true
 	config.Remote.UploadDirs = true
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
+	config.Remote.Shell = "bash"
 	config.Go.GoTool = "go"
 	config.Go.CgoCCTool = "gcc"
 	config.Go.DelveTool = "dlv"
@@ -513,9 +500,7 @@ type Configuration struct {
 		Config               string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
 		FallbackConfig       string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
 		Lang                 string       `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
-		Sandbox              bool         `help:"Deprecated, use sandbox.build instead."`
 		Xattrs               bool         `help:"True (the default) to attempt to use xattrs to record file metadata. If false Please will fall back to using additional files where needed, which is more compatible but has slightly worse performance."`
-		PleaseSandboxTool    string       `help:"Deprecated, use sandbox.tool instead."`
 		Nonce                string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
@@ -548,7 +533,6 @@ type Configuration struct {
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		Sandbox                  bool         `help:"Deprecated, use sandbox.test instead."`
 		DisableCoverage          []string     `help:"Disables coverage for tests that have any of these labels spcified."`
 		Upload                   cli.URL      `help:"URL to upload test results to (in XML format)"`
 		UploadGzipped            bool         `help:"True to upload the test results gzipped."`
@@ -575,10 +559,10 @@ type Configuration struct {
 		Secure        bool         `help:"Whether to use TLS for communication or not."`
 		VerifyOutputs bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
 		UploadDirs    bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
-		Shell         string       `help:"Path to the shell to use to execute actions in. Default looks up bash based on the build.path setting."`
+		Shell         string       `help:"Path to the shell to use to execute actions in. Default is 'bash' which will be looked up by the server."`
 		Platform      []string     `help:"Platform properties to request from remote workers, in the format key=value."`
 		CacheDuration cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
-		BuildID       string       `help:"ID of the build action that's being run, to attach to remote requests."`
+		BuildID       string       `help:"ID of the build action that's being run, to attach to remote requests. If not set then one is automatically generated."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
@@ -605,7 +589,7 @@ type Configuration struct {
 		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
 		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
 		LDFlags          string `help:"Sets the LDFLAGS env var for go rules." var:"GO_LD_FLAGS"`
-	} `help:"Please has built-in support for compiling Go, and of course is written in Go itself.\nSee the config subfields or the Go rules themselves for more information.\n\nNote that Please is a bit more flexible than Go about directory layout - for example, it is possible to have multiple packages in a directory, but it's not a good idea to push this too far since Go's directory layout is inextricably linked with its import paths." exclude_flag:"ExcludeGoRules"`
+	}
 	Python struct {
 		PipTool             string   `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
 		PipFlags            string   `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
@@ -637,7 +621,7 @@ type Configuration struct {
 		JavacTestFlags     string    `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" var:"JAVAC_TEST_FLAGS"`
 		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
 		Toolchain          string    `help:"A label identifying a java_toolchain." var:"JAVA_TOOLCHAIN"`
-	} `help:"Please has built-in support for compiling Java.\nIt builds uber-jars for binary and test rules which contain all dependencies and can be easily deployed, and with the help of some of Please's additional tools they are deterministic as well.\n\nWe've only tested support for Java 7 and 8, although it's likely newer versions will work with little or no change." exclude_flag:"ExcludeJavaRules"`
+	}
 	Cpp struct {
 		CCTool             string     `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
 		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
@@ -654,7 +638,7 @@ type Configuration struct {
 		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
 		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
 		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." var:"DSYM_TOOL"`
-	} `help:"Please has built-in support for compiling C and C++ code. We don't support every possible nuance of compilation for these languages, but aim to provide something fairly straightforward.\nTypically there is little problem compiling & linking against system libraries although Please has no insight into those libraries and when they change, so cannot rebuild targets appropriately.\n\nThe C and C++ rules are very similar and simply take a different set of tools and flags to facilitate side-by-side usage." exclude_flag:"ExcludeCCRules"`
+	}
 	Proto struct {
 		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." var:"PROTOC_TOOL"`
 		ProtocGoPlugin   string   `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.\nWe've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example." var:"PROTOC_GO_PLUGIN"`
@@ -671,7 +655,7 @@ type Configuration struct {
 		JavaGrpcDep      string   `help:"An in-repo dependency that's applied to any Java gRPC libraries." var:"GRPC_JAVA_DEP"`
 		GoGrpcDep        string   `help:"An in-repo dependency that's applied to any Go gRPC libraries." var:"GRPC_GO_DEP"`
 		ProtocFlag       []string `help:"Flags to pass to protoc i.e. the location of well known types. Can be repeated." var:"PROTOC_FLAGS"`
-	} `help:"Please has built-in support for compiling protocol buffers, which are a form of codegen to define common data types which can be serialised and communicated between different languages.\nSee https://developers.google.com/protocol-buffers/ for more information.\n\nThere is also support for gRPC, which is an implementation of protobuf's RPC framework. See http://www.grpc.io/ for more information.\n\nNote that you must have the protocol buffers compiler (and gRPC plugins, if needed) installed on your machine to make use of these rules." exclude_flag:"ExcludeProtoRules"`
+	}
 	Licences struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
 		Reject []string `help:"Licences that are explicitly rejected in this repository.\nAn astute observer will notice that this is not very different to just not adding it to the accept section, but it does have the advantage of explicitly documenting things that the team aren't allowed to use."`
@@ -693,17 +677,6 @@ type Configuration struct {
 	buildEnvStored *storedBuildEnv
 
 	FeatureFlags struct {
-		PackageOutputsStrictness bool `help:"Prevents certain combinations of target outputs within a package that result in nondeterminist behaviour"`
-		PythonWheelHashing       bool `help:"This hashes the internal build rule that downloads the wheel instead" var:"FF_PYTHON_WHEEL_HASHING"`
-		NoIterSourcesMarked      bool `help:"Don't mark sources as done when iterating inputs" var:"FF_NO_ITER_SOURCES_MARKED"`
-		ExcludeJavaRules         bool `help:"Whether to include the java rules or use the plugin"`
-		ExcludeCCRules           bool `help:"Whether to include the C and C++ rules or require use of the plugin"`
-		ExcludeGoRules           bool `help:"Whether to include the go rules rules or require use of the plugin"`
-		ExcludeShellRules        bool `help:"Whether to include the shell rules rules or require use of the plugin"`
-		ExcludeProtoRules        bool `help:"Whether to include the proto rules or require use of the plugin"`
-		ExcludeSymlinksInGlob    bool `help:"Whether to include symlinks in the glob" var:"FF_EXCLUDE_GLOB_SYMLINKS"`
-		GoDontCollapseImportPath bool `help:"If set, we will no longer collapse import paths that have repeat final parts e.g. foo/bar/bar -> foo/bar" var:"FF_GO_DONT_COLLAPSE_IMPORT_PATHS"`
-		ErrorOnEmptyGlob         bool `help:"Error out if a glob doesn't match anything" var:"FF_ERROR_ON_EMPTY_GLOB"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
@@ -1002,6 +975,11 @@ func (config *Configuration) ApplyOverrides(overrides map[string]string) error {
 				return err
 			}
 		} else if len(split) == 2 {
+			switch split[0] {
+			case "go", "cpp", "java", "python", "proto":
+				log.Warning("You're overriding field %s which is deprecated in plz v17+; this will have no effect.", k)
+				log.Warning("Hint: try -o plugin.%s:%s instead", k, v)
+			}
 			if err := applyOverride(configValue, split[0], split[1], v); err != nil {
 				return err
 			}

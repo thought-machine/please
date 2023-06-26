@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bazelbuild/buildtools/build"
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
 	"github.com/stretchr/testify/assert"
@@ -66,7 +67,7 @@ go_test(
     srcs = ["lsp_test.go"],
     deps = [
         ":lsp",
-        "//third_party/go:testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
     ],
 )
 `
@@ -146,7 +147,7 @@ func TestDidClose(t *testing.T) {
 const testFormattingContent = `go_test(
     name = "lsp_test",
     srcs = ["lsp_test.go"],
-    deps = [":lsp","//third_party/go:testify"],
+    deps = [":lsp","///third_party/go/github.com_stretchr_testify//assert"],
 )
 `
 
@@ -170,7 +171,7 @@ func TestFormatting(t *testing.T) {
 		{
 			Range: lsp.Range{
 				Start: lsp.Position{Line: 3, Character: 0},
-				End:   lsp.Position{Line: 3, Character: 47},
+				End:   lsp.Position{Line: 3, Character: 76},
 			},
 			NewText: `    deps = [`,
 		},
@@ -186,7 +187,7 @@ func TestFormatting(t *testing.T) {
 				Start: lsp.Position{Line: 5, Character: 0},
 				End:   lsp.Position{Line: 5, Character: 0},
 			},
-			NewText: `        "//third_party/go:testify",`,
+			NewText: `        "///third_party/go/github.com_stretchr_testify//assert",`,
 		},
 		{
 			Range: lsp.Range{
@@ -196,6 +197,35 @@ func TestFormatting(t *testing.T) {
 			NewText: "    ],\n)\n",
 		},
 	}, edits)
+}
+
+const testFormattingMalformedContent = `go_test(
+    name = "lsp_test",
+    srcs = ["lsp_test.go"]  # no comma
+    deps = [":lsp","///third_party/go/github.com_stretchr_testify//assert"],
+)
+`
+
+func TestFormattingMalformedContent(t *testing.T) {
+	h := initHandler()
+	err := h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{
+		TextDocument: lsp.TextDocumentItem{
+			URI:  "file://test/test.build",
+			Text: testFormattingMalformedContent,
+		},
+	}, nil)
+	assert.NoError(t, err)
+	edits := []lsp.TextEdit{}
+	err = h.Request("textDocument/formatting", &lsp.DocumentFormattingParams{
+		TextDocument: lsp.TextDocumentIdentifier{
+			URI: "file://test/test.build",
+		},
+	}, &edits)
+	assert.Error(t, err)
+
+	// check that it's a ParseError
+	_, ok := err.(build.ParseError)
+	assert.True(t, ok)
 }
 
 func TestShutdown(t *testing.T) {
@@ -399,91 +429,71 @@ func TestCompletionPartial(t *testing.T) {
 	}, completions)
 }
 
-const testCompletionContentFunction = `
-go_library(
-    name = "test",
-    srcs = glob(["*.go"]),
-    deps = [
-        "//src/core:core",
-    ],
-)
-`
-
 func TestCompletionFunction(t *testing.T) {
 	h := initHandler()
 	err := h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{
 		TextDocument: lsp.TextDocumentItem{
-			URI:  "file://test/test.build",
-			Text: testCompletionContentFunction,
+			URI:  testURI,
+			Text: `plugin_repo()`,
 		},
 	}, nil)
 	assert.NoError(t, err)
-	h.WaitForPackage("src/core")
 	completions := &lsp.CompletionList{}
 	err = h.Request("textDocument/completion", &lsp.CompletionParams{
 		TextDocumentPositionParams: lsp.TextDocumentPositionParams{
 			TextDocument: lsp.TextDocumentIdentifier{
-				URI: "file://test/test.build",
+				URI: testURI,
 			},
 			Position: lsp.Position{
-				Line:      1,
-				Character: 6,
+				Line:      0,
+				Character: 4,
 			},
 		},
 	}, completions)
 	assert.NoError(t, err)
 	assert.Equal(t, &lsp.CompletionList{
 		IsIncomplete: false,
-		Items: []lsp.CompletionItem{
-			{
-				Label:            "go_library",
-				Kind:             lsp.CIKFunction,
-				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("rary", 1, 6),
-				Documentation:    h.builtins["go_library"].Stmt.FuncDef.Docstring,
-			},
-		},
+		Items: []lsp.CompletionItem{{
+			Label:            "plugin_repo",
+			Kind:             lsp.CIKFunction,
+			InsertTextFormat: lsp.ITFPlainText,
+			TextEdit:         textEdit("in_repo", 0, 4),
+			Documentation:    h.builtins["plugin_repo"].Stmt.FuncDef.Docstring,
+		}},
 	}, completions)
 }
-
-const testCompletionContentPartialFunction = `
-go_libr
-`
 
 func TestCompletionPartialFunction(t *testing.T) {
 	h := initHandler()
 	err := h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{
 		TextDocument: lsp.TextDocumentItem{
-			URI:  "file://test/test.build",
-			Text: testCompletionContentPartialFunction,
+			URI:  testURI,
+			Text: `plugin_re`,
 		},
 	}, nil)
 	assert.NoError(t, err)
-	h.WaitForPackage("src/core")
 	completions := &lsp.CompletionList{}
 	err = h.Request("textDocument/completion", &lsp.CompletionParams{
 		TextDocumentPositionParams: lsp.TextDocumentPositionParams{
 			TextDocument: lsp.TextDocumentIdentifier{
-				URI: "file://test/test.build",
+				URI: testURI,
 			},
 			Position: lsp.Position{
-				Line:      1,
-				Character: 6,
+				Line:      0,
+				Character: 9,
 			},
 		},
 	}, completions)
 	assert.NoError(t, err)
 	assert.Equal(t, &lsp.CompletionList{
 		IsIncomplete: false,
-		Items: []lsp.CompletionItem{
-			{
-				Label:            "go_library",
-				Kind:             lsp.CIKFunction,
-				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("rary", 1, 6),
-				Documentation:    h.builtins["go_library"].Stmt.FuncDef.Docstring,
-			},
-		},
+		Items: []lsp.CompletionItem{{
+			Label:            "plugin_repo",
+			Kind:             lsp.CIKFunction,
+			InsertTextFormat: lsp.ITFPlainText,
+			TextEdit:         textEdit("po", 0, 9),
+			Documentation:    h.builtins["plugin_repo"].Stmt.FuncDef.Docstring,
+		}},
 	}, completions)
 }
 

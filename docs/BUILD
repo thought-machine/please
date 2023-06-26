@@ -57,13 +57,14 @@ genrule(
 
 # Plugin versions to pull the docs from
 plugins = {
-    "python": "v1.2.1",
-    "java": "v0.2.5",
-    "go": "v1.2.1",
+    "python": "v1.3.0",
+    "java": "v0.3.0",
+    "go": "v1.7.1",
     "cc": "v0.3.2",
     "shell": "v0.1.2",
     "go-proto": "v0.2.0",
-    "proto": "v0.2.0",
+    "python-proto": "v0.1.0",
+    "proto": "v0.2.1",
 }
 
 plugin_targets = []
@@ -88,12 +89,12 @@ genrule(
     ],
     outs = ["plugins.html"],
     cmd = [
-        '"$TOOLS_LEX" -i docs/plugins.html -i docs/lexicon_entry.html docs/*_rules.json > "$OUT"',
+        '"$TOOLS_PLUGIN" --plugin docs/plugins.html --lex docs/lexicon_entry.html docs/*_plugin.json > "$OUT"',
         '"$TOOLS_TMPL" --template docs/template.html --in plugins.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
     tools = {
-        "lex": ["//docs/tools/lexicon_templater"],
+        "plugin": ["//docs/tools/plugin_templater"],
         "tmpl": ["//docs/tools/templater"],
     },
     visibility = ["//docs/test/..."],

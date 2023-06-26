@@ -1,0 +1,237 @@
+<h1 class="title-1">Please 17.0.0</h1>
+
+<p>
+    This document describes the developments and breaking changes in v17, and how to migrate. You can find the complete
+    changelog <a class="copy-link" href="https://github.com/thought-machine/please/releases/tag/v17.0.0">here</a>.
+</p>
+
+<section class="mt4">
+    <h2 class="title-2">Plugins</h2>
+    <p>
+        The <a class="copy-link" href="/plugins.html">plugin API</a> is a powerful new way to extend Please to support
+        new languages and technologies. It offers rule authors greater flexibility in how they configure, distribute,
+        and version their rules. In v17, Plugins are becoming the default, replacing all the built-in language rules.
+    </p>
+    <p>
+        The language plugins are hosted in the <a class="copy-link" href="https://github.com/please-build/please-rules">
+        please-build</a> github organisation, where we better collaborate with external contributors. If you have a
+        plugin you'd like to contribute, please <a class="copy-link" href="https://gitter.im/please-build/Lobby">get
+        in touch</a>!
+    </p>
+    <p>
+        To migrate from the built-in rules, simply run <code class="code">plz init plugin [plugin name]</code>.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Golang</h2>
+    <p>
+        The Golang plugin has remained mostly compatible with the builtin rules, however there are a lot of new features
+        available!
+    </p>
+    <h3 class="title-3">Minor changes to import paths</h3>
+    <p>
+        Previously, the Go rules would let you import a package using two different import paths,
+        <code class="code">example.com/owner/repo/package</code>, and
+        <code class="code">example.com/owner/repo/package/package</code>. This was a bug that has now been resolved. To
+        help migration, use the <code class="code">LegacyImports</code> config option, under
+        <code class="code">[Plugin "go"]</code> in your <code class="code">.plzconfig</code> file.
+    </p>
+
+    <h3 class="title-3">Improvements to third party modules</h3>
+    <p>
+        One of the major shortcomings of using Please when compared to the standard go tooling is the toil involved in
+        managing third party dependencies. The <code class="code">go_module()</code> rule has served us well, but it has
+        some major shortcomings.
+    </p>
+    <p>
+        Cyclic dependencies between modules are hard to represent as we compile the entire module in one go.
+        It's possible to work around this by downloading the module with one rule and compiling it in parts,
+        however this requires a lot of toil, and can get complicated quickly:
+    </p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    go_mod_download(
+        name = "go-opentelemetry_download",
+        module = "go.opentelemetry.io/otel",
+        version = "v1.11.1",
+    )
+
+    go_module(
+        name = "go-opentelemetry",
+        download = ":go-opentelemetry_download",
+        install = [
+            ".",
+            "baggage",
+            "internal",
+            "internal/baggage",
+            "internal/attribute",
+            "internal/global",
+            "propagation",
+            "semconv/internal",
+            "semconv/v1.10.0",
+        ],
+        module = "go.opentelemetry.io/otel",
+        deps = [
+            ":go-opentelemetry.trace",
+            ":logr",
+            ":stdr",
+        ],
+    )
+
+    # split off due to go-opentelemetry's circular dependency with go-opentelemetry.trace
+    go_module(
+        name = "go-opentelemetry_1",
+        download = ":go-opentelemetry_download",
+        install = [
+            "attribute",
+            "codes",
+        ],
+        module = "go.opentelemetry.io/otel",
+    )
+      </code>
+    </pre>
+    <p>
+        Additionally, dependencies between modules must be explicitly defined, along with the packages that we need from
+        that module. This results in a slow, iterative cycle of building, and waiting for the next compiler error to
+        figure out which package or module we're missing. We also often end up relying on wildcards, compiling more of t
+        he module than we actually need because figuring out the set of packages we actually need is so hard.
+    </p>
+    <p>
+        Compiling large modules with a single rule like this can also take a long time. Some modules such and the AWS
+        SDK can take upwards for 4 minutes to compile. This happens in a single build task so often can't take advantage
+        of multicore systems.
+    </p>
+    <p>
+        In the Go plugin, we have introduced a brand new build rule called <code class="code">go_repo()</code>, which
+        uses a wildly different paradigm:
+    </p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    go_repo(module="github.com/google/go-cmp", version="v0.5.9")
+    go_repo(module="github.com/stretchr/testify", version="v1.8.0")
+    go_repo(module="go.opentelemetry.io/otel/trace", version="v1.11.1")
+    go_repo(module="go.opentelemetry.io/otel", version="v1.11.1")
+    go_repo(module="github.com/go-logr/stdr", version="v1.2.2")
+    go_repo(module="github.com/pmezard/go-difflib", version="v1.0.0")
+    go_repo(module="github.com/stretchr/objx", version="v0.4.0")
+    go_repo(module="gopkg.in/yaml.v3", version="v3.0.1")
+    go_repo(module="gopkg.in/check.v1", version="v0.0.0-20161208181325-20d25e280405")
+    go_repo(module="github.com/go-logr/logr", version="v1.2.3")
+    go_repo(module="github.com/davecgh/go-spew", version="v1.1.1")
+      </code>
+    </pre>
+    <p>
+        By treating third party modules as subrepos, we can generate individual build
+        targets for each package! This eliminates all these problems with the existing
+        <code class="code">go_module()</code> rules:
+    </p>
+    <ul class="bulleted-list">
+        <li>
+            <span>
+                The modules depend on each other using a naming convention, meaning that users don't have to define
+                dependencies between modules. In fact, the only mandatory arguments for
+                <code class="code">go_repo()</code> are the module name and version.
+            </span>
+        </li>
+        <li>
+            <span>
+                Targets can depend on individual packages within the go repo, which means that we get far better
+                granularity. We actually use the same build rules (<code class="code">go_library()</code> and
+                <code class="code">go_binary()</code>) to compile the packages in the subrepo!
+            </span>
+        </li>
+    </ul>
+    <p>
+        Labels follow the following format:
+        <code class="code">///third_party/go/github.com_module_name//package/name</code>.
+        To depend on <code class="code">github.com/stretchr/testify/assert</code>, use
+        <code class="code">///third_party/go/github.com_stretchr_testify//assert</code>.
+    </p>
+    <p>
+        As these build labels are quite cumbersome, you may pass a name and install list to
+        <code class="code">go_repo()</code>:
+    </p>
+    <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code data-lang="plz">
+    go_repo(
+        name = "testify",
+        install = ["assert", "require"],
+        module = "github.com/stretchr/testify",
+        version = "v1.8.0",
+    )
+      </code>
+    </pre>
+    <p>
+        You may then use <code class="code">//third_party/go:testify</code> as an alias for
+        <code class="code">///third_party/go/github.com_stretchr_testify//assert</code> and
+        <code class="code">///third_party/go/github.com_stretchr_testify//require</code>.
+    </p>
+    <h3 class="title-3">Improvements to the toolchain and standard library</h3>
+    <p>
+        In go v1.20, they stopped distributing the SDK in binary form with the SDK. The Go rules depend on these
+        binaries. The simplest way to work with go v1.20 is to use the <code class="code">go_toolchain()</code> rule,
+        which now compiles the SDK for you.
+    </p>
+    <p>
+        Under the hood, the <code class="code">go_toolchain()</code> rule is using
+        <code class="code">go_stdlib()</code>, which compiles the standard library as a normal build target. This detail
+        lets us support additional features such as cross compilation, build modes, and race detection by allowing
+        Please to re-build the standard library as needed. For example,
+        <code class="code">plz build -o plugin.go.race:true //src:main</code>, will build that target with race
+        detection enabled. There's also <code class="code">go.buildmode</code> for different build modes. Both of these
+        can also be configured in <code class="code">[Plugin "go"]</code> in your <code class="code">.plzconfig</code>.
+    </p>
+    <h3 class="title-3">Go package driver</h3>
+    <p>
+        The <a href="https://github.com/please-build/go-rules/blob/master/tools/driver/README.md" class="copy-link">Go
+        packages driver</a> is an experimental tool that provides a bridge between go tooling and build systems like
+        Please. Tools like gopls, gosec, and many of the linters included in golangci-lint will use this.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Proto</h2>
+    <p>
+        In v17 we have implemented a new approach to the proto rules. The original proto rules supported a fixed set of
+        languages, and extending them with new plugins proved quite difficult. The new proto rules provide an sdk for
+        adding new protoc plugins for new languages and targets e.g. gRPC gateways.
+    </p>
+    <p>
+        So far, <a class="copy-link" href="https://github.com/please-build/go-proto-rules">Golang</a> and
+        <a class="copy-link" href="https://github.com/please-build/python-proto-rules">Python</a> are supported, however
+        there are plans to support C++ and Java in the future.
+    </p>
+    <p>
+        The new proto rules don't currently support the same set of languages. For a drop in replacement, you may use
+        <code class="code">///proto//build_defs:legacy</code>. These rules use the original configuration under
+        <code class="code">[Proto]</code>, so there's no need to update your build file.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Persistent workers</h2>
+    <p>
+        Due to poor adoption, persistent workers have been removed as of v17. Users migrating to the Java plugin should
+        configure <code class="code">JavacTool</code> instead of <code class="code">JavacWorker</code>.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">Changes to glob()</h2>
+    <p>
+        The <code class="code">plz generate</code> subcommand can be used to link generated sources into the source tree
+        which can help with integrating with tooling and IDEs, however if you're using glob in that directory, this may
+        cause build failures. In v17, glob will omit symlinks by default. If you want to include symlinks, pass
+        <code class="code">glob(include_symlinks = True, ...)</code>.
+    </p>
+    <p>
+        Glob is often used to find files on disk to reduce toil in keeping build rules up to date, however it's often
+        easy to get the glob pattern wrong. In this case, it used to silently return an empty list which can lead to
+        confusing errors. In v17, glob will now throw an exception. If you want to allow glob to match empty files,
+        pass <code class="code">glob(allow_empty = True, ...)</code>.
+    </p>
+</section>

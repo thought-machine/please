@@ -78,17 +78,12 @@ def isinstance(obj, types:function|list) -> bool:
 
 def range(start:int, stop:int=None, step:int=1) -> str:
     pass
-def any(seq:list) -> bool:
-    for x in seq:
-        if x:
-            return True
-    return False
-def all(seq:list) -> bool:
-    for x in seq:
-        if not x:
-            return False
-    return True
 
+def any(seq:list) -> bool:
+    pass
+
+def all(seq:list) -> bool:
+    pass
 
 def bool(b) -> bool:
     pass
@@ -100,9 +95,11 @@ def list(l):
     fail('list is not callable')
 def dict(d):
     fail('dict is not callable')
+def callable(f:function) -> bool:
+    return isinstance(f, callable)
 
 
-def glob(include:list|str, exclude:list|str&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=not CONFIG.FF_EXCLUDE_GLOB_SYMLINKS, allow_empty:bool=not CONFIG.FF_ERROR_ON_EMPTY_GLOB) -> list:
+def glob(include:list|str, exclude:list|str&excludes=[], hidden:bool=CONFIG.BAZEL_COMPATIBILITY, include_symlinks:bool=False, allow_empty:bool=False) -> list:
     pass
 
 
@@ -237,6 +234,8 @@ def add_data(target:str, datum:str|list|dict):
 def add_out(target:str, name:str, out:str=''):
     pass
 def get_outs(target:str):
+    pass
+def get_named_outs(target:str) -> dict:
     pass
 def add_licence(target:str, licence:str):
     pass

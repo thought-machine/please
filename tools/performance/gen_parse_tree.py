@@ -32,7 +32,6 @@ DIRNAMES = [
 LANGUAGE_EXTENSIONS = {
     'python': 'py',
     'go': 'go',
-    'java': 'java',
     'cc': 'cc',
 }
 
@@ -41,8 +40,7 @@ LANGUAGES = list(LANGUAGE_EXTENSIONS.keys())
 # This is a little fiddly but a nice touch of realism: some targets have very high fan-out
 TEST_DEPS = {
     'python': [],
-    'go': ['//third_party/go:testify'],
-    'java': ['//third_party/java:junit', '//third_party/java:hamcrest'],
+    'go': ['///third_party/go/github.com_stretchr_testify//assert'],
     'cc': [],
 }
 
@@ -51,13 +49,13 @@ subinclude("///{lang}//build_defs:{lang}")
 
 {lang}_library(
     name = "{name}",
-    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"]),
+    srcs = glob(["*.{ext}"], exclude=["*_test.{ext}"], allow_empty=True),
     deps = {deps},
 )
 
 {lang}_test(
     name = "{name}_test",
-    srcs = glob(["*_test.{ext}"]),
+    srcs = glob(["*_test.{ext}"], allow_empty=True),
     deps = {test_deps},
 )
 """
@@ -121,18 +119,21 @@ def main(argv):
     # Create the .plzconfig in the new root
     with open(os.path.join(FLAGS.root, '.plzconfig'), 'w') as f:
         f.write("""
-[Plugin "java"]
-Target = //plugins:java
 [Plugin "python"]
 Target = //plugins:python
+
 [Plugin "cc"]
 Target = //plugins:cc
 TestMain = ///pleasings//cc:unittest_main
+
 [Plugin "go"]
 Target = //plugins:go
+FeatureFlags = go_get
+
 [parse]
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///cc//build_defs:cc
+preloadsubincludes = ///go//build_defs:go
         """)
     with open(os.path.join(FLAGS.root, 'BUILD.plz'), 'w') as f:
         f.write("""

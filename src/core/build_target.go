@@ -247,7 +247,8 @@ type BuildMetadata struct {
 	// Standard output & error
 	Stdout, Stderr []byte
 	// Serialised build action metadata.
-	RemoteAction []byte
+	RemoteAction  []byte
+	RemoteOutputs []byte
 	// Time this action was written. Used for remote execution to determine if
 	// the action is stale and needs re-checking or not.
 	Timestamp time.Time
@@ -639,12 +640,12 @@ func (target *BuildTarget) ExternalDependencies() []*BuildTarget {
 }
 
 // BuildDependencies returns the build-time dependencies of this target (i.e. not data, internal nor source).
-func (target *BuildTarget) BuildDependencies(state *BuildState) []*BuildTarget {
+func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(target.dependencies))
 	for _, deps := range target.dependencies {
-		if !deps.data && !deps.internal && (!state.Config.FeatureFlags.NoIterSourcesMarked || !deps.source) {
+		if !deps.data && !deps.internal && !deps.source {
 			for _, dep := range deps.deps {
 				ret = append(ret, dep)
 			}
@@ -711,6 +712,29 @@ func (target *BuildTarget) DeclaredNamedOutputs() map[string][]string {
 func (target *BuildTarget) DeclaredOutputNames() []string {
 	ret := make([]string, 0, len(target.namedOutputs))
 	for name := range target.namedOutputs {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
+}
+
+// DeclaredNamedSources returns the named sources from this target's original declaration.
+func (target *BuildTarget) DeclaredNamedSources() map[string][]string {
+	ret := make(map[string][]string, len(target.NamedSources))
+	for k, v := range target.NamedSources {
+		ret[k] = make([]string, len(v))
+		for i, bi := range v {
+			ret[k][i] = bi.String()
+		}
+	}
+	return ret
+}
+
+// DeclaredSourceNames is a convenience function to return the names of the declared
+// sources in a consistent order.
+func (target *BuildTarget) DeclaredSourceNames() []string {
+	ret := make([]string, 0, len(target.NamedSources))
+	for name := range target.NamedSources {
 		ret = append(ret, name)
 	}
 	sort.Strings(ret)
@@ -1631,7 +1655,7 @@ func (target *BuildTarget) toolPath(abs bool, namedOutput string) string {
 			if abs {
 				ret[i] = filepath.Join(RepoRoot, target.OutDir(), o)
 			} else {
-				ret[i] = filepath.Join(target.Label.PackageName, o)
+				ret[i] = filepath.Join(target.PackageDir(), o)
 			}
 		}
 		return strings.Join(ret, " ")

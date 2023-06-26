@@ -22,6 +22,16 @@ var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 
 // Push performs a single push of all registered metrics to the pushgateway (if configured).
 func Push(config *core.Configuration) {
+	if family, err := prometheus.DefaultGatherer.Gather(); err == nil {
+		for _, fam := range family {
+			for _, metric := range fam.Metric {
+				if metric.Counter != nil {
+					log.Debug("Metric recorded: %s: %0.0f", *fam.Name, *metric.Counter.Value)
+				}
+			}
+		}
+	}
+
 	if config.Metrics.PrometheusGatewayURL == "" {
 		return
 	}

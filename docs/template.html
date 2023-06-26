@@ -54,11 +54,11 @@
     <script src="/tabs.js"></script>
   </head>
   <body
-    class="silver bg-raisin-black essential-pragmata-pro f5 lh-copy nested-list-reset"
+    class="silver bg-raisin-black f5 lh-copy nested-list-reset"
   >
     {{ if ne .Filename "index.html"}}
       <header class="cf pa3">
-        <a class="flex no-underline f2-ns f3 white calibre fl" href="/index.html"
+        <a class="flex no-underline f2-ns f3 white fl" href="/index.html"
           >please<span class="violet">.build</span></a
         >
         <button
@@ -79,7 +79,7 @@
             <img id="nav-graphic" class="h4 rotate-270" alt="" src="/images/{{shape 2}}_v.png" />
           </div>
 
-          <ul class="sticky top-1 ttu" role="menu">
+          <ul class="sticky top-1 ttu essential-pragmata-pro" role="menu">
             {{$isItemActive := matches .Filename "quickstart.html" "codelabs.html" "basics.html" "dependencies.html" "quickstart_dropoff.html"}}
             <li
                     class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"
@@ -220,12 +220,6 @@
                     >C++ rules</a
                     >
                   </li>
-                  <li class="pl4" role="menuitem">
-                    <a
-                            class="silver no-underline"
-                            href="/lexicon.html#go"
-                    >Go rules</a
-                    >
                   </li>
                   <li class="pl4" role="menuitem">
                     <a
@@ -237,7 +231,7 @@
                   <li class="pl4" role="menuitem">
                     <a
                             class="silver no-underline"
-                            href="/lexicon.html#proto"
+                            href="/plugins.html#proto"
                     >Protobuf rules</a
                     >
                   </li>
@@ -280,7 +274,7 @@
                   <li class="pl4" role="menuitem">
                     <a
                             class="silver no-underline"
-                            href="/plugins.html#go-proto"
+                            href="/plugins.html#go_proto"
                     >Go-proto</a
                     >
                   </li>
@@ -437,7 +431,7 @@
       </div>
       <div class="ph3 flex-l w-80-l mw8-l">
         <div class="pb4 w-50-l">
-          <a class="flex no-underline f2-ns f3 white calibre" href="/index.html"
+          <a class="flex no-underline f2-ns f3 white" href="/index.html"
             >please<span class="turquoise">.build</span></a
           >
           <ul>

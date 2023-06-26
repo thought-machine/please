@@ -11,11 +11,11 @@ go_binary(
         "//test/please_shim/...",
     ],
     deps = [
+        "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
+        "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//src/cli",
         "//src/core",
         "//src/fs",
         "//src/update",
-        "//third_party/go:go-flags",
-        "//third_party/go:logging",
     ],
 )

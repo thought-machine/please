@@ -3,13 +3,13 @@ go_library(
     srcs = ["run_step.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/golang.org_x_sync//errgroup",
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/output",
         "//src/process",
-        "//third_party/go:errgroup",
     ],
 )
 
@@ -19,7 +19,8 @@ go_test(
     data = ["test_data"],
     deps = [
         ":run",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "//src/core",
         "//src/process",
-        "//third_party/go:testify",
     ],
 )

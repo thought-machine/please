@@ -2,23 +2,24 @@ subinclude("//build_defs:version")
 
 go_library(
     name = "update",
-    srcs = glob(
-        ["*.go"],
-        exclude = ["*_test.go"],
-    ),
-    resources = ["key.pub"],
+    srcs = [
+        "clean.go",
+        "update.go",
+        "verify.go",
+    ],
+    resources = glob(["key.pub"]),
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_coreos_go-semver//semver",
+        "///third_party/go/github.com_hashicorp_go-retryablehttp//:go-retryablehttp",
+        "///third_party/go/github.com_sigstore_sigstore//pkg/cryptoutils",
+        "///third_party/go/github.com_sigstore_sigstore//pkg/signature",
+        "///third_party/go/github.com_ulikunitz_xz//:xz",
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/process",
-        "//third_party/go:go-crypto",
-        "//third_party/go:go-retryablehttp",
-        "//third_party/go:semver",
-        "//third_party/go:sigstore",
-        "//third_party/go:xz",
     ],
 )
 
@@ -41,11 +42,13 @@ go_test(
     resources = ["key.pub"],
     deps = [
         ":update",
+        "///third_party/go/github.com_hashicorp_go-retryablehttp//:go-retryablehttp",
+        "///third_party/go/github.com_sigstore_sigstore//pkg/cryptoutils",
+        "///third_party/go/github.com_sigstore_sigstore//pkg/signature",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//src/cli",
-        "//src/cli/logging",
-        "//third_party/go:go-retryablehttp",
-        "//third_party/go:logging",
-        "//third_party/go:testify",
+        "//src/core",
     ],
 )
 

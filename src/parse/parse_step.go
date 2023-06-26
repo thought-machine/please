@@ -27,14 +27,14 @@ var log = logging.Log
 // targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
 // 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
 // even when we're not otherwise building targets.
-func Parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) {
-	if err := parse(tid, state, label, dependent, forSubinclude); err != nil {
-		state.LogBuildError(tid, label, core.ParseFailed, err, "Failed to parse package")
+func Parse(state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) {
+	if err := parse(state, label, dependent, forSubinclude); err != nil {
+		state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
 	}
 }
 
-func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
-	subrepo, err := checkSubrepo(tid, state, label, dependent, forSubinclude)
+func parse(state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) error {
+	subrepo, err := checkSubrepo(state, label, dependent, forSubinclude)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 		return state.ActivateTarget(pkg, label, dependent, forSubinclude)
 	}
 	// If we get here then it falls to us to parse this package.
-	state.LogParseResult(tid, label, core.PackageParsing, "Parsing...")
+	state.LogParseResult(label, core.PackageParsing, "Parsing...")
 
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
@@ -75,14 +75,14 @@ func parse(tid int, state *core.BuildState, label, dependent core.BuildLabel, fo
 	if err != nil {
 		return err
 	}
-	state.LogParseResult(tid, label, core.PackageParsed, "Parsed package")
+	state.LogParseResult(label, core.PackageParsed, "Parsed package")
 	// The target likely got activated already, however we activate here to handle psudotargets (:all), and to let this
 	// error when the target doesn't exist.
 	return state.ActivateTarget(pkg, label, dependent, forSubinclude)
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
-func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
+func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, forSubinclude bool) (*core.Subrepo, error) {
 	if label.Subrepo == "" {
 		return nil, nil
 	} else if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
@@ -101,14 +101,14 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 	}
 
 	// Try parsing the package in the host repo first.
-	s, err := parseSubrepoPackage(tid, state, sl.PackageName, "", label)
+	s, err := parseSubrepoPackage(state, sl.PackageName, "", label)
 	if err != nil || s != nil {
 		return s, err
 	}
 
 	// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host
 	// repo
-	s, err = parseSubrepoPackage(tid, state, sl.PackageName, dependent.Subrepo, label)
+	s, err = parseSubrepoPackage(state, sl.PackageName, dependent.Subrepo, label)
 	if err != nil || s != nil {
 		return s, err
 	}
@@ -117,11 +117,11 @@ func checkSubrepo(tid int, state *core.BuildState, label, dependent core.BuildLa
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
-func parseSubrepoPackage(tid int, state *core.BuildState, pkg, subrepo string, dependent core.BuildLabel) (*core.Subrepo, error) {
+func parseSubrepoPackage(state *core.BuildState, pkg, subrepo string, dependent core.BuildLabel) (*core.Subrepo, error) {
 	if state.Graph.Package(pkg, subrepo) == nil {
 		// Don't have it already, must parse.
 		label := core.BuildLabel{Subrepo: subrepo, PackageName: pkg, Name: "all"}
-		if err := parse(tid, state, label, dependent, true); err != nil {
+		if err := parse(state, label, dependent, true); err != nil {
 			return nil, err
 		}
 	}
@@ -175,11 +175,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 
 	// Verifies some details of the output files. This can only be perfomed after the whole package has been parsed as
 	// it guarantees that all necessary information between targets has been retrieved.
-	if state.Config.FeatureFlags.PackageOutputsStrictness {
-		go pkg.MustVerifyOutputs()
-	} else {
-		go pkg.VerifyOutputs()
-	}
+	go pkg.MustVerifyOutputs()
 
 	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
 	return pkg, nil

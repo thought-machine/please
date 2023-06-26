@@ -411,14 +411,13 @@ func TestDependencies(t *testing.T) {
 }
 
 func TestBuildDependencies(t *testing.T) {
-	state := NewDefaultBuildState()
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
 	target3 := makeTarget1("//src/core:target3", "", target2)
 	target3.AddDatum(target1.Label)
-	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies(state))
-	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies(state))
-	assert.Equal(t, []*BuildTarget{target2}, target3.BuildDependencies(state))
+	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies())
+	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies())
+	assert.Equal(t, []*BuildTarget{target2}, target3.BuildDependencies())
 }
 
 func TestDeclaredDependenciesStrict(t *testing.T) {

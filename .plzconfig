@@ -1,3 +1,19 @@
+[parse]
+BlacklistDirs = tree ; The performance test repo
+preloadsubincludes = ///go//build_defs:go
+preloadsubincludes = ///python//build_defs:python
+preloadsubincludes = ///shell//build_defs:shell
+
+[Plugin "go"]
+Target = //plugins:go
+pleasegotool = ///go//tools/please_go:bootstrap
+importpath = github.com/thought-machine/please
+gotool = //third_party/go:toolchain|go
+FeatureFlags = go_get
+
+[Plugin "shell"]
+Target = //plugins:shell
+
 [Plugin "python"]
 Target = //plugins:python
 ; We use the in-repo please_pex tool to build other pexes within this repo.
@@ -9,31 +25,6 @@ DisableVendorFlags = true
 keep = //test/...
 keep = //docs:all
 keep = //package:all
-
-[Plugin "cc"]
-target = //plugins:cc
-defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
-defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
-TestMain = ///pleasings//cc:unittest_main
-
-[Plugin "java"]
-Target = //plugins:java
-JavacWorker = //tools/java:javac_worker
-JunitRunner = //tools/java:junit_runner
-
-[proto]
-protoctool = //third_party/proto:protoc
-protocgoplugin = //third_party/go:protoc-gen-go
-language = go
-
-[parse]
-BlacklistDirs = tree ; The performance test repo
-preloadsubincludes = //build_defs:go
-# TODO(jpoole): We only need this to make cc_library available for the test main above. We should respect the pre-loaded
-# subincldues they define so we don't need this here.
-preloadsubincludes = ///cc//build_defs:cc
-preloadsubincludes = ///python//build_defs:python
-preloadsubincludes = ///shell//build_defs:shell
 
 [alias "autofix"]
 desc = Generates generated code and applies lint fixes
@@ -64,12 +55,13 @@ cmd = run //tools/misc:lint -p --
 
 [alias "go-get"]
 desc = Runs the go deps tool to install new dependencies into the repo
-cmd = run //third_party/binary:go-deps -- -w
+cmd = run ///go//tools/go_get_migrator --
 
 [licences]
 accept = MIT
 accept = MIT License
 accept = BSD
+accept = BSD-3
 accept = BSD License
 accept = Simplified BSD
 accept = BSD 3-Clause
@@ -90,24 +82,3 @@ accept = Artistic License
 accept = ISC
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice
-
-[featureflags]
-PackageOutputsStrictness = true
-PythonWheelHashing = true
-NoIterSourcesMarked = true
-GoDontCollapseImportPath = true
-ExcludeGoRules = true
-ErrorOnEmptyGlob = true
-ExcludeProtoRules = true
-
-[Plugin "go"]
-Target = //plugins:go
-pleasegotool = ///go//tools/please_go:bootstrap
-importpath = github.com/thought-machine/please
-gotool = //third_party/go:toolchain|go
-
-[BuildConfig]
-use-go-plugin = True
-
-[Plugin "shell"]
-Target = //plugins:shell

@@ -10,7 +10,7 @@
 # mitigated by having these tests only run tests in this package which are tagged as manual
 # so the bootstrap script won't try to run them twice simultaneously.
 
-subinclude("//test/build_defs", "///java//build_defs:java")
+subinclude("//test/build_defs")
 
 # This isn't really needed in this BUILD file, but is intended to avoid race conditions
 # between this and other BUILD files that have the same dependency.
@@ -21,19 +21,19 @@ subinclude("///pleasings//go:go_bindata")
 # found is not necessarily unique or stable.
 plz_e2e_test(
     name = "query_somepath_test",
-    cmd = "plz query somepath //tools/java:junit_runner //third_party/java:junit",
+    cmd = "plz query somepath //src:please //src/fs",
     expected_output = "query_somepath_test.txt",
 )
 
 plz_e2e_test(
     name = "query_somepath_reverse_test",
-    cmd = "plz query somepath //third_party/java:junit //tools/java:junit_runner",
+    cmd = "plz query somepath //src/fs //src:please",
     expected_output = "query_somepath_test.txt",
 )
 
 plz_e2e_test(
     name = "query_somepath_nopath_test",
-    cmd = "plz query somepath //src:please //third_party/java:junit",
+    cmd = "plz query somepath //src:please //docs/tools/config_templater",
     expected_failure = True,
     expected_output = "query_somepath_nopath_test.txt",
 )
@@ -43,20 +43,6 @@ plz_e2e_test(
     cmd = "HIDDEN=$(plz query somepath //tools/build_langserver:build_langserver //tools/build_langserver/lsp:all --hidden | wc -l); \
            NOTHIDDEN=$(plz query somepath //tools/build_langserver:build_langserver //tools/build_langserver/lsp:all | wc -l); \
            if [ $HIDDEN > $NOTHIDDEN ]; then exit 0; else exit 1; fi",
-)
-
-# Tests that targets can only use other targets that they depend on.
-plz_e2e_test(
-    name = "dep_required_test",
-    cmd = "plz build //test:failed_dep",
-    expect_output_contains = "Target //src/core:config_test isn't visible to //test:failed_dep",
-    expected_failure = True,
-)
-
-build_rule(
-    name = "failed_dep",
-    labels = ["manual"],
-    deps = ["//src/core:config_test"],
 )
 
 # Test that we count test output correctly. Also indirectly tests access to test data files.
@@ -170,15 +156,6 @@ plz_e2e_test(
     cmd = "plz test //test:individual_test_run_py TestRunningIndividualTests.test_first_thing",
     expect_output_contains = "1 test target and 1 test run",
     labels = ["python3"],
-)
-
-java_test(
-    name = "individual_test_run_java",
-    srcs = ["IndividualTest.java"],
-    labels = ["manual"],
-    deps = [
-        "//third_party/java:junit",
-    ],
 )
 
 # Test re-runs.
@@ -475,4 +452,18 @@ build_rule(
 plz_e2e_test(
     name = "non_test_target_with_test_fields_set_test",
     cmd = "plz test //test:non_test_target_with_test_fields_set",
+)
+
+gentest(
+    name = "shell_output_test_case",
+    labels = ["manual"],
+    no_test_output = True,
+    test_cmd = "echo '$TEST'; exit 1",
+)
+
+plz_e2e_test(
+    name = "shell_output_test",
+    cmd = "plz test //test:shell_output_test_case",
+    expect_output_contains = "$TEST",
+    expected_failure = True,
 )

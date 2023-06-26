@@ -75,6 +75,8 @@ func injectPluginConfig(plugin string, file ast.File) ast.File {
 		return writeJavaConfigFields(file)
 	case "cc":
 		return writeCCConfigFields(file)
+	case "go":
+		return writeGoConfigFields(file)
 	default:
 		return writeFieldsToConfig(plugin, file, nil)
 	}
@@ -137,11 +139,30 @@ func writeJavaConfigFields(file ast.File) ast.File {
 	return writeFieldsToConfig("java", file, configMap)
 }
 
+func writeGoConfigFields(file ast.File) ast.File {
+	configMap := map[string]string{
+		"gotool":           "GoTool",
+		"importpath":       "ImportPath",
+		"cgocctool":        "CCTool",
+		"cgoenabled":       "CGoEnabled",
+		"pleasegotool":     "PleaseGoTool",
+		"delvetool":        "DelveTool",
+		"defaultstatic":    "DefaultStatic",
+		"gotestrootcompat": "TestRootCompat",
+		"cflags":           "CFlags",
+		"ldflags":          "LdFlags",
+	}
+
+	return writeFieldsToConfig("go", file, configMap)
+}
+
 func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {
 	section := "Plugin"
 
+	pluginName := strings.ReplaceAll(plugin, "-", "_")
+
 	// Check for existing plugin section
-	if s := file.MaybeGetSection(section, plugin); s != nil {
+	if s := file.MaybeGetSection(section, pluginName); s != nil {
 		info("Plugin config section already exists, so init did nothing.")
 		return file
 	}
@@ -150,19 +171,19 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 	// TODO(sam): We can get the actual name of the package containing the build_defs
 	// if we build the plugin target, which we do below. Refactor this to build the target
 	// earlier and use the build_defs dir specified in the plugin config
-	subincludeStr := "///" + plugin + "//build_defs:" + plugin
+	subincludeStr := "///" + pluginName + "//build_defs:" + pluginName
 	file = ast.InjectField(file, "preloadsubincludes", subincludeStr, "parse", "", true)
 
 	// Write plugin target value
-	file = ast.InjectField(file, "Target", "//plugins:"+plugin, section, plugin, false)
+	file = ast.InjectField(file, "Target", "//plugins:"+pluginName, section, pluginName, false)
 
 	// Migrate any existing language fields to their plugin equivalents
 	if configMap != nil {
 		for _, s := range file.Sections {
-			if s.Key == plugin {
+			if s.Key == pluginName {
 				for _, field := range s.Fields {
 					if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-						file = ast.InjectField(file, plugVal, field.Value, section, plugin, true)
+						file = ast.InjectField(file, plugVal, field.Value, section, pluginName, true)
 					}
 				}
 			}
@@ -174,7 +195,7 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 
 // targetExistsInFile checks to see if the plugin target already exists
 // in plugins/BUILD
-func targetExistsInFile(location, plugin string) bool {
+func targetExistsInFile(location, target string) bool {
 	if !fs.FileExists(location) {
 		return false
 	}
@@ -186,7 +207,8 @@ func targetExistsInFile(location, plugin string) bool {
 
 	//TODO: Might want to pull in the state object here one day so we can query the build
 	// graph instead of using regexp
-	str := "plugin_repo\\(.+name = \"" + plugin + "\""
+
+	str := "plugin_repo\\(.+name = \"" + target + "\""
 	exists, err := regexp.Match("(?s)"+str, b)
 	if err != nil {
 		panic(err)
@@ -196,7 +218,8 @@ func targetExistsInFile(location, plugin string) bool {
 
 // createTarget writes the plugin target to plugins/BUILD
 func createTarget(location, plugin, version string) error {
-	if targetExistsInFile(location, plugin) {
+	pluginTarget := strings.ReplaceAll(plugin, "-", "_")
+	if targetExistsInFile(location, pluginTarget) {
 		return nil
 	}
 
@@ -217,7 +240,7 @@ func createTarget(location, plugin, version string) error {
 		}
 		version = revision
 	}
-	_, err = fmt.Fprintf(f, pluginRepoTemplate, plugin, version, plugin)
+	_, err = fmt.Fprintf(f, pluginRepoTemplate, pluginTarget, version, plugin)
 
 	return err
 }

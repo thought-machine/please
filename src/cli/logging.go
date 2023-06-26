@@ -127,6 +127,7 @@ type LogBackend struct {
 	rows, cols, maxRecords, interactiveRows, maxInteractiveRows, maxLines int
 	messageCount                                                          int
 	passthrough                                                           bool
+	lineWrapRe                                                            *regexp.Regexp
 }
 
 // Log implements the logging.Backend interface.
@@ -227,6 +228,7 @@ func (backend *LogBackend) recalcWindowSize() {
 	backend.rows = rows - 4 // Give a little space at the edge for any off-by-ones
 	backend.cols = cols
 	backend.RecalcLines()
+	backend.lineWrapRe = regexp.MustCompilePOSIX(fmt.Sprintf(".{%d,%d}(\\x1b[^m]+m)?", cols/2, cols))
 }
 
 // MaxDimensions returns the maximum number of rows / columns available in the display.
@@ -249,7 +251,7 @@ func (backend *LogBackend) lineWrap(msg string) []string {
 	wrappedLines := make([]string, 0, len(lines))
 	for _, line := range lines {
 		for i := 0; i < len(line); {
-			split := i + findSplit(line[i:], backend.cols)
+			split := i + backend.findSplit(line[i:], backend.cols)
 			wrappedLines = append(wrappedLines, line[i:split])
 			i = split
 		}
@@ -273,12 +275,11 @@ func reverse(s []string) []string {
 
 // Tries to find an appropriate point to word wrap line, taking shell escape codes into account.
 // (Note that because the escape codes are not visible, we can run past the max length for one of them)
-func findSplit(line string, guess int) int {
+func (backend *LogBackend) findSplit(line string, guess int) int {
 	if guess >= len(line) {
 		return len(line)
 	}
-	r := regexp.MustCompilePOSIX(fmt.Sprintf(".{%d,%d}(\\x1b[^m]+m)?", guess/2, guess))
-	if m := r.FindStringIndex(line); m != nil {
+	if m := backend.lineWrapRe.FindStringIndex(line); m != nil {
 		return m[1] // second element in slice is the end index
 	}
 	return guess // Dunno what to do at this point. It's probably unlikely to happen often though.

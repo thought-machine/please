@@ -98,7 +98,7 @@ func getTestOutputLines(currentIndex int, lines [][]byte) []string {
 	if resultLooksPriorGo114(currentIndex, lines) {
 		return getPostResultOutput(currentIndex, lines)
 	}
-	return getPreResultOutput(currentIndex, lines)
+	return append(getPreResultOutput(currentIndex, lines), getPostResultOutput(currentIndex, lines)...)
 }
 
 // Go test output looks prior to 114 if the previous line matches against a start test block.

@@ -15,6 +15,7 @@ func TestLineWrap(t *testing.T) {
 	backend.cols = 80
 	backend.maxLines = 2
 	backend.interactiveRows = 2
+	backend.recalcWindowSize()
 
 	s := backend.lineWrap(strings.Repeat("a", 40))
 	assert.Equal(t, strings.Repeat("a", 40), strings.Join(s, "\n"))

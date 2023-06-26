@@ -149,17 +149,10 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 		if dependency != target {
 			ch <- dependency.Label
 		}
-		if !state.Config.FeatureFlags.NoIterSourcesMarked {
-			// All the sources of this target now count as done
-			for _, src := range dependency.AllSources() {
-				if label, ok := src.Label(); ok && dependency.IsSourceOnlyDep(label) {
-					done[label] = true
-				}
-			}
-		}
+
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
-			for _, dep := range dependency.BuildDependencies(state) {
+			for _, dep := range dependency.BuildDependencies() {
 				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
 					if !done[dep2] && !dependency.IsTool(dep2) {
 						inner(graph.TargetOrDie(dep2))

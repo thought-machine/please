@@ -13,49 +13,10 @@ check_path_for_excludes() {
   PATH=/usr/local/bin:/usr/bin:/bin
 
   EXCLUDES=""
-  if [ "`uname`" = "Darwin" ]; then
-      if ! hash nasm 2>/dev/null ; then
-          # OSX comes with an ancient version of nasm that can't target
-          # 64-bit Mach-O binaries (?!!). Ensure we've got the Brew one.
-          if [ -n "`nasm -v | grep 'version 2'`" ]; then
-              warn "nasm 2.x not found, excluding C++ tests"
-              EXCLUDES="${EXCLUDES} --exclude=cc"
-          fi
-      fi
-  fi
 
-  if [ "$GOOS" != "linux" ] ; then
-      warn "cc_module tests disabled due to not being on Linux"
-      EXCLUDES="${EXCLUDES} --exclude=cc_module"
-  fi
-  if ! hash python2 2>/dev/null ; then
-      warn "python2 not found, excluding python2 tests"
-      EXCLUDES="${EXCLUDES} --exclude=py2"
-  fi
   if ! hash python3 2>/dev/null ; then
       warn "python3 not found, excluding python3 tests"
       EXCLUDES="${EXCLUDES} --exclude=py3 --exclude python3"
-  fi
-  if ! pkg-config python3 2>/dev/null ; then
-      warn "python3 includes not found, excluding py3 API tests"
-      EXCLUDES="${EXCLUDES} --exclude=py3_pkg_config"
-  fi
-  if ! hash clang++ 2>/dev/null ; then
-      warn "Clang not found, excluding Clang tests"
-      EXCLUDES="${EXCLUDES} --exclude=clang"
-  fi
-  if ! hash gold 2>/dev/null ; then
-      warn "Gold not found, excluding Gold tests"
-      EXCLUDES="${EXCLUDES} --exclude=gold"
-  fi
-  if ! hash java 2>/dev/null ; then
-      warn "Java not found, excluding Java tests"
-      EXCLUDES="${EXCLUDES} --exclude=java"
-  elif [ "`uname`" = "Darwin" ]; then
-      if [ -n "$(find /Library/Java/JavaVirtualMachines -prune -empty)" ] ; then
-          warn "JVM not found, excluding Java tests"
-          EXCLUDES="${EXCLUDES} --exclude=java"
-      fi
   fi
   if ! hash xz 2>/dev/null ; then
       warn "xz not found, excluding update tests"

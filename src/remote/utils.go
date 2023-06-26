@@ -36,6 +36,24 @@ var downloadErrors = metrics.NewCounter(
 	"Number of times the an error has been seen during a tree digest download",
 )
 
+var directoriesStored = metrics.NewCounter(
+	"remote",
+	"dirs_stored_total",
+	"Number of directories cached locally",
+)
+
+var directoriesRetrieved = metrics.NewCounter(
+	"remote",
+	"dirs_retrieved_total",
+	"Number of directories retrieved from cache",
+)
+
+var directoriesDownloaded = metrics.NewCounter(
+	"remote",
+	"dirs_downloaded_total",
+	"Number of directories downloaded from remote",
+)
+
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
 
@@ -141,6 +159,18 @@ func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.Outpu
 	return files, dirs, nil
 }
 
+// readDirectory reads a Directory proto, possibly using a local cache, otherwise going to the remote
+func (c *Client) readDirectory(dg *pb.Digest) (*pb.Directory, error) {
+	if dir, present := c.directories.Load(dg.Hash); present {
+		directoriesRetrieved.Inc()
+		return dir.(*pb.Directory), nil
+	}
+	dir := &pb.Directory{}
+	_, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir)
+	directoriesDownloaded.Inc()
+	return dir, err
+}
+
 // maybeGetOutDir will get the output directory based on the directory provided. If there's no matching directory, this
 // will return an empty string indicating that that action output was not an output directory.
 func maybeGetOutDir(dir string, outDirs []core.OutputDirectory) core.OutputDirectory {
@@ -181,14 +211,32 @@ func (c *Client) actionURL(digest *pb.Digest, prefix bool) string {
 }
 
 // locallyCacheResults stores the actionresult for an action in the local (usually dir) cache.
-func (c *Client) locallyCacheResults(target *core.BuildTarget, digest *pb.Digest, metadata *core.BuildMetadata, ar *pb.ActionResult) {
+func (c *Client) locallyCacheResults(target *core.BuildTarget, dg *pb.Digest, metadata *core.BuildMetadata, ar *pb.ActionResult) {
 	if c.state.Cache == nil {
 		return
 	}
 	data, _ := proto.Marshal(ar)
 	metadata.RemoteAction = data
 	metadata.Timestamp = time.Now()
-	if err := c.mdStore.storeMetadata(digest.Hash, metadata); err != nil {
+
+	if len(ar.OutputDirectories) > 0 {
+		tree := pb.Tree{}
+		for _, d := range ar.OutputDirectories {
+			t := pb.Tree{}
+			if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), &t); err == nil {
+				tree.Children = append(tree.Children, t.Root)
+				tree.Children = append(tree.Children, t.Children...)
+			}
+		}
+		for _, dir := range tree.Children {
+			c.directories.Store(c.digestMessage(dir).Hash, dir)
+		}
+		directoriesStored.Add(float64(len(tree.Children)))
+		data, _ := proto.Marshal(&tree)
+		metadata.RemoteOutputs = data
+	}
+
+	if err := c.mdStore.storeMetadata(dg.Hash, metadata); err != nil {
 		log.Warningf("Failed to store build metadata for target %s: %v", target.Label, err)
 	}
 }
@@ -204,6 +252,14 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
+				if len(metadata.RemoteOutputs) > 0 {
+					tree := pb.Tree{}
+					if err := proto.Unmarshal(metadata.RemoteOutputs, &tree); err == nil {
+						for _, dir := range tree.Children {
+							c.directories.Store(c.digestMessage(dir).Hash, dir)
+						}
+					}
+				}
 				return metadata, ar
 			}
 		}
@@ -575,7 +631,7 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 	const key = "build.bazel.remote.execution.v2.requestmetadata-bin" // as defined by the proto
 	b, _ := proto.Marshal(&pb.RequestMetadata{
 		ActionId:                target.Label.String(),
-		CorrelatedInvocationsId: c.state.Config.Remote.BuildID,
+		CorrelatedInvocationsId: c.buildID,
 		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
 			ToolVersion: core.PleaseVersion,

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testURI = "file://test/test.build"
+const testURI = "file:///test_data/test.build"
 
 func TestSymbols(t *testing.T) {
 	h := initHandlerText(`"test"`)

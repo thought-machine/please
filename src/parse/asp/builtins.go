@@ -39,6 +39,8 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "range", pyRange)
 	setNativeCode(s, "enumerate", enumerate)
 	setNativeCode(s, "zip", zip, varargs)
+	setNativeCode(s, "any", anyFunc)
+	setNativeCode(s, "all", allFunc)
 	setNativeCode(s, "len", lenFunc)
 	setNativeCode(s, "glob", glob)
 	setNativeCode(s, "bool", boolType)
@@ -55,6 +57,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_data", addData)
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "get_outs", getOuts)
+	setNativeCode(s, "get_named_outs", getNamedOuts)
 	setNativeCode(s, "add_licence", addLicence)
 	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
@@ -278,7 +281,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(filename, l), false)
+	s.SetAll(s.interpreter.Subinclude(s, filename, l), false)
 	return None
 }
 
@@ -314,7 +317,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.interpreter.loadPluginConfig(s, incPkgState)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(filepath.Join(t.OutDir(), out), t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label), false)
 		}
 	}
 	return None
@@ -395,20 +398,30 @@ func objLen(obj pyObject) pyInt {
 
 func isinstance(s *scope, args []pyObject) pyObject {
 	obj := args[0]
-	types := args[1]
-	if f, ok := types.(*pyFunc); ok && isType(obj, f.name) {
+	typesArg := args[1]
+
+	var types pyList
+
+	if l, ok := typesArg.(pyList); ok {
+		types = l
+	} else {
+		types = pyList{typesArg}
+	}
+
+	for _, li := range types {
 		// Special case for 'str' and so forth that are functions but also types.
-		return True
-	} else if l, ok := types.(pyList); ok {
-		for _, li := range l {
-			if lif, ok := li.(*pyFunc); ok && isType(obj, lif.name) {
-				return True
-			} else if reflect.TypeOf(obj) == reflect.TypeOf(li) {
-				return True
-			}
+		if lif, ok := li.(*pyFunc); ok && isType(obj, lif.name) {
+			return True
+		} else if _, ok := obj.(*pyFunc); ok {
+			continue // reflect would always return true
+		} else if reflect.TypeOf(obj) == reflect.TypeOf(li) {
+			return True
 		}
 	}
-	return newPyBool(reflect.TypeOf(obj) == reflect.TypeOf(types))
+	if _, ok := obj.(*pyFunc); ok {
+		return False // reflect would always return true
+	}
+	return newPyBool(reflect.TypeOf(obj) == reflect.TypeOf(typesArg))
 }
 
 func isType(obj pyObject, name string) bool {
@@ -425,6 +438,8 @@ func isType(obj pyObject, name string) bool {
 		return name == "dict"
 	case *pyConfig:
 		return name == "config"
+	case *pyFunc:
+		return name == "callable"
 	}
 	return false
 }
@@ -573,7 +588,7 @@ func glob(s *scope, args []pyObject) pyObject {
 	}
 
 	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
-	if s.state.Config.FeatureFlags.ErrorOnEmptyGlob && !allowEmpty && len(glob) == 0 {
+	if !allowEmpty && len(glob) == 0 {
 		// Strip build file name from exclude list for error message
 		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]
 		log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
@@ -772,6 +787,28 @@ func enumerate(s *scope, args []pyObject) pyObject {
 		ret[i] = pyList{pyInt(i), li}
 	}
 	return ret
+}
+
+func anyFunc(s *scope, args []pyObject) pyObject {
+	l, ok := args[0].(pyList)
+	s.Assert(ok, "Argument to any must be a list, not %s", args[0].Type())
+	for _, li := range l {
+		if li.IsTruthy() {
+			return True
+		}
+	}
+	return False
+}
+
+func allFunc(s *scope, args []pyObject) pyObject {
+	l, ok := args[0].(pyList)
+	s.Assert(ok, "Argument to all must be a list, not %s", args[0].Type())
+	for _, li := range l {
+		if !li.IsTruthy() {
+			return False
+		}
+	}
+	return True
 }
 
 func zip(s *scope, args []pyObject) pyObject {
@@ -984,6 +1021,34 @@ func getOuts(s *scope, args []pyObject) pyObject {
 	return ret
 }
 
+// getNamedOuts gets the named outputs of a target
+func getNamedOuts(s *scope, args []pyObject) pyObject {
+	var target *core.BuildTarget
+	if name := args[0].String(); core.LooksLikeABuildLabel(name) {
+		label := core.ParseBuildLabel(name, s.pkg.Name)
+		target = s.state.Graph.TargetOrDie(label)
+	} else {
+		target = getTargetPost(s, name)
+	}
+
+	var outs map[string][]string
+	if target.IsFilegroup {
+		outs = target.DeclaredNamedSources()
+	} else {
+		outs = target.DeclaredNamedOutputs()
+	}
+
+	ret := make(pyDict, len(outs))
+	for k, v := range outs {
+		list := make(pyList, len(v))
+		for i, out := range v {
+			list[i] = pyString(out)
+		}
+		ret[k] = list
+	}
+	return ret
+}
+
 // addLicence adds a licence to a target.
 func addLicence(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
@@ -1121,6 +1186,8 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		}
 		state = state.ForArch(arch)
 		isCrossCompile = true
+	} else if state.Arch != arch {
+		state = state.ForArch(arch)
 	}
 	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile)
 	if args[PackageRootIdx].IsTruthy() {

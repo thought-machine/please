@@ -1,0 +1,21 @@
+# true:
+t1 = all([True])
+t2 = all([1])
+t3 = all(["1"])
+t4 = all([{"1": "one"}])
+t5 = all([[1]])
+t6 = all([True, True])
+t7 = all([1, 1])
+t8 = all(["1", "1"])
+t9 = all([[1], [1]])
+
+# false:
+f1 = all([False])
+f2 = all([0])
+f3 = all([""])
+f4 = all([{}])
+f5 = all([[]])
+f6 = all([True, True, False])
+f7 = all([1, 1, 0])
+f8 = all(["1", "1", ""])
+f9 = all([[1], [1], []])

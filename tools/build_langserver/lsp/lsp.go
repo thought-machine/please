@@ -61,7 +61,18 @@ func NewHandler() *Handler {
 // Handle implements the jsonrpc2.Handler interface
 func (h *Handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) {
 	if resp, err := h.handle(req.Method, req.Params); err != nil {
-		if err := conn.ReplyWithError(ctx, req.ID, err.(*jsonrpc2.Error)); err != nil {
+		// check if the error is a jsonrpc error
+		jsonerr, ok := err.(*jsonrpc2.Error)
+
+		if !ok {
+			// if it's not a jsonrpc error then create a CodeInternalError
+			jsonerr = &jsonrpc2.Error{
+				Code:    jsonrpc2.CodeInternalError,
+				Message: fmt.Sprintf("%s", err),
+			}
+		}
+
+		if err := conn.ReplyWithError(ctx, req.ID, jsonerr); err != nil {
 			log.Error("Failed to send error response: %s", err)
 		}
 	} else if resp != nil {
@@ -218,7 +229,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 
 // loadBuiltins extracts & loads all the builtin functions at startup.
 func (h *Handler) loadBuiltins() error {
-	assets, err := rules.AllAssets(map[string]struct{}{})
+	assets, err := rules.AllAssets()
 	if err != nil {
 		return err
 	}

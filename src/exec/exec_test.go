@@ -34,7 +34,7 @@ func TestPrepareRuntimeDir(t *testing.T) {
 	if err := build.StoreTargetMetadata(target, &core.BuildMetadata{}); err != nil {
 		panic(err)
 	}
-	build.Build(0, state, target.Label, false)
+	build.Build(state, target, false)
 
 	err := core.PrepareRuntimeDir(state, target, "plz-out/exec/pkg")
 	assert.Nil(t, err)
@@ -104,7 +104,7 @@ func TestCommandExitCode(t *testing.T) {
 	target := core.NewBuildTarget(core.NewBuildLabel("pkg", "t"))
 	state.Graph.AddTarget(target)
 
-	exitCode := Exec(state, core.AnnotatedOutputLabel{BuildLabel: target.Label}, "test", nil, []string{"exit", "5"}, false, process.NoSandbox)
+	exitCode := Exec(state, core.AnnotatedOutputLabel{BuildLabel: target.Label}, "test", nil, []string{"exit", "5"}, nil, false, process.NoSandbox)
 	assert.Equal(t, 5, exitCode)
 }
 

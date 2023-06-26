@@ -485,7 +485,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         pass_env=pass_env
     )
 
-def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:str=None,
+def text_file(name:str, content:str, strip:bool=False, hashes:list=None, data:list|dict=[], out:str=None,
               binary:bool=False, visibility:list=None, licences:list=None, test_only:bool&testonly=False,
               labels:list=[], deps:list|dict=None, exported_deps:list=None, _tag:str='', entry_points:dict={}):
     """Defines a rule to convert a string in the build language into a text file.
@@ -493,6 +493,7 @@ def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:st
     Args:
       name (str): Name of the rule
       content (str): The text content of the file.
+      strip (bool): True to strip the input.
       hashes (list): List of hashes; the output must match at least one of these.
       out (str): Output name of the file. Chosen automatically if not given.
       binary (bool): True to mark the output as binary and runnable.
@@ -504,6 +505,11 @@ def text_file(name:str, content:str, hashes:list=None, data:list|dict=[], out:st
       data (list): List of runtime data for this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
     """
+
+    if strip:
+        content = '\n'.join(
+            [ line.lstrip(' \t') for line in content.removeprefix('\n').split('\n') ]
+        )
 
     return build_rule(
         name = name,

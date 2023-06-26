@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +30,7 @@ var cache core.Cache
 func TestBuildTargetWithNoDeps(t *testing.T) {
 	state, target := newState("//package1:target1")
 	target.AddOutput("file1")
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -39,7 +38,7 @@ func TestBuildTargetWithNoDeps(t *testing.T) {
 func TestFailedBuildTarget(t *testing.T) {
 	state, target := newState("//package1:target1a")
 	target.Command = "false"
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.Error(t, err)
 }
 
@@ -48,7 +47,7 @@ func TestBuildTargetWhichNeedsRebuilding(t *testing.T) {
 	// because there's no rule hash file.
 	state, target := newState("//package1:target2")
 	target.AddOutput("file2")
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -59,7 +58,7 @@ func TestBuildTargetWhichDoesntNeedRebuilding(t *testing.T) {
 	target.AddOutput("file3")
 	StoreTargetMetadata(target, new(core.BuildMetadata))
 	assert.NoError(t, writeRuleHash(state, target))
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Reused, target.State())
 }
@@ -72,7 +71,7 @@ func TestModifiedBuildTargetStillNeedsRebuilding(t *testing.T) {
 	assert.NoError(t, writeRuleHash(state, target))
 	target.Command = "echo -n 'wibble wibble wibble' > $OUT"
 	target.RuleHash = nil // Have to force a reset of this
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -83,7 +82,7 @@ func TestSymlinkedOutputs(t *testing.T) {
 	target.AddOutput("file5")
 	target.AddSource(core.FileLabel{File: "src5", Package: "package1"})
 	target.Command = "ln -s $SRC $OUT"
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -97,7 +96,7 @@ func TestPreBuildFunction(t *testing.T) {
 		target.Command = "echo 'wibble wibble wibble' > $OUT"
 		return nil
 	})
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 }
@@ -111,7 +110,7 @@ func TestPostBuildFunction(t *testing.T) {
 		assert.Equal(t, "wibble wibble wibble", output)
 		return nil
 	})
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 	assert.Equal(t, []string{"file7"}, target.Outputs())
@@ -129,7 +128,7 @@ func TestOutputDir(t *testing.T) {
 
 	state, target := newTarget()
 
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 
@@ -141,7 +140,7 @@ func TestOutputDir(t *testing.T) {
 
 	// Run again to load the outputs from the metadata
 	state, target = newTarget()
-	err = buildTarget(1, state, target, false)
+	err = buildTarget(state, target, false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 	assert.Equal(t, core.Reused, target.State())
@@ -164,7 +163,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 
 	state, target := newTarget(false)
 
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"foo"}, target.Outputs())
 
@@ -180,7 +179,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 
 	state, target = newTarget(true)
 
-	err = buildTarget(1, state, target, false)
+	err = buildTarget(state, target, false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"foo/file7"}, target.Outputs())
 
@@ -195,7 +194,7 @@ func TestCacheRetrieval(t *testing.T) {
 	target.AddOutput("file8")
 	target.Command = "false" // Will fail if we try to build it.
 	state.Cache = cache
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Cached, target.State())
 }
@@ -213,7 +212,7 @@ func TestPostBuildFunctionAndCache(t *testing.T) {
 		return nil
 	})
 	state.Cache = cache
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
 	assert.True(t, called)
@@ -233,7 +232,7 @@ func TestPostBuildFunctionAndCache2(t *testing.T) {
 		return nil
 	})
 	state.Cache = cache
-	err := buildTarget(1, state, target, false)
+	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Cached, target.State())
 	assert.True(t, called)
@@ -276,7 +275,7 @@ func TestCreatePlzOutGo(t *testing.T) {
 	target.AddLabel("link:plz-out/go/${PKG}/src")
 	target.AddOutput("file1.go")
 	assert.False(t, fs.PathExists("plz-out/go"))
-	assert.NoError(t, buildTarget(1, state, target, false))
+	assert.NoError(t, buildTarget(state, target, false))
 	assert.True(t, fs.PathExists("plz-out/go/package1/src/file1.go"))
 }
 
@@ -435,7 +434,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 
 	state, target := newState("//package1:mdtest")
 	target.AddOutput("file1")
-	err := buildTarget(rand.Int(), state, target, false)
+	err := buildTarget(state, target, false)
 	require.NoError(t, err)
 	assert.False(t, target.BuildCouldModifyTarget())
 	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
@@ -447,7 +446,7 @@ func TestBuildMetadatafileIsCreated(t *testing.T) {
 		assert.Equal(t, stdOut, output)
 		return nil
 	})
-	err = buildTarget(rand.Int(), state, target, false)
+	err = buildTarget(state, target, false)
 	require.NoError(t, err)
 	assert.True(t, target.BuildCouldModifyTarget())
 	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), target.TargetBuildMetadataFileName())))
@@ -631,12 +630,12 @@ func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, d
 }
 
 // RunPreBuildFunction stub
-func (fake *fakeParser) RunPreBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget) error {
+func (fake *fakeParser) RunPreBuildFunction(state *core.BuildState, target *core.BuildTarget) error {
 	return target.PreBuildFunction.Call(target)
 }
 
 // RunPostBuildFunction stub
-func (fake *fakeParser) RunPostBuildFunction(threadID int, state *core.BuildState, target *core.BuildTarget, output string) error {
+func (fake *fakeParser) RunPostBuildFunction(state *core.BuildState, target *core.BuildTarget, output string) error {
 	return target.PostBuildFunction.Call(target, output)
 }
 

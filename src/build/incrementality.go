@@ -47,19 +47,6 @@ var boolFalseHashValue = []byte{1}
 
 // Return true if the rule needs building, false if the existing outputs are OK.
 func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild bool) bool {
-	// Check the dependencies first, because they don't need any disk I/O.
-	if target.NeedsTransitiveDependencies {
-		if anyDependencyHasChanged(target) {
-			return true // one of the transitive deps has changed, need to rebuild
-		}
-	} else {
-		for _, dep := range target.Dependencies() {
-			if dep.State() < core.Unchanged {
-				log.Debug("Need to rebuild %s, %s has changed", target.Label, dep.Label)
-				return true // dependency has just been rebuilt, do this too.
-			}
-		}
-	}
 	// If the metadata file containing the std-out and additional outputs doesn't exist, rebuild
 	if !fs.FileExists(targetBuildMetadataFileName(target)) {
 		log.Debug("Need to rebuild %s, metadata file is missing", target.Label)
@@ -111,29 +98,6 @@ func b64(b []byte) string {
 		return "<not found>"
 	}
 	return base64.RawStdEncoding.EncodeToString(b)
-}
-
-// Returns true if any transitive dependency of this target has changed.
-func anyDependencyHasChanged(target *core.BuildTarget) bool {
-	done := map[core.BuildLabel]bool{}
-	var inner func(*core.BuildTarget) bool
-	inner = func(dependency *core.BuildTarget) bool {
-		done[dependency.Label] = true
-		if dependency != target && dependency.State() < core.Unchanged {
-			return true
-		} else if !dependency.OutputIsComplete || dependency == target {
-			for _, dep := range dependency.Dependencies() {
-				if !done[dep.Label] {
-					if inner(dep) {
-						log.Debug("Need to rebuild %s, %s has changed", target.Label, dep.Label)
-						return true
-					}
-				}
-			}
-		}
-		return false
-	}
-	return inner(target)
 }
 
 func mustSourceHash(state *core.BuildState, target *core.BuildTarget) []byte {

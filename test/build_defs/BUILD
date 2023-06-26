@@ -1,6 +1,6 @@
 package(default_visibility = ["//test/..."])
 
-subinclude("///shell//build_defs:shell")
+subinclude("///shell//build_defs:shell", "///go//build_defs:go")
 
 sh_binary(
     name = "content_checker",
@@ -11,6 +11,10 @@ sh_binary(
 filegroup(
     name = "build_defs",
     srcs = ["test.build_defs"],
+    visibility = [
+        "//test/...",
+        "//src/test/...",
+    ],
 )
 
 filegroup(

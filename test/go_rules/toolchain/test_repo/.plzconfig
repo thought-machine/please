@@ -1,6 +1,0 @@
-[go]
-GoTool = //tools:toolchain|go
-ImportPath = testrepo
-
-[Parse]
-BuildFileName = BUILD_FILE

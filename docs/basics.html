@@ -26,9 +26,11 @@
   <h2 class="title-2">Build targets</h2>
 
   <p>
-    Each BUILD file can contain a number of <em>build targets</em>. These are
-    units of buildable code which can be reused by other build targets. An
-    example is probably worth 1000 words at this point:
+    Each BUILD file can contain a number of <em>build targets</em>. These targets are the tasks that the build system
+    can perform. They are described using "build rules" which are in turn defined in plugins for each language. These
+    must be added to your project before you can use them. To get started, run
+    <code class="code">plz init plugin [python|java|go|cc]</code>. This will make build rules for that language
+    available to you in your BUILD files. An example is probably worth 1000 words at this point:
   </p>
 
   <div data-widget="tabs">
@@ -97,9 +99,6 @@
       >
         <!-- prettier-ignore -->
         <code data-lang="plz">
-    # https://github.com/please-build/python-rules
-    subinclude("///python//build_defs:python")
-
     python_library(
         name = 'my_library',
         srcs = ['file1.py', 'file2.py'],
@@ -234,48 +233,40 @@
       </pre>
     </div>
   </div>
-
   <p>
-    This snippet defines three build targets; a build target is simply a thing
-    that can be built by Please and typically appears as a single object in the
-    build file (as the
-    <code class="code">python_library</code>,
-    <code class="code">python_binary</code> and
-    <code class="code">python_test</code> are above).
+    The code above defines a 3 targets: a library called <code class="code">my_library</code>, a binary called
+    <code class="code">my_binary</code>, and a test target called <code class="code">my_test</code>. There are some
+    differences between languages but this is the typical pattern that Please build rules follow:
   </p>
-
   <ul class="bulleted-list">
     <li>
       <span>
-        <code class="code">my_library</code> is simply a collection of
-        <code class="code">file1.py</code> and
-        <code class="code">file2.py</code>.<br />
-        For some languages these might be compiled, for Python of course they're
-        simply made available for other rules.</span
-      >
+        The <code class="code">my_library</code> rules build first party packages, modules, or translation units,
+        depending on the nomenclature of the language. These are then made available to other rules within the project.
+      </span>
     </li>
     <li>
       <span>
-        <code class="code">my_binary</code> creates a deployable Python binary
-        with an entry point in <code class="code">my_main.py</code>.<br />
-        It also defines a <em>dependency</em> on
-        <code class="code">my_library</code> since it will use it
-        internally.</span
-      >
+        The <code class="code">my_binary</code> rules creates a runnable "binary target" that depends on
+        <code class="code">my_library</code>. These must have some kind of entry point, e.g.
+        <code class="code">python_binary</code> requires that a python file be passed via
+        <code class="code">main</code>, however other languages may require a main method or similar. The binary targets
+        can be run via <code class="code">plz run</code>.
+      </span>
     </li>
     <li>
       <span>
-        <code class="code">my_library_test</code> defines a test on
-        <code class="code">my_library</code>. Tests are run by Please and their
-        results are aggregated.</span
-      >
+        The <code class="code">my_library_test</code> defines a test on
+        <code class="code">my_library</code>. Tests are can be ran via <code class="code">plz test</code> or
+        <code class="code">plz cover</code>, and their results are aggregated.
+      </span>
     </li>
   </ul>
 
   <p>
     This illustrates the core points of Please; every rule clearly defines its
     inputs - its own sources and its dependencies - and since these are known
-    Please can be aggressive about parallelising, caching and reusing build
+    Please can be aggressive about parallelism, caching and reusing build
     artifacts.
   </p>
 </section>
@@ -287,28 +278,28 @@
 
   <p>
     Let's assume the build rules given above are defined in a file in your repo
-    named package/BUILD. You can do the following:
+    named <code class="code">package/BUILD</code>. You can do the following:
   </p>
 
   <ul class="bulleted-list">
     <li>
       <span>
         <code class="code">plz build //package:my_library</code> builds the
-        library. This isn't drastically useful on its own, of course...</span
-      >
+        library. This isn't drastically useful on its own, of course...
+      </span>
     </li>
     <li>
       <span>
         <code class="code">plz build //package:my_binary</code> builds the
         binary and all needed libraries that it depends on. That produces a
-        single output file which you could copy to another machine.</span
-      >
+        single output file which you could copy to another machine.
+      </span>
     </li>
     <li>
       <span>
         <code class="code">plz run //package:my_binary</code> builds and runs
-        the binary immediately.</span
-      >
+        the binary immediately.
+      </span>
     </li>
     <li>
       <span>
@@ -320,18 +311,19 @@
 </section>
 
 <section class="mt4">
-  <h2 class="title-2">Build labels</h2>
+  <h2 class="title-2" id="labels">Build labels</h2>
 
   <p>
-    That brings us to the topic of <em>build labels</em>, which are identifiers
-    of build targets. As you've just seen, these are of the form
-    <code class="code">//package:target</code>, where
+    Above, we have been referring to each target via its <em>build labels</em>. As you've just seen,
+    these are of the form <code class="code">//package:target</code>, where
     <code class="code">package</code> is the path from the repo root to that
     package, and <code class="code">target</code> is the name of the target
-    within that package.<br />
-    This is the most common form to identify targets absolutely, but there is
-    also a convenient shorthand where we omit the part before the colon (as you
-    saw earlier as well) to refer to a target within the current package.
+    within that package.
+</p>
+<p>
+    This is the most common form to identify targets absolutely, however you may see build labels
+    of the form <code class="code">:my_library</code>. These are local build labels that refer to a
+    target in the current BUILD file.
   </p>
 
   <p>

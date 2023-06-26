@@ -70,7 +70,7 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 	}
 
 	if level != 0 {
-		revdeps := FindRevdeps(state, labels, true, level)
+		revdeps := FindRevdeps(state, labels, true, false, level)
 		for dep := range revdeps {
 			if _, present := changed[dep]; !present {
 				labels = append(labels, dep.Label)
