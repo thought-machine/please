@@ -65,7 +65,7 @@ go_test(
         "///third_party/go/github.com_peterebden_go-sri//:go-sri",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
-        "///third_party/go/google.golang.org_genproto//googleapis/bytestream",
+        "///third_party/go/google.golang.org_genproto_googleapis_bytestream//:bytestream",
         "///third_party/go/google.golang.org_genproto_googleapis_rpc//status",
         "///third_party/go/google.golang.org_grpc//:grpc",
         "///third_party/go/google.golang.org_grpc//codes",
