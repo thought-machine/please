@@ -48,6 +48,7 @@ go_test(
     srcs = ["glob_integration_test.go"],
     # This must remain a glob because the tests rely on data being loaded in via globs
     data = glob(["test_data/**"]),
+    deps = [":fs"],
 )
 
 go_benchmark(

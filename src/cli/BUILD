@@ -9,6 +9,7 @@ go_library(
         "replacements.go",
         "suggest.go",
         "winch_other.go",
+        "winch_windows.go",
         "window.go",
     ],
     visibility = ["PUBLIC"],

@@ -5,6 +5,6 @@ go_binary(
     deps = [
         "///third_party/go/github.com_peterebden_go-cli-init_v5//flags",
         "//docs/tools/lexicon_templater/rules",
-        "//docs/tools/plugin_config_tool/plugin:plugin",
-    ]
+        "//docs/tools/plugin_config_tool/plugin",
+    ],
 )
