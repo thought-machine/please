@@ -144,7 +144,7 @@ func (i *interpreter) preloadSubincludes(s *scope) (err error) {
 
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, forSubinclude bool, statements []*Statement) (*scope, error) {
+func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, statements []*Statement) (*scope, error) {
 	s := i.scope.NewPackagedScope(pkg, 1)
 	s.config = i.getConfig(s.state).Copy()
 
@@ -153,13 +153,13 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 	// mutating operations like .setdefault() otherwise.
 	if forLabel != nil {
 		s.parsingFor = &parseTarget{
-			label:         *forLabel,
-			dependent:     *dependent,
-			forSubinclude: forSubinclude,
+			label:     *forLabel,
+			dependent: *dependent,
+			mode:      mode,
 		}
 	}
 
-	if !forSubinclude {
+	if !mode.IsPreload() {
 		if err := i.preloadSubincludes(s); err != nil {
 			return nil, err
 		}
@@ -251,9 +251,9 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 
 // parseTarget represents a request to activate a target while parsing a package
 type parseTarget struct {
-	label         core.BuildLabel
-	dependent     core.BuildLabel
-	forSubinclude bool
+	label     core.BuildLabel
+	dependent core.BuildLabel
+	mode      core.ParseMode
 }
 
 // A scope contains all the information about a lexical scope.

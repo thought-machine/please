@@ -55,12 +55,12 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, forSubinclude bool, filename string) error {
-	return p.parser.ParseFile(pkg, forLabel, dependent, forSubinclude, filename)
+func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, filename string) error {
+	return p.parser.ParseFile(pkg, forLabel, dependent, mode, filename)
 }
 
-func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel, forSubinclude bool) error {
-	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent, forSubinclude)
+func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel, mode core.ParseMode) error {
+	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent, mode)
 	return err
 }
 
