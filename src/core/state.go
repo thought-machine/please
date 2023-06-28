@@ -934,7 +934,7 @@ func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel, isForPreload bool) *BuildTarget {
 	mode := ParseModeForSubinclude
 	if isForPreload {
-		mode = mode | ParseModeForPreload
+		mode |= ParseModeForPreload
 	}
 	return state.waitForTargetAndEnsureDownload(l, dependent, mode)
 }
