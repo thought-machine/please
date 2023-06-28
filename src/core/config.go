@@ -443,7 +443,6 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.Timeout = cli.Duration(2 * time.Minute)
 	config.Bazel.Compatibility = usingBazelWorkspace
 
-	config.Sandbox.Tool = "please_sandbox"
 	// Please tools
 	config.Go.FilterTool = "/////_please:please_go_filter"
 	config.Go.PleaseGoTool = "/////_please:please_go"
