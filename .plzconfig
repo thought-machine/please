@@ -11,6 +11,12 @@ importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 FeatureFlags = go_get
 
+[Plugin "cc"]
+target = //plugins:cc
+defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
+defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
+TestMain = ///pleasings//cc:unittest_main
+
 [Plugin "shell"]
 Target = //plugins:shell
 

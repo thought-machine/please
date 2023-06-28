@@ -1,13 +1,14 @@
-subinclude("//test/build_defs", "///cc//build_defs:cc")
+subinclude("//test/build_defs")
 
-cc_library(
+filegroup(
     name = "lib",
     srcs = ["lib.cc"],
 )
 
-cc_binary(
+filegroup(
     name = "bin",
     srcs = ["bin.cc"],
+    binary = True,
 )
 
 # plz test should be able to complete tests in this directory
