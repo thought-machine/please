@@ -1081,7 +1081,7 @@ func (config *Configuration) NumRemoteExecutors() int {
 	return config.Remote.NumExecutors
 }
 
-func (config *Configuration) IsRemoteExecutution() bool {
+func (config *Configuration) IsRemoteExecution() bool {
 	if config.Remote.URL == "" {
 		return false
 	}

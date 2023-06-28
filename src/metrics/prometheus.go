@@ -44,7 +44,7 @@ func Push(config *core.Configuration) {
 			Name:      "hostinfo",
 			Help:      "Please host running info",
 			ConstLabels: prometheus.Labels{
-				"remote":   strconv.FormatBool(config.IsRemoteExecutution()),
+				"remote":   strconv.FormatBool(config.IsRemoteExecution()),
 				"hostname": name,
 			},
 		})
