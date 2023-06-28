@@ -2,6 +2,8 @@ package metrics
 
 import (
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,6 +34,22 @@ func Push(config *core.Configuration) {
 
 	if config.Metrics.PrometheusGatewayURL == "" {
 		return
+	}
+
+	if config.Metrics.PushHostInfo {
+		name, _ := os.Hostname()
+		counter := prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "plz",
+			Subsystem: "metrics",
+			Name:      "hostinfo",
+			Help:      "Please host running info",
+			ConstLabels: prometheus.Labels{
+				"remote":   strconv.FormatBool(config.IsRemoteExecution()),
+				"hostname": name,
+			},
+		})
+		MustRegister(counter)
+		counter.Inc()
 	}
 
 	if err := push.New(config.Metrics.PrometheusGatewayURL, "please").

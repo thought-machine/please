@@ -681,6 +681,7 @@ type Configuration struct {
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
 		Timeout              cli.Duration `help:"timeout for pushing to the gateway. Defaults to 2 seconds." `
+		PushHostInfo         bool         `help:"Whether to push host info"`
 	} `help:"Settings for collecting metrics."`
 }
 
@@ -1078,6 +1079,13 @@ func (config *Configuration) NumRemoteExecutors() int {
 		return 0
 	}
 	return config.Remote.NumExecutors
+}
+
+func (config *Configuration) IsRemoteExecution() bool {
+	if config.Remote.URL == "" {
+		return false
+	}
+	return config.Remote.NumExecutors > 0
 }
 
 func (config *Configuration) ShouldLinkGeneratedSources() bool {
