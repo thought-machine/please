@@ -1,0 +1,8 @@
+# This should be available to us via preloads even though this file is involved in a subinclude
+blah = sh_test
+
+filegroup(
+    name = "empty",
+    srcs = ["empty.build_defs"],
+    visibility = ["//src/..."],
+)

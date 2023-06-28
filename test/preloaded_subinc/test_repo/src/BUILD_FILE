@@ -1,3 +1,6 @@
+# This file contains a reference to sh_test which is preloaded. Make sure that works.
+subinclude("//src/build_defs:empty")
+
 k8s_config(
     name = "k8s",
     srcs = [

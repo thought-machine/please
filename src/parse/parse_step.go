@@ -78,6 +78,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	state.LogParseResult(label, core.PackageParsed, "Parsed package")
 	// The target likely got activated already, however we activate here to handle psudotargets (:all), and to let this
 	// error when the target doesn't exist.
+
 	return state.ActivateTarget(pkg, label, dependent, mode)
 }
 
