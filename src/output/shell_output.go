@@ -355,7 +355,7 @@ func testResultMessage(results *core.TestSuite, showDuration bool) string {
 		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.FlakyPasses(), "flake", "flakes"))
 	}
 	if results.TimedOut {
-		msg += ", ${RED_ON_WHITE}TIMED OUT${RESET}"
+		msg += ", ${WHITE_ON_RED}TIMED OUT${RESET}"
 	}
 	if results.Cached {
 		msg += " ${GREEN}[cached]${RESET}"
