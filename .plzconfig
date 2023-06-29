@@ -1,6 +1,7 @@
 [parse]
 BlacklistDirs = tree ; The performance test repo
 preloadsubincludes = ///go//build_defs:go
+preloadsubincludes = ///cc//build_defs:cc 
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///shell//build_defs:shell
 
