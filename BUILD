@@ -39,8 +39,3 @@ sh_cmd(
     cmd = "plz fmt -w && gofmt -s -w src tools test && plz run parallel --include codegen",
 )
 
-github_repo(
-    name = "pleasings",
-    repo = "thought-machine/pleasings",
-    revision = "v1.1.0",
-)
