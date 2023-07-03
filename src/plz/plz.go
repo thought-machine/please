@@ -103,7 +103,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		parse.Parse(state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, 0)
+		parse.Parse(state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, core.ParseModeNormal)
 	}
 	if arch.Arch != "" && arch != cli.HostArch() {
 		// Set up a new subrepo for this architecture.

@@ -68,7 +68,7 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 			}
 		} else {
 			// These are buildable now
-			state.QueueTarget(target.Label, core.OriginalTarget, false, 0)
+			state.QueueTarget(target.Label, core.OriginalTarget, false, core.ParseModeNormal)
 		}
 	}
 	return target

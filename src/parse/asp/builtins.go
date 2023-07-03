@@ -929,7 +929,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, false, 0)
+		err := s.state.QueueTarget(dep, target.Label, false, core.ParseModeNormal)
 		s.Assert(err == nil, "%s", err)
 	}
 	return None
@@ -939,7 +939,7 @@ func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum cor
 	target.AddDatum(datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false, 0)
+		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
 		s.Assert(err == nil, "%s", err)
 	}
 }
@@ -948,7 +948,7 @@ func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.Buil
 	target.AddNamedDatum(name, datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false, 0)
+		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
 		s.Assert(err == nil, "%s", err)
 	}
 }

@@ -26,7 +26,8 @@ import (
 type ParseMode uint8
 
 const (
-	ParseModeForSubinclude ParseMode = 1 << iota
+	ParseModeNormal ParseMode = iota
+	ParseModeForSubinclude
 	ParseModeForPreload
 )
 
@@ -478,7 +479,7 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 		state.progress.originalTargets = append(state.progress.originalTargets, label)
 		state.progress.originalTargetMutex.Unlock()
 	}
-	state.addPendingParse(label, OriginalTarget, 0)
+	state.addPendingParse(label, OriginalTarget, ParseModeNormal)
 }
 
 // Hasher returns a PathHasher for the given function (e.g. "SHA1").
@@ -942,7 +943,7 @@ func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel,
 // WaitForInitialTargetAndEnsureDownload is like WaitForTargetAndEnsureDownload but is used for
 // targets in the initial set.
 func (state *BuildState) WaitForInitialTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
-	return state.waitForTargetAndEnsureDownload(l, dependent, 0)
+	return state.waitForTargetAndEnsureDownload(l, dependent, ParseModeNormal)
 }
 
 func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
@@ -1126,7 +1127,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		var called atomicBool
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called.SetTrue()
-			return state.queueResolvedTarget(t, forceBuild, 0)
+			return state.queueResolvedTarget(t, forceBuild, ParseModeNormal)
 		}); err != nil {
 			state.asyncError(target.Label, err)
 			return
