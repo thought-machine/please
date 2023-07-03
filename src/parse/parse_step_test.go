@@ -14,7 +14,7 @@ import (
 func TestAddDepSimple(t *testing.T) {
 	// Simple case with only one package parsed and one target added
 	state := makeState(true, false)
-	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, core.ParseModeNormal)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -26,9 +26,9 @@ func TestAddDepSimple(t *testing.T) {
 func TestAddDepMultiple(t *testing.T) {
 	// Similar to above but doing all targets in that package
 	state := makeState(true, false)
-	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
-	state.ActivateTarget(nil, buildLabel("//package1:target2"), core.OriginalTarget, false)
-	state.ActivateTarget(nil, buildLabel("//package1:target3"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, core.ParseModeNormal)
+	state.ActivateTarget(nil, buildLabel("//package1:target2"), core.OriginalTarget, core.ParseModeNormal)
+	state.ActivateTarget(nil, buildLabel("//package1:target3"), core.OriginalTarget, core.ParseModeNormal)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -42,7 +42,7 @@ func TestAddDepMultiple(t *testing.T) {
 func TestAddDepMultiplePackages(t *testing.T) {
 	// This time we already have package2 parsed
 	state := makeState(true, true)
-	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, core.ParseModeNormal)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -55,7 +55,7 @@ func TestAddDepNoBuild(t *testing.T) {
 	// Tag state as not needing build. We shouldn't get any pending builds at this point.
 	state := makeState(true, true)
 	state.NeedBuild = false
-	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, false)
+	state.ActivateTarget(nil, buildLabel("//package1:target1"), core.OriginalTarget, core.ParseModeNormal)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -68,7 +68,7 @@ func TestAddParseDep(t *testing.T) {
 	// should still get queued for build though. Recall that we indicate this with :all...
 	state := makeState(true, true)
 	state.NeedBuild = false
-	state.ActivateTarget(nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), false)
+	state.ActivateTarget(nil, buildLabel("//package2:target2"), buildLabel("//package3:all"), core.ParseModeNormal)
 
 	time.Sleep(time.Millisecond * 100)
 

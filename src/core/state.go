@@ -23,6 +23,22 @@ import (
 	"github.com/thought-machine/please/src/process"
 )
 
+type ParseMode uint8
+
+const (
+	ParseModeNormal ParseMode = iota
+	ParseModeForSubinclude
+	ParseModeForPreload
+)
+
+func (m ParseMode) IsPreload() bool {
+	return m&ParseModeForPreload != 0
+}
+
+func (m ParseMode) IsForSubinclude() bool {
+	return m&ParseModeForSubinclude != 0 || m&ParseModeForPreload != 0
+}
+
 // startTime is as close as we can conveniently get to process start time.
 var startTime = time.Now()
 
@@ -32,7 +48,7 @@ const cycleCheckDuration = 5 * time.Second
 // ParseTask is the type for the parse task queue
 type ParseTask struct {
 	Label, Dependent BuildLabel
-	ForSubinclude    bool
+	Mode             ParseMode
 }
 
 // A TaskType identifies whether a task is a build or test action.
@@ -65,9 +81,9 @@ const (
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
-	ParseFile(pkg *Package, forLabel, dependent *BuildLabel, forSubinclude bool, filename string) error
+	ParseFile(pkg *Package, forLabel, dependent *BuildLabel, mode ParseMode, filename string) error
 	// ParseReader parses a single BUILD file into the given package.
-	ParseReader(pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel, forSubinclude bool) error
+	ParseReader(pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel, mode ParseMode) error
 	// RunPreBuildFunction runs a pre-build function for a target.
 	RunPreBuildFunction(state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
@@ -313,14 +329,14 @@ func (state *BuildState) addActiveTargets(n int) {
 }
 
 // addPendingParse adds a task for a pending parse of a build label.
-func (state *BuildState) addPendingParse(label, dependent BuildLabel, forSubinclude bool) {
+func (state *BuildState) addPendingParse(label, dependent BuildLabel, mode ParseMode) {
 	atomic.AddInt64(&state.progress.numActive, 1)
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
 		}()
-		state.pendingParses <- ParseTask{Label: label, Dependent: dependent, ForSubinclude: forSubinclude}
+		state.pendingParses <- ParseTask{Label: label, Dependent: dependent, Mode: mode}
 	}()
 }
 
@@ -463,7 +479,7 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 		state.progress.originalTargets = append(state.progress.originalTargets, label)
 		state.progress.originalTargetMutex.Unlock()
 	}
-	state.addPendingParse(label, OriginalTarget, false)
+	state.addPendingParse(label, OriginalTarget, ParseModeNormal)
 }
 
 // Hasher returns a PathHasher for the given function (e.g. "SHA1").
@@ -631,7 +647,7 @@ func (state *BuildState) WaitForPreloadedSubincludeTargetsAndEnsureDownloaded() 
 			// Queue them up asynchronously to feed the queues as quickly as possible
 			wg.Add(1)
 			go func(inc BuildLabel) {
-				state.WaitForTargetAndEnsureDownload(inc, OriginalTarget)
+				state.WaitForTargetAndEnsureDownload(inc, OriginalTarget, true)
 				wg.Done()
 			}(inc)
 		}
@@ -824,7 +840,7 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 	}
 
 	// Otherwise queue the target for parse and recurse
-	state.addPendingParse(l, dependent, true)
+	state.addPendingParse(l, dependent, ParseModeForSubinclude)
 	state.progress.packageWaits.Set(key, make(chan struct{}))
 
 	return state.WaitForPackage(l, dependent)
@@ -832,10 +848,10 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
-	return state.waitForBuiltTarget(l, dependent, true)
+	return state.waitForBuiltTarget(l, dependent, ParseModeForSubinclude)
 }
 
-func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, forSubinclude bool) *BuildTarget {
+func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
 		if s := t.State(); s >= Built && s != Failed {
 			return t
@@ -848,14 +864,14 @@ func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, forSubinclu
 		<-ch
 		return state.Graph.Target(l)
 	}
-	if err := state.queueTarget(l, dependent, forSubinclude, forSubinclude); err != nil {
+	if err := state.queueTarget(l, dependent, mode.IsForSubinclude(), mode); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
-	return state.waitForBuiltTarget(l, dependent, forSubinclude)
+	return state.waitForBuiltTarget(l, dependent, mode)
 }
 
 // AddTarget adds a new target to the build graph.
@@ -916,18 +932,22 @@ func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 }
 
 // WaitForTargetAndEnsureDownload waits for the target to be built and then downloads it if executing remotely
-func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
-	return state.waitForTargetAndEnsureDownload(l, dependent, true)
+func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel, isForPreload bool) *BuildTarget {
+	mode := ParseModeForSubinclude
+	if isForPreload {
+		mode |= ParseModeForPreload
+	}
+	return state.waitForTargetAndEnsureDownload(l, dependent, mode)
 }
 
 // WaitForInitialTargetAndEnsureDownload is like WaitForTargetAndEnsureDownload but is used for
 // targets in the initial set.
 func (state *BuildState) WaitForInitialTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
-	return state.waitForTargetAndEnsureDownload(l, dependent, false)
+	return state.waitForTargetAndEnsureDownload(l, dependent, ParseModeNormal)
 }
 
-func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel, forSubinclude bool) *BuildTarget {
-	target := state.waitForBuiltTarget(l, dependent, forSubinclude)
+func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
+	target := state.waitForBuiltTarget(l, dependent, mode)
 	if err := state.EnsureDownloaded(target); err != nil {
 		panic(fmt.Errorf("failed to download target outputs: %w", err))
 	}
@@ -935,7 +955,7 @@ func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel,
 }
 
 // ActivateTarget marks a target as active (ie. to be built) and adds its dependencies as pending parses.
-func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabel, forSubinclude bool) error {
+func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabel, mode ParseMode) error {
 	if !label.IsAllTargets() && state.Graph.Target(label) == nil {
 		if label.Subrepo == "" && label.PackageName == "" && label.Name == dependent.Subrepo {
 			if subrepo := state.CheckArchSubrepo(label.Name); subrepo != nil {
@@ -943,7 +963,7 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 				return nil
 			}
 		}
-		if state.Config.Bazel.Compatibility && forSubinclude {
+		if state.Config.Bazel.Compatibility && mode.IsForSubinclude() {
 			// Bazel allows some things that look like build targets but aren't - notably the syntax
 			// to load(). It suits us to treat that as though it is one, but we now have to
 			// implicitly make it available.
@@ -956,7 +976,7 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 			return fmt.Errorf(msg + suggestTargets(pkg, label, dependent))
 		}
 	}
-	if state.ParsePackageOnly && !forSubinclude {
+	if state.ParsePackageOnly && !mode.IsForSubinclude() {
 		return nil // Some kinds of query don't need a full recursive parse.
 	} else if label.IsAllTargets() {
 		if dependent == OriginalTarget {
@@ -967,7 +987,7 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 					// Must always do this for coverage because we need to calculate sources of
 					// non-test targets later on.
 					if !state.NeedTests || target.IsTest() || state.NeedCoverage {
-						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets()); err != nil {
+						if err := state.QueueTarget(target.Label, dependent, dependent.IsAllTargets(), mode); err != nil {
 							return err
 						}
 					}
@@ -977,7 +997,7 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 	} else {
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
-			if err := state.QueueTarget(l, dependent, forSubinclude || dependent.IsAllTargets()); err != nil {
+			if err := state.QueueTarget(l, dependent, dependent.IsAllTargets(), mode); err != nil {
 				return err
 			}
 		}
@@ -1005,16 +1025,19 @@ func (state *BuildState) CheckArchSubrepo(name string) *Subrepo {
 }
 
 // QueueTarget adds a single target to the build queue.
-func (state *BuildState) QueueTarget(label, dependent BuildLabel, forceBuild bool) error {
-	return state.queueTarget(label, dependent, forceBuild, false)
+func (state *BuildState) QueueTarget(label, dependent BuildLabel, forceBuild bool, mode ParseMode) error {
+	return state.queueTarget(label, dependent, forceBuild || mode.IsForSubinclude(), mode)
 }
 
-func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild, neededForSubinclude bool) error {
+func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild bool, mode ParseMode) error {
+	if label.Name == "arcat" {
+		log.Debug("")
+	}
 	target := state.Graph.Target(label)
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.
 		if state.Graph.PackageByLabel(label) == nil {
-			state.addPendingParse(label, dependent, forceBuild)
+			state.addPendingParse(label, dependent, mode)
 			return nil
 		}
 		// Package is loaded but target doesn't exist in it. Check again to avoid nasty races.
@@ -1024,14 +1047,14 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild, ne
 		}
 	}
 	if dependent.IsAllTargets() || dependent == OriginalTarget {
-		return state.queueResolvedTarget(target, forceBuild, neededForSubinclude)
+		return state.queueResolvedTarget(target, forceBuild, mode)
 	}
 	for _, l := range target.ProvideFor(state.Graph.TargetOrDie(dependent)) {
 		if l == label {
-			if err := state.queueResolvedTarget(target, forceBuild, neededForSubinclude); err != nil {
+			if err := state.queueResolvedTarget(target, forceBuild, mode); err != nil {
 				return err
 			}
-		} else if err := state.queueTarget(l, dependent, forceBuild, neededForSubinclude); err != nil {
+		} else if err := state.queueTarget(l, dependent, forceBuild, mode); err != nil {
 			return err
 		}
 	}
@@ -1054,8 +1077,8 @@ func (state *BuildState) queueTargetData(target *BuildTarget) {
 }
 
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
-func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild, neededForSubinclude bool) error {
-	if neededForSubinclude {
+func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild bool, mode ParseMode) error {
+	if mode.IsForSubinclude() {
 		target.neededForSubinclude.SetTrue()
 	}
 	if target.State() >= Active && !forceBuild {
@@ -1075,7 +1098,7 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild, ne
 		}
 		// Actual queuing stuff now happens asynchronously in here.
 		atomic.AddInt64(&state.progress.numPending, 1)
-		go state.queueTargetAsync(target, forceBuild, shouldBuild)
+		go state.queueTargetAsync(target, forceBuild, shouldBuild, mode)
 	}
 
 	// Here we want to ensure we don't queue the target every time; ideally we only do it once.
@@ -1092,10 +1115,10 @@ func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild, ne
 }
 
 // queueTarget enqueues a target's dependencies and the target itself once they are done.
-func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, building bool) {
+func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, building bool, mode ParseMode) {
 	defer state.taskDone(true)
 	for _, dep := range target.DeclaredDependencies() {
-		if err := state.queueTarget(dep, target.Label, forceBuild, false); err != nil {
+		if err := state.queueTarget(dep, target.Label, forceBuild, mode); err != nil {
 			state.asyncError(dep, err)
 			return
 		}
@@ -1104,7 +1127,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		var called atomicBool
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called.SetTrue()
-			return state.queueResolvedTarget(t, forceBuild, false)
+			return state.queueResolvedTarget(t, forceBuild, ParseModeNormal)
 		}); err != nil {
 			state.asyncError(target.Label, err)
 			return

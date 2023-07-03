@@ -607,7 +607,7 @@ type fakeParser struct {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, forSubinclude bool, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, filename string) error {
 	return nil
 }
 
@@ -625,7 +625,7 @@ func (fake *fakeParser) NewParser(state *core.BuildState) {
 }
 
 // ParseReader stub
-func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel, forSubinclude bool) error {
+func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel, mode core.ParseMode) error {
 	return nil
 }
 

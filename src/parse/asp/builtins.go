@@ -194,7 +194,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	}
 
 	if s.parsingFor != nil && s.parsingFor.label == target.Label {
-		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.parsingFor.forSubinclude); err != nil {
+		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.parsingFor.mode); err != nil {
 			s.Error("%v", err)
 		}
 	}
@@ -292,7 +292,7 @@ func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.Bui
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
 
-	return s.state.WaitForTargetAndEnsureDownload(l, dependent)
+	return s.state.WaitForTargetAndEnsureDownload(l, dependent, false)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -360,7 +360,11 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 		}
 		if t.State() < core.Active {
-			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, true); err != nil {
+			mode := core.ParseModeForSubinclude
+			if s.parsingFor != nil {
+				mode = s.parsingFor.mode // Propagate whether this is a preload or not
+			}
+			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, mode); err != nil {
 				s.Error("Failed to activate subinclude target: %v", err)
 			}
 		}
@@ -925,7 +929,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, false)
+		err := s.state.QueueTarget(dep, target.Label, false, core.ParseModeNormal)
 		s.Assert(err == nil, "%s", err)
 	}
 	return None
@@ -935,7 +939,7 @@ func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum cor
 	target.AddDatum(datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false)
+		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
 		s.Assert(err == nil, "%s", err)
 	}
 }
@@ -944,7 +948,7 @@ func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.Buil
 	target.AddNamedDatum(name, datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false)
+		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
 		s.Assert(err == nil, "%s", err)
 	}
 }

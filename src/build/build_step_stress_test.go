@@ -68,7 +68,7 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 			}
 		} else {
 			// These are buildable now
-			state.QueueTarget(target.Label, core.OriginalTarget, false)
+			state.QueueTarget(target.Label, core.OriginalTarget, false, core.ParseModeNormal)
 		}
 	}
 	return target
@@ -100,7 +100,7 @@ type fakeParser struct {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, forSubinclude bool, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, filename string) error {
 	return nil
 }
 
@@ -119,7 +119,7 @@ func (fake *fakeParser) Init(state *core.BuildState) {
 }
 
 // ParseReader stub
-func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel, forSubinclude bool) error {
+func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel, mode core.ParseMode) error {
 	return nil
 }
 
