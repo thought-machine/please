@@ -117,6 +117,10 @@ type Client struct {
 	// existingBlobs is used to track the set of existing blobs remotely.
 	existingBlobs     map[string]struct{}
 	existingBlobMutex sync.Mutex
+
+	// tracer is the otel tracer
+	tracer   trace.Tracer
+	shutdown func()
 }
 
 type actionDigestMap struct {
@@ -158,6 +162,23 @@ func New(state *core.BuildState) *Client {
 		buildID:           state.Config.Remote.BuildID,
 	}
 
+	bsp := honeycomb.NewBaggageSpanProcessor()
+
+	// use honeycomb distro to setup OpenTelemetry SDK
+	shutdown, err := otelconfig.ConfigureOpenTelemetry(
+		otelconfig.WithSpanProcessor(bsp),
+		otelconfig.WithLogLevel("DEBUG"),
+		otelconfig.WithLogger(log),
+	)
+	if err != nil {
+		log.Warningf("Failed to set up tracing, continuing anyway: %v", err)
+	}
+	tracer := otel.Tracer("please-tracer")
+
+	c.tracer = tracer
+
+	c.shutdown = shutdown
+
 	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
@@ -171,10 +192,12 @@ func (c *Client) CheckInitialised() error {
 
 // Disconnect disconnects this client from the remote server.
 func (c *Client) Disconnect() error {
+	c.shutdown()
 	if c.client != nil {
 		log.Debug("Disconnecting from remote execution server...")
 		return c.client.Close()
 	}
+
 	return nil
 }
 
@@ -376,7 +399,7 @@ func (c *Client) Run(target *core.BuildTarget) error {
 	if err := c.CheckInitialised(); err != nil {
 		return err
 	}
-	cmd, digest, err := c.uploadAction(target, false, true)
+	cmd, digest, err := c.uploadAction(context.TODO(), target, false, true)
 	if err != nil {
 		return err
 	}
@@ -603,41 +626,30 @@ func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Comm
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
-
-	bsp := honeycomb.NewBaggageSpanProcessor()
-
-	// use honeycomb distro to setup OpenTelemetry SDK
-	otelShutdown, err := otelconfig.ConfigureOpenTelemetry(
-		otelconfig.WithSpanProcessor(bsp),
-	)
-	if err != nil {
-		defer otelShutdown()
-	} else {
-		log.Warningf("Failed to set up tracing, continuing anyway")
-	}
-	tracer := otel.Tracer("test-tracer")
-	// Attributes represent additional key-value descriptors that can be bound
-	// to a metric observer or recorder.
-	commonAttrs := []attribute.KeyValue{
-		attribute.String("attrA", "chocolate"),
-		attribute.String("attrB", "raspberry"),
-		attribute.String("attrC", "vanilla"),
-	}
-
-	// work begins
-	_, span := tracer.Start(
-		context.Background(),
-		"please-execution",
-		trace.WithAttributes(commonAttrs...))
-	defer span.End()
-
 	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(target, command, digest, isTest, needStdout); metadata != nil {
 			return metadata, ar, nil
 		}
 	}
+	// Don't set up the span until after we check the local cache, so we don't flood our tracing
+
+	//Attributes represent additional key-value descriptors that can be bound
+	//to a metric observer or recorder.
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("version", core.PleaseVersion),
+		attribute.String("build-id", c.buildID),
+		attribute.String("target", target.Label.Name),
+	}
+
+	// work begins
+	ctx, span := c.tracer.Start(
+		context.Background(),
+		"please",
+		trace.WithAttributes(commonAttrs...))
+	defer span.End()
+
 	// We didn't actually upload the inputs before, so we must do so now.
-	command, digest, err = c.uploadAction(target, isTest, false)
+	command, digest, err := c.uploadAction(ctx, target, isTest, false)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
@@ -656,12 +668,12 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 	skipCacheLookup := (isTest && (c.state.ForceRerun || c.state.NumTestRuns != 1)) || (!isTest && c.state.ForceRebuild)
 	skipCacheLookup = skipCacheLookup && c.state.IsOriginalTarget(target)
 
-	return c.reallyExecute(target, command, digest, needStdout, isTest, skipCacheLookup)
+	return c.reallyExecute(ctx, target, command, digest, needStdout, isTest, skipCacheLookup)
 }
 
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
-func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) reallyExecute(ctx context.Context, target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
 	executing := false
 	building := target.State() <= core.Built
 	if building {
@@ -700,7 +712,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 		}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
 		for i := 1; i < 1000000; i++ {
@@ -721,7 +733,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 		}
 	}()
 
-	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(target), &pb.ExecuteRequest{
+	resp, err := c.client.ExecuteAndWaitProgress(c.contextWithMetadata(ctx, target), &pb.ExecuteRequest{
 		InstanceName:    c.instance,
 		ActionDigest:    digest,
 		SkipCacheLookup: skipCacheLookup,
@@ -899,7 +911,7 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 		return nil, nil, err
 	}
 	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
+	if err := c.uploadBlobs(context.TODO(), func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		inputDir.Build(ch)
 		for _, out := range command.OutputPaths {
@@ -925,7 +937,7 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	}); err != nil {
 		return nil, nil, err
 	}
-	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
+	if _, err := c.client.UpdateActionResult(context.TODO(), &pb.UpdateActionResultRequest{
 		InstanceName: c.instance,
 		ActionDigest: actionDigest,
 		ActionResult: ar,
@@ -938,7 +950,7 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 // buildTextFile "builds" uploads a text file to the CAS
 func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
 	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
+	if err := c.uploadBlobs(context.TODO(), func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		if len(command.OutputPaths) != 1 {
 			return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(command.OutputPaths))

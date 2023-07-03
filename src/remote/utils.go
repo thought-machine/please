@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel"
 	"os"
 	"path/filepath"
 	"sort"
@@ -584,13 +585,16 @@ func reencodeSRI(target *core.BuildTarget, h string) string {
 
 // dialOpts returns a set of dial options to apply based on the config.
 func (c *Client) dialOpts() ([]grpc.DialOption, error) {
-
+	keep := otelgrpc.WithInterceptorFilter(func(info *otelgrpc.InterceptorInfo) bool {
+		method := info.Method
+		return strings.HasPrefix(method, "/build.bazel.remote.execution.v2.Execution/Execute")
+	})
 	opts := []grpc.DialOption{
 		grpc.WithStatsHandler(c.stats),
 		// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
+		grpc.WithChainUnaryInterceptor(otelgrpc.UnaryClientInterceptor(keep, otelgrpc.WithTracerProvider(otel.GetTracerProvider()))),
+		grpc.WithChainStreamInterceptor(otelgrpc.StreamClientInterceptor(keep, otelgrpc.WithTracerProvider(otel.GetTracerProvider()))),
 	}
 	if c.state.Config.Remote.TokenFile == "" {
 		return opts, nil
@@ -631,7 +635,7 @@ func (cred tokenCredProvider) RequireTransportSecurity() bool {
 }
 
 // contextWithMetadata returns a context with metadata corresponding to the given build target.
-func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
+func (c *Client) contextWithMetadata(ctx context.Context, target *core.BuildTarget) context.Context {
 	const key = "build.bazel.remote.execution.v2.requestmetadata-bin" // as defined by the proto
 	b, _ := proto.Marshal(&pb.RequestMetadata{
 		ActionId:                target.Label.String(),
@@ -641,5 +645,5 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 			ToolVersion: core.PleaseVersion,
 		},
 	})
-	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(key, string(b)))
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(key, string(b)))
 }

@@ -11,7 +11,7 @@ import (
 // It handles all the logic around the various upload methods etc.
 // The given function is a callback that receives a channel to send these blobs on; it
 // should close it when finished.
-func (c *Client) uploadBlobs(f func(ch chan<- *uploadinfo.Entry) error) error {
+func (c *Client) uploadBlobs(ctx context.Context, f func(ch chan<- *uploadinfo.Entry) error) error {
 	const buffer = 10 // Buffer it a bit but don't get too far ahead.
 	ch := make(chan *uploadinfo.Entry, buffer)
 	var g errgroup.Group
@@ -23,7 +23,7 @@ func (c *Client) uploadBlobs(f func(ch chan<- *uploadinfo.Entry) error) error {
 	if err := g.Wait(); err != nil {
 		return err
 	}
-	return c.uploadIfMissing(context.Background(), chomks)
+	return c.uploadIfMissing(ctx, chomks)
 }
 
 func (c *Client) uploadIfMissing(ctx context.Context, chomks []*uploadinfo.Entry) error {

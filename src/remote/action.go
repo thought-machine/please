@@ -27,10 +27,10 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb.Command, *pb.Digest, error) {
+func (c *Client) uploadAction(ctx context.Context, target *core.BuildTarget, isTest, isRun bool) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
-	err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
+	err := c.uploadBlobs(ctx, func(ch chan<- *uploadinfo.Entry) error {
 		defer close(ch)
 		inputRoot, err := c.uploadInputs(ch, target, isTest || isRun)
 		if err != nil {
