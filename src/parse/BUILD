@@ -5,6 +5,7 @@ go_library(
         "internal_package.go",
         "parse_step.go",
     ],
+    pgo_file = "//:pgo",
     resources = glob(["internal.tmpl"]),
     visibility = ["PUBLIC"],
     deps = [

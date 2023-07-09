@@ -4,6 +4,7 @@ go_library(
         "cmap.go",
         "hash.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = ["///third_party/go/github.com_cespare_xxhash_v2//:v2"],
 )

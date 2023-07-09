@@ -11,6 +11,7 @@ go_library(
         "sort.go",
         "walk.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_karrick_godirwalk//:godirwalk",

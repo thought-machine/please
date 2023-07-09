@@ -1,6 +1,7 @@
 go_library(
     name = "assets",
     srcs = ["assets.go"],
+    pgo_file = "//:pgo",
     resources = [":resources"],
     visibility = ["//src/..."],
 )

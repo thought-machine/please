@@ -1,6 +1,7 @@
 go_library(
     name = "clean",
     srcs = ["clean.go"],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "//src/build",

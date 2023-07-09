@@ -42,4 +42,5 @@ sh_cmd(
 filegroup(
     name = "pgo",
     srcs = ["default.pgo"],
+    visibility = ["//src/..."],
 )

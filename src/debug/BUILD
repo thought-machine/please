@@ -1,6 +1,7 @@
 go_library(
     name = "debug",
     srcs = ["debug.go"],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli/logging",

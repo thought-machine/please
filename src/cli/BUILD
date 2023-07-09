@@ -11,6 +11,7 @@ go_library(
         "winch_other.go",
         "window.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_coreos_go-semver//semver",

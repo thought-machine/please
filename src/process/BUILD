@@ -7,6 +7,7 @@ go_library(
         "process.go",
         "progress.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",

@@ -1,6 +1,7 @@
 go_library(
     name = "hashes",
     srcs = ["rewrite_hashes.go"],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli/logging",

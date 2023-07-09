@@ -5,6 +5,7 @@ go_library(
         "scm.go",
         "stub.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_sourcegraph_go-diff//diff",

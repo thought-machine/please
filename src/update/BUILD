@@ -7,6 +7,7 @@ go_library(
         "update.go",
         "verify.go",
     ],
+    pgo_file = "//:pgo",
     resources = glob(["key.pub"]),
     visibility = ["PUBLIC"],
     deps = [

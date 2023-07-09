@@ -1,6 +1,7 @@
 go_library(
     name = "run",
     srcs = ["run_step.go"],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/golang.org_x_sync//errgroup",

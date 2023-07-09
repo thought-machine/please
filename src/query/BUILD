@@ -17,6 +17,7 @@ go_library(
         "whatinputs.go",
         "whatoutputs.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_please-build_gcfg//:gcfg",
