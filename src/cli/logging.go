@@ -222,7 +222,10 @@ func (backend *LogBackend) SetPassthrough(passthrough bool, interactiveRows int,
 }
 
 func (backend *LogBackend) recalcWindowSize() {
-	rows, cols, _ := WindowSize()
+	rows, cols, err := WindowSize()
+	if err != nil {
+		log.Debug("Failed to recalculate window size: %s", err)
+	}
 	backend.mutex.Lock()
 	defer backend.mutex.Unlock()
 	backend.rows = rows - 4 // Give a little space at the edge for any off-by-ones

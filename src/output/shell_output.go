@@ -46,6 +46,7 @@ func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTest
 	defer t.Stop()
 	results := state.Results()
 	bt := newBuildingTargets(state, plainOutput)
+	displayer.Update(bt.Targets())
 loop:
 	for {
 		select {
