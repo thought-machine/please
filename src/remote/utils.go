@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel"
 	"os"
 	"path/filepath"
 	"sort"
@@ -593,8 +592,8 @@ func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 		grpc.WithStatsHandler(c.stats),
 		// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
-		grpc.WithChainUnaryInterceptor(otelgrpc.UnaryClientInterceptor(keep, otelgrpc.WithTracerProvider(otel.GetTracerProvider()))),
-		grpc.WithChainStreamInterceptor(otelgrpc.StreamClientInterceptor(keep, otelgrpc.WithTracerProvider(otel.GetTracerProvider()))),
+		grpc.WithChainUnaryInterceptor(otelgrpc.UnaryClientInterceptor(keep)),
+		grpc.WithChainStreamInterceptor(otelgrpc.StreamClientInterceptor(keep)),
 	}
 	if c.state.Config.Remote.TokenFile == "" {
 		return opts, nil
@@ -645,5 +644,6 @@ func (c *Client) contextWithMetadata(ctx context.Context, target *core.BuildTarg
 			ToolVersion: core.PleaseVersion,
 		},
 	})
+
 	return metadata.NewOutgoingContext(ctx, metadata.Pairs(key, string(b)))
 }
