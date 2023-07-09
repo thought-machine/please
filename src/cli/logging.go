@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -84,10 +85,12 @@ func InitFileLogging(logFile string, logFileLevel Verbosity, append bool) {
 
 func logFormatter(coloured bool) logging.Formatter {
 	formatStr := "%{time:15:04:05.000} %{level:7s}: %{message}"
-	if coloured {
-		formatStr = "%{color}" + formatStr + "%{color:reset}"
+	if !coloured {
+		return logging.MustStringFormatter(formatStr)
 	}
-	return logging.MustStringFormatter(formatStr)
+	formatStr = "%{color}" + formatStr + "%{color:reset}"
+	formatter := logging.MustStringFormatter(formatStr)
+	return &deathFormatter{f: formatter}
 }
 
 func setLogBackend(backend logging.Backend) {
@@ -313,4 +316,27 @@ func (w *HTTPLogWrapper) Warn(msg string, keysAndValues ...interface{}) {
 // IsATerminal returns true if the given file is an interactive TTY.
 func IsATerminal(file *os.File) bool {
 	return term.IsTerminal(int(file.Fd()))
+}
+
+// deathFormatter handles printing of death messages in the correct manner.
+type deathFormatter struct {
+	f logging.Formatter
+}
+
+func (d *deathFormatter) Format(calldepth int, r *logging.Record, w io.Writer) error {
+	if r.Level != logging.CRITICAL {
+		return d.f.Format(calldepth, r, w)
+	}
+	var buf bytes.Buffer
+	if err := d.f.Format(calldepth, r, &buf); err != nil {
+		return err
+	}
+	replacements := []string{
+		"a", "ᴀ", "b", "ʙ", "c", "ᴄ", "d", "ᴅ", "e", "ᴇ", "f", "ꜰ", "g", "ɢ", "h", "ʜ", "i", "ɪ",
+		"j", "ᴊ", "k", "ᴋ", "l", "ʟ", "m", "ᴍ", "n", "ɴ", "o", "ᴏ", "p", "ᴘ", "q", "ꞯ", "r", "ʀ",
+		"s", "ꜱ", "t", "ᴛ", "u", "ᴜ", "v", "ᴠ", "w", "ᴡ", "x", "x", "y", "ʏ", "z", "ᴢ",
+	}
+	s := strings.NewReplacer(replacements...).Replace(buf.String())
+	_, err := w.Write([]byte(s))
+	return err
 }
