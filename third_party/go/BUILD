@@ -5,13 +5,14 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "df6509885f65f0d7a4eaf3dfbe7dda327569787e8a0a31cbf99ae3a6e23e9ea8",  # darwin_amd64
-        "859e0a54b7fcea89d9dd1ec52aab415ac8f169999e5fdfb0f0c15b577c4ead5e",  # darwin_arm64
-        "eca1a8f7b6ff6146efc285eed581096b12b59c1f0488bfe98ed053ab205267ca",  # freebsd_amd64
-        "464b6b66591f6cf055bc5df90a9750bf5fbc9d038722bb84a9d56a2bea974be6",  # linux_amd64
-        "efa97fac9574fc6ef6c9ff3e3758fb85f1439b046573bf434cccb5e012bd00c8",  # linux_arm64
+        "79715ca5b8becd120703ac9af5d1da749e095d2b9bf830c4f3af4b15b2cb049d", # darwin-amd64
+        "94ad76b7e1593bb59df7fd35a738194643d6eed26a4181c94e3ee91381e40459", # darwin-arm64
+        "eda6cf7495c95fc3f57d3a62cb63d321269198e1a6960563a1d894ed767b1301", # freebsd-amd64
+        "d7ec48cde0d3d2be2c69203bc3e0a44de8660b9c09a6e85c4732a3f7dc442612", # linux-amd64
+        "aa2fab0a7da20213ff975fa7876a66d47b48351558d98851b87d1cfef4360d09", # linux-arm64
     ],
-    version = "1.19",
+    install_std = True,
+    version = "1.20.5",
 )
 
 go_mod_download(
