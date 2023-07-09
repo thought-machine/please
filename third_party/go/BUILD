@@ -15,6 +15,10 @@ go_toolchain(
     version = "1.20.5",
 )
 
+go_stdlib(
+    name = "std",
+)
+
 go_mod_download(
     name = "build_tools_dl",
     module = "github.com/peterebden/buildtools",
