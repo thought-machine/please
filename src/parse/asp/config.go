@@ -82,6 +82,9 @@ func newConfig(state *core.BuildState) *pyConfig {
 	base["BUILD_CONFIG"] = pyString(state.Config.Build.Config)
 	base["DEBUG_PORT"] = pyInt(state.DebugPort)
 
+	// >= is legal at the start of the plz version but it shouldn't appear to the BUILD file.
+	base["PLZ_VERSION"] = pyString(strings.TrimPrefix(state.Config.Please.Version.String(), ">="))
+
 	return &pyConfig{base: &pyConfigBase{dict: base}}
 }
 
