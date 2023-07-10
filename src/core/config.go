@@ -589,86 +589,86 @@ type Configuration struct {
 		KeepLabel []string     `help:"Defines a target label to be kept; for example, if you set this to go, no Go targets would ever be considered for deletion." example:"go"`
 	} `help:"Please supports a form of 'garbage collection', by which it means identifying targets that are not used for anything. By default binary targets and all their transitive dependencies are always considered non-garbage, as are any tests directly on those. The config options here allow tweaking this behaviour to retain more things.\n\nNote that it's a very good idea that your BUILD files are in the standard format when running this."`
 	Go struct {
-		GoTool           string `help:"The binary to use to invoke Go & its subtools with." var:"GO_TOOL"`
-		GoRoot           string `help:"If set, will set the GOROOT environment variable appropriately during build actions." var:"GOROOT"`
-		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." var:"GOPATH"`
-		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." var:"GO_IMPORT_PATH"`
-		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" var:"CGO_CC_TOOL"`
-		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation. Defaults to '0' (disabled)" var:"CGO_ENABLED"`
-		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." var:"GO_FILTER_TOOL"`
-		PleaseGoTool     string `help:"Sets the location of the please_go tool that is used to compile and test go code." var:"PLEASE_GO_TOOL"`
-		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." var:"GO_EMBED_TOOL"`
-		DelveTool        string `help:"Sets the location of the Delve tool that is used for debugging Go code." var:"DELVE_TOOL"`
-		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." var:"GO_DEFAULT_STATIC"`
-		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." var:"GO_TEST_ROOT_COMPAT"`
-		CFlags           string `help:"Sets the CFLAGS env var for go rules." var:"GO_C_FLAGS"`
-		LDFlags          string `help:"Sets the LDFLAGS env var for go rules." var:"GO_LD_FLAGS"`
+		GoTool           string `help:"The binary to use to invoke Go & its subtools with." deprecated:"true" var:"GO_TOOL"`
+		GoRoot           string `help:"If set, will set the GOROOT environment variable appropriately during build actions." deprecated:"true" var:"GOROOT"`
+		GoPath           string `help:"If set, will set the GOPATH environment variable appropriately during build actions." deprecated:"true" var:"GOPATH"`
+		ImportPath       string `help:"Sets the default Go import path at the root of this repository.\nFor example, in the Please repo, we might set it to github.com/thought-machine/please to allow imports from that package within the repo." deprecated:"true" var:"GO_IMPORT_PATH"`
+		CgoCCTool        string `help:"Sets the location of CC while building cgo_library and cgo_test rules. Defaults to gcc" deprecated:"true" var:"CGO_CC_TOOL"`
+		CgoEnabled       string `help:"Sets the CGO_ENABLED which controls whether the cgo build flag is set during cross compilation. Defaults to '0' (disabled)" deprecated:"true" var:"CGO_ENABLED"`
+		FilterTool       string `help:"Sets the location of the please_go_filter tool that is used to filter source files against build constraints." deprecated:"true" var:"GO_FILTER_TOOL"`
+		PleaseGoTool     string `help:"Sets the location of the please_go tool that is used to compile and test go code." deprecated:"true" var:"PLEASE_GO_TOOL"`
+		EmbedTool        string `help:"Sets the location of the please_go_embed tool that is used to parse //go:embed directives." deprecated:"true" var:"GO_EMBED_TOOL"`
+		DelveTool        string `help:"Sets the location of the Delve tool that is used for debugging Go code." deprecated:"true" var:"DELVE_TOOL"`
+		DefaultStatic    bool   `help:"Sets Go binaries to default to static linking. Note that enabling this may have negative consequences for some code, including Go's DNS lookup code in the net module." deprecated:"true" var:"GO_DEFAULT_STATIC"`
+		GoTestRootCompat bool   `help:"Changes the behavior of the build rules to be more compatible with go test i.e. please will descend into the package directory to run unit tests as go test does." deprecated:"true" var:"GO_TEST_ROOT_COMPAT"`
+		CFlags           string `help:"Sets the CFLAGS env var for go rules." deprecated:"true" var:"GO_C_FLAGS"`
+		LDFlags          string `help:"Sets the LDFLAGS env var for go rules." deprecated:"true" var:"GO_LD_FLAGS"`
 	}
 	Python struct {
-		PipTool             string   `help:"The tool that is invoked during pip_library rules." var:"PIP_TOOL"`
-		PipFlags            string   `help:"Additional flags to pass to pip invocations in pip_library rules." var:"PIP_FLAGS"`
-		PexTool             string   `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory." var:"PEX_TOOL"`
-		DefaultInterpreter  string   `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." var:"DEFAULT_PYTHON_INTERPRETER"`
-		TestRunner          string   `help:"The test runner used to discover & run Python tests; one of unittest, pytest or behave, or a custom import path to bring your own." var:"PYTHON_TEST_RUNNER"`
-		TestRunnerBootstrap string   `help:"Target providing test-runner library and its transitive dependencies. Injects plz-provided bootstraps if not given." var:"PYTHON_TEST_RUNNER_BOOTSTRAP"`
-		Debugger            string   `help:"Sets what debugger to use to debug Python binaries. The available options are: 'pdb' (default) and 'debugpy'." var:"PYTHON_DEBUGGER"`
-		ModuleDir           string   `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." var:"PYTHON_MODULE_DIR"`
-		DefaultPipRepo      cli.URL  `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." var:"PYTHON_DEFAULT_PIP_REPO"`
-		WheelRepo           cli.URL  `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`
-		UsePyPI             bool     `help:"Whether or not to use PyPI for pip_library rules or not. Defaults to true, if you disable this you will presumably want to set DefaultPipRepo to use one of your own.\nIs overridden by the use_pypi argument to pip_library." var:"USE_PYPI"`
-		WheelNameScheme     []string `help:"Defines a custom templatized wheel naming scheme. Templatized variables should be surrounded in curly braces, and the available options are: url_base, package_name, version and initial (the first character of package_name). The default search pattern is '{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl' along with a few common variants." var:"PYTHON_WHEEL_NAME_SCHEME"`
-		InterpreterOptions  string   `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
-		DisableVendorFlags  bool     `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." var:"DISABLE_VENDOR_FLAGS"`
+		PipTool             string   `help:"The tool that is invoked during pip_library rules." deprecated:"true" var:"PIP_TOOL"`
+		PipFlags            string   `help:"Additional flags to pass to pip invocations in pip_library rules." deprecated:"true" var:"PIP_FLAGS"`
+		PexTool             string   `help:"The tool that's invoked to build pexes. Defaults to please_pex in the install directory." deprecated:"true" var:"PEX_TOOL"`
+		DefaultInterpreter  string   `help:"The interpreter used for python_binary and python_test rules when none is specified on the rule itself. Defaults to python but you could of course set it to, say, pypy." deprecated:"true" var:"DEFAULT_PYTHON_INTERPRETER"`
+		TestRunner          string   `help:"The test runner used to discover & run Python tests; one of unittest, pytest or behave, or a custom import path to bring your own." deprecated:"true" var:"PYTHON_TEST_RUNNER"`
+		TestRunnerBootstrap string   `help:"Target providing test-runner library and its transitive dependencies. Injects plz-provided bootstraps if not given." deprecated:"true" var:"PYTHON_TEST_RUNNER_BOOTSTRAP"`
+		Debugger            string   `help:"Sets what debugger to use to debug Python binaries. The available options are: 'pdb' (default) and 'debugpy'." deprecated:"true" var:"PYTHON_DEBUGGER"`
+		ModuleDir           string   `help:"Defines a directory containing modules from which they can be imported at the top level.\nBy default this is empty but by convention we define our pip_library rules in third_party/python and set this appropriately. Hence any of those third-party libraries that try something like import six will have it work as they expect, even though it's actually in a different location within the .pex." deprecated:"true" var:"PYTHON_MODULE_DIR"`
+		DefaultPipRepo      cli.URL  `help:"Defines a location for a pip repo to download wheels from.\nBy default pip_library uses PyPI (although see below on that) but you may well want to use this define another location to upload your own wheels to.\nIs overridden by the repo argument to pip_library." deprecated:"true" var:"PYTHON_DEFAULT_PIP_REPO"`
+		WheelRepo           cli.URL  `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." deprecated:"true" var:"PYTHON_WHEEL_REPO"`
+		UsePyPI             bool     `help:"Whether or not to use PyPI for pip_library rules or not. Defaults to true, if you disable this you will presumably want to set DefaultPipRepo to use one of your own.\nIs overridden by the use_pypi argument to pip_library." deprecated:"true" var:"USE_PYPI"`
+		WheelNameScheme     []string `help:"Defines a custom templatized wheel naming scheme. Templatized variables should be surrounded in curly braces, and the available options are: url_base, package_name, version and initial (the first character of package_name). The default search pattern is '{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl' along with a few common variants." deprecated:"true" var:"PYTHON_WHEEL_NAME_SCHEME"`
+		InterpreterOptions  string   `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." deprecated:"true" var:"PYTHON_INTERPRETER_OPTIONS"`
+		DisableVendorFlags  bool     `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." deprecated:"true" var:"DISABLE_VENDOR_FLAGS"`
 	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude:"true"`
 	Java struct {
-		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." var:"JAVAC_TOOL"`
-		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." var:"JLINK_TOOL"`
-		JavaHome           string    `help:"Defines the path of the Java Home folder." var:"JAVA_HOME"`
-		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." var:"JAVAC_WORKER"`
-		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to arcat in the internal //_please package." var:"JARCAT_TOOL"`
-		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the internal //_please package." var:"JUNIT_RUNNER"`
-		DefaultTestPackage string    `help:"The Java classpath to search for functions annotated with @Test. If not specified the compiled sources will be searched for files named *Test.java." var:"DEFAULT_TEST_PACKAGE"`
-		ReleaseLevel       string    `help:"The default Java release level when compiling.\nSourceLevel and TargetLevel are ignored if this is set. Bear in mind that this flag is only supported in Java version 9+." var:"JAVA_RELEASE_LEVEL"`
-		SourceLevel        string    `help:"The default Java source level when compiling. Defaults to 8." var:"JAVA_SOURCE_LEVEL"`
-		TargetLevel        string    `help:"The default Java bytecode level to target. Defaults to 8." var:"JAVA_TARGET_LEVEL"`
-		JavacFlags         string    `help:"Additional flags to pass to javac when compiling libraries." example:"-Xmx1200M" var:"JAVAC_FLAGS"`
-		JavacTestFlags     string    `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" var:"JAVAC_TEST_FLAGS"`
-		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." var:"DEFAULT_MAVEN_REPO"`
-		Toolchain          string    `help:"A label identifying a java_toolchain." var:"JAVA_TOOLCHAIN"`
+		JavacTool          string    `help:"Defines the tool used for the Java compiler. Defaults to javac." deprecated:"true" var:"JAVAC_TOOL"`
+		JlinkTool          string    `help:"Defines the tool used for the Java linker. Defaults to jlink." deprecated:"true" var:"JLINK_TOOL"`
+		JavaHome           string    `help:"Defines the path of the Java Home folder." deprecated:"true" var:"JAVA_HOME"`
+		JavacWorker        string    `help:"Defines the tool used for the Java persistent compiler. This is significantly (approx 4x) faster for large Java trees than invoking javac separately each time. Default to javac_worker in the install directory, but can be switched off to fall back to javactool and separate invocation." deprecated:"true" var:"JAVAC_WORKER"`
+		JarCatTool         string    `help:"Defines the tool used to concatenate .jar files which we use to build the output of java_binary, java_test and various other rules. Defaults to arcat in the internal //_please package." deprecated:"true" var:"JARCAT_TOOL"`
+		JUnitRunner        string    `help:"Defines the .jar containing the JUnit runner. This is built into all java_test rules since it's necessary to make JUnit do anything useful.\nDefaults to junit_runner.jar in the internal //_please package." deprecated:"true" var:"JUNIT_RUNNER"`
+		DefaultTestPackage string    `help:"The Java classpath to search for functions annotated with @Test. If not specified the compiled sources will be searched for files named *Test.java." deprecated:"true" var:"DEFAULT_TEST_PACKAGE"`
+		ReleaseLevel       string    `help:"The default Java release level when compiling.\nSourceLevel and TargetLevel are ignored if this is set. Bear in mind that this flag is only supported in Java version 9+." deprecated:"true" var:"JAVA_RELEASE_LEVEL"`
+		SourceLevel        string    `help:"The default Java source level when compiling. Defaults to 8." deprecated:"true" var:"JAVA_SOURCE_LEVEL"`
+		TargetLevel        string    `help:"The default Java bytecode level to target. Defaults to 8." deprecated:"true" var:"JAVA_TARGET_LEVEL"`
+		JavacFlags         string    `help:"Additional flags to pass to javac when compiling libraries." example:"-Xmx1200M" deprecated:"true" var:"JAVAC_FLAGS"`
+		JavacTestFlags     string    `help:"Additional flags to pass to javac when compiling tests." example:"-Xmx1200M" deprecated:"true" var:"JAVAC_TEST_FLAGS"`
+		DefaultMavenRepo   []cli.URL `help:"Default location to load artifacts from in maven_jar rules. Can be overridden on a per-rule basis." deprecated:"true" var:"DEFAULT_MAVEN_REPO"`
+		Toolchain          string    `help:"A label identifying a java_toolchain." deprecated:"true" var:"JAVA_TOOLCHAIN"`
 	}
 	Cpp struct {
-		CCTool             string     `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." var:"CC_TOOL"`
-		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." var:"CPP_TOOL"`
-		LdTool             string     `help:"The tool invoked to link object files. Defaults to ld but you could also set it to gold, for example." var:"LD_TOOL"`
-		ArTool             string     `help:"The tool invoked to archive static libraries. Defaults to ar." var:"AR_TOOL"`
-		LinkWithLdTool     bool       `help:"If true, instructs Please to use the tool set earlier in ldtool to link binaries instead of cctool.\nThis is an esoteric setting that most people don't want; a vanilla ld will not perform all steps necessary here (you'll get lots of missing symbol messages from having no libc etc). Generally best to leave this disabled unless you have very specific requirements." var:"LINK_WITH_LD_TOOL"`
-		DefaultOptCflags   string     `help:"Compiler flags passed to all C rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c99 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CFLAGS"`
-		DefaultDbgCflags   string     `help:"Compiler rules passed to all C rules during dbg builds.\nDefaults to --std=c99 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CFLAGS"`
-		DefaultOptCppflags string     `help:"Compiler flags passed to all C++ rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c++11 -O3 -DNDEBUG -Wall -Wextra -Werror" var:"DEFAULT_OPT_CPPFLAGS"`
-		DefaultDbgCppflags string     `help:"Compiler rules passed to all C++ rules during dbg builds.\nDefaults to --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror." var:"DEFAULT_DBG_CPPFLAGS"`
-		DefaultLdflags     string     `help:"Linker flags passed to all C++ rules.\nBy default this is empty." var:"DEFAULT_LDFLAGS"`
-		PkgConfigPath      string     `help:"Custom PKG_CONFIG_PATH for pkg-config.\nBy default this is empty." var:"PKG_CONFIG_PATH"`
-		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." var:"CPP_COVERAGE"`
-		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" var:"CC_TEST_MAIN"`
-		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." var:"CC_MODULES_CLANG"`
-		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." var:"DSYM_TOOL"`
+		CCTool             string     `help:"The tool invoked to compile C code. Defaults to gcc but you might want to set it to clang, for example." deprecated:"true" var:"CC_TOOL"`
+		CppTool            string     `help:"The tool invoked to compile C++ code. Defaults to g++ but you might want to set it to clang++, for example." deprecated:"true" var:"CPP_TOOL"`
+		LdTool             string     `help:"The tool invoked to link object files. Defaults to ld but you could also set it to gold, for example." deprecated:"true" var:"LD_TOOL"`
+		ArTool             string     `help:"The tool invoked to archive static libraries. Defaults to ar." deprecated:"true" var:"AR_TOOL"`
+		LinkWithLdTool     bool       `help:"If true, instructs Please to use the tool set earlier in ldtool to link binaries instead of cctool.\nThis is an esoteric setting that most people don't want; a vanilla ld will not perform all steps necessary here (you'll get lots of missing symbol messages from having no libc etc). Generally best to leave this disabled unless you have very specific requirements." deprecated:"true" var:"LINK_WITH_LD_TOOL"`
+		DefaultOptCflags   string     `help:"Compiler flags passed to all C rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c99 -O3 -DNDEBUG -Wall -Wextra -Werror" deprecated:"true" var:"DEFAULT_OPT_CFLAGS"`
+		DefaultDbgCflags   string     `help:"Compiler rules passed to all C rules during dbg builds.\nDefaults to --std=c99 -g3 -DDEBUG -Wall -Wextra -Werror." deprecated:"true" var:"DEFAULT_DBG_CFLAGS"`
+		DefaultOptCppflags string     `help:"Compiler flags passed to all C++ rules during opt builds; these are typically pretty basic things like what language standard you want to target, warning flags, etc.\nDefaults to --std=c++11 -O3 -DNDEBUG -Wall -Wextra -Werror" deprecated:"true" var:"DEFAULT_OPT_CPPFLAGS"`
+		DefaultDbgCppflags string     `help:"Compiler rules passed to all C++ rules during dbg builds.\nDefaults to --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror." deprecated:"true" var:"DEFAULT_DBG_CPPFLAGS"`
+		DefaultLdflags     string     `help:"Linker flags passed to all C++ rules.\nBy default this is empty." deprecated:"true" var:"DEFAULT_LDFLAGS"`
+		PkgConfigPath      string     `help:"Custom PKG_CONFIG_PATH for pkg-config.\nBy default this is empty." deprecated:"true" var:"PKG_CONFIG_PATH"`
+		Coverage           bool       `help:"If true (the default), coverage will be available for C and C++ build rules.\nThis is still a little experimental but should work for GCC. Right now it does not work for Clang (it likely will in Clang 4.0 which will likely support --fprofile-dir) and so this can be useful to disable it.\nIt's also useful in some cases for CI systems etc if you'd prefer to avoid the overhead, since the tests have to be compiled with extra instrumentation and without optimisation." deprecated:"true" var:"CPP_COVERAGE"`
+		TestMain           BuildLabel `help:"The build target to use for the default main for C++ test rules." example:"///pleasings//cc:unittest_main" deprecated:"true" var:"CC_TEST_MAIN"`
+		ClangModules       bool       `help:"Uses Clang-style arguments for compiling cc_module rules. If disabled gcc-style arguments will be used instead. Experimental, expected to be removed at some point once module compilation methods are more consistent." deprecated:"true" var:"CC_MODULES_CLANG"`
+		DsymTool           string     `help:"Set this to dsymutil or equivalent on macOS to use this tool to generate xcode symbol information for debug builds." deprecated:"true" var:"DSYM_TOOL"`
 	}
 	Proto struct {
-		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." var:"PROTOC_TOOL"`
-		ProtocGoPlugin   string   `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.\nWe've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example." var:"PROTOC_GO_PLUGIN"`
-		GrpcPythonPlugin string   `help:"The plugin invoked to compile Python code for grpc_library.\nDefaults to protoc-gen-grpc-python." var:"GRPC_PYTHON_PLUGIN"`
-		GrpcJavaPlugin   string   `help:"The plugin invoked to compile Java code for grpc_library.\nDefaults to protoc-gen-grpc-java." var:"GRPC_JAVA_PLUGIN"`
-		GrpcGoPlugin     string   `help:"The plugin invoked to compile Go code for grpc_library.\nIf not set, then the protoc plugin will be used instead." var:"GRPC_GO_PLUGIN"`
-		GrpcCCPlugin     string   `help:"The plugin invoked to compile C++ code for grpc_library.\nDefaults to grpc_cpp_plugin." var:"GRPC_CC_PLUGIN"`
-		Language         []string `help:"Sets the default set of languages that proto rules are built for.\nChosen from the set of {cc, java, go, py}.\nDefaults to all of them!" var:"PROTO_LANGUAGES"`
-		PythonDep        string   `help:"An in-repo dependency that's applied to any Python proto libraries." var:"PROTO_PYTHON_DEP"`
-		JavaDep          string   `help:"An in-repo dependency that's applied to any Java proto libraries." var:"PROTO_JAVA_DEP"`
-		GoDep            string   `help:"An in-repo dependency that's applied to any Go proto libraries." var:"PROTO_GO_DEP"`
-		JsDep            string   `help:"An in-repo dependency that's applied to any Javascript proto libraries." var:"PROTO_JS_DEP"`
-		PythonGrpcDep    string   `help:"An in-repo dependency that's applied to any Python gRPC libraries." var:"GRPC_PYTHON_DEP"`
-		JavaGrpcDep      string   `help:"An in-repo dependency that's applied to any Java gRPC libraries." var:"GRPC_JAVA_DEP"`
-		GoGrpcDep        string   `help:"An in-repo dependency that's applied to any Go gRPC libraries." var:"GRPC_GO_DEP"`
-		ProtocFlag       []string `help:"Flags to pass to protoc i.e. the location of well known types. Can be repeated." var:"PROTOC_FLAGS"`
+		ProtocTool       string   `help:"The binary invoked to compile .proto files. Defaults to protoc." deprecated:"true" var:"PROTOC_TOOL"`
+		ProtocGoPlugin   string   `help:"The binary passed to protoc as a plugin to generate Go code. Defaults to protoc-gen-go.\nWe've found this easier to manage with a go_get rule instead though, so you can also pass a build label here. See the Please repo for an example." deprecated:"true" var:"PROTOC_GO_PLUGIN"`
+		GrpcPythonPlugin string   `help:"The plugin invoked to compile Python code for grpc_library.\nDefaults to protoc-gen-grpc-python." deprecated:"true" var:"GRPC_PYTHON_PLUGIN"`
+		GrpcJavaPlugin   string   `help:"The plugin invoked to compile Java code for grpc_library.\nDefaults to protoc-gen-grpc-java." deprecated:"true" var:"GRPC_JAVA_PLUGIN"`
+		GrpcGoPlugin     string   `help:"The plugin invoked to compile Go code for grpc_library.\nIf not set, then the protoc plugin will be used instead." deprecated:"true" var:"GRPC_GO_PLUGIN"`
+		GrpcCCPlugin     string   `help:"The plugin invoked to compile C++ code for grpc_library.\nDefaults to grpc_cpp_plugin." deprecated:"true" var:"GRPC_CC_PLUGIN"`
+		Language         []string `help:"Sets the default set of languages that proto rules are built for.\nChosen from the set of {cc, java, go, py}.\nDefaults to all of them!" deprecated:"true" var:"PROTO_LANGUAGES"`
+		PythonDep        string   `help:"An in-repo dependency that's applied to any Python proto libraries." deprecated:"true" var:"PROTO_PYTHON_DEP"`
+		JavaDep          string   `help:"An in-repo dependency that's applied to any Java proto libraries." deprecated:"true" var:"PROTO_JAVA_DEP"`
+		GoDep            string   `help:"An in-repo dependency that's applied to any Go proto libraries." deprecated:"true" var:"PROTO_GO_DEP"`
+		JsDep            string   `help:"An in-repo dependency that's applied to any Javascript proto libraries." deprecated:"true" var:"PROTO_JS_DEP"`
+		PythonGrpcDep    string   `help:"An in-repo dependency that's applied to any Python gRPC libraries." deprecated:"true" var:"GRPC_PYTHON_DEP"`
+		JavaGrpcDep      string   `help:"An in-repo dependency that's applied to any Java gRPC libraries." deprecated:"true" var:"GRPC_JAVA_DEP"`
+		GoGrpcDep        string   `help:"An in-repo dependency that's applied to any Go gRPC libraries." deprecated:"true" var:"GRPC_GO_DEP"`
+		ProtocFlag       []string `help:"Flags to pass to protoc i.e. the location of well known types. Can be repeated." deprecated:"true" var:"PROTOC_FLAGS"`
 	}
 	Licences struct {
 		Accept []string `help:"Licences that are accepted in this repository.\nWhen this is empty licences are ignored. As soon as it's set any licence detected or assigned must be accepted explicitly here.\nThere's no fuzzy matching, so some package managers (especially PyPI and Maven, but shockingly not npm which rather nicely uses SPDX) will generate a lot of slightly different spellings of the same thing, which will all have to be accepted here. We'd rather that than trying to 'cleverly' match them which might result in matching the wrong thing."`
@@ -691,6 +691,7 @@ type Configuration struct {
 	buildEnvStored *storedBuildEnv
 
 	FeatureFlags struct {
+		HideDeprecatedConfigOptions bool `help:"Don't expose deprecated config options to the BUILD language"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`

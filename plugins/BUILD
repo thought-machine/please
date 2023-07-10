@@ -7,13 +7,13 @@ plugin_repo(
 plugin_repo(
     name = "cc",
     plugin = "cc-rules",
-    revision = "v0.3.2",
+    revision = "v0.4.0",
 )
 
 plugin_repo(
     name = "shell",
     plugin = "shell-rules",
-    revision = "v0.1.1",
+    revision = "v0.2.0",
 )
 
 plugin_repo(

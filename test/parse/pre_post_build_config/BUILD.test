@@ -1,6 +1,7 @@
-package(GO_TOOL = "foo")
+package(go = {
+    "go_tool": "foo",
+})
 
 subinclude("//test/parse/pre_post_build_config/build_defs:build_foo")
 
 build_foo(name = "target")
-

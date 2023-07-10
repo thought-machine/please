@@ -38,12 +38,15 @@ func newConfig(state *core.BuildState) *pyConfig {
 	base := make(pyDict, 100)
 
 	v := reflect.ValueOf(state.Config).Elem()
+	emitDeprecated := !state.Config.FeatureFlags.HideDeprecatedConfigOptions
 	for i := 0; i < v.NumField(); i++ {
 		if field := v.Field(i); field.Kind() == reflect.Struct {
 			for j := 0; j < field.NumField(); j++ {
 				subfieldType := field.Type().Field(j)
 				if varName := subfieldType.Tag.Get("var"); varName != "" {
-					base[varName] = valueToPyObject(field.Field(j))
+					if subfieldType.Tag.Get("deprecated") != "true" || emitDeprecated {
+						base[varName] = valueToPyObject(field.Field(j))
+					}
 				}
 			}
 		}
