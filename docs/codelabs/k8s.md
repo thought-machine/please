@@ -16,9 +16,8 @@ Duration: 1
 - You should be comfortable using the existing build rules.
 - You should be familiar with [Docker](https://docs.docker.com/get-started/) 
   and [Kubernetes](https://kubernetes.io/docs/tutorials/kubernetes-basics/) 
-- This codelab uses minikube which is only available on macOS and linux, not FreeBSD.
 
-This codelab uses Python for the example service however the language used for this service isn't that important. Just 
+This codelab uses Golang for the example service however the language used for this service isn't that important. Just 
 make sure you're able to build a binary in whatever your preferred language is.  
 
 ### What You'll Learn
@@ -45,34 +44,64 @@ For the sake of this codelabs, we'll make a simple hello world HTTP service in P
 ### Initialising the project
 ```
 $ plz init 
+$ go mod init github.com/exmaple/module
+$ plz init plugin go
 ```
 
-### Creating a Python service
-Create a file `hello_service/main.py`:
+### Setup the Go plugin
 
+Add a go toolchain to `third_party/go/BUILD`
 ```python
-import http.server
-import socketserver
-from http import HTTPStatus
+go_toolchain(
+    name = "toolchain",
+    version = "1.20",
+)
+```
 
+And configure the plugin:
+```
+[Plugin "go"]
+Target = //plguins:go
+ImportPath = github.com/exmaple/module
+GoTool = //third_party/go:toolchain|go
+```
 
-class Handler(http.server.SimpleHTTPRequestHandler):
-	def do_GET(self):
-		self.send_response(HTTPStatus.OK)
-		self.end_headers()
-		self.wfile.write(b'Hello world\n')
+For more information on this, check out the Go codelab. 
 
+### Creating a Go service
+Create a file `hello_service/service.go`:
 
-httpd = socketserver.TCPServer(('', 8000), Handler)
-httpd.serve_forever()
+```golang
+package main
+
+import (
+  "fmt"
+  "log"
+  "net/http"
+)
+
+func main() {
+  http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintln(w, "This is my website!")
+  })
+
+  http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintln(w, "Hello, HTTP!")
+  })
+
+  err := http.ListenAndServe(":8080", nil)
+  if err != nil {
+    log.Fatal("Error starting the server: ", err)
+  }
+}
 ```
 
 Then create a `hello_service/BUILD` file like so:
 ```python
-python_binary(
-    name = "hello_service",
-    main = "main.py",
-    visibility = ["//hello_service/..."],
+go_binary(
+  name = "hello_service",
+  srcs = ["service.go"],
+  visibility = ["//hello_service/k8s:all"],
 )
 ```
 
@@ -82,10 +111,10 @@ And test it works:
 $ plz run //hello_service &
 [1] 28694
 
-$ curl localhost:8000
+$ curl localhost:8080
 Hello, world!
 
-$ pkill python3
+$ pkill hello_service
 [1]+  Terminated              plz run //hello_service
 ```
 
@@ -94,40 +123,24 @@ Duration: 5
 
 Before we create a docker image for our service, it can be useful to create a base image that all our services share. 
 This can be used this to install language runtimes e.g. a python interpreter. If you're using a language that requires
-a runtime, this is where you should install it.
+a runtime, this is where you should install it. In this case, we're using Go so this isn't strictly necessary. 
 
 Let's create a base docker file for our repo that all our services will use in `common/docker/Dockerfile-base`:
 ```
-FROM alpine:3.7
+FROM ubuntu:22.04
 
-RUN apk update && apk add python3
+RUN apt update && apt upgrade
 ```
 
 ### Docker build rules
-Unlike `python_lbrary()` the docker image build rules aren't built in. They are part of the extra rules found in the 
-[pleasings](https://github.com/thought-machine/pleasings/tree/master/docker) repository. 
 
-To use the pleasings rules, we need to add pleasings to our project:
-```
-$ plz init pleasings --revision v1.1.0
-```
+To use the docker build rules, we need to install the docker plugin, as well as the shell plugin which it reuqires:
 
-This will add the pleasings subrepo to the build graph via the `github_repo()` built-in:
-```
-$ cat BUILD
-github_repo(
-  name = "pleasings",
-  repo = "thought-machine/pleasings",
-  revision = "v1.1.0",
-)
-```
+`$ plz init plugin shell && plz init plugin docker`
 
-We can then subinclude them via special build labels in the form of `///subrepo_name//some:target`. 
-Let's create `common/docker/BUILD` using these rules to build our docker image:
+We can then build a set of scripts that help us build, and push our docker images:
 
 ```python
-subinclude("///pleasings//docker")
-
 docker_image(
     name = "base",
     dockerfile = "Dockerfile-base",
@@ -136,25 +149,6 @@ docker_image(
 ```
 
 And then let's build that:
-```
-$ plz build //common/docker:base
-Build stopped after 130ms. 1 target failed:
-    //common/docker:base
-rules/misc_rules.build_defs:555:9: error: You must set buildconfig.default-docker-repo in your .plzconfig to use Docker rules, e.g.
-[buildconfig]
-default-docker-repo = hub.docker.com
-...
-```
-
-
-Oh no! Looks like we missed something. If you've got a docker registry to push to then great otherwise don't worry. This 
-is just used to name the image. Let's set this to something sensible in `.plzconfig`:
-```
-[buildconfig]
-default-docker-repo = please-examples
-```
-
-And try again:
 ```
 $ plz build //common/docker:base
 Build finished; total time 80ms, incrementality 40.0%. Outputs:
@@ -192,16 +186,14 @@ service:
 ```
 FROM //common/docker:base
 
-COPY /hello_service.pex /hello_service.pex
+COPY /hello_service /hello_service
 
-ENTRYPOINT [ "/hello_service.pex" ] 
+ENTRYPOINT [ "/hello_service" ]
 ```
 
 And then set up some build rules for that in `hello_service/k8s/BUILD`:
 
 ```
-subinclude("///pleasings//docker")
-
 docker_image(
     name = "image",
     srcs = ["//hello_service"],
@@ -225,7 +217,7 @@ $ cat plz-out/bin/hello_service/k8s/image.sh
   Dockerfile - < plz-out/gen/hello_service/k8s/_image#docker_context.tar.gz
 ```
 
-Note, this script takes care of building the base image for us so we don't have to orchestrate this ourselves. 
+Note, this script takes care of building the base image for us so we don't have to orchestrate this ourselves.
 
 ## Creating a Kubernetes deployment  
 Duration: 5
@@ -277,11 +269,11 @@ template your yaml files substituting in the image with the correct label based 
 built! This ties all the images and kubernetes manifests together based on the current state of the repo making the
 deployment much more reproducible!
 
+To add the kubernetes rules, run `plz init plugin k8s`.
+
 Lets update `hello_service/k8s/BUILD` to build these manifests:
 
 ```python
-subinclude("///pleasings//docker", "///pleasings//k8s")
-
 docker_image(
     name = "image",
     srcs = ["//hello_service"],
@@ -295,7 +287,7 @@ k8s_config(
         "deployment.yaml",
         "service.yaml",
     ],
-    containers = ["//hello_service/k8s:image"],
+    containers = [":image"],
 )
 ```
 
@@ -354,7 +346,7 @@ Duration: 5
 Let's tie this all together by deploying our service to minikube! 
 
 ### Setting up minikube
-We can get Please to download minikube for us. Let's create `tools/minikube/BUILD` to do so:
+We can get Please to download minikube for us. Let's create `third_party/binary/BUILD` to do so:
 
 ```
 remote_file (
@@ -366,7 +358,7 @@ remote_file (
 
 And then we can start the cluster like so:
 ```
-$ plz run //tools/minikube -- start
+$ plz run //third_party/binary:minikube -- start
 ```
 
 ### Deploying our service 
@@ -374,7 +366,7 @@ $ plz run //tools/minikube -- start
 First we need to push our images to minikube's docker. To do this we need to point `docker` at minikube:
 
 ```
-$ eval $(plz run //tools/minikube -- docker-env)
+$ eval $(plz run //third_party/binary:minikube -- docker-env)
 ```
 
 Then we can run our deployment scripts:
@@ -434,8 +426,6 @@ out of Docker without this extra infrastructure. The built in rules produce a nu
 push and save images:
 
 ```
-subinclude("///pleasings//docker")
-
 docker_image(
     name = "image",
     srcs = [":example"],
