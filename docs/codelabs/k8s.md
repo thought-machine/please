@@ -89,7 +89,7 @@ func main() {
     fmt.Fprintln(w, "Hello, HTTP!")
   })
 
-  err := http.ListenAndServe(":8080", nil)
+  err := http.ListenAndServe(":8000", nil)
   if err != nil {
     log.Fatal("Error starting the server: ", err)
   }
@@ -111,7 +111,7 @@ And test it works:
 $ plz run //hello_service &
 [1] 28694
 
-$ curl localhost:8080
+$ curl localhost:8000
 Hello, world!
 
 $ pkill hello_service
