@@ -26,6 +26,7 @@ go_library(
         "utils.go",
         "version.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_cespare_xxhash_v2//:v2",

@@ -1,6 +1,7 @@
 go_library(
     name = "tool",
     srcs = ["tool.go"],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_thought-machine_go-flags//:go-flags",

@@ -14,6 +14,7 @@ go_library(
         "xml_coverage.go",
         "xml_results.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
@@ -47,10 +48,10 @@ go_test(
 go_test(
     name = "go_test_panic",
     srcs = ["go_test_panic.go"],
+    labels = ["manual"],
     deps = [
         "///third_party/go/github.com_stretchr_testify//assert",
     ],
-    labels = ["manual"],
 )
 
 # This test runs the test above (go_test_panic), which panics, and checks that
@@ -58,6 +59,6 @@ go_test(
 plz_e2e_test(
     name = "go_test_output_test",
     cmd = "plz test //src/test:go_test_panic",
-    expected_failure = True,
     expect_output_contains = "panic: goodbye world",
+    expected_failure = True,
 )

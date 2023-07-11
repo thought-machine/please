@@ -7,6 +7,7 @@ go_library(
         "targets.go",
         "trace.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_dustin_go-humanize//:go-humanize",

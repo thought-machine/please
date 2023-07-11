@@ -39,3 +39,8 @@ sh_cmd(
     cmd = "plz fmt -w && gofmt -s -w src tools test && plz run parallel --include codegen",
 )
 
+filegroup(
+    name = "pgo",
+    srcs = ["default.pgo"],
+    visibility = ["//src/..."],
+)

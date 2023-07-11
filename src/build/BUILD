@@ -5,6 +5,7 @@ go_library(
         "filegroup.go",
         "incrementality.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_hashicorp_go-multierror//:go-multierror",
@@ -43,11 +44,11 @@ go_test(
     external = True,
     deps = [
         ":build",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/cli/logging",
         "//src/core",
         "//src/output",
         "//src/plz",
-        "///third_party/go/github.com_stretchr_testify//assert",
-        "///third_party/go/github.com_stretchr_testify//require",
     ],
 )

@@ -6,6 +6,7 @@ go_library(
         "pleasings.go",
         "plugins.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_please-build_gcfg//ast",

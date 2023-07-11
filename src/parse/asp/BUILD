@@ -17,6 +17,7 @@ go_library(
         "targets.go",
         "util.go",
     ],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_Masterminds_semver_v3//:v3",

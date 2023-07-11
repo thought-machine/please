@@ -4,6 +4,7 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/cloud.google.com_go_longrunning//autogen/longrunningpb",

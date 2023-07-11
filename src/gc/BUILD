@@ -1,6 +1,7 @@
 go_library(
     name = "gc",
     srcs = ["gc.go"],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "//src/cli",

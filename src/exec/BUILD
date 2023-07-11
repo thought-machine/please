@@ -1,6 +1,7 @@
 go_library(
     name = "exec",
     srcs = ["exec.go"],
+    pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/golang.org_x_sync//errgroup",
