@@ -276,12 +276,12 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 	if l.Subrepo != "" {
 		subrepo := s.state.Graph.Subrepo(l.Subrepo)
 		if subrepo == nil || (subrepo.Target != nil && subrepo != s.contextPackage().Subrepo) {
-			subincludeTarget(s, l)
+			subincludeTarget(s, l, core.ParseModeForSubinclude)
 			subrepo = s.state.Graph.SubrepoOrDie(l.Subrepo)
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(s, filename, l), false)
+	s.SetAll(s.interpreter.Subinclude(s, filename, l, core.ParseModeForSubinclude), false)
 	return None
 }
 
@@ -306,7 +306,12 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.Error("cannot subinclude from this scope")
 	}
 	for _, arg := range args {
-		t := subincludeTarget(s, s.parseLabelInContextPkg(string(arg.(pyString))))
+		mode := core.ParseModeForSubinclude
+		if s.parsingFor != nil {
+			mode = s.parsingFor.mode // Propagate whether this is a preload or not
+		}
+
+		t := subincludeTarget(s, s.parseLabelInContextPkg(string(arg.(pyString))), mode)
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
 
 		incPkgState := s.state
@@ -317,7 +322,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.interpreter.loadPluginConfig(s, incPkgState)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, mode), false)
 		}
 	}
 	return None
@@ -325,7 +330,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
-func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
+func subincludeTarget(s *scope, l core.BuildLabel, mode core.ParseMode) *core.BuildTarget {
 	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
 	pkg := s.contextPackage()
@@ -360,10 +365,6 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 		}
 		if t.State() < core.Active {
-			mode := core.ParseModeForSubinclude
-			if s.parsingFor != nil {
-				mode = s.parsingFor.mode // Propagate whether this is a preload or not
-			}
 			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, mode); err != nil {
 				s.Error("Failed to activate subinclude target: %v", err)
 			}
@@ -1132,7 +1133,7 @@ func selectTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		s.NAssert(t == nil, "Target %s in select() call has not been defined yet", l.Name)
 		return t
 	}
-	return subincludeTarget(s, l)
+	return subincludeTarget(s, l, core.ParseModeForSubinclude)
 }
 
 // subrepo implements the subrepo() builtin that adds a new repository.

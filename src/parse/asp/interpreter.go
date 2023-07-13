@@ -136,7 +136,7 @@ func (i *interpreter) preloadSubincludes(s *scope) (err error) {
 
 		s.interpreter.loadPluginConfig(s, includeState)
 		for _, out := range t.FullOutputs() {
-			s.SetAll(s.interpreter.Subinclude(s, out, t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(s, out, t.Label, core.ParseModeForPreload|core.ParseModeForSubinclude), false)
 		}
 	}
 	return
@@ -194,7 +194,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel) pyDict {
+func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, mode core.ParseMode) pyDict {
 	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
 	globals, wait, first := i.subincludes.GetOrWait(key)
 	if globals != nil {
@@ -212,6 +212,13 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 	}
 	stmts = i.parser.optimise(stmts)
 	s := i.scope.NewScope(path)
+
+	if !mode.IsPreload() {
+		if err := i.preloadSubincludes(s); err != nil {
+			s.Error("failed: %v", err)
+		}
+	}
+
 	s.state = pkgScope.state
 	// Scope needs a local version of CONFIG
 	s.config = i.scope.config.Copy()
