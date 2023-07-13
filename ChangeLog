@@ -1,3 +1,10 @@
+Version 17.2.0
+---------------
+    * Added hostinfo prometheus counter (#2835)
+    * Fix formatting for timed out message (#2845)
+    * Strip >= from the PLZ_VERSION variable (#2854)
+    * Add optimisation profile and enable pgo (#2850)
+
 Version 17.1.0
 ---------------
     * Handle function calls in `isinstance` (#2796)
