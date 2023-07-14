@@ -78,7 +78,7 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 
 // LoadBuiltins loads a set of builtins from a file, optionally with its contents.
 func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*Statement) error {
-	s := i.scope.NewScope(filename)
+	s := i.scope.NewScope(filename, 0)
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
@@ -136,7 +136,7 @@ func (i *interpreter) preloadSubincludes(s *scope) (err error) {
 
 		s.interpreter.loadPluginConfig(s, includeState)
 		for _, out := range t.FullOutputs() {
-			s.SetAll(s.interpreter.Subinclude(s, out, t.Label, core.ParseModeForPreload|core.ParseModeForSubinclude), false)
+			s.SetAll(s.interpreter.Subinclude(s, out, t.Label, true), false)
 		}
 	}
 	return
@@ -145,7 +145,7 @@ func (i *interpreter) preloadSubincludes(s *scope) (err error) {
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, statements []*Statement) (*scope, error) {
-	s := i.scope.NewPackagedScope(pkg, 1)
+	s := i.scope.NewPackagedScope(pkg, mode, 1)
 	s.config = i.getConfig(s.state).Copy()
 
 	// Config needs a little separate tweaking.
@@ -155,7 +155,6 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 		s.parsingFor = &parseTarget{
 			label:     *forLabel,
 			dependent: *dependent,
-			mode:      mode,
 		}
 	}
 
@@ -194,7 +193,7 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 }
 
 // Subinclude returns the global values corresponding to subincluding the given file.
-func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, mode core.ParseMode) pyDict {
+func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, preload bool) pyDict {
 	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
 	globals, wait, first := i.subincludes.GetOrWait(key)
 	if globals != nil {
@@ -211,7 +210,11 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}
 	stmts = i.parser.optimise(stmts)
-	s := i.scope.NewScope(path)
+	mode := pkgScope.mode
+	if preload {
+		mode |= core.ParseModeForPreload
+	}
+	s := i.scope.NewScope(path, mode)
 
 	if !mode.IsPreload() {
 		if err := i.preloadSubincludes(s); err != nil {
@@ -260,7 +263,6 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 type parseTarget struct {
 	label     core.BuildLabel
 	dependent core.BuildLabel
-	mode      core.ParseMode
 }
 
 // A scope contains all the information about a lexical scope.
@@ -277,6 +279,7 @@ type scope struct {
 	globber         *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
+	mode     core.ParseMode
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -347,17 +350,17 @@ func (s *scope) subincludePackage() *core.Package {
 }
 
 // NewScope creates a new child scope of this one.
-func (s *scope) NewScope(filename string) *scope {
-	return s.newScope(s.pkg, filename, 0)
+func (s *scope) NewScope(filename string, mode core.ParseMode) *scope {
+	return s.newScope(s.pkg, mode, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
-func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
-	return s.newScope(pkg, pkg.Filename, hint)
+func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint int) *scope {
+	return s.newScope(pkg, mode, pkg.Filename, hint)
 }
 
-func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
+func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
 	s2 := &scope{
 		filename:    filename,
 		interpreter: s.interpreter,
@@ -368,6 +371,7 @@ func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
 		locals:      make(pyDict, hint),
 		config:      s.config,
 		Callback:    s.Callback,
+		mode:        mode,
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -784,7 +788,7 @@ func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
-	cs := s.NewScope(s.filename)
+	cs := s.NewScope(s.filename, s.mode)
 	l := s.iterate(expr.Comprehension.Expr)
 	ret := make(pyList, 0, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {
@@ -805,7 +809,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	cs := s.NewScope(s.filename)
+	cs := s.NewScope(s.filename, s.mode)
 	l := cs.iterate(expr.Comprehension.Expr)
 	ret := make(pyDict, len(l))
 	cs.evaluateComprehension(l, expr.Comprehension, func(li pyObject) {

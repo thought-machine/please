@@ -1,2 +1,6 @@
+subinclude("//build_defs:bar")
+
+bar()
+
 def foo():
     pass
