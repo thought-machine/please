@@ -165,6 +165,14 @@ func TestInterpreterSorting(t *testing.T) {
 	// N.B. sorted() sorts in-place, unlike Python's one. We may change that later.
 }
 
+func TestReversed(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/reversed.build")
+	require.NoError(t, err)
+	assert.Equal(t, pyList{}, s.Lookup("r1"))
+	assert.Equal(t, pyList{pyInt(3), pyInt(2), pyInt(1)}, s.Lookup("r2"))
+	assert.Equal(t, pyList{pyInt(4), pyInt(3), pyInt(2), pyInt(1)}, s.Lookup("r3"))
+}
+
 func TestInterpreterUnpacking(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/unpacking.build")
 	require.NoError(t, err)
