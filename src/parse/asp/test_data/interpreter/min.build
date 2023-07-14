@@ -1,0 +1,17 @@
+# 1
+i1 = min([1])
+i2 = min([1, 2, 3, 4, 5])
+i3 = min([5, 4, 3, 2, 1])
+
+# "five"
+s1 = min(["five"])
+s2 = min(["one", "two", "three", "four", "five"])
+s3 = min(["five", "four", "three", "two", "one"])
+
+# "ten"
+s4 = min(["ten"], len)
+s5 = min(["ten", "eleven", "twelve", "thirteen", "fourteen"], len)
+s6 = min(["fourteen", "thirteen", "twelve", "eleven", "ten"], len)
+
+# "one" (for stability)
+s7 = min(["one", "two", "ten"], len)

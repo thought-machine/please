@@ -41,6 +41,8 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "zip", zip, varargs)
 	setNativeCode(s, "any", anyFunc)
 	setNativeCode(s, "all", allFunc)
+	setNativeCode(s, "min", min)
+	setNativeCode(s, "max", max)
 	setNativeCode(s, "len", lenFunc)
 	setNativeCode(s, "glob", glob)
 	setNativeCode(s, "bool", boolType)
@@ -813,6 +815,41 @@ func allFunc(s *scope, args []pyObject) pyObject {
 		}
 	}
 	return True
+}
+
+func min(s *scope, args []pyObject) pyObject {
+	return extreme(s, args, LessThan)
+}
+
+func max(s *scope, args []pyObject) pyObject {
+	return extreme(s, args, GreaterThan)
+}
+
+func extreme(s *scope, args []pyObject, cmp Operator) pyObject {
+	l, isList := args[0].(pyList)
+	key, isFunc := args[1].(*pyFunc)
+	s.Assert(isList, "Argument seq must be a list, not %s", args[0].Type())
+	s.Assert(len(l) > 0, "Argument seq must contain at least one item")
+	if key != nil {
+		s.Assert(isFunc, "Argument key must be callable, not %s", args[1].Type())
+	}
+	var cret, ret pyObject
+	for i, li := range l {
+		cli := li
+		if key != nil {
+			c := &Call{
+				Arguments: []CallArgument{{
+					Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+				}},
+			}
+			cli = key.Call(s, c)
+		}
+		if i == 0 || cli.Operator(cmp, cret).IsTruthy() {
+			cret = cli
+			ret = li
+		}
+	}
+	return ret
 }
 
 func zip(s *scope, args []pyObject) pyObject {

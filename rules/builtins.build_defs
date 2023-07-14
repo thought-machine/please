@@ -85,6 +85,12 @@ def any(seq:list) -> bool:
 def all(seq:list) -> bool:
     pass
 
+def min(seq:list, key:function=None):
+    pass
+
+def max(seq:list, key:function=None):
+    pass
+
 def bool(b) -> bool:
     pass
 def int(s:str) -> int:
