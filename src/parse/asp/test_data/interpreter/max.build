@@ -1,0 +1,17 @@
+# 5
+i1 = max([5])
+i2 = max([1, 2, 3, 4, 5])
+i3 = max([5, 4, 3, 2, 1])
+
+# "two"
+s1 = max(["two"])
+s2 = max(["one", "two", "three", "four", "five"])
+s3 = max(["five", "four", "three", "two", "one"])
+
+# "three"
+s4 = max(["three"], len)
+s5 = max(["one", "two", "three", "four", "five"], len)
+s6 = max(["five", "four", "three", "two", "one"], len)
+
+# "one" (for stability)
+s7 = max(["one", "two", "ten"], len)

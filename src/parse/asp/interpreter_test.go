@@ -415,6 +415,36 @@ func TestAll(t *testing.T) {
 	})
 }
 
+func TestMin(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/min.build")
+		assert.NoError(t, err)
+		for i := 1; i <= 3; i++ {
+			assert.EqualValues(t, pyInt(1), s.Lookup(fmt.Sprintf("i%d", i)))
+			assert.EqualValues(t, pyString("five"), s.Lookup(fmt.Sprintf("s%d", i)))
+		}
+		for i := 4; i <= 6; i++ {
+			assert.EqualValues(t, pyString("ten"), s.Lookup(fmt.Sprintf("s%d", i)))
+		}
+		assert.EqualValues(t, pyString("one"), s.Lookup("s7"))
+	})
+}
+
+func TestMax(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/max.build")
+		assert.NoError(t, err)
+		for i := 1; i <= 3; i++ {
+			assert.EqualValues(t, pyInt(5), s.Lookup(fmt.Sprintf("i%d", i)))
+			assert.EqualValues(t, pyString("two"), s.Lookup(fmt.Sprintf("s%d", i)))
+		}
+		for i := 4; i <= 6; i++ {
+			assert.EqualValues(t, pyString("three"), s.Lookup(fmt.Sprintf("s%d", i)))
+		}
+		assert.EqualValues(t, pyString("one"), s.Lookup("s7"))
+	})
+}
+
 func TestIsSemver(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		s, err := parseFile("src/parse/asp/test_data/interpreter/is_semver.build")
