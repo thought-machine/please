@@ -35,6 +35,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "load", bazelLoad, varargs)
 	setNativeCode(s, "package", pkg, false, kwargs)
 	setNativeCode(s, "sorted", sorted)
+	setNativeCode(s, "reversed", reversed)
 	setNativeCode(s, "isinstance", isinstance)
 	setNativeCode(s, "range", pyRange)
 	setNativeCode(s, "enumerate", enumerate)
@@ -689,6 +690,17 @@ func sorted(s *scope, args []pyObject) pyObject {
 	s.Assert(ok, "unsortable type %s", args[0].Type())
 	l = l[:]
 	sort.Slice(l, func(i, j int) bool { return l[i].Operator(LessThan, l[j]).IsTruthy() })
+	return l
+}
+
+func reversed(s *scope, args []pyObject) pyObject {
+	l, ok := args[0].(pyList)
+	s.Assert(ok, "irreversible type %s", args[0].Type())
+	l = l[:]
+	// TODO(chrisnovakovic): replace with slices.Reverse after upgrading to Go 1.21
+	for i, j := 0, len(l)-1; i < j; i, j = i+1, j-1 {
+		l[i], l[j] = l[j], l[i]
+	}
 	return l
 }
 

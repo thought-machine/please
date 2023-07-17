@@ -115,6 +115,8 @@ def package():
 def sorted(seq:list) -> list:
     pass
 
+def reversed(seq:list) -> list:
+    pass
 
 def get(self:dict, key:str, default=None):
     pass
