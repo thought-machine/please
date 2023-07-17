@@ -292,7 +292,7 @@ func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.Bui
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
 
-	return s.state.WaitForTargetAndEnsureDownload(l, dependent, false)
+	return s.state.WaitForTargetAndEnsureDownload(l, dependent, s.mode.IsPreload())
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -345,7 +345,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			Subrepo:     subrepoLabel.Subrepo,
 			Name:        "all",
 		}
-		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel)
+		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel, s.mode|core.ParseModeForSubinclude)
 	}
 
 	// isLocal is true when this subinclude target in the current package being parsed

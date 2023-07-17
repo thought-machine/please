@@ -117,29 +117,36 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 	return err
 }
 
-func (i *interpreter) preloadSubincludes(s *scope) (err error) {
+func (i *interpreter) preloadSubincludes(s *scope) error {
+	// We should have ensured these targets are downloaded by this point in `parse_step.go`
+	for _, label := range s.state.GetPreloadedSubincludes() {
+		if err := i.preloadSubinclude(s, label); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = handleErrors(r)
 		}
 	}()
 
-	// We should have ensured these targets are downloaded by this point in `parse_step.go`
-	for _, label := range s.state.GetPreloadedSubincludes() {
-		t := s.state.Graph.TargetOrDie(label)
+	t := s.state.Graph.TargetOrDie(label)
 
-		includeState := s.state
-		if t.Label.Subrepo != "" {
-			subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
-			includeState = subrepo.State
-		}
-
-		s.interpreter.loadPluginConfig(s, includeState)
-		for _, out := range t.FullOutputs() {
-			s.SetAll(s.interpreter.Subinclude(s, out, t.Label, true), false)
-		}
+	includeState := s.state
+	if t.Label.Subrepo != "" {
+		subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
+		includeState = subrepo.State
 	}
-	return
+
+	s.interpreter.loadPluginConfig(s, includeState)
+	for _, out := range t.FullOutputs() {
+		s.SetAll(s.interpreter.Subinclude(s, out, t.Label, true), false)
+	}
+	return nil
 }
 
 // interpretAll runs a series of statements in the scope of the given package.
@@ -204,6 +211,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		<-wait
 		return i.subincludes.Get(key)
 	}
+
 	// If we get here, it falls to us to parse this.
 	stmts, err := i.parser.parse(path)
 	if err != nil {
@@ -216,18 +224,18 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 	}
 	s := i.scope.NewScope(path, mode)
 
+	s.state = pkgScope.state
+	// Scope needs a local version of CONFIG
+	s.config = i.scope.config.Copy()
+	s.Set("CONFIG", s.config)
+	s.subincludeLabel = &label
+	i.optimiseExpressions(stmts)
+
 	if !mode.IsPreload() {
 		if err := i.preloadSubincludes(s); err != nil {
 			s.Error("failed: %v", err)
 		}
 	}
-
-	s.state = pkgScope.state
-	// Scope needs a local version of CONFIG
-	s.config = i.scope.config.Copy()
-	s.subincludeLabel = &label
-	s.Set("CONFIG", s.config)
-	i.optimiseExpressions(stmts)
 	s.interpretStatements(stmts)
 	locals := s.Freeze()
 	if s.config.overlay == nil {

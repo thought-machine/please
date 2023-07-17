@@ -82,6 +82,11 @@ func (p *aspParser) BuildRuleArgOrder() map[string]int {
 	return p.parser.BuildRuleArgOrder()
 }
 
+// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
+func (p *aspParser) RegisterPreload(label core.BuildLabel) error {
+	return p.parser.RegisterPreload(label)
+}
+
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
