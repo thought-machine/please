@@ -5,10 +5,10 @@ def e2e_test(name, expected_output, plz_command):
         name = name,
         expected_output = expected_output,
         plz_command = plz_command.replace("plz ", "plz -o plugin.go.gotool:$TOOLS_GO "),
+        repo = "test_repo",
         tools = {
             "go": [CONFIG.GO.GO_TOOL],
         },
-        repo = "test_repo",
     )
 
 e2e_test(

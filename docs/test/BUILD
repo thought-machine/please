@@ -3,10 +3,10 @@ go_test(
     srcs = ["docs_test.go"],
     data = ["//docs"],
     deps = [
-        "//src/core",
-        "///third_party/go/golang.org_x_net//html",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
+        "///third_party/go/golang.org_x_net//html",
+        "//src/core",
     ],
 )
 

@@ -21,8 +21,14 @@ gr_getouts = genrule(
 fg_getouts = filegroup(
     name = "filegroup_getouts",
     srcs = {
-        "wibble": [text_file(name = 'wibble_file2', content = 'wibblewibblewibble')],
-        "wobble": [text_file(name = 'wobble_file2', content = 'wobblewobblewobble')],
+        "wibble": [text_file(
+            name = "wibble_file2",
+            content = "wibblewibblewibble",
+        )],
+        "wobble": [text_file(
+            name = "wobble_file2",
+            content = "wobblewobblewobble",
+        )],
     },
 )
 
@@ -30,20 +36,30 @@ def assert_dict(l1, l2):
     if l1 != l2:
         fail(f"{l1} != {l2}")
 
-assert_dict({}, get_named_outs(nonamedouts))
+assert_dict(
+    {},
+    get_named_outs(nonamedouts),
+)
 
-assert_dict({
-    "wibble": ["wibble_file1"],
-    "wobble": ["wobble_file1"],
-}, get_named_outs(gr_getouts))
+assert_dict(
+    {
+        "wibble": ["wibble_file1"],
+        "wobble": ["wobble_file1"],
+    },
+    get_named_outs(gr_getouts),
+)
 
-assert_dict({
-    "wibble": ["//test/get_outs:wibble_file2"],
-    "wobble": ["//test/get_outs:wobble_file2"],
-}, get_named_outs(fg_getouts))
+assert_dict(
+    {
+        "wibble": ["//test/get_outs:wibble_file2"],
+        "wobble": ["//test/get_outs:wobble_file2"],
+    },
+    get_named_outs(fg_getouts),
+)
 
-gr_subtargets = { k: [f'{gr_getouts}|{k}'] for k, _ in get_named_outs(gr_getouts).items() }
-fg_subtargets = { k: [f'{fg_getouts}|{k}'] for k, _ in get_named_outs(fg_getouts).items() }
+gr_subtargets = {k: [f"{gr_getouts}|{k}"] for k, _ in get_named_outs(gr_getouts).items()}
+
+fg_subtargets = {k: [f"{fg_getouts}|{k}"] for k, _ in get_named_outs(fg_getouts).items()}
 
 gentest(
     name = "get_outs_gr_wibble_test",

@@ -10,7 +10,7 @@ genrule(
     cmd = "mv $SRCS_PLUGIN foo_plugin && mv $SRCS_TOOL foo_plugin/tools && tar -czf $OUT foo_plugin",
 )
 
-def plugin_e2e_test(name, plz_command, expected_output = None, expected_failure = False, expect_output_contains = None):
+def plugin_e2e_test(name, plz_command, expected_output=None, expected_failure=False, expect_output_contains=None):
     return please_repo_e2e_test(
         name = name,
         data = {
@@ -118,7 +118,6 @@ please_repo_e2e_test(
     plz_command = "plz build  -o plugin.foo.modulepath:something //test/...",
     repo = "self_referencing_plugin",
 )
-
 
 plugin_e2e_test(
     name = "arch_test",
