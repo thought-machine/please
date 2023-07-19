@@ -7,12 +7,12 @@ text_file(
 
 text_file(
     name = "multilines_file",
-    strip = True,
     content = """
         This is a multi lines file,
         use strip option to remove first empty newline
         and all empty spaces on the left of the text.
     """,
+    strip = True,
 )
 
 text_file(
