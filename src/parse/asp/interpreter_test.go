@@ -286,7 +286,7 @@ func TestInterpreterFStrings(t *testing.T) {
 func TestInterpreterSubincludeConfig(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
-	s.SetAll(s.interpreter.Subinclude(s, "src/parse/asp/test_data/interpreter/subinclude_config.build", core.NewPackage("test").Label()), false)
+	s.SetAll(s.interpreter.Subinclude(s, "src/parse/asp/test_data/interpreter/subinclude_config.build", core.NewPackage("test").Label(), false), false)
 	assert.EqualValues(t, "test test", s.config.Get("test", None))
 }
 
@@ -444,7 +444,7 @@ func TestJSON(t *testing.T) {
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
 
-	s := parser.interpreter.scope.NewScope("BUILD")
+	s := parser.interpreter.scope.NewScope("BUILD", core.ParseModeNormal)
 
 	list := pyList{pyString("foo"), pyInt(5)}
 	dict := pyDict{"foo": pyString("bar")}
@@ -512,7 +512,7 @@ func TestLogConfigVariable(t *testing.T) {
 	confBase := &pyConfigBase{dict: dict}
 	config := &pyConfig{base: confBase, overlay: pyDict{"baz": pyInt(6)}}
 
-	s := parser.interpreter.scope.NewScope("BUILD")
+	s := parser.interpreter.scope.NewScope("BUILD", core.ParseModeNormal)
 	s.config = config
 	s.Set("CONFIG", config)
 
