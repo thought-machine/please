@@ -1,0 +1,7 @@
+r1 = reversed([])
+
+# Odd number of items:
+r2 = reversed([1, 2, 3])
+
+# Even number of items:
+r3 = reversed([1, 2, 3, 4])
