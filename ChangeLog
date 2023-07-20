@@ -1,3 +1,7 @@
+Version 17.2.1
+---------------
+    * Better support preloaded subincludes that themselves subinclude (#2859)
+
 Version 17.2.0
 ---------------
     * Added hostinfo prometheus counter (#2835)

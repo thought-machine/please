@@ -1,6 +1,7 @@
 # This should be available to us via preloads even though this file is involved in a subinclude
 blah = sh_test
 
+# Empty doesn't export anything. It just checks that foo() is preloaded there
 filegroup(
     name = "empty",
     srcs = ["empty.build_defs"],

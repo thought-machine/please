@@ -16,6 +16,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/zeebo/blake3"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cmap"
@@ -90,6 +91,7 @@ type Parser interface {
 	RunPostBuildFunction(state *BuildState, target *BuildTarget, output string) error
 	// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
 	BuildRuleArgOrder() map[string]int
+	RegisterPreload(label BuildLabel) error
 }
 
 // A RemoteClient is the interface to a remote execution service.
@@ -634,28 +636,30 @@ func (state *BuildState) forwardResults() {
 	}
 }
 
-// WaitForPreloadedSubincludeTargetsAndEnsureDownloaded waits for all preloaded subinclude targets to be built, and
-// downloads them.
-func (state *BuildState) WaitForPreloadedSubincludeTargetsAndEnsureDownloaded() {
+// RegisterPreloads waits for all preloaded subinclude targets to be built, downloads them, and then registers them with
+// the interpreter. We have to actually register them otherwise this will return before we build any
+// transitive subincludes.
+func (state *BuildState) RegisterPreloads() error {
+	var err error
 	state.preloadDownloadOnce.Do(func() {
-		wg := sync.WaitGroup{}
+		var eg errgroup.Group
 		for _, inc := range state.GetPreloadedSubincludes() {
 			if inc.IsPseudoTarget() {
 				log.Fatalf("Can't preload pseudotarget %v", inc)
 			}
 
 			// Queue them up asynchronously to feed the queues as quickly as possible
-			wg.Add(1)
-			go func(inc BuildLabel) {
+			inc := inc
+			eg.Go(func() error {
 				state.WaitForTargetAndEnsureDownload(inc, OriginalTarget, true)
-				wg.Done()
-			}(inc)
+				return state.Parser.RegisterPreload(inc)
+			})
 		}
-
 		// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
 		// a package
-		wg.Wait()
+		err = eg.Wait()
 	})
+	return err
 }
 
 // checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
@@ -821,7 +825,7 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 
 // WaitForPackage is similar to WaitForBuiltTarget however it waits for the package to be parsed, queuing it for parse
 // if necessary
-func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
+func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode) *Package {
 	if p := state.Graph.PackageByLabel(l); p != nil {
 		return p
 	}
@@ -840,10 +844,10 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel) *Package {
 	}
 
 	// Otherwise queue the target for parse and recurse
-	state.addPendingParse(l, dependent, ParseModeForSubinclude)
+	state.addPendingParse(l, dependent, mode)
 	state.progress.packageWaits.Set(key, make(chan struct{}))
 
-	return state.WaitForPackage(l, dependent)
+	return state.WaitForPackage(l, dependent, mode)
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
@@ -1030,9 +1034,6 @@ func (state *BuildState) QueueTarget(label, dependent BuildLabel, forceBuild boo
 }
 
 func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild bool, mode ParseMode) error {
-	if label.Name == "arcat" {
-		log.Debug("")
-	}
 	target := state.Graph.Target(label)
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.

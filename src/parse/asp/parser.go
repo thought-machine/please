@@ -87,6 +87,18 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	return err
 }
 
+// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
+func (p *Parser) RegisterPreload(label core.BuildLabel) error {
+	p.limiter.Acquire()
+	defer p.limiter.Release()
+
+	// This is a throw away scope. We're just doing this to avoid race conditions setting this on the main scope.
+	s := p.interpreter.scope.newScope(nil, p.interpreter.scope.mode, "", 0)
+	s.config = p.interpreter.scope.config.Copy()
+	s.Set("CONFIG", s.config)
+	return p.interpreter.preloadSubinclude(s, label)
+}
+
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.

@@ -169,7 +169,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 			subrepoLabel := target.SubrepoLabel(state, "")
 			state.WaitForInitialTargetAndEnsureDownload(subrepoLabel, target)
 			// Targets now get activated during parsing, so can be built before we finish parsing their package.
-			state.WaitForPackage(subrepoLabel, target)
+			state.WaitForPackage(subrepoLabel, target, core.ParseModeNormal)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)

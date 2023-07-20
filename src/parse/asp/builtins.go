@@ -197,7 +197,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	}
 
 	if s.parsingFor != nil && s.parsingFor.label == target.Label {
-		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.parsingFor.mode); err != nil {
+		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.mode); err != nil {
 			s.Error("%v", err)
 		}
 	}
@@ -284,7 +284,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(s, filename, l), false)
+	s.SetAll(s.interpreter.Subinclude(s, filename, l, false), false)
 	return None
 }
 
@@ -295,7 +295,7 @@ func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.Bui
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
 
-	return s.state.WaitForTargetAndEnsureDownload(l, dependent, false)
+	return s.state.WaitForTargetAndEnsureDownload(l, dependent, s.mode.IsPreload())
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -320,7 +320,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		s.interpreter.loadPluginConfig(s, incPkgState)
 
 		for _, out := range t.Outputs() {
-			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label), false)
+			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false)
 		}
 	}
 	return None
@@ -348,7 +348,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			Subrepo:     subrepoLabel.Subrepo,
 			Name:        "all",
 		}
-		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel)
+		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel, s.mode|core.ParseModeForSubinclude)
 	}
 
 	// isLocal is true when this subinclude target in the current package being parsed
@@ -363,11 +363,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 		}
 		if t.State() < core.Active {
-			mode := core.ParseModeForSubinclude
-			if s.parsingFor != nil {
-				mode = s.parsingFor.mode // Propagate whether this is a preload or not
-			}
-			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, mode); err != nil {
+			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, s.mode|core.ParseModeForSubinclude); err != nil {
 				s.Error("Failed to activate subinclude target: %v", err)
 			}
 		}

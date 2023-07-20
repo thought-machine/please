@@ -633,11 +633,11 @@ func (f *pyFunc) String() string {
 func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
-			return f.callNative(s.NewScope("<builtin code>"), c)
+			return f.callNative(s.NewScope("<builtin code>", 0), c)
 		}
 		return f.callNative(s, c)
 	}
-	s2 := f.scope.newScope(s.pkg, f.scope.filename, len(f.args)+1)
+	s2 := f.scope.newScope(s.pkg, s.mode, f.scope.filename, len(f.args)+1)
 	s2.config = s.config
 	s2.Set("CONFIG", s.config) // This needs to be copied across too :(
 	s2.Callback = s.Callback
