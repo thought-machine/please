@@ -1,5 +1,9 @@
 Version 17.2.0
 ---------------
+    * Better support preloaded subincludes that themselves subinclude (#2859)
+
+Version 17.2.0
+---------------
     * Added hostinfo prometheus counter (#2835)
     * Fix formatting for timed out message (#2845)
     * Strip >= from the PLZ_VERSION variable (#2854)
