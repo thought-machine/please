@@ -46,7 +46,9 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	// Ensure that all the preloaded targets are built before we sync the package parse. If we don't do this, we might
 	// take the package lock for a package involved in a subinclude, and end up in a deadlock
 	if !mode.IsPreload() {
-		state.RegisterPreloads()
+		if err := state.RegisterPreloads(); err != nil {
+			return err
+		}
 	}
 
 	// See if something else has parsed this package first.

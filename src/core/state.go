@@ -16,6 +16,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/zeebo/blake3"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cmap"
@@ -638,29 +639,27 @@ func (state *BuildState) forwardResults() {
 // RegisterPreloads waits for all preloaded subinclude targets to be built, downloads them, and then registers them with
 // the interpreter. We have to actually register them otherwise this will return before we build any
 // transitive subincludes.
-func (state *BuildState) RegisterPreloads() {
+func (state *BuildState) RegisterPreloads() error {
+	var err error
 	state.preloadDownloadOnce.Do(func() {
-		wg := sync.WaitGroup{}
+		var eg errgroup.Group
 		for _, inc := range state.GetPreloadedSubincludes() {
 			if inc.IsPseudoTarget() {
 				log.Fatalf("Can't preload pseudotarget %v", inc)
 			}
 
 			// Queue them up asynchronously to feed the queues as quickly as possible
-			wg.Add(1)
-			go func(inc BuildLabel) {
+			inc := inc
+			eg.Go(func() error {
 				state.WaitForTargetAndEnsureDownload(inc, OriginalTarget, true)
-				if err := state.Parser.RegisterPreload(inc); err != nil {
-					panic(err)
-				}
-				wg.Done()
-			}(inc)
+				return state.Parser.RegisterPreload(inc)
+			})
 		}
-
 		// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
 		// a package
-		wg.Wait()
+		err = eg.Wait()
 	})
+	return err
 }
 
 // checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
