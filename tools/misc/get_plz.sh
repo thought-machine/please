@@ -21,6 +21,8 @@ fi
 ARCH=`uname -m`
 if [ "$ARCH" = "x86_64" ]; then
     ARCH="amd64"
+elif [ "$ARCH" = "amd64" ]; then
+    :
 elif [ "$ARCH" = "arm64" ]; then
     :
 elif [ "$ARCH" = "aarch64" ]; then
