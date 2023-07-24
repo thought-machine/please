@@ -130,6 +130,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
         name = name,
         srcs = {
             'remote': [remote_rule],
+            'patches': patches,
             'build': [build_file],
         },
         tools = [CONFIG.ARCAT_TOOL],
