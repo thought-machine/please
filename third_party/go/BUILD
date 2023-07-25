@@ -21,8 +21,8 @@ go_stdlib(
 
 go_mod_download(
     name = "build_tools_dl",
-    module = "github.com/peterebden/buildtools",
-    version = "1bf812c34357cd58ee72892491ddb20b3cab4fce",
+    module = "github.com/please-build/buildtools",
+    version = "24cce64e067d6147dcfff2a7059fa00c28537597",
 )
 
 go_repo(

@@ -1,3 +1,5 @@
+x = y is not None
+
 def no_type(arg):
     pass
 
