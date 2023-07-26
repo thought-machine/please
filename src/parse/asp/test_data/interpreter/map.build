@@ -1,0 +1,5 @@
+# identity
+m1 = map(lambda x: x, [0, 1, 2, 3])
+
+# add 1
+m2 = map(lambda x: x + 1, [0, 1, 2, 3])

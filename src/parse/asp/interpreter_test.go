@@ -181,6 +181,13 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, pyList{pyInt(5), pyInt(5)}, s.Lookup("f3"))
 }
 
+func TestMap(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/map.build")
+	require.NoError(t, err)
+	assert.Equal(t, pyList{pyInt(0), pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("m1"))
+	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3), pyInt(4)}, s.Lookup("m2"))
+}
+
 func TestInterpreterUnpacking(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/unpacking.build")
 	require.NoError(t, err)
