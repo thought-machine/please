@@ -2,6 +2,8 @@ package format
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,9 +12,23 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+const testDir = "src/format/test_data"
+
 func TestFormat(t *testing.T) {
-	const before = "src/format/test_data/before.build"
-	const after = "src/format/test_data/after.build"
+	files, err := os.ReadDir(testDir)
+	assert.NoError(t, err)
+	for _, file := range files {
+		if test, isBefore := strings.CutSuffix(file.Name(), ".before.build"); isBefore {
+			t.Run(test, func(t *testing.T) {
+				formatTestCase(t, test)
+			})
+		}
+	}
+}
+
+func formatTestCase(t *testing.T, test string) {
+	before := filepath.Join(testDir, test + ".before.build")
+	after := filepath.Join(testDir, test + ".after.build")
 
 	changed, err := Format(core.DefaultConfiguration(), []string{before}, false, true)
 	assert.NoError(t, err)
