@@ -173,6 +173,14 @@ func TestReversed(t *testing.T) {
 	assert.Equal(t, pyList{pyInt(4), pyInt(3), pyInt(2), pyInt(1)}, s.Lookup("r3"))
 }
 
+func TestFilter(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/filter.build")
+	require.NoError(t, err)
+	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("f1"))
+	assert.Equal(t, pyList{pyInt(0), pyInt(2)}, s.Lookup("f2"))
+	assert.Equal(t, pyList{pyInt(5), pyInt(5)}, s.Lookup("f3"))
+}
+
 func TestInterpreterUnpacking(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/unpacking.build")
 	require.NoError(t, err)
