@@ -20,8 +20,8 @@ func TestFormat(t *testing.T) {
 	for _, file := range files {
 		if test, isBefore := strings.CutSuffix(file.Name(), ".before.build"); isBefore {
 			t.Run(test, func(t *testing.T) {
-				before := filepath.Join(testDir, test + ".before.build")
-				after := filepath.Join(testDir, test + ".after.build")
+				before := filepath.Join(testDir, test+".before.build")
+				after := filepath.Join(testDir, test+".after.build")
 
 				changed, err := Format(core.DefaultConfiguration(), []string{before}, false, true)
 				assert.NoError(t, err)
