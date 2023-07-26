@@ -20,28 +20,24 @@ func TestFormat(t *testing.T) {
 	for _, file := range files {
 		if test, isBefore := strings.CutSuffix(file.Name(), ".before.build"); isBefore {
 			t.Run(test, func(t *testing.T) {
-				formatTestCase(t, test)
+				before := filepath.Join(testDir, test + ".before.build")
+				after := filepath.Join(testDir, test + ".after.build")
+
+				changed, err := Format(core.DefaultConfiguration(), []string{before}, false, true)
+				assert.NoError(t, err)
+				assert.True(t, changed)
+
+				// N.B. this rewrites the file; be careful if you're adding more tests here.
+				changed, err = Format(core.DefaultConfiguration(), []string{before}, true, false)
+				assert.NoError(t, err)
+				assert.True(t, changed)
+
+				beforeContents, err := os.ReadFile(before)
+				require.NoError(t, err)
+				afterContents, err := os.ReadFile(after)
+				require.NoError(t, err)
+				assert.Equal(t, beforeContents, afterContents)
 			})
 		}
 	}
-}
-
-func formatTestCase(t *testing.T, test string) {
-	before := filepath.Join(testDir, test + ".before.build")
-	after := filepath.Join(testDir, test + ".after.build")
-
-	changed, err := Format(core.DefaultConfiguration(), []string{before}, false, true)
-	assert.NoError(t, err)
-	assert.True(t, changed)
-
-	// N.B. this rewrites the file; be careful if you're adding more tests here.
-	changed, err = Format(core.DefaultConfiguration(), []string{before}, true, false)
-	assert.NoError(t, err)
-	assert.True(t, changed)
-
-	beforeContents, err := os.ReadFile(before)
-	require.NoError(t, err)
-	afterContents, err := os.ReadFile(after)
-	require.NoError(t, err)
-	assert.Equal(t, beforeContents, afterContents)
 }
