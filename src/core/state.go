@@ -1203,6 +1203,7 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	s.Config = config
 	s.RepoConfig = repoConfig
 	s.Arch = arch
+	s.CurrentSubrepo = arch.Arch
 	state.progress.allStates = append(state.progress.allStates, s)
 
 	return s
