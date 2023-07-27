@@ -91,6 +91,12 @@ def min(seq:list, key:function=None):
 def max(seq:list, key:function=None):
     pass
 
+def filter(filter:function, seq:list):
+    pass
+
+def map(mapper:function, seq:list):
+    pass
+
 def bool(b) -> bool:
     pass
 def int(s:str) -> int:

@@ -36,6 +36,8 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "package", pkg, false, kwargs)
 	setNativeCode(s, "sorted", sorted)
 	setNativeCode(s, "reversed", reversed)
+	setNativeCode(s, "filter", filter)
+	setNativeCode(s, "map", mapFunc)
 	setNativeCode(s, "isinstance", isinstance)
 	setNativeCode(s, "range", pyRange)
 	setNativeCode(s, "enumerate", enumerate)
@@ -698,6 +700,44 @@ func reversed(s *scope, args []pyObject) pyObject {
 		l[i], l[j] = l[j], l[i]
 	}
 	return l
+}
+
+func filter(s *scope, args []pyObject) pyObject {
+	f, isFunc := args[0].(*pyFunc)
+	l, isList := args[1].(pyList)
+	s.Assert(isFunc, "Argument filter must be callable, not %s", args[0].Type())
+	s.Assert(isList, "Argument seq must be a list, not %s", args[1].Type())
+
+	var ret pyList
+	for _, li := range l {
+		c := &Call{
+			Arguments: []CallArgument{{
+				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+			}},
+		}
+		if f.Call(s, c).IsTruthy() {
+			ret = append(ret, li)
+		}
+	}
+	return ret
+}
+
+func mapFunc(s *scope, args []pyObject) pyObject {
+	mapper, isFunc := args[0].(*pyFunc)
+	l, isList := args[1].(pyList)
+	s.Assert(isFunc, "Argument mapper must be callable, not %s", args[0].Type())
+	s.Assert(isList, "Argument seq must be a list, not %s", args[1].Type())
+
+	var ret pyList
+	for _, li := range l {
+		c := &Call{
+			Arguments: []CallArgument{{
+				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+			}},
+		}
+		ret = append(ret, mapper.Call(s, c))
+	}
+	return ret
 }
 
 func joinPath(s *scope, args []pyObject) pyObject {
