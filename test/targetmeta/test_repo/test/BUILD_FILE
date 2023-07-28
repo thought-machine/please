@@ -1,0 +1,21 @@
+def subtargets(target:str) -> dict:
+    return { k: [ f'{target}|{k}' ] for k in get_named_outs(target).keys() }
+
+here = get_base_path()
+
+sub1targets = subtargets(f"@//{here}/sub1")
+sub2targets = subtargets(f"@//{here}/sub2")
+
+tg = filegroup(
+    name = "targetmeta_combined",
+    srcs = sub1targets | sub2targets
+)
+
+text_file(
+    name = "success",
+    content = str(get_named_outs(tg)),
+)
+
+# should instantly fail
+# t = get_outs(f"@//{here}:ssss")
+# t = get_outs(f"@//{here}/sub1:nope")

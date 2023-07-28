@@ -1,0 +1,19 @@
+sub1 = dirname(get_base_path()) + "/sub1"
+
+sub1keys = get_named_outs(f"@//{sub1}").keys()
+idx = len(sub1keys)
+
+filegroup(
+    name = basename(package_name()),
+    visibility = ['PUBLIC'],
+    srcs = {
+        str(idx + 1): [text_file(
+            name = "c",
+            content = "ccccccccccc",
+        )],
+        str(idx + 2): [text_file(
+            name = "d",
+            content = "dddddddd",
+        )],
+    }
+)

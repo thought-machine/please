@@ -1,0 +1,5 @@
+text_file(
+    name = "a",
+    visibility = ["PUBLIC"],
+    content = "aaaaaaaaaaa",
+)

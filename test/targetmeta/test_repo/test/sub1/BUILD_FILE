@@ -1,0 +1,14 @@
+filegroup(
+    name = basename(package_name()),
+    visibility = ["//test:all", "//test/sub2:all"],
+    srcs = {
+        "1": [text_file(
+            name = "a",
+            content = "aaaaaaaaaaa",
+        )],
+        "2": [text_file(
+            name = "b",
+            content = "bbbbbbbbbb",
+        )],
+    }
+)

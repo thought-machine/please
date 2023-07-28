@@ -30,6 +30,7 @@ const (
 	ParseModeNormal ParseMode = 1 << iota
 	ParseModeForSubinclude
 	ParseModeForPreload
+	ParseModeForInformation
 	ParseModeForceBuild
 )
 
@@ -39,6 +40,10 @@ func (m ParseMode) IsPreload() bool {
 
 func (m ParseMode) IsForSubinclude() bool {
 	return m&ParseModeForSubinclude != 0
+}
+
+func (m ParseMode) IsForInformation() bool {
+	return m&ParseModeForInformation != 0
 }
 
 // startTime is as close as we can conveniently get to process start time.
@@ -852,8 +857,8 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
-func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
-	return state.waitForBuiltTarget(l, dependent, ParseModeForSubinclude)
+func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
+	return state.waitForBuiltTarget(l, dependent, mode)
 }
 
 func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
@@ -872,7 +877,6 @@ func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	if err := state.queueTarget(l, dependent, mode.IsForSubinclude(), mode); err != nil {
 		log.Fatalf("%v", err)
 	}
-
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
@@ -952,7 +956,7 @@ func (state *BuildState) WaitForInitialTargetAndEnsureDownload(l, dependent Buil
 }
 
 func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
-	target := state.waitForBuiltTarget(l, dependent, mode)
+	target := state.WaitForBuiltTarget(l, dependent, mode)
 	if err := state.EnsureDownloaded(target); err != nil {
 		panic(fmt.Errorf("failed to download target outputs: %w", err))
 	}
@@ -1076,7 +1080,7 @@ func (state *BuildState) QueueTestTarget(target *BuildTarget) {
 func (state *BuildState) queueTargetData(target *BuildTarget) {
 	for _, data := range target.AllData() {
 		if l, ok := data.Label(); ok {
-			state.WaitForBuiltTarget(l, target.Label)
+			state.WaitForBuiltTarget(l, target.Label, ParseModeForSubinclude)
 		}
 	}
 }
