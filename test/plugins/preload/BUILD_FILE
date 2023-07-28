@@ -1,0 +1,8 @@
+if not CONFIG.FOO.BOOL_TEST:
+    fail("BoolTest should be falsy")
+
+genrule(
+    name = "output_fooc",
+    cmd = f"echo {CONFIG.FOO.FOOC_TOOL} > $OUT",
+    outs = ["fooc.txt"],
+)

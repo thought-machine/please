@@ -10,7 +10,7 @@ genrule(
     cmd = "mv $SRCS_PLUGIN foo_plugin && mv $SRCS_TOOL foo_plugin/tools && tar -czf $OUT foo_plugin",
 )
 
-def plugin_e2e_test(name, plz_command, expected_output=None, expected_failure=False, expect_output_contains=None):
+def plugin_e2e_test(name, plz_command, expected_output=None, expected_failure=False, expect_output_contains=None, repo="test_repo"):
     return please_repo_e2e_test(
         name = name,
         data = {
@@ -21,7 +21,7 @@ def plugin_e2e_test(name, plz_command, expected_output=None, expected_failure=Fa
         expected_failure = expected_failure,
         expected_output = expected_output,
         plz_command = plz_command.replace("plz ", "plz -o buildconfig.nested-subrepo:$TMP_DIR/$DATA_NESTED_SUBREPO -o please.pluginrepo:file://$TMP_DIR/$DATA_PLUGIN "),
-        repo = "test_repo",
+        repo = repo,
     )
 
 plugin_e2e_test(
@@ -125,4 +125,12 @@ plugin_e2e_test(
         "plz-out/gen/foo_bar66/fooc.txt": "bar66",
     },
     plz_command = "plz build -o plugin.foo.modulepath:something --arch foo_bar66 //:output_fooc",
+)
+
+# Currently preloading breaks arch-specific config loading.
+# Once we have a fix, we should remove the 'not' from 'if not CONFIG.FOO.BOOL_TEST:' in test/plugins/preload/BUILD_FILE
+plugin_e2e_test(
+    name = "arch_with_preload_test",
+    plz_command = "plz build --arch freebsd_amd64 //:output_fooc",
+    repo = "preload",
 )

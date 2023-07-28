@@ -1,0 +1,11 @@
+[parse]
+preloadsubincludes = ///foo//build_defs:foolang
+
+[Plugin "foo"]
+Target = //plugins:foo
+FoocTool = @foo//tools:fooc
+bartool = bar
+CompileFlag = -sha256
+BoolTest = True
+IntTest = 15
+ModulePath = modulepath

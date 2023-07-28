@@ -1,0 +1,2 @@
+[Plugin "foo"]
+BoolTest = False
