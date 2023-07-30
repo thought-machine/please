@@ -329,6 +329,17 @@ func TestInterpreterDictUnion(t *testing.T) {
 	}, s.Lookup("z"))
 }
 
+func TestInterpreterDictPop(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/dict_pop.build")
+	assert.EqualValues(t, pyInt(2), s.Lookup("r1"))
+	assert.EqualValues(t, pyInt(42), s.Lookup("r2"))
+	assert.EqualValues(t, pyDict{
+		"a": pyInt(1),
+		"c": pyInt(3),
+	}, s.Lookup("d"))
+	assert.Error(t, err, "unknown dict key: y")
+}
+
 func TestIsNotNone(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/isnot.build")
 	assert.NoError(t, err)

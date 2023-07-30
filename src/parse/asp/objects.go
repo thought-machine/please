@@ -22,8 +22,10 @@ type pyObject interface {
 	Property(scope *scope, name string) pyObject
 	// Invokes the given operator on this object and returns the result.
 	Operator(operator Operator, operand pyObject) pyObject
-	// Used for index-assignment statements
+	// Assigns the given value to the given index.
 	IndexAssign(index, value pyObject)
+	// Deletes the value at the given index.
+	IndexDelete(index pyObject)
 }
 
 // A freezable represents an object that can be frozen into a readonly state.
@@ -69,6 +71,10 @@ func (b pyBool) IndexAssign(index, value pyObject) {
 	panic("bool type is not indexable")
 }
 
+func (b pyBool) IndexDelete(index pyObject) {
+	panic("bool type is not indexable")
+}
+
 func (b pyBool) String() string {
 	if b == True {
 		return "True"
@@ -108,6 +114,10 @@ func (n pyNone) IndexAssign(index, value pyObject) {
 	panic("none type is not indexable")
 }
 
+func (n pyNone) IndexDelete(index pyObject) {
+	panic("none type is not indexable")
+}
+
 func (n pyNone) String() string {
 	return "None"
 }
@@ -140,6 +150,10 @@ func (s pySentinel) Operator(operator Operator, operand pyObject) pyObject {
 }
 
 func (s pySentinel) IndexAssign(index, value pyObject) {
+	panic("sentinel type is not indexable")
+}
+
+func (s pySentinel) IndexDelete(index pyObject) {
 	panic("sentinel type is not indexable")
 }
 
@@ -223,6 +237,10 @@ func (i pyInt) IndexAssign(index, value pyObject) {
 	panic("int type is not indexable")
 }
 
+func (i pyInt) IndexDelete(index pyObject) {
+	panic("int type is not indexable")
+}
+
 func (i pyInt) String() string {
 	return strconv.Itoa(int(i))
 }
@@ -296,6 +314,10 @@ func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 
 func (s pyString) IndexAssign(index, value pyObject) {
 	panic("str type cannot be partially assigned to")
+}
+
+func (s pyString) IndexDelete(index pyObject) {
+	panic("str type is not indexable")
 }
 
 func (s pyString) String() string {
@@ -373,6 +395,10 @@ func (l pyList) IndexAssign(index, value pyObject) {
 	l[i] = value
 }
 
+func (l pyList) IndexDelete(index pyObject) {
+	panic("list type does not support deletion operations")
+}
+
 func (l pyList) String() string {
 	return fmt.Sprintf("%s", []pyObject(l))
 }
@@ -409,6 +435,10 @@ func (l pyFrozenList) MarshalJSON() ([]byte, error) {
 }
 
 func (l pyFrozenList) IndexAssign(index, value pyObject) {
+	panic("list is immutable")
+}
+
+func (l pyFrozenList) IndexDelete(index pyObject) {
 	panic("list is immutable")
 }
 
@@ -470,6 +500,14 @@ func (d pyDict) IndexAssign(index, value pyObject) {
 		panic("Dict keys must be strings, not " + index.Type())
 	}
 	d[string(key)] = value
+}
+
+func (d pyDict) IndexDelete(index pyObject) {
+	key, ok := index.(pyString)
+	if !ok {
+		panic("Dict keys must be strings, not " + index.Type())
+	}
+	delete(d, string(key))
 }
 
 func (d pyDict) String() string {
@@ -539,6 +577,10 @@ func (d pyFrozenDict) Property(scope *scope, name string) pyObject {
 }
 
 func (d pyFrozenDict) IndexAssign(index, value pyObject) {
+	panic("dict is immutable")
+}
+
+func (d pyFrozenDict) IndexDelete(index pyObject) {
 	panic("dict is immutable")
 }
 
@@ -623,6 +665,10 @@ func (f *pyFunc) Operator(operator Operator, operand pyObject) pyObject {
 }
 
 func (f *pyFunc) IndexAssign(index, value pyObject) {
+	panic("function type is not indexable")
+}
+
+func (f *pyFunc) IndexDelete(index pyObject) {
 	panic("function type is not indexable")
 }
 
@@ -810,6 +856,7 @@ type pyConfigBase struct {
 // on each update.
 type pyConfig struct {
 	base    *pyConfigBase
+	masked  map[string]bool
 	overlay pyDict
 }
 
@@ -872,6 +919,7 @@ func (c *pyConfig) Operator(operator Operator, operand pyObject) pyObject {
 
 func (c *pyConfig) IndexAssign(index, value pyObject) {
 	key := string(index.(pyString))
+	delete(c.masked, key)
 	if c.overlay == nil {
 		c.overlay = pyDict{key: value}
 	} else {
@@ -879,22 +927,35 @@ func (c *pyConfig) IndexAssign(index, value pyObject) {
 	}
 }
 
+func (c *pyConfig) IndexDelete(index pyObject) {
+	key := string(index.(pyString))
+	if c.overlay == nil {
+		c.masked[key] = true
+	} else {
+		delete(c.overlay, key)
+	}
+}
+
 // Copy creates a copy of this config object. It does not copy the overlay config, so be careful
 // where it is used.
 func (c *pyConfig) Copy() *pyConfig {
-	return &pyConfig{base: c.base}
+	return &pyConfig{
+		base:   c.base,
+		masked: make(map[string]bool),
+	}
 }
 
 // Get implements the get() method, similarly to a dict but looks up in both internal maps.
 func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
-	if c.overlay != nil {
-		if obj, present := c.overlay[key]; present {
+	if _, masked := c.masked[key]; !masked {
+		if c.overlay != nil {
+			if obj, present := c.overlay[key]; present {
+				return obj
+			}
+		}
+		if obj, present := c.base.dict[key]; present {
 			return obj
 		}
-	}
-
-	if obj, present := c.base.dict[key]; present {
-		return obj
 	}
 	return fallback
 }
@@ -933,6 +994,11 @@ func (c *pyFrozenConfig) MarshalJSON() ([]byte, error) {
 
 // IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
 func (c *pyFrozenConfig) IndexAssign(_, _ pyObject) {
+	panic("Config object is not assignable in this scope")
+}
+
+// IndexDelete always fails, assignments to a pyFrozenConfig aren't allowed.
+func (c *pyFrozenConfig) IndexDelete(_ pyObject) {
 	panic("Config object is not assignable in this scope")
 }
 

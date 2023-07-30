@@ -96,6 +96,7 @@ func registerBuiltins(s *scope) {
 		"keys":       setNativeCode(s, "keys", dictKeys),
 		"items":      setNativeCode(s, "items", dictItems),
 		"values":     setNativeCode(s, "values", dictValues),
+		"pop":        setNativeCode(s, "pop", dictPop, varargs),
 		"copy":       setNativeCode(s, "copy", dictCopy),
 	}
 	s.interpreter.configMethods = map[string]*pyFunc{
@@ -673,6 +674,18 @@ func dictItems(s *scope, args []pyObject) pyObject {
 		ret[i] = pyList{pyString(k), self[k]}
 	}
 	return ret
+}
+
+func dictPop(s *scope, args []pyObject) pyObject {
+	self := args[0].(pyDict)
+	sk, ok := args[1].(pyString)
+	s.Assert(ok, "dict keys must be strings, not %s", args[1].Type())
+	if ret, present := self[string(sk)]; present {
+		self.IndexDelete(sk)
+		return ret
+	}
+	s.Assert(len(args) > 2, "unknown dict key: " + sk.String())
+	return args[2]
 }
 
 func dictCopy(s *scope, args []pyObject) pyObject {

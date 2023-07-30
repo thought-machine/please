@@ -118,6 +118,8 @@ def sorted(seq:list) -> list:
 
 def get(self:dict, key:str, default=None):
     pass
+def pop(self:dict, key:str):
+    pass  # Has to be implemented natively since it's varargs
 def setdefault(self:config, key:str, default=None) -> config:
     if key in self:
         return self[key]
