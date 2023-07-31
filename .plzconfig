@@ -1,7 +1,7 @@
 [parse]
 BlacklistDirs = tree ; The performance test repo
 preloadsubincludes = ///go//build_defs:go
-preloadsubincludes = ///cc//build_defs:cc 
+preloadsubincludes = ///cc//build_defs:cc
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///shell//build_defs:shell
 
@@ -88,3 +88,6 @@ accept = Artistic License
 accept = ISC
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice
+
+[featureflags]
+hidedeprecatedconfigoptions = true
