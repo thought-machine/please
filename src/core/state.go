@@ -27,9 +27,10 @@ import (
 type ParseMode uint8
 
 const (
-	ParseModeNormal ParseMode = iota
+	ParseModeNormal ParseMode = 1 << iota
 	ParseModeForSubinclude
 	ParseModeForPreload
+	ParseModeForceBuild
 )
 
 func (m ParseMode) IsPreload() bool {
@@ -1030,7 +1031,7 @@ func (state *BuildState) CheckArchSubrepo(name string) *Subrepo {
 
 // QueueTarget adds a single target to the build queue.
 func (state *BuildState) QueueTarget(label, dependent BuildLabel, forceBuild bool, mode ParseMode) error {
-	return state.queueTarget(label, dependent, forceBuild || mode.IsForSubinclude(), mode)
+	return state.queueTarget(label, dependent, forceBuild || mode.IsForSubinclude() || (mode&ParseModeForceBuild) != 0, mode)
 }
 
 func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild bool, mode ParseMode) error {
@@ -1038,6 +1039,9 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild boo
 	if target == nil {
 		// If the package isn't loaded yet, we need to queue a parse for it.
 		if state.Graph.PackageByLabel(label) == nil {
+			if forceBuild {
+				mode |= ParseModeForceBuild
+			}
 			state.addPendingParse(label, dependent, mode)
 			return nil
 		}

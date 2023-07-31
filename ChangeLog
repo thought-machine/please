@@ -1,3 +1,9 @@
+Version 17.2.2
+--------------
+    * `format`: avoid unneeded parentheses around `in`/`not in` expressions (#2871)
+    * Pass correct output of uname -a (#2868)
+    * Fix occasional hang when some targets are not queued
+
 Version 17.2.1
 ---------------
     * Better support preloaded subincludes that themselves subinclude (#2859)
