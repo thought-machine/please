@@ -1,0 +1,17 @@
+# acc
+r1 = reduce(lambda x, y: x + y, [0, 1, 2, 3])
+
+# with init
+r2 = reduce(
+    function=lambda x, y: x + y,
+    seq=[0, 1, 2, 3],
+    initializer=10,
+)
+
+# dict
+r3 = reduce(lambda x, y: x | y, [{"a": 2, "b": 3}, {"c": 4, "d": 5}], initializer={"e": 0})
+
+r4 = reduce(lambda x, y: x + y, [])
+r5 = reduce(lambda x, y: x + y, [], initializer=5)
+r6 = reduce(lambda x, y: x + y, [1], initializer=5)
+r7 = reduce(lambda x, y: x + y, [7])
