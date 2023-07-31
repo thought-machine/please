@@ -1040,7 +1040,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild boo
 		// If the package isn't loaded yet, we need to queue a parse for it.
 		if state.Graph.PackageByLabel(label) == nil {
 			if forceBuild {
-				mode = mode | ParseModeForceBuild
+				mode |= ParseModeForceBuild
 			}
 			state.addPendingParse(label, dependent, mode)
 			return nil
