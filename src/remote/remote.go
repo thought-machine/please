@@ -556,6 +556,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		metadata.Cached = true
 		return metadata, ar
 	}
+	c.state.LogBuildResult(target, core.TargetBuilding, "Checking remote...")
 	// Now see if it is cached on the remote server
 	start := time.Now()
 	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
@@ -585,7 +586,6 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 // (i.e. not if we're doing plz build --rebuild or plz test --rerun).
 func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
 	if !c.state.ShouldRebuild(target) && !(c.state.NeedTests && isTest && c.state.ForceRerun) {
-		c.state.LogBuildResult(target, core.TargetBuilding, "Checking remote...")
 		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest); metadata != nil {
 			return metadata, ar
 		}
