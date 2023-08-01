@@ -327,20 +327,11 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	}
 
 	if c.state.ShouldDownload(target) {
-		if !c.outputsExist(target, digest) {
-			log.Debug("need to download outputs for %s, they don't exist", target)
-			c.state.LogBuildResult(target, core.TargetBuilding, "Downloading")
-			if err := c.download(target, func() error {
-				return c.reallyDownload(target, digest, ar)
-			}); err != nil {
-				return metadata, err
-			}
-		} else {
-			log.Debug("Not downloading outputs for %s, they are already up-to-date", target)
-			// Ensure this is marked as already downloaded.
-			v, _ := c.downloads.LoadOrStore(target, &pendingDownload{})
-			v.(*pendingDownload).once.Do(func() {})
+		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading")
+		if err := c.Download(target); err != nil {
+			return metadata, nil
 		}
+		// TODO(peterebden): Should this not just be part of Download()?
 		if err := c.downloadData(target); err != nil {
 			return metadata, err
 		}
@@ -424,8 +415,9 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		return nil // No download needed since this target was built locally
 	}
 	return c.download(target, func() error {
-		log.Debug("Download %s", target)
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
+		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+		defer core.ReleaseFileLock(file)
 		if c.outputsExist(target, buildAction) {
 			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
 			return nil
@@ -434,7 +426,6 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
 		}
-		log.Debug("Got action result for %s [%s]", target, buildAction.Hash)
 		return c.reallyDownload(target, buildAction, ar)
 	})
 }
@@ -450,9 +441,6 @@ func (c *Client) download(target *core.BuildTarget, f func() error) error {
 
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
 	log.Debug("Downloading outputs for %s", target)
-
-	file := core.AcquireExclusiveFileLock(target.BuildLockFile())
-	defer core.ReleaseFileLock(file)
 
 	if err := removeOutputs(target); err != nil {
 		return err
