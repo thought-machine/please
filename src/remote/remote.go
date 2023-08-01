@@ -329,7 +329,7 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if c.state.ShouldDownload(target) {
 		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading")
 		if err := c.Download(target); err != nil {
-			return metadata, nil
+			return metadata, err
 		}
 		// TODO(peterebden): Should this not just be part of Download()?
 		if err := c.downloadData(target); err != nil {
