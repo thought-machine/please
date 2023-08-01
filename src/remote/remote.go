@@ -328,6 +328,7 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 
 	if c.state.ShouldDownload(target) {
 		if !c.outputsExist(target, digest) {
+			log.Debug("need to download outputs for %s, they don't exist", target)
 			c.state.LogBuildResult(target, core.TargetBuilding, "Downloading")
 			if err := c.download(target, func() error {
 				return c.reallyDownload(target, digest, ar)
@@ -423,6 +424,7 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		return nil // No download needed since this target was built locally
 	}
 	return c.download(target, func() error {
+		log.Debug("Download %s", target)
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
 		if c.outputsExist(target, buildAction) {
 			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
@@ -432,6 +434,7 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
 		}
+		log.Debug("Got action result for %s [%s]", target, buildAction.Hash)
 		return c.reallyDownload(target, buildAction, ar)
 	})
 }
