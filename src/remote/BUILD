@@ -33,6 +33,7 @@ go_library(
         "///third_party/go/google.golang.org_protobuf//proto",
         "///third_party/go/google.golang.org_protobuf//types/known/durationpb",
         "//src/build",
+        "//src/cache",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",

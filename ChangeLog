@@ -1,3 +1,7 @@
+Version 17.2.3
+--------------
+    * Improve locking logic around downloading targets for multiple concurrent plz executions
+
 Version 17.2.2
 --------------
     * `format`: avoid unneeded parentheses around `in`/`not in` expressions (#2871)

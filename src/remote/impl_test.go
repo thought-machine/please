@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/thought-machine/please/src/cache"
 	"github.com/thought-machine/please/src/core"
 )
 
@@ -42,6 +43,7 @@ func newClientInstance(name string) *Client {
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
 	state.Config.Remote.AssetURL = state.Config.Remote.URL
+	state.Cache = cache.NewCache(state)
 	return New(state)
 }
 
