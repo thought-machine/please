@@ -418,6 +418,19 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
 		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
 		defer core.ReleaseFileLock(file)
+
+		if target.IsFilegroup {
+			for _, t := range target.AllSources() {
+				if l, ok := t.Label(); ok {
+					if l.PackageName == target.Label.PackageName && l.Subrepo == target.Label.Subrepo {
+						t := c.state.Graph.TargetOrDie(l)
+						file := core.AcquireExclusiveFileLock(t.BuildLockFile())
+						defer core.ReleaseFileLock(file)
+					}
+				}
+			}
+		}
+
 		if c.outputsExist(target, buildAction) {
 			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
 			return nil
