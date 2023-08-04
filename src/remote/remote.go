@@ -419,6 +419,8 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
 		defer core.ReleaseFileLock(file)
 
+		// This is a bit of a grungy hack to avoid clobbering outputs.
+		// See https://github.com/thought-machine/please/issues/2886
 		if target.IsFilegroup {
 			for _, t := range target.AllSources() {
 				if l, ok := t.Label(); ok {
