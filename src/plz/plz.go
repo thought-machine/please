@@ -3,9 +3,9 @@ package plz
 import (
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
@@ -36,9 +36,6 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 	parse.InitParser(state)
 
-	// Start looking for the initial targets to kick the build off
-	go findOriginalTasks(state, preTargets, targets, arch)
-
 	parses, actions := state.TaskQueues()
 
 	localLimiter := make(limiter, config.Please.NumThreads)
@@ -46,18 +43,20 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	anyRemote := config.NumRemoteExecutors() > 0
 
 	// Start up all the build workers
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
+	var g errgroup.Group
+	g.Go(func() error {
+		return findOriginalTasks(state, preTargets, targets, arch)
+	})
+	g.Go(func() error {
 		for task := range parses {
 			go func(task core.ParseTask) {
 				parse.Parse(state, task.Label, task.Dependent, task.Mode)
 				state.TaskDone()
 			}(task)
 		}
-		wg.Done()
-	}()
-	go func() {
+		return nil
+	})
+	g.Go(func() error {
 		for task := range actions {
 			go func(task core.Task) {
 				remote := anyRemote && !task.Target.Local
@@ -77,10 +76,10 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 				state.TaskDone()
 			}(task)
 		}
-		wg.Done()
-	}()
+		return nil
+	})
 	// Wait until they've all exited, which they'll do once they have no tasks left.
-	wg.Wait()
+	err := g.Wait()
 	if state.Cache != nil {
 		state.Cache.Shutdown()
 	}
@@ -90,6 +89,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 	state.CloseResults()
 	metrics.Push(config)
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
 }
 
 // RunHost is a convenience function that uses the host architecture, the given state's
@@ -99,7 +101,8 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
-func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildLabel, arch cli.Arch) {
+func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildLabel, arch cli.Arch) error {
+	var g errgroup.Group
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
@@ -110,7 +113,7 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
 	}
 	if len(preTargets) > 0 {
-		findOriginalTaskSet(state, preTargets, false, arch)
+		findOriginalTaskSet(state, &g, preTargets, false, arch)
 		for _, target := range preTargets {
 			if target.IsAllTargets() {
 				log.Debug("Waiting for pre-target %s...", target)
@@ -120,18 +123,24 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		}
 		for _, target := range state.ExpandLabels(preTargets) {
 			log.Debug("Waiting for pre-target %s...", target)
-			state.WaitForInitialTargetAndEnsureDownload(target, targets[0])
+			state.WaitForTargetAndEnsureDownload(target, targets[0], core.ParseModeNormal)
 			log.Debug("Pre-target %s built, continuing...", target)
 		}
 	}
-	findOriginalTaskSet(state, targets, true, arch)
+	findOriginalTaskSet(state, &g, targets, true, arch)
+	if err := g.Wait(); err != nil {
+		log.Debug("Original target scan failed: %s", err)
+		state.Stop()
+		return err
+	}
 	log.Debug("Original target scan complete")
 	state.TaskDone() // initial target adding counts as one.
+	return nil
 }
 
-func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
+func findOriginalTaskSet(state *core.BuildState, g *errgroup.Group, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
 	for _, target := range ReadStdinLabels(targets) {
-		findOriginalTask(state, target, addToList, arch)
+		findOriginalTask(state, g, target, addToList, arch)
 	}
 }
 
@@ -155,7 +164,7 @@ func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.B
 	return label
 }
 
-func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList bool, arch cli.Arch) {
+func findOriginalTask(state *core.BuildState, g *errgroup.Group, target core.BuildLabel, addToList bool, arch cli.Arch) {
 	if arch != cli.HostArch() {
 		target = core.LabelToArch(target, arch)
 	}
@@ -167,7 +176,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		prefix := ""
 		if target.Subrepo != "" {
 			subrepoLabel := target.SubrepoLabel(state, "")
-			state.WaitForInitialTargetAndEnsureDownload(subrepoLabel, target)
+			state.WaitForTargetAndEnsureDownload(subrepoLabel, target, core.ParseModeNormal)
 			// Targets now get activated during parsing, so can be built before we finish parsing their package.
 			state.WaitForPackage(subrepoLabel, target, core.ParseModeNormal)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
@@ -178,11 +187,35 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 			dirname, _ := filepath.Split(filename)
 			l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(strings.TrimRight(dirname, "/"), prefix), "/"), "all")
 			l.Subrepo = target.Subrepo
-			state.AddOriginalTarget(l, addToList)
+			queueTarget(state, g, l, addToList)
 		}
 	} else {
-		state.AddOriginalTarget(target, addToList)
+		queueTarget(state, g, target, addToList)
 	}
+}
+
+// queueTarget marks a target as an original target and enqueues it for building, testing, or whatever.
+func queueTarget(state *core.BuildState, g *errgroup.Group, label core.BuildLabel, addToList bool) {
+	g.Go(func() error {
+		if addToList {
+			state.AddOriginalTarget(label)
+		}
+		if label.IsAllTargets() {
+			for _, target := range state.WaitForPackage(label, core.OriginalTarget, core.ParseModeNormal).AllTargets() {
+				queueTarget(state, g, target.Label, false)
+			}
+			return nil
+		} else if !state.NeedBuild && !state.NeedTests && !state.ParsePackageOnly {
+			_, err := state.ParseTree(label, core.OriginalTarget)
+			return err
+		} else if target, err := state.Parse(label, core.OriginalTarget, core.ParseModeNormal); err != nil || state.ParsePackageOnly {
+			return err
+		} else if !state.NeedTests {
+			return state.Build(target, core.ParseModeNormal)
+		} else {
+			return state.Test(target)
+		}
+	})
 }
 
 // FindAllBuildFiles finds all BUILD files under a particular path.

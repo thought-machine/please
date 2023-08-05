@@ -151,19 +151,9 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, statements []*Statement) (*scope, error) {
+func (i *interpreter) interpretAll(pkg *core.Package, mode core.ParseMode, statements []*Statement) (*scope, error) {
 	s := i.scope.NewPackagedScope(pkg, mode, 1)
 	s.config = i.getConfig(s.state).Copy()
-
-	// Config needs a little separate tweaking.
-	// Annoyingly we'd like to not have to do this at all, but it's very hard to handle
-	// mutating operations like .setdefault() otherwise.
-	if forLabel != nil {
-		s.parsingFor = &parseTarget{
-			label:     *forLabel,
-			dependent: *dependent,
-		}
-	}
 
 	if !mode.IsPreload() {
 		if err := i.preloadSubincludes(s); err != nil {
@@ -280,7 +270,6 @@ type scope struct {
 	state           *core.BuildState
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel
-	parsingFor      *parseTarget
 	parent          *scope
 	locals          pyDict
 	config          *pyConfig
@@ -374,7 +363,6 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
-		parsingFor:  s.parsingFor,
 		parent:      s,
 		locals:      make(pyDict, hint),
 		config:      s.config,

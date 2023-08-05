@@ -34,7 +34,7 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 	}
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
-	s, err := parser.interpreter.interpretAll(pkg, nil, nil, 0, statements)
+	s, err := parser.interpreter.interpretAll(pkg, 0, statements)
 	return s, statements, err
 }
 

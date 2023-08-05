@@ -189,12 +189,20 @@ type BuildTarget struct {
 	EntryPoints map[string]string `name:"entry_points"`
 	// Used to arbitrate concurrent access to dependencies, and to the test results.
 	mutex sync.RWMutex `print:"false"`
+	// Used to notify once the dependencies of this target have been resolved.
+	dependenciesResolved chan struct{} `print:"false"`
 	// Used to notify once this target has built successfully.
 	finishedBuilding chan struct{} `print:"false"`
+	// Used to notify once this target has tested successfully.
+	finishedTesting chan struct{} `print:"false"`
 	// Env are any custom environment variables to set for this build target
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
 	FileContent string `name:"content"`
+	// Any error encountered during building this target
+	BuildError error `print:"false"`
+	// Used to check if dependencies have been resolved at least once.
+	dependenciesResolvedOnce atomicBool `print:"false"`
 	// Represents the state of this build target (see below)
 	state int32 `print:"false"`
 	// If true, the target is needed for a subinclude and therefore we will have to make sure its
@@ -359,10 +367,12 @@ func (s BuildTargetState) String() string {
 // NewBuildTarget constructs & returns a new BuildTarget.
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return &BuildTarget{
-		Label:               label,
-		state:               int32(Inactive),
-		BuildingDescription: DefaultBuildingDescription,
-		finishedBuilding:    make(chan struct{}),
+		Label:                label,
+		state:                int32(Inactive),
+		BuildingDescription:  DefaultBuildingDescription,
+		finishedBuilding:     make(chan struct{}),
+		finishedTesting:      make(chan struct{}),
+		dependenciesResolved: make(chan struct{}),
 	}
 }
 
@@ -516,7 +526,7 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
 //
 //	below should behave (preferably nicely).
-func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
+func (target *BuildTarget) resolveDependencies(resolve func(BuildLabel) (*BuildTarget, error)) error {
 	var g errgroup.Group
 	target.mutex.RLock()
 	for i := range target.dependencies {
@@ -525,25 +535,36 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 			continue // already done
 		}
 		g.Go(func() error {
-			if err := target.resolveOneDependency(graph, dep); err != nil {
-				return err
-			}
-			for _, d := range dep.deps {
-				if err := callback(d); err != nil {
-					return err
-				}
-			}
-			return nil
+			return target.resolveOneDependency(dep, resolve)
 		})
 	}
 	target.mutex.RUnlock()
+	if target.dependenciesResolvedOnce.ToggleOn() {
+		defer close(target.dependenciesResolved)
+	}
 	return g.Wait()
 }
 
-func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(*dep.declared)
-	if t == nil {
-		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
+// waitForDependencyResolution waits until at least one call to resolveDependencies has completed
+func (target *BuildTarget) waitForDependencyResolution() {
+	<-target.dependenciesResolved
+}
+
+// iterateDependencies calls the given function for each resolved dependency of the target.
+func (target *BuildTarget) iterateDependencies(callback func(*BuildTarget)) {
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
+	for _, dep := range target.dependencies {
+		for _, d := range dep.deps {
+			callback(d)
+		}
+	}
+}
+
+func (target *BuildTarget) resolveOneDependency(dep *depInfo, resolve func(BuildLabel) (*BuildTarget, error)) error {
+	t, err := resolve(*dep.declared)
+	if err != nil {
+		return err
 	}
 	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
 
@@ -560,9 +581,9 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 
 	deps := make([]*BuildTarget, 0, len(labels))
 	for _, l := range labels {
-		t := graph.WaitForTarget(l)
-		if t == nil {
-			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
+		t, err := resolve(l)
+		if err != nil {
+			return err
 		}
 		deps = append(deps, t)
 	}
@@ -578,7 +599,9 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 // MustResolveDependencies is exposed only for testing purposes.
 // TODO(peterebden, tatskaari): See if we can get rid of this.
 func (target *BuildTarget) ResolveDependencies(graph *BuildGraph) error {
-	return target.resolveDependencies(graph, func(*BuildTarget) error { return nil })
+	return target.resolveDependencies(func(l BuildLabel) (*BuildTarget, error) {
+		return graph.Target(l), nil
+	})
 }
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
@@ -694,6 +717,16 @@ func (target *BuildTarget) FinishBuild() {
 // WaitForBuild blocks until this target has finished building.
 func (target *BuildTarget) WaitForBuild() {
 	<-target.finishedBuilding
+}
+
+// FinishTest marks this target as having finished running one test run.
+func (target *BuildTarget) FinishTest() {
+	target.finishedTesting <- struct{}{}
+}
+
+// WaitForTest blocks until this target has finished testing.
+func (target *BuildTarget) WaitForTest() {
+	<-target.finishedTesting
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.

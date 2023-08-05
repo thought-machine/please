@@ -54,15 +54,15 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
-		// Does exist, all we need to do is toggle on this target
-		return state.ActivateTarget(pkg, label, dependent, mode)
+		// Does exist, nothing else needs doing by us
+		return nil
 	}
 	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(label, core.PackageParsing, "Parsing...")
 
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label, mode.IsPreload())
+		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label, mode)
 		if err := subrepo.State.Initialise(subrepo); err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	// The target likely got activated already, however we activate here to handle psudotargets (:all), and to let this
 	// error when the target doesn't exist.
 
-	return state.ActivateTarget(pkg, label, dependent, mode)
+	return nil
 }
 
 // checkSubrepo checks whether this guy exists within a subrepo. If so we will need to make sure that's available first.
@@ -152,14 +152,14 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate internal package: %w", err)
 		}
-		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr), &label, &dependent, mode); err != nil {
+		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr), mode); err != nil {
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
 		filename, dir := buildFileName(state, label.PackageName, subrepo)
 		if filename != "" {
 			pkg.Filename = filename
-			if err := state.Parser.ParseFile(pkg, &label, &dependent, mode, pkg.Filename); err != nil {
+			if err := state.Parser.ParseFile(pkg, mode, pkg.Filename); err != nil {
 				return nil, err
 			}
 		} else {

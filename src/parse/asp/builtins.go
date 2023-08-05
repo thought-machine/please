@@ -198,13 +198,6 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	if s.Callback {
 		target.AddedPostBuild = true
 	}
-
-	if s.parsingFor != nil && s.parsingFor.label == target.Label {
-		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.mode); err != nil {
-			s.Error("%v", err)
-		}
-	}
-
 	return pyString(":" + target.Label.Name)
 }
 
@@ -298,7 +291,11 @@ func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.Bui
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
 
-	return s.state.WaitForTargetAndEnsureDownload(l, dependent, s.mode.IsPreload())
+	target, err := s.state.WaitForTargetAndEnsureDownload(l, dependent, s.mode)
+	if err != nil {
+		panic(err)
+	}
+	return target
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -357,18 +354,11 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// isLocal is true when this subinclude target in the current package being parsed
 	isLocal := l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName
 
-	// If the subinclude is local to this package, it must already exist in the graph. If it already exists in the graph
-	// but isn't activated, we should activate it otherwise WaitForSubincludedTarget might block. This can happen when
-	// another package also subincludes this target, and queues it first.
+	// If the subinclude is local to this package, it must already exist in the graph. Check it as a nicety rather than just
+	// blocking on ourselves forever.
 	if isLocal && s.pkg != nil {
-		t := s.state.Graph.Target(l)
-		if t == nil {
+		if t := s.state.Graph.Target(l); t == nil {
 			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
-		}
-		if t.State() < core.Active {
-			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, s.mode|core.ParseModeForSubinclude); err != nil {
-				s.Error("Failed to activate subinclude target: %v", err)
-			}
 		}
 	}
 
@@ -1046,27 +1036,24 @@ func addDep(s *scope, args []pyObject) pyObject {
 	target.AddMaybeExportedDependency(dep, exported, false, false)
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, false, core.ParseModeNormal)
-		s.Assert(err == nil, "%s", err)
+		go s.state.ParseAndBuild(dep, target.Label, core.ParseModeNormal)
 	}
 	return None
 }
 
-func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
+func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum core.BuildInput) {
 	target.AddDatum(datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
-		s.Assert(err == nil, "%s", err)
+		go s.state.ParseAndBuild(l, target.Label, core.ParseModeNormal)
 	}
 }
 
-func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
+func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, datum core.BuildInput) {
 	target.AddNamedDatum(name, datum)
 	// Queue this dependency if it'll be needed.
 	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
-		s.Assert(err == nil, "%s", err)
+		go s.state.ParseAndBuild(l, target.Label, core.ParseModeNormal)
 	}
 }
 
@@ -1084,19 +1071,19 @@ func addData(s *scope, args []pyObject) pyObject {
 	// add_data() builtin can take a string, list, or dict
 	if isType(datum, "str") {
 		if bi := parseBuildInput(s, datum, string(label.(pyString)), systemAllowed, tool); bi != nil {
-			addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+			target.AddDatum(bi)
 		}
 	} else if isType(datum, "list") {
 		for _, str := range datum.(pyList) {
 			if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
-				addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+				target.AddDatum(bi)
 			}
 		}
 	} else if isType(datum, "dict") {
 		for name, v := range datum.(pyDict) {
 			for _, str := range v.(pyList) {
 				if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
-					addNamedDatumToTargetAndMaybeQueue(s, name, target, bi, systemAllowed, tool)
+					target.AddNamedDatum(name, bi)
 				}
 			}
 		}

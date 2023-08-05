@@ -17,6 +17,11 @@ func (b *atomicBool) SetFalse() {
 	atomic.StoreInt32(&b.b, 0)
 }
 
+// ToggleOn sets this bool to true, and returns true if it was changed by this operation.
+func (b *atomicBool) ToggleOn() bool {
+	return atomic.CompareAndSwapInt32(&b.b, 0, 1)
+}
+
 func (b *atomicBool) Set(val bool) {
 	if val {
 		b.SetTrue()

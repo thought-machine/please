@@ -641,7 +641,6 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	s2.config = s.config
 	s2.Set("CONFIG", s.config) // This needs to be copied across too :(
 	s2.Callback = s.Callback
-	s2.parsingFor = s.parsingFor
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments
 	if f.self != nil {

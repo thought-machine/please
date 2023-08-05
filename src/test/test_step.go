@@ -52,6 +52,7 @@ func Test(state *core.BuildState, target *core.BuildTarget, remote bool, run int
 
 	state.LogBuildResult(target, core.TargetTesting, "Testing...")
 	test(state.ForTarget(target), target.Label, target, remote, run)
+	target.FinishTest()
 }
 
 func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
@@ -201,13 +202,6 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 		if target.Test.Results.TestCases.AllSucceeded() {
 			// Success, store in cache
 			moveAndCacheOutputFiles(target.Test.Results, coverage)
-		}
-	} else if state.TestSequentially {
-		for run := 1; run <= int(state.NumTestRuns); run++ {
-			state.LogBuildResult(target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
-			var results core.TestSuite
-			results, coverage = doTest(state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
-			target.AddTestResults(results)
 		}
 	} else {
 		state.LogBuildResult(target, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
