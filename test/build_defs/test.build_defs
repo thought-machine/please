@@ -11,6 +11,7 @@ def please_repo_e2e_test(
         expect_output_contains: dict = {},
         expect_output_doesnt_contain: dict = {},
         labels: list = [],
+        timeout: int = 0,
 ):
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     if expected_failure:
@@ -48,6 +49,7 @@ def please_repo_e2e_test(
         env = {
             "PLZ_CONFIG_PROFILE": "e2e",
         },
+        timeout = timeout,
         no_test_output = True,
         labels = labels + ["plz_e2e_test", "e2e"],
         sandbox = False,

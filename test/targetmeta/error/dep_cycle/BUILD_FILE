@@ -1,0 +1,9 @@
+t = get_outs(f"@//c")
+
+text_file(
+    name = "top",
+    visibility = ["PUBLIC"],
+    content = t,
+)
+
+

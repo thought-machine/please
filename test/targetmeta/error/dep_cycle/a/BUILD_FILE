@@ -1,0 +1,7 @@
+t = get_outs(f"@//b")
+
+text_file(
+    name = package_name(),
+    visibility = ["PUBLIC"],
+    content = t,
+)
