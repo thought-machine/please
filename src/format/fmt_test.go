@@ -2,6 +2,8 @@ package format
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,22 +12,32 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+const testDir = "src/format/test_data"
+
 func TestFormat(t *testing.T) {
-	const before = "src/format/test_data/before.build"
-	const after = "src/format/test_data/after.build"
-
-	changed, err := Format(core.DefaultConfiguration(), []string{before}, false, true)
+	files, err := os.ReadDir(testDir)
 	assert.NoError(t, err)
-	assert.True(t, changed)
+	for _, file := range files {
+		if test, isBefore := strings.CutSuffix(file.Name(), ".before.build"); isBefore {
+			t.Run(test, func(t *testing.T) {
+				before := filepath.Join(testDir, test+".before.build")
+				after := filepath.Join(testDir, test+".after.build")
 
-	// N.B. this rewrites the file; be careful if you're adding more tests here.
-	changed, err = Format(core.DefaultConfiguration(), []string{before}, true, false)
-	assert.NoError(t, err)
-	assert.True(t, changed)
+				changed, err := Format(core.DefaultConfiguration(), []string{before}, false, true)
+				assert.NoError(t, err)
+				assert.True(t, changed)
 
-	beforeContents, err := os.ReadFile(before)
-	require.NoError(t, err)
-	afterContents, err := os.ReadFile(after)
-	require.NoError(t, err)
-	assert.Equal(t, beforeContents, afterContents)
+				// N.B. this rewrites the file; be careful if you're adding more tests here.
+				changed, err = Format(core.DefaultConfiguration(), []string{before}, true, false)
+				assert.NoError(t, err)
+				assert.True(t, changed)
+
+				beforeContents, err := os.ReadFile(before)
+				require.NoError(t, err)
+				afterContents, err := os.ReadFile(after)
+				require.NoError(t, err)
+				assert.Equal(t, beforeContents, afterContents)
+			})
+		}
+	}
 }
