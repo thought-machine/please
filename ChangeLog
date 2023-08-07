@@ -1,3 +1,9 @@
+Version 17.3.0
+--------------
+    * REX: fix issue with downloading the outputs of filegroups with remote execution (#2885)
+    * Added reduce builtin to the build language (#2880)
+    * Don't automatically download targets queued for subinclue during remote execution (#2889)
+
 Version 17.2.3
 --------------
     * Improve locking logic around downloading targets for multiple concurrent plz executions
