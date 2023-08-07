@@ -38,6 +38,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "reversed", reversed)
 	setNativeCode(s, "filter", filter)
 	setNativeCode(s, "map", mapFunc)
+	setNativeCode(s, "reduce", reduce)
 	setNativeCode(s, "isinstance", isinstance)
 	setNativeCode(s, "range", pyRange)
 	setNativeCode(s, "enumerate", enumerate)
@@ -736,6 +737,37 @@ func mapFunc(s *scope, args []pyObject) pyObject {
 			}},
 		}
 		ret = append(ret, mapper.Call(s, c))
+	}
+	return ret
+}
+
+func reduce(s *scope, args []pyObject) pyObject {
+	function, isFunc := args[0].(*pyFunc)
+	l, isList := args[1].(pyList)
+	init := args[2]
+	s.Assert(isFunc, "Argument function must be callable, not %s", args[0].Type())
+	s.Assert(isList, "Argument seq must be a list, not %s", args[1].Type())
+
+	ret := init
+	start := 0
+	if init == None {
+		start = 1
+		if len(l) > 0 {
+			ret = l[0]
+		}
+		if len(l) <= 1 {
+			return ret
+		}
+	}
+	for _, li := range l[start:] {
+		c := &Call{
+			Arguments: []CallArgument{{
+				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+			}, {
+				Value: Expression{Optimised: &OptimisedExpression{Constant: ret}},
+			}},
+		}
+		ret = function.Call(s, c)
 	}
 	return ret
 }

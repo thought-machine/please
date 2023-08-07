@@ -188,6 +188,25 @@ func TestMap(t *testing.T) {
 	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3), pyInt(4)}, s.Lookup("m2"))
 }
 
+func TestReduce(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/reduce.build")
+	require.NoError(t, err)
+	assert.Equal(t, pyInt(6), s.Lookup("r1"))
+	assert.Equal(t, pyInt(16), s.Lookup("r2"))
+	res := pyDict{
+		"a": pyInt(2),
+		"b": pyInt(3),
+		"c": pyInt(4),
+		"d": pyInt(5),
+		"e": pyInt(0),
+	}
+	assert.Equal(t, res, s.Lookup("r3"))
+	assert.Equal(t, s.Lookup("None"), s.Lookup("r4"))
+	assert.Equal(t, pyInt(5), s.Lookup("r5"))
+	assert.Equal(t, pyInt(6), s.Lookup("r6"))
+	assert.Equal(t, pyInt(7), s.Lookup("r7"))
+}
+
 func TestInterpreterUnpacking(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/unpacking.build")
 	require.NoError(t, err)
