@@ -38,7 +38,7 @@ func (m ParseMode) IsPreload() bool {
 }
 
 func (m ParseMode) IsForSubinclude() bool {
-	return m&ParseModeForSubinclude != 0 || m&ParseModeForPreload != 0
+	return m&ParseModeForSubinclude != 0
 }
 
 // startTime is as close as we can conveniently get to process start time.
@@ -911,7 +911,7 @@ func (state *BuildState) ShouldDownload(target *BuildTarget) bool {
 	downloadOriginalTarget := state.OutputDownload == OriginalOutputDownload && state.IsOriginalTarget(target)
 	downloadTransitiveTarget := state.OutputDownload == TransitiveOutputDownload
 	downloadLinkableTarget := state.Config.Build.DownloadLinkable && target.HasLinks(state)
-	return target.neededForSubinclude.Value() || (downloadOriginalTarget && !state.NeedTests) || downloadTransitiveTarget || downloadLinkableTarget
+	return (downloadOriginalTarget && !state.NeedTests) || downloadTransitiveTarget || downloadLinkableTarget
 }
 
 // ShouldRebuild returns true if we should force a rebuild of this target (i.e. the user
