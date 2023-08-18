@@ -508,7 +508,7 @@ def text_file(name:str, content:str, strip:bool=False, hashes:list=None, data:li
 
     if strip:
         content = '\n'.join(
-            [ line.lstrip(' \t') for line in content.removeprefix('\n').split('\n') ]
+            [ line.lstrip(' ') for line in content.removeprefix('\n').split('\n') ]
         )
 
     return build_rule(
