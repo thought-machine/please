@@ -281,6 +281,10 @@ def breakpoint():
     """Breaks into an interactive debugging session."""
     pass
 
+def stacktrace():
+    """Returns a stacktrace."""
+    pass
+
 def is_semver(s:str) -> bool:
     """Returns true if the given string is a semantic version number (either with or without
     a leading v), or false if not.

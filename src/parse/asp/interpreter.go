@@ -277,11 +277,13 @@ type parseTarget struct {
 type scope struct {
 	interpreter     *interpreter
 	filename        string
+	function        *pyFunc
 	state           *core.BuildState
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel
 	parsingFor      *parseTarget
 	parent          *scope
+	caller          *scope
 	locals          pyDict
 	config          *pyConfig
 	globber         *fs.Globber
@@ -369,13 +371,19 @@ func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint in
 }
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
+	return s.newFunctionScope(pkg, mode, filename, nil, s, hint)
+}
+
+func (s *scope) newFunctionScope(pkg *core.Package, mode core.ParseMode, filename string, function *pyFunc, caller *scope, hint int) *scope {
 	s2 := &scope{
 		filename:    filename,
+		function:    function,
 		interpreter: s.interpreter,
 		state:       s.state,
 		pkg:         pkg,
 		parsingFor:  s.parsingFor,
 		parent:      s,
+		caller:      caller,
 		locals:      make(pyDict, hint),
 		config:      s.config,
 		Callback:    s.Callback,

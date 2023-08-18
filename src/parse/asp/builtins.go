@@ -70,6 +70,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
 	setNativeCode(s, "breakpoint", breakpoint)
+	setNativeCode(s, "stacktrace", stacktrace)
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
 	setNativeCode(s, "looks_like_build_label", looksLikeBuildLabel)
@@ -1387,6 +1388,25 @@ func breakpoint(s *scope, args []pyObject) pyObject {
 	}
 	fmt.Printf("Debugger exited, continuing...\n")
 	return None
+}
+
+// stacktrace returns a list of dict containing filename, package_name, subrepo and function
+// leading to the current scope where stacktrace was called
+func stacktrace(s *scope, args []pyObject) pyObject {
+	ret := make(pyList, 0)
+	for scp := s; scp != nil; scp = scp.caller {
+		if scp.function != nil {
+			trace := make(pyDict, 0)
+			trace["filename"] = pyString(scp.filename)
+			if scp.pkg != nil {
+				trace["subrepo"] = pyString(scp.pkg.SubrepoName)
+				trace["package"] = pyString(scp.pkg.Name)
+			}
+			trace["function"] = pyString(scp.function.name)
+			ret = append(ret, trace)
+		}
+	}
+	return ret
 }
 
 func isSemver(s *scope, args []pyObject) pyObject {
