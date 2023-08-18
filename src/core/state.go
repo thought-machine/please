@@ -1463,7 +1463,6 @@ loop:
 				cyclestr += "[" + k.String() + "]{" + dstr + "}\n"
 			}
 			log.Fatalf("Dependencies cycle detected:\n%s", cyclestr)
-			panic("Fatal failed")
 		}
 	case ptask := <-state.waitTargetCycleDetectorRm:
 		if !ptask.Mode.IsForInformation() {
