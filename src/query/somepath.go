@@ -85,6 +85,7 @@ func somePath(graph *core.BuildGraph, hidden bool, target1, target2 *core.BuildT
 	} else if _, present := seen[target1.Label]; present {
 		return nil
 	}
+	seen[target1.Label] = struct{}{}
 	for _, dep := range target1.DeclaredDependencies() {
 		if t := graph.Target(dep); t != nil {
 			if _, present := except[t.Label]; present {
@@ -97,7 +98,6 @@ func somePath(graph *core.BuildGraph, hidden bool, target1, target2 *core.BuildT
 			}
 		}
 	}
-	seen[target1.Label] = struct{}{}
 	return nil
 }
 
