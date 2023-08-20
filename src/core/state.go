@@ -112,6 +112,13 @@ type RemoteClient interface {
 	Disconnect() error
 }
 
+// A BuildExecutor is the interface to local build action execution.
+type BuildExecutor interface {
+	Parse(state *BuildState, label, dependent BuildLabel, mode ParseMode) error
+	Build(state *BuildState, target *BuildTarget) error
+	Test(state *BuildState, target *BuildTarget, run int)
+}
+
 // A TargetHasher is a thing that knows how to create hashes for targets.
 type TargetHasher interface {
 	// OutputHash calculates the output hash for a given build target.
@@ -141,6 +148,8 @@ type BuildState struct {
 	RepoConfig *Configuration
 	// Parser implementation. Other things can call this to perform various external parse tasks.
 	Parser Parser
+	// Local build executor
+	BuildExecutor BuildExecutor
 	// Subprocess executor.
 	ProcessExecutor *process.Executor
 	// Hashes of variouts bits of the configuration, used for incrementality.
@@ -811,33 +820,6 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
-// WaitForPackage is similar to WaitForBuiltTarget however it waits for the package to be parsed, queuing it for parse
-// if necessary
-func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode) *Package {
-	if p := state.Graph.PackageByLabel(l); p != nil {
-		return p
-	}
-	key := packageKey{Name: l.PackageName, Subrepo: l.Subrepo}
-
-	// If something has promised to parse it, wait for them to do so
-	if ch := state.progress.pendingPackages.Get(key); ch != nil {
-		<-ch
-		return state.Graph.PackageByLabel(l)
-	}
-
-	// If something has already queued the package to be parsed, wait for them
-	if ch := state.progress.packageWaits.Get(key); ch != nil {
-		<-ch
-		return state.Graph.PackageByLabel(l)
-	}
-
-	// Otherwise queue the target for parse and recurse
-	state.addPendingParse(l, dependent, mode)
-	state.progress.packageWaits.Set(key, make(chan struct{}))
-
-	return state.WaitForPackage(l, dependent, mode)
-}
-
 // AddTarget adds a new target to the build graph.
 func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 	pkg.AddTarget(target)
@@ -933,7 +915,9 @@ func (state *BuildState) Parse(label, dependent BuildLabel, mode ParseMode) (*Bu
 	if target := state.Graph.Target(label); target != nil {
 		return target, nil
 	}
-	state.addPendingParse(label, dependent, mode)
+	if err := state.BuildExecutor.Parse(state, label, dependent, mode); err != nil {
+		return nil, err
+	}
 	if target := state.Graph.WaitForTarget(label); target != nil {
 		return target, nil
 	} else if pkg := state.Graph.PackageByLabel(label); pkg != nil {
@@ -946,6 +930,18 @@ func (state *BuildState) Parse(label, dependent BuildLabel, mode ParseMode) (*Bu
 		return nil, fmt.Errorf("No BUILD file found for target %s", label)
 	}
 	return nil, fmt.Errorf("No BUILD file found for target %s (depended on by %s)", label, dependent)
+}
+
+// ParsePackage ensures a build label corresponding to the given package has been parsed.
+// It does not do any specific checking for whether the given target exists in it.
+func (state *BuildState) ParsePackage(label, dependent BuildLabel, mode ParseMode) (*Package, error) {
+	if p := state.Graph.PackageByLabel(label); p != nil {
+		return p, nil
+	}
+	if err := state.BuildExecutor.Parse(state, label, dependent, mode); err != nil {
+		return nil, err
+	}
+	return state.Graph.PackageByLabel(label), nil
 }
 
 // ParseTree parses the build file for a target and all of its transitive dependencies.
@@ -995,8 +991,7 @@ func (state *BuildState) Build(target *BuildTarget, mode ParseMode) error {
 			return err
 		}
 	}
-	state.addPendingBuild(target)
-	return target.Building.Wait()
+	return state.BuildExecutor.Build(state, target)
 }
 
 // ParseAndBuild is a convenience function that calls both Parse and Build for a target.
@@ -1021,16 +1016,16 @@ func (state *BuildState) Test(target *BuildTarget) error {
 	}
 	if state.TestSequentially {
 		for i := 0; i < int(state.NumTestRuns); i++ {
-			state.addPendingTestRun(target, i)
-			target.Testing.Wait()
+			state.BuildExecutor.Test(state, target, i)
 		}
 	} else {
+		var wg sync.WaitGroup
 		for i := 0; i < int(state.NumTestRuns); i++ {
-			state.addPendingTestRun(target, i)
+			go func(run int) {
+				state.BuildExecutor.Test(state, target, run)
+			}(i)
 		}
-		for i := 0; i < int(state.NumTestRuns); i++ {
-			target.Testing.Wait()
-		}
+		wg.Wait()
 	}
 	return nil
 }

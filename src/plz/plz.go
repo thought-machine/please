@@ -36,11 +36,13 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 	parse.InitParser(state)
 
-	parses, actions := state.TaskQueues()
+	state.BuildExecutor = executor{
+		localLimiter:  make(limiter, config.Please.NumThreads),
+		remoteLimiter: make(limiter, config.NumRemoteExecutors()),
+		anyRemote:     config.NumRemoteExecutors() > 0,
+	}
 
-	localLimiter := make(limiter, config.Please.NumThreads)
-	remoteLimiter := make(limiter, config.NumRemoteExecutors())
-	anyRemote := config.NumRemoteExecutors() > 0
+	parses, _ := state.TaskQueues()
 
 	// Start up all the build workers
 	var g errgroup.Group
@@ -51,28 +53,6 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		for task := range parses {
 			go func(task core.ParseTask) {
 				parse.Parse(state, task.Label, task.Dependent, task.Mode)
-				state.TaskDone()
-			}(task)
-		}
-		return nil
-	})
-	g.Go(func() error {
-		for task := range actions {
-			go func(task core.Task) {
-				remote := anyRemote && !task.Target.Local
-				if remote {
-					remoteLimiter.Acquire()
-					defer remoteLimiter.Release()
-				} else {
-					localLimiter.Acquire()
-					defer localLimiter.Release()
-				}
-				switch task.Type {
-				case core.TestTask:
-					test.Test(state, task.Target, remote, int(task.Run))
-				case core.BuildTask:
-					build.Build(state, task.Target, remote)
-				}
 				state.TaskDone()
 			}(task)
 		}
@@ -178,7 +158,7 @@ func findOriginalTask(state *core.BuildState, g *errgroup.Group, target core.Bui
 			subrepoLabel := target.SubrepoLabel(state, "")
 			state.WaitForTargetAndEnsureDownload(subrepoLabel, target, core.ParseModeNormal)
 			// Targets now get activated during parsing, so can be built before we finish parsing their package.
-			state.WaitForPackage(subrepoLabel, target, core.ParseModeNormal)
+			state.ParsePackage(subrepoLabel, target, core.ParseModeNormal)
 			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
 			dir = subrepo.Dir(dir)
 			prefix = subrepo.Dir(prefix)
@@ -201,7 +181,11 @@ func queueTarget(state *core.BuildState, g *errgroup.Group, label core.BuildLabe
 			state.AddOriginalTarget(label)
 		}
 		if label.IsAllTargets() {
-			for _, target := range state.WaitForPackage(label, core.OriginalTarget, core.ParseModeNormal).AllTargets() {
+			pkg, err := state.ParsePackage(label, core.OriginalTarget, core.ParseModeNormal)
+			if err != nil {
+				return err
+			}
+			for _, target := range pkg.AllTargets() {
 				queueTarget(state, g, target.Label, false)
 			}
 			return nil
@@ -213,7 +197,8 @@ func queueTarget(state *core.BuildState, g *errgroup.Group, label core.BuildLabe
 		} else if !state.NeedTests {
 			return state.Build(target, core.ParseModeNormal)
 		} else {
-			return state.Test(target)
+			state.Test(target)
+			return nil
 		}
 	})
 }
@@ -292,4 +277,39 @@ func (l limiter) Acquire() {
 
 func (l limiter) Release() {
 	<-l
+}
+
+// An executor implements local action execution on the BuildState
+// It only really exists to allow State to call downwards into other packages like build and test
+type executor struct {
+	localLimiter, remoteLimiter limiter
+	anyRemote                   bool
+}
+
+func (e executor) Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
+	defer state.TaskDone()
+	return parse.Parse(state, label, dependent, mode)
+}
+
+func (e executor) Build(state *core.BuildState, target *core.BuildTarget) error {
+	l := e.limiter(target)
+	l.Acquire()
+	defer l.Release()
+	defer state.TaskDone()
+	return build.Build(state, target, e.anyRemote && !target.Local)
+}
+
+func (e executor) Test(state *core.BuildState, target *core.BuildTarget, run int) {
+	l := e.limiter(target)
+	l.Acquire()
+	defer l.Release()
+	defer state.TaskDone()
+	test.Test(state, target, e.anyRemote && !target.Local, run)
+}
+
+func (e executor) limiter(target *core.BuildTarget) limiter {
+	if e.anyRemote && !target.Local {
+		return e.remoteLimiter
+	}
+	return e.localLimiter
 }

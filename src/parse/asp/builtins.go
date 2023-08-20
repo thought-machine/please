@@ -348,7 +348,9 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			Subrepo:     subrepoLabel.Subrepo,
 			Name:        "all",
 		}
-		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel, s.mode|core.ParseModeForSubinclude)
+		if _, err := s.state.ParsePackage(subrepoPackageLabel, pkgLabel, s.mode|core.ParseModeForSubinclude); err != nil {
+			s.Error("%s", err)
+		}
 	}
 
 	// isLocal is true when this subinclude target in the current package being parsed

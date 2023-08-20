@@ -193,8 +193,6 @@ type BuildTarget struct {
 	dependenciesResolved chan struct{} `print:"false"`
 	// Used to notify once this target has built.
 	Building BroadcastChan[error] `print:"false"`
-	// Used to notify once this target has tested.
-	Testing BroadcastChan[error] `print:"false"`
 	// Env are any custom environment variables to set for this build target
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
@@ -369,7 +367,6 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 		state:                int32(Inactive),
 		BuildingDescription:  DefaultBuildingDescription,
 		Building:             NewBroadcastChan[error](),
-		Testing:              NewBroadcastChan[error](),
 		dependenciesResolved: make(chan struct{}),
 	}
 }

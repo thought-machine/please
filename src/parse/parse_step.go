@@ -27,10 +27,12 @@ var log = logging.Log
 // targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
 // 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
 // even when we're not otherwise building targets.
-func Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) {
+func Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
 	if err := parse(state, label, dependent, mode); err != nil {
 		state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
+		return err
 	}
+	return nil
 }
 
 func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
