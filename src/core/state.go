@@ -283,12 +283,8 @@ type stateProgress struct {
 	mutex      sync.Mutex
 	closeOnce  sync.Once
 	resultOnce sync.Once
-	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
-	pendingTargets *cmap.Map[BuildLabel, chan struct{}]
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
 	pendingPackages *cmap.Map[packageKey, chan struct{}]
-	// similar to pendingPackages but consumers haven't committed to parsing the package
-	packageWaits *cmap.Map[packageKey, chan struct{}]
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
@@ -508,9 +504,6 @@ func (state *BuildState) LogParseResult(label BuildLabel, status BuildResultStat
 		if ch := state.progress.pendingPackages.Get(key); ch != nil {
 			close(ch) // This signals to anyone waiting that it's done.
 		}
-		if ch := state.progress.packageWaits.Get(key); ch != nil {
-			close(ch) // This signals to anyone waiting that it's done.
-		}
 		return // We don't notify anything else on these.
 	}
 	state.logResult(&BuildResult{
@@ -530,20 +523,6 @@ func (state *BuildState) LogBuildResult(target *BuildTarget, status BuildResultS
 		Err:         nil,
 		Description: description,
 	})
-	if status == TargetBuilt || status == TargetCached {
-		// We may have parse tasks waiting for this guy to build, check for them.
-		if ch := state.progress.pendingTargets.Get(target.Label); ch != nil {
-			close(ch) // This signals to anyone waiting that it's done.
-		}
-	}
-}
-
-// ArchSubrepoInitialised closes the pending target channel for the non-existent arch subrepo psudo-target
-func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
-	// We may have parse tasks waiting for this guy to build, check for them.
-	if ch := state.progress.pendingTargets.Get(subrepoLabel); ch != nil {
-		close(ch) // This signals to anyone waiting that it's done.
-	}
 }
 
 // LogTestResult logs the result of a target once its tests have completed.
@@ -1269,9 +1248,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
-			pendingTargets:  cmap.New[BuildLabel, chan struct{}](cmap.DefaultShardCount, hashBuildLabel),
 			pendingPackages: cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
-			packageWaits:    cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 		},
