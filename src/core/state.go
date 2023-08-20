@@ -385,9 +385,6 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 	if !wasSynthetic {
 		atomic.AddInt64(&state.progress.numDone, 1)
 	}
-	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
-		state.Stop()
-	}
 }
 
 // Stop stops the worker queues after any current tasks are done.
