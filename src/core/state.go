@@ -960,7 +960,9 @@ func (state *BuildState) Build(target *BuildTarget, mode ParseMode) error {
 			break
 		}
 		// Now ensure all the resolved dependencies are getting built
-		var g errgroup.Group
+		// TODO(peterebden): On error we can return before everything in this group is done. This is important for us,
+		// but we should do something to ensure that the state as a whole doesn't finish until everything actually stops.
+		var g initialErrgroup
 		target.iterateDependencies(func(dep *BuildTarget) {
 			g.Go(func() error {
 				return state.Build(dep, mode)
