@@ -46,27 +46,6 @@ var startTime = time.Now()
 // cycleCheckDuration is the length of time we allow inactivity for before we trigger cycle detection.
 const cycleCheckDuration = 5 * time.Second
 
-// ParseTask is the type for the parse task queue
-type ParseTask struct {
-	Label, Dependent BuildLabel
-	Mode             ParseMode
-}
-
-// A TaskType identifies whether a task is a build or test action.
-type TaskType uint8
-
-const (
-	BuildTask TaskType = 0
-	TestTask  TaskType = 1
-)
-
-// A Task is the type for the queue of build/test tasks.
-type Task struct {
-	Target *BuildTarget
-	Type   TaskType
-	Run    uint32 // Only present for tests (the run of a build is always zero)
-}
-
 // A OutputDownloadOption is the option for how outputs should be downloaded.
 type OutputDownloadOption uint8
 
@@ -134,9 +113,6 @@ type TargetHasher interface {
 // Tasks are internally tracked by priority, which is determined by their type.
 type BuildState struct {
 	Graph *BuildGraph
-	// Streams of pending tasks
-	pendingParses  chan ParseTask
-	pendingActions chan Task
 	// Timestamp that the build is considered to start at.
 	StartTime time.Time
 	// Various system statistics. Mostly used during remote communication.
@@ -335,46 +311,6 @@ func (state *BuildState) addActiveTargets(n int) {
 	atomic.AddInt64(&state.progress.numActive, int64(n))
 }
 
-// addPendingParse adds a task for a pending parse of a build label.
-func (state *BuildState) addPendingParse(label, dependent BuildLabel, mode ParseMode) {
-	atomic.AddInt64(&state.progress.numActive, 1)
-	atomic.AddInt64(&state.progress.numPending, 1)
-	go func() {
-		defer func() {
-			recover() // Prevent death on 'send on closed channel'
-		}()
-		state.pendingParses <- ParseTask{Label: label, Dependent: dependent, Mode: mode}
-	}()
-}
-
-// addPendingBuild adds a task for a pending build of a target.
-func (state *BuildState) addPendingBuild(target *BuildTarget) {
-	atomic.AddInt64(&state.progress.numActive, 1)
-	atomic.AddInt64(&state.progress.numPending, 1)
-	go func() {
-		defer func() {
-			recover() // Prevent death on 'send on closed channel'
-		}()
-		state.pendingActions <- Task{Target: target, Type: BuildTask}
-	}()
-}
-
-func (state *BuildState) addPendingTestRun(target *BuildTarget, run int) {
-	atomic.AddInt64(&state.progress.numActive, 1)
-	atomic.AddInt64(&state.progress.numPending, 1)
-	go func() {
-		defer func() {
-			recover() // Prevent death on 'send on closed channel'
-		}()
-		state.pendingActions <- Task{Target: target, Run: uint32(run), Type: TestTask}
-	}()
-}
-
-// TaskQueues returns a set of channels to listen on for tasks of various types.
-func (state *BuildState) TaskQueues() (parses <-chan ParseTask, actions <-chan Task) {
-	return state.pendingParses, state.pendingActions
-}
-
 // TaskDone indicates that a single task is finished. Should be called after one is finished with
 // a task returned from NextTask().
 func (state *BuildState) TaskDone() {
@@ -385,14 +321,6 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 	if !wasSynthetic {
 		atomic.AddInt64(&state.progress.numDone, 1)
 	}
-}
-
-// Stop stops the worker queues after any current tasks are done.
-func (state *BuildState) Stop() {
-	state.progress.closeOnce.Do(func() {
-		close(state.pendingParses)
-		close(state.pendingActions)
-	})
 }
 
 // CloseResults closes the result channels.
@@ -639,7 +567,7 @@ func (state *BuildState) RegisterPreloads() error {
 func (state *BuildState) checkForCycles() {
 	if err := state.progress.cycleDetector.Check(); err != nil {
 		state.LogBuildError(err.Cycle[0].Label, TargetBuildFailed, err, "")
-		state.Stop()
+		// TODO(peterebden): What do we do in this case? How do we unblock everything else?
 	}
 }
 
@@ -972,15 +900,6 @@ func (state *BuildState) Build(target *BuildTarget, mode ParseMode) error {
 	return state.BuildExecutor.Build(state, target)
 }
 
-// ParseAndBuild is a convenience function that calls both Parse and Build for a target.
-func (state *BuildState) ParseAndBuild(label, dependent BuildLabel, mode ParseMode) {
-	if target, err := state.Parse(label, dependent, mode); err != nil {
-		state.asyncError(label, err)
-	} else if err := state.Build(target, mode); err != nil {
-		state.asyncError(label, err)
-	}
-}
-
 // Test adds a target to the queue to be tested.
 func (state *BuildState) Test(target *BuildTarget) error {
 	// TODO(peterebden): Build the data in parallel with the target itself.
@@ -1029,7 +948,6 @@ func (state *BuildState) buildTargetData(target *BuildTarget) error {
 func (state *BuildState) asyncError(label BuildLabel, err error) {
 	log.Error("Error queuing %s: %s", label, err)
 	state.LogBuildError(label, TargetBuildFailed, err, "")
-	state.Stop()
 }
 
 // ForTarget returns the state associated with a given target.
@@ -1221,9 +1139,7 @@ func executorFromConfig(config *Configuration) *process.Executor {
 func NewBuildState(config *Configuration) *BuildState {
 	graph := NewGraph()
 	state := &BuildState{
-		Graph:          graph,
-		pendingParses:  make(chan ParseTask, 10000),
-		pendingActions: make(chan Task, 1000),
+		Graph: graph,
 		hashers: map[string]*fs.PathHasher{
 			// For compatibility reasons the sha1 hasher has no suffix.
 			"sha1":   fs.NewPathHasher(RepoRoot, config.Build.Xattrs, sha1.New, "sha1"),

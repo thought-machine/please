@@ -1036,27 +1036,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	dep := s.parseLabelInPackage(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false)
-	// Queue this dependency if it'll be needed.
-	if target.State() > core.Inactive {
-		go s.state.ParseAndBuild(dep, target.Label, core.ParseModeNormal)
-	}
 	return None
-}
-
-func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum core.BuildInput) {
-	target.AddDatum(datum)
-	// Queue this dependency if it'll be needed.
-	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		go s.state.ParseAndBuild(l, target.Label, core.ParseModeNormal)
-	}
-}
-
-func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, datum core.BuildInput) {
-	target.AddNamedDatum(name, datum)
-	// Queue this dependency if it'll be needed.
-	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		go s.state.ParseAndBuild(l, target.Label, core.ParseModeNormal)
-	}
 }
 
 // Add runtime dependencies to target

@@ -42,21 +42,10 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		anyRemote:     config.NumRemoteExecutors() > 0,
 	}
 
-	parses, _ := state.TaskQueues()
-
 	// Start up all the build workers
 	var g errgroup.Group
 	g.Go(func() error {
 		return findOriginalTasks(state, preTargets, targets, arch)
-	})
-	g.Go(func() error {
-		for task := range parses {
-			go func(task core.ParseTask) {
-				parse.Parse(state, task.Label, task.Dependent, task.Mode)
-				state.TaskDone()
-			}(task)
-		}
-		return nil
 	})
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	err := g.Wait()
@@ -110,7 +99,6 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 	findOriginalTaskSet(state, &g, targets, true, arch)
 	if err := g.Wait(); err != nil {
 		log.Debug("Original target scan failed: %s", err)
-		state.Stop()
 		return err
 	}
 	log.Debug("Original target scan complete")

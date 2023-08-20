@@ -109,20 +109,15 @@ func TestAddTargetFilegroupPackageOutputs(t *testing.T) {
 
 func TestAddDepsToTarget(t *testing.T) {
 	state := NewDefaultBuildState()
-	_, builds := state.TaskQueues()
 	pkg := NewPackage("src/core")
 	target1 := addTargetDeps(state, pkg, "//src/core:target1", "//src/core:target2")
 	target2 := addTargetDeps(state, pkg, "//src/core:target2")
 	state.Graph.AddPackage(pkg)
 	go state.Build(target1, ParseModeNormal)
-	task := <-builds
-	assert.Equal(t, Task{Target: target2}, task)
 	// Now simulate target2 being built and adding a new dep to target1 in its post-build function.
 	target3 := addTargetDeps(state, pkg, "//src/core:target3")
 	target1.AddDependency(target3.Label)
 	target2.Building.Complete(nil)
-	task = <-builds
-	assert.Equal(t, Task{Target: target3}, task)
 }
 
 func addTarget(state *BuildState, name string, labels ...string) {
