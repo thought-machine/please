@@ -120,7 +120,7 @@ func TestAddDepsToTarget(t *testing.T) {
 	// Now simulate target2 being built and adding a new dep to target1 in its post-build function.
 	target3 := addTargetDeps(state, pkg, "//src/core:target3")
 	target1.AddDependency(target3.Label)
-	target2.FinishBuild()
+	target2.Building.Complete(nil)
 	task = <-builds
 	assert.Equal(t, Task{Target: target3}, task)
 }

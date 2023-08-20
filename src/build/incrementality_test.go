@@ -105,11 +105,10 @@ var KnownFields = map[string]bool{
 	"neededForSubinclude":      true,
 	"mutex":                    true,
 	"dependenciesRegistered":   true,
-	"finishedBuilding":         true,
 	"dependenciesResolved":     true,
 	"dependenciesResolvedOnce": true,
-	"finishedTesting":          true,
-	"BuildError":               true,
+	"Building":                 true,
+	"Testing":                  true,
 
 	// Used to save the rule hash rather than actually being hashed itself.
 	"RuleHash": true,

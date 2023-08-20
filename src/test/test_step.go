@@ -52,7 +52,7 @@ func Test(state *core.BuildState, target *core.BuildTarget, remote bool, run int
 
 	state.LogBuildResult(target, core.TargetTesting, "Testing...")
 	test(state.ForTarget(target), target.Label, target, remote, run)
-	target.FinishTest()
+	target.Testing.Complete(nil)
 }
 
 func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {

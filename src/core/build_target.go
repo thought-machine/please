@@ -191,16 +191,14 @@ type BuildTarget struct {
 	mutex sync.RWMutex `print:"false"`
 	// Used to notify once the dependencies of this target have been resolved.
 	dependenciesResolved chan struct{} `print:"false"`
-	// Used to notify once this target has built successfully.
-	finishedBuilding chan struct{} `print:"false"`
-	// Used to notify once this target has tested successfully.
-	finishedTesting chan struct{} `print:"false"`
+	// Used to notify once this target has built.
+	Building BroadcastChan[error] `print:"false"`
+	// Used to notify once this target has tested.
+	Testing BroadcastChan[error] `print:"false"`
 	// Env are any custom environment variables to set for this build target
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
 	FileContent string `name:"content"`
-	// Any error encountered during building this target
-	BuildError error `print:"false"`
 	// Used to check if dependencies have been resolved at least once.
 	dependenciesResolvedOnce atomicBool `print:"false"`
 	// Represents the state of this build target (see below)
@@ -370,8 +368,8 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 		Label:                label,
 		state:                int32(Inactive),
 		BuildingDescription:  DefaultBuildingDescription,
-		finishedBuilding:     make(chan struct{}),
-		finishedTesting:      make(chan struct{}),
+		Building:             NewBroadcastChan[error](),
+		Testing:              NewBroadcastChan[error](),
 		dependenciesResolved: make(chan struct{}),
 	}
 }
@@ -707,26 +705,6 @@ func (target *BuildTarget) dependenciesFor(label BuildLabel) []*BuildTarget {
 		return target.dependenciesFor(label)
 	}
 	return nil
-}
-
-// FinishBuild marks this target as having built.
-func (target *BuildTarget) FinishBuild() {
-	close(target.finishedBuilding)
-}
-
-// WaitForBuild blocks until this target has finished building.
-func (target *BuildTarget) WaitForBuild() {
-	<-target.finishedBuilding
-}
-
-// FinishTest marks this target as having finished running one test run.
-func (target *BuildTarget) FinishTest() {
-	target.finishedTesting <- struct{}{}
-}
-
-// WaitForTest blocks until this target has finished testing.
-func (target *BuildTarget) WaitForTest() {
-	<-target.finishedTesting
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.

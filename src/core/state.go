@@ -968,8 +968,7 @@ func (state *BuildState) ParseTree(label, dependent BuildLabel) (*BuildTarget, e
 func (state *BuildState) Build(target *BuildTarget, mode ParseMode) error {
 	if !target.SyncUpdateState(Inactive, Active) && !target.SyncUpdateState(Semiactive, Active) {
 		// Someone else has already called Build() on this target. We should just wait for them.
-		target.WaitForBuild()
-		return target.BuildError
+		return target.Building.Wait()
 	}
 	// N.B. Post-build functions complicate this somewhat; we might build all the initially declared dependencies, but then it is
 	// possible for more to be added, hence the additional top-level loop.
@@ -997,8 +996,7 @@ func (state *BuildState) Build(target *BuildTarget, mode ParseMode) error {
 		}
 	}
 	state.addPendingBuild(target)
-	target.WaitForBuild()
-	return target.BuildError
+	return target.Building.Wait()
 }
 
 // ParseAndBuild is a convenience function that calls both Parse and Build for a target.
@@ -1024,14 +1022,14 @@ func (state *BuildState) Test(target *BuildTarget) error {
 	if state.TestSequentially {
 		for i := 0; i < int(state.NumTestRuns); i++ {
 			state.addPendingTestRun(target, i)
-			target.WaitForTest()
+			target.Testing.Wait()
 		}
 	} else {
 		for i := 0; i < int(state.NumTestRuns); i++ {
 			state.addPendingTestRun(target, i)
 		}
 		for i := 0; i < int(state.NumTestRuns); i++ {
-			target.WaitForTest()
+			target.Testing.Wait()
 		}
 	}
 	return nil
