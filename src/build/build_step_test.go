@@ -648,7 +648,7 @@ func (fake *fakeParser) BuildRuleArgOrder() map[string]int {
 	return map[string]int{}
 }
 
-type preBuildFunction func(*core.BuildTarget) error
+type preBuildFunction func(*core.BuildTar  get) error
 type postBuildFunction func(*core.BuildTarget, string) error
 
 func (f preBuildFunction) Call(target *core.BuildTarget) error { return f(target) }
