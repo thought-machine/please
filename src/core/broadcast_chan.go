@@ -15,14 +15,14 @@ func NewBroadcastChan[T any]() BroadcastChan[T] {
 
 // Wait waits for someone to call Complete then returns its value
 // Any number of concurrent callers may call Wait() simultaneously.
-func (ch BroadcastChan[T]) Wait() T {
+func (ch *BroadcastChan[T]) Wait() T {
 	<-ch.ch
 	return ch.t
 }
 
 // Complete marks the chan as complete. Any callers waiting on `Wait()` will receive the value passed in here.
 // It is not threadsafe to call this multiple times concurrently.
-func (ch BroadcastChan[T]) Complete(t T) {
+func (ch *BroadcastChan[T]) Complete(t T) {
 	ch.t = t
 	close(ch.ch)
 }
