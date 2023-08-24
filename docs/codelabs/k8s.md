@@ -421,7 +421,7 @@ To finish this off, it's worth talking about the challenges with building docker
 file based build system. 
 
 Integrating a build system with `docker build` is notoriously difficult. Build systems have trouble building your image 
-as `docker build` sends the image to a daemon running the background. There's no easy way to get a file based artifact 
+as `docker build` sends the image to a daemon running in the background. There's no easy way to get a file based artifact 
 out of Docker without this extra infrastructure. The built in rules produce a number of scripts to help build, load, 
 push and save images:
 
