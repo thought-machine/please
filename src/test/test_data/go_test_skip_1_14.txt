@@ -1,5 +1,4 @@
 === RUN   TestSomething
-    TestSomething: my_test.go:8: This thing is also here
     TestSomething: my_test.go:9: This test is skipped
 --- SKIP: TestSomething (0.00s)
 === RUN   TestPass

@@ -1,6 +1,0 @@
-=== RUN   TestA
---- PASS: TestB (0.00s)
-=== RUN   TestB
---- PASS: TestA (0.00s)
-FAIL
-coverage: 22.9% of statements

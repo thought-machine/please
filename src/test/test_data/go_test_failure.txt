@@ -1,9 +1,9 @@
 === RUN TestJSONExpectedFailure-6
---- FAIL: TestJSONExpectedFailure-6 (0.00s)
 	results_test.go:11: Unable to parse file: EOF
+--- FAIL: TestJSONExpectedFailure-6 (0.00s)
 === RUN TestJSONSkipped-6
---- FAIL: TestJSONSkipped-6 (0.00s)
 	results_test.go:24: Unable to parse file: EOF
+--- FAIL: TestJSONSkipped-6 (0.00s)
 === RUN TestBuckXML-6
 --- PASS: TestBuckXML-6 (0.00s)
 === RUN TestJUnitXML-6

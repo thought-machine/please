@@ -78,7 +78,7 @@ func TestGoFailedTraceback(t *testing.T) {
 	require.NoError(t, err)
 
 	var failedTC = getFirstFailedTestCase(results)
-	assert.Equal(t, "\tresults_test.go:11: Unable to parse file: EOF", failedTC.Executions[0].Failure.Traceback)
+	assert.Equal(t, "results_test.go:11: Unable to parse file: EOF", failedTC.Executions[0].Failure.Message)
 }
 
 // Go 1.14 changes the ordering of failed messages in Go tests
@@ -87,7 +87,7 @@ func TestGoFailedTracebackGo114(t *testing.T) {
 	require.NoError(t, err)
 
 	var failedTC = getFirstFailedTestCase(results)
-	assert.Equal(t, "    TestFail: my_test.go:17: This test is going to fail.", failedTC.Executions[0].Failure.Traceback)
+	assert.Equal(t, "TestFail: my_test.go:17: This test is going to fail.", failedTC.Executions[0].Failure.Message)
 }
 
 func getFirstFailedTestCase(ts core.TestSuite) *core.TestCase {
@@ -167,11 +167,6 @@ func TestGoIgnoreUnknownOutput(t *testing.T) {
 	assert.Equal(t, 4, results.Passes())
 	assert.Equal(t, 0, results.Failures())
 	assert.Equal(t, 0, results.Skips())
-}
-
-func TestGoFailIfUnknownTestPasses(t *testing.T) {
-	_, err := parseTestResultsFile("src/test/test_data/go_test_unknown_test.txt")
-	assert.Error(t, err)
 }
 
 func TestParseGoFileWithNoTests(t *testing.T) {

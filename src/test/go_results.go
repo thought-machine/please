@@ -51,6 +51,12 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 				Executions: []core.TestExecution{execution},
 			})
 		}
+		// Attach any trailing output to the last failing test case. This happens if e.g. a case panics.
+		if len(suite.TestCases) > 0 {
+			if c := &suite.TestCases[len(suite.TestCases)-1]; c.Executions[0].Failure != nil {
+				c.Executions[0].Failure.Traceback = strings.Join(pkg.Output, "\n")
+			}
+		}
 		return suite, nil
 	}
 	return core.TestSuite{}, nil
