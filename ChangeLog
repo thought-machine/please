@@ -1,3 +1,7 @@
+Version 17.3.1
+--------------
+    * Fixed `plz query somepath` to not hang in the face of a graph cycle (#2893)
+
 Version 17.3.0
 --------------
     * REX: fix issue with downloading the outputs of filegroups with remote execution (#2885)
