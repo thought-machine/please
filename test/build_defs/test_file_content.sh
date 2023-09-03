@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 file=$1
 
@@ -7,10 +7,16 @@ if ! test -f "$file"; then
   exit 1
 fi
 
-CONTENT=$(cat "$file")
+CONTENT=$(<"$file")
 shift 1
+CHECK=$(< <(printf '%s\n' "$@"))
 
-if [ "$CONTENT" != "$@" ]; then
-  echo "$file" doesnt contain "$@", it contains "$CONTENT"
+if [[ "$CONTENT" != "$CHECK" ]]; then
+  printf '%s\n%s\n%s\n%s\n%s\n' \
+    "${file} doesnt contain" \
+    "${CHECK}" \
+    "---- it contains ----" \
+    "${CONTENT}" \
+    "---- EOF ----"
   exit 1
 fi
