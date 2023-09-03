@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20230709
+       - image: thoughtmachine/please_alpine:20230903
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
@@ -43,7 +43,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230709
+       - image: thoughtmachine/please_ubuntu:20230903
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
@@ -91,7 +91,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20230709
+       - image: thoughtmachine/please_ubuntu_alt:20230903
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
@@ -176,7 +176,7 @@ jobs:
    build-linux-arm64:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230709
+       - image: thoughtmachine/please_ubuntu:20230903
      resource_class: large
      steps:
        - checkout
@@ -245,7 +245,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230709
+       - image: thoughtmachine/please_ubuntu:20230903
      resource_class: xlarge
      steps:
        - checkout
@@ -262,7 +262,7 @@ jobs:
    test-http-cache:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230709
+       - image: thoughtmachine/please_ubuntu:20230903
      resource_class: large
      steps:
        - checkout
@@ -305,7 +305,7 @@ jobs:
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
-       - image: thoughtmachine/please_ubuntu:20230709
+       - image: thoughtmachine/please_ubuntu:20230903
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout
