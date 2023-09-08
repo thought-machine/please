@@ -17,7 +17,8 @@ go_library(
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
-        "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
+        "///third_party/go/github.com_jstemmer_go-junit-report_v2//gtr",
+        "///third_party/go/github.com_jstemmer_go-junit-report_v2//parser/gotest",
         "///third_party/go/github.com_peterebden_tools//cover",
         "//src/build",
         "//src/cli",

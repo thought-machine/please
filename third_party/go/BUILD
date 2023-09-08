@@ -562,3 +562,8 @@ go_repo(
     module = "golang.org/x/exp",
     version = "1de6713980dea447778ef6e71194d5eb54288072",
 )
+
+go_repo(
+    module = "github.com/jstemmer/go-junit-report/v2",
+    version = "v2.0.0",
+)

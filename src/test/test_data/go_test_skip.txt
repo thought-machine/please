@@ -5,7 +5,7 @@
 === RUN TestLimitedPrintfAnsi
 --- PASS: TestLimitedPrintfAnsi (0.00s)
 === RUN TestLimitedPrintfAnsiNotCountedWhenReducing
---- SKIP: TestLimitedPrintfAnsiNotCountedWhenReducing (0.00s)
 	interactive_display_test.go:21: haven't written proper support for this yet
+--- SKIP: TestLimitedPrintfAnsiNotCountedWhenReducing (0.00s)
 PASS
 coverage: 1.7% of statements
