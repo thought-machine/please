@@ -14,6 +14,10 @@ issues:
     - exitAfterDefer # Potentially useful but not in any cases it fires right now.
     - receiver-naming # Think this is confused about generics
     - error-strings
+    - unused-parameter # Potentially useful but we have quite a few cases to fix
+    - empty-block # generally not useful
+    - redefines-builtin-id
+    - superfluous-else
   exclude-rules:
     - path: _test\.go
       linters:
@@ -34,7 +38,6 @@ linters:
     - asciicheck
     - bidichk
     - bodyclose
-    - deadcode
     - dogsled
     - dupl
     - exportloopref
@@ -43,19 +46,16 @@ linters:
     - gofmt
     - gosimple
     - govet
-    - ifshort
     - ineffassign
     - misspell
     - nilerr
     - prealloc
     - revive
     - staticcheck
-    - structcheck
     - tenv
     - thelper
     - unconvert
     - unused
-    - varcheck
     - wastedassign
     - whitespace
 
