@@ -10,7 +10,7 @@ release_folder() {
   local path=$2
 
   aws s3 sync $folder s3://please-releases/$path
-  gsutil rsync $folder gs://get.please.build/$path
+  gsutil rsync -r $folder gs://get.please.build/$path
 }
 
 # Copies a file to the bucket, optionally setting the content type
@@ -35,7 +35,7 @@ echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
 echo "Releasing docs website"
 tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && \
   aws s3 sync /tmp/workspace/docs s3://please-docs && \
-  gsutil rsync /tmp/workspace/docs gs://please.build
+  gsutil rsync -r /tmp/workspace/docs gs://please.build
 
 
 if aws s3 ls s3://please-releases/linux_arm64/$VERSION/; then
