@@ -62,7 +62,7 @@ plugins = {
     "go": "v1.8.2",
     "cc": "v0.4.0",
     "shell": "v0.2.0",
-    "go-proto": "v0.2.0",
+    "go-proto": "v0.2.1",
     "python-proto": "v0.1.0",
     "proto": "v0.2.1",
 }
