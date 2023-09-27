@@ -269,6 +269,9 @@ func (label BuildLabel) IsPseudoTarget() bool {
 
 // Includes returns true if label includes the other label (//pkg:target1 is covered by //pkg:all etc).
 func (label BuildLabel) Includes(that BuildLabel) bool {
+	if label.Subrepo != that.Subrepo && label.Subrepo != "" {
+		return false
+	}
 	if (label.PackageName == "" && label.IsAllSubpackages()) ||
 		that.PackageName == label.PackageName ||
 		strings.HasPrefix(that.PackageName, label.PackageName+"/") {
