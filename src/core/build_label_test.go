@@ -51,6 +51,14 @@ func TestIncludesSubpackages(t *testing.T) {
 	assert.True(t, label1.Includes(label2))
 }
 
+func TestIncludesSubrepo(t *testing.T) {
+	label1 := BuildLabel{Subrepo: "plz", PackageName: "src/core", Name: "..."}
+	label2 := BuildLabel{Subrepo: "plz", PackageName: "src/core", Name: "core_test"}
+	label3 := BuildLabel{Subrepo: "go", PackageName: "src/core", Name: "core_test"}
+	assert.True(t, label1.Includes(label2))
+	assert.False(t, label1.Includes(label3))
+}
+
 func TestLabelParent(t *testing.T) {
 	label := BuildLabel{PackageName: "src/core", Name: "core"}
 	assert.Equal(t, label, label.Parent())
