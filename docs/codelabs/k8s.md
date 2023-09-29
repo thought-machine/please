@@ -44,7 +44,7 @@ For the sake of this codelabs, we'll make a simple hello world HTTP service in P
 ### Initialising the project
 ```
 $ plz init 
-$ go mod init github.com/exmaple/module
+$ go mod init github.com/example/module
 $ plz init plugin go
 ```
 
@@ -61,8 +61,8 @@ go_toolchain(
 And configure the plugin:
 ```
 [Plugin "go"]
-Target = //plguins:go
-ImportPath = github.com/exmaple/module
+Target = //plugins:go
+ImportPath = github.com/example/module
 GoTool = //third_party/go:toolchain|go
 ```
 
