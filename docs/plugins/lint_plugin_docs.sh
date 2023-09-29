@@ -4,31 +4,31 @@
 # It is intended to be run by a github action
 
 PLUGINS=("python" "java" "go" "cc" "shell" "go-proto" "proto")
-URLPREFIX="https://github.com/please-build/"
+URL_PREFIX="https://github.com/please-build/"
 
-FAILED=0
-for PLUGIN in "${PLUGINS[@]}"; do
-    LATEST=$(git ls-remote --tags "${URLPREFIX}""${PLUGIN}"-rules.git | sed 's/.*\///' | sed '/^v[0-9]\+\.[0-9]\+\.[0-9]\+$/!d' | tail -n 1)
-    if [ -z "$LATEST" ]; then
-        echo "No tags found for ${PLUGIN}"
+failed=0
+for plugin in "${PLUGINS[@]}"; do
+    latest=$(git ls-remote --tags "${URL_PREFIX}""${plugin}"-rules.git | sed 's/.*\///' | sed '/^v[0-9]\+\.[0-9]\+\.[0-9]\+$/!d' | tail -n 1)
+    if [ -z "$latest" ]; then
+        echo "No tags found for ${plugin}"
         exit 1
     fi
 
-    DOCS_VERSION=$(./pleasew query print //docs/... --include "${PLUGIN}"_plugin_docs* | grep labels | cut -d: -f2 | cut -d\' -f1)
-    if [ -z "$DOCS_VERSION" ]; then
-        echo "No docs found for ${PLUGIN}"
+    docs_version=$(./pleasew query print //docs/... --include "${plugin}"_plugin_docs* | grep labels | cut -d: -f2 | cut -d\' -f1)
+    if [ -z "$docs_version" ]; then
+        echo "No docs found for ${plugin}"
         exit 1
     fi
 
-    if [ "$LATEST" != "$DOCS_VERSION" ]; then
-        echo "Latest version for ${PLUGIN} is ${LATEST}, update the plugin version in docs/BUILD from ${DOCS_VERSION} to ${LATEST}"
-        FAILED=1
+    if [ "$latest" != "$docs_version" ]; then
+        echo "Latest version for ${plugin} is ${latest}, update the plugin version in docs/BUILD from ${docs_version} to ${latest}"
+        failed=1
         continue
     fi
 
-    echo "Latest version for ${PLUGIN} is ${LATEST}. Docs are up to date"
+    echo "Latest version for ${plugin} is ${latest}. Docs are up to date"
 done
 
-if [ $FAILED -eq 1 ]; then
+if [ $failed -eq 1 ]; then
     exit 1
 fi
