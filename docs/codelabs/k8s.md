@@ -61,7 +61,7 @@ go_toolchain(
 And configure the plugin:
 ```
 [Plugin "go"]
-Target = //plguins:go
+Target = //plugins:go
 ImportPath = github.com/example/module
 GoTool = //third_party/go:toolchain|go
 ```
