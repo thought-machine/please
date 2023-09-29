@@ -4,7 +4,6 @@
 # It is intended to be run by a github action
 
 PLUGINS=("python" "java" "go" "cc" "shell" "go-proto" "proto")
-
 URLPREFIX="https://github.com/please-build/"
 
 FAILED=0
