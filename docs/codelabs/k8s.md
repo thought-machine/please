@@ -264,7 +264,7 @@ spec:
 ```
 
 ### Kubernetes rules
-Not that we've referenced the image `//hello-service/k8s:image` in the deployment. The kubernetes rules are able to 
+Note that we've referenced the image `//hello-service/k8s:image` in the deployment. The kubernetes rules are able to 
 template your yaml files substituting in the image with the correct label based on the version of the image we just 
 built! This ties all the images and kubernetes manifests together based on the current state of the repo making the
 deployment much more reproducible!
