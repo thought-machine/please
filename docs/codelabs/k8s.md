@@ -44,11 +44,11 @@ For the sake of this codelabs, we'll make a simple hello world HTTP service in P
 ### Initialising the project
 ```
 $ plz init 
-$ go mod init github.com/exmaple/module
+$ go mod init github.com/example/module
 $ plz init plugin go
 ```
 
-### Setup the Go plugin
+### Set up the Go plugin
 
 Add a go toolchain to `third_party/go/BUILD`
 ```python
@@ -61,8 +61,8 @@ go_toolchain(
 And configure the plugin:
 ```
 [Plugin "go"]
-Target = //plguins:go
-ImportPath = github.com/exmaple/module
+Target = //plugins:go
+ImportPath = github.com/example/module
 GoTool = //third_party/go:toolchain|go
 ```
 
@@ -129,12 +129,12 @@ Let's create a base docker file for our repo that all our services will use in `
 ```
 FROM ubuntu:22.04
 
-RUN apt update && apt upgrade
+RUN apt update -y && apt upgrade -y
 ```
 
 ### Docker build rules
 
-To use the docker build rules, we need to install the docker plugin, as well as the shell plugin which it reuqires:
+To use the docker build rules, we need to install the docker plugin, as well as the shell plugin which it requires:
 
 `$ plz init plugin shell && plz init plugin docker`
 
@@ -217,7 +217,7 @@ $ cat plz-out/bin/hello_service/k8s/image.sh
   Dockerfile - < plz-out/gen/hello_service/k8s/_image#docker_context.tar.gz
 ```
 
-Note, this script takes care of building the base image for us so we don't have to orchestrate this ourselves.
+Note, this script takes care of building the base image for us, so we don't have to orchestrate this ourselves.
 
 ## Creating a Kubernetes deployment  
 Duration: 5
@@ -271,7 +271,7 @@ deployment much more reproducible!
 
 To add the kubernetes rules, run `plz init plugin k8s`.
 
-Lets update `hello_service/k8s/BUILD` to build these manifests:
+Let's update `hello_service/k8s/BUILD` to build these manifests:
 
 ```python
 docker_image(
