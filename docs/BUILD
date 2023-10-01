@@ -59,7 +59,7 @@ genrule(
 plugins = {
     "python": "v1.4.1",
     "java": "v0.3.0",
-    "go": "v1.8.2",
+    "go": "v1.9.0",
     "cc": "v0.4.0",
     "shell": "v0.2.0",
     "go-proto": "v0.2.1",
