@@ -1175,7 +1175,9 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 	} else {
 		target.Provides[language] = label
 	}
-	target.AddDependency(label)
+	if label != target.Label {
+		target.AddDependency(label)
+	}
 }
 
 // ProvideFor returns the build label that we'd provide for the given target.
