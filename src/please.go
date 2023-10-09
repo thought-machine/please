@@ -602,6 +602,7 @@ var buildFunctions = map[string]func() int{
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			}
 			output := opts.Run.Parallel.Output
+			args = append(args, opts.Run.Sequential.Args.AsStrings()...)
 			os.Exit(run.Parallel(context.Background(), state, annotated, args, opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
@@ -618,6 +619,7 @@ var buildFunctions = map[string]func() int{
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
 				output = process.Quiet
 			}
+			args = append(args, opts.Run.Sequential.Args.AsStrings()...)
 			os.Exit(run.Sequential(state, annotated, args, output, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
 		}
 		return 1
