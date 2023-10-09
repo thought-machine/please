@@ -189,18 +189,18 @@ var opts struct {
 			NumTasks       int                `short:"n" long:"num_tasks" default:"10" description:"Maximum number of subtasks to run in parallel"`
 			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
-				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
+				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Target to run"`
 			} `positional-args:"true" required:"true"`
-			Args   cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+			Args   cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the target. Deprecated, pass them directly as arguments (after -- if needed)"`
 			Detach bool          `long:"detach" description:"Detach from the parent process when all children have spawned"`
 		} `command:"parallel" description:"Runs a sequence of targets in parallel"`
 		Sequential struct {
 			Quiet          bool               `short:"q" long:"quiet" description:"Suppress output from successful subprocesses."`
 			Output         process.OutputMode `long:"output" default:"default" choice:"default" choice:"quiet" choice:"group_immediate" description:"Allows to control how the output should be handled."`
 			PositionalArgs struct {
-				Targets []core.AnnotatedOutputLabel `positional-arg-name:"target" description:"Targets to run"`
+				Targets TargetsOrArgs `positional-arg-name:"target" required:"true" description:"Target to run"`
 			} `positional-args:"true" required:"true"`
-			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the called processes."`
+			Args cli.Filepaths `short:"a" long:"arg" description:"Arguments to pass to the target. Deprecated, pass them directly as arguments (after -- if needed)"`
 		} `command:"sequential" description:"Runs a sequence of targets sequentially."`
 		Args struct {
 			Target core.AnnotatedOutputLabel `positional-arg-name:"target" required:"true" description:"Target to run"`
@@ -595,19 +595,20 @@ var buildFunctions = map[string]func() int{
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"run.parallel": func() int {
-		if success, state := runBuild(unannotateLabels(opts.Run.Parallel.PositionalArgs.Targets), true, false, false); success {
+		annotated, unannotated, args := opts.Run.Parallel.PositionalArgs.Targets.Separate()
+		if success, state := runBuild(unannotated, true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			}
-			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Parallel.PositionalArgs.Targets)
 			output := opts.Run.Parallel.Output
-			os.Exit(run.Parallel(context.Background(), state, ls, opts.Run.Parallel.Args.AsStrings(), opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
+			os.Exit(run.Parallel(context.Background(), state, annotated, args, opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
 	"run.sequential": func() int {
-		if success, state := runBuild(unannotateLabels(opts.Run.Sequential.PositionalArgs.Targets), true, false, false); success {
+		annotated, unannotated, args := opts.Run.Sequential.PositionalArgs.Targets.Separate()
+		if success, state := runBuild(unannotated, true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
@@ -617,9 +618,7 @@ var buildFunctions = map[string]func() int{
 				log.Warningf("--quiet has been deprecated in favour of --output=quiet and will be removed in v17.")
 				output = process.Quiet
 			}
-
-			ls := state.ExpandOriginalMaybeAnnotatedLabels(opts.Run.Sequential.PositionalArgs.Targets)
-			os.Exit(run.Sequential(state, ls, opts.Run.Sequential.Args.AsStrings(), output, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
+			os.Exit(run.Sequential(state, annotated, args, output, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
 		}
 		return 1
 	},
