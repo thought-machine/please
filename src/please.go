@@ -1209,7 +1209,15 @@ type TargetsOrArgs []TargetOrArg
 func (l TargetsOrArgs) Separate() (annotated []core.AnnotatedOutputLabel, unannotated []core.BuildLabel, args []string) {
 	for _, arg := range l {
 		if l, _ := arg.label.Label(); l.IsEmpty() {
-			args = append(args, arg.arg)
+			if arg.arg == "-" {
+				labels := plz.ReadAndParseStdinLabels()
+				unannotated = append(unannotated, labels...)
+				for _, label := range labels {
+					annotated = append(annotated, core.AnnotatedOutputLabel{BuildLabel: label})
+				}
+			} else {
+				args = append(args, arg.arg)
+			}
 		} else {
 			annotated = append(annotated, arg.label)
 			unannotated = append(unannotated, arg.label.BuildLabel)
