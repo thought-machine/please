@@ -239,12 +239,19 @@ func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
 	ret := []core.BuildLabel{}
 	for _, l := range labels {
 		if l == core.BuildLabelStdin {
-			for s := range flags.ReadStdin() {
-				ret = append(ret, core.ParseBuildLabels([]string{s})...)
-			}
+			ret = append(ret, ReadAndParseStdinLabels()...)
 		} else {
 			ret = append(ret, l)
 		}
+	}
+	return ret
+}
+
+// ReadAndParseStdinLabels unconditionally reads stdin and parses it into build labels.
+func ReadAndParseStdinLabels() []core.BuildLabel {
+	ret := []core.BuildLabel{}
+	for s := range flags.ReadStdin() {
+		ret = append(ret, core.ParseBuildLabels([]string{s})...)
 	}
 	return ret
 }
