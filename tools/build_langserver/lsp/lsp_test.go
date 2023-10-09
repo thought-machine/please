@@ -457,7 +457,7 @@ func TestCompletionFunction(t *testing.T) {
 			Label:            "plugin_repo",
 			Kind:             lsp.CIKFunction,
 			InsertTextFormat: lsp.ITFPlainText,
-			TextEdit:         textEdit("in_repo", 0, 4),
+			TextEdit:         textEdit("plugin_repo", 0, 4),
 			Documentation:    h.builtins["plugin_repo"].Stmt.FuncDef.Docstring,
 		}},
 	}, completions)
@@ -491,7 +491,7 @@ func TestCompletionPartialFunction(t *testing.T) {
 			Label:            "plugin_repo",
 			Kind:             lsp.CIKFunction,
 			InsertTextFormat: lsp.ITFPlainText,
-			TextEdit:         textEdit("po", 0, 9),
+			TextEdit:         textEdit("plugin_repo", 0, 9),
 			Documentation:    h.builtins["plugin_repo"].Stmt.FuncDef.Docstring,
 		}},
 	}, completions)
