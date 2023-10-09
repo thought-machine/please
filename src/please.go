@@ -1434,14 +1434,6 @@ func initBuild(args []string) string {
 	return command
 }
 
-func unannotateLabels(als []core.AnnotatedOutputLabel) []core.BuildLabel {
-	labels := make([]core.BuildLabel, len(als))
-	for i, al := range als {
-		labels[i] = al.BuildLabel
-	}
-	return labels
-}
-
 func writeGoTraceFile() {
 	if err := runtime.StartTrace(); err != nil {
 		log.Fatalf("failed to start trace: %v", err)
