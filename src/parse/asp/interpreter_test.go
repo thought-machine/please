@@ -487,6 +487,29 @@ func TestMax(t *testing.T) {
 	})
 }
 
+func TestChr(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/chr.build")
+		assert.NoError(t, err)
+		assert.EqualValues(t, pyString("\x00"), s.Lookup("null"))
+		assert.EqualValues(t, pyString("a"), s.Lookup("a"))
+		assert.EqualValues(t, pyString("€"), s.Lookup("euro"))
+		assert.EqualValues(t, pyString("\U0010FFFF"), s.Lookup("maximum"))
+	})
+	t.Run("Wrong parameter type", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/chr_wrong_type.build")
+		assert.ErrorContains(t, err, "Invalid type for argument i to chr; expected int, was str")
+	})
+	t.Run("Parameter out of bounds (too low)", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/chr_bounds_low.build")
+		assert.ErrorContains(t, err, "Argument i must be within the Unicode code point range")
+	})
+	t.Run("Parameter out of bounds (too high)", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/chr_bounds_high.build")
+		assert.ErrorContains(t, err, "Argument i must be within the Unicode code point range")
+	})
+}
+
 func TestIsSemver(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		s, err := parseFile("src/parse/asp/test_data/interpreter/is_semver.build")

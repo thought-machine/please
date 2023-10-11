@@ -16,6 +16,8 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str=''
                _subrepo:bool=False):
     pass
 
+def chr(i:int) -> str:
+    pass
 def len(obj:list|dict|str) -> int:
     pass
 def enumerate(seq:list):
