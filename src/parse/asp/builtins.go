@@ -408,7 +408,7 @@ func chr(s *scope, args []pyObject) pyObject {
 	i, isInt := args[0].(pyInt)
 	s.Assert(isInt, "Argument i must be an integer, not %s", args[0].Type())
 	s.Assert(i >= 0 && i <= unicode.MaxRune, "Argument i must be within the Unicode code point range")
-	return pyString(i)
+	return pyString(rune(i))
 }
 
 func isinstance(s *scope, args []pyObject) pyObject {
