@@ -397,7 +397,7 @@ func objLen(obj pyObject) pyInt {
 	case pyFrozenDict:
 		return pyInt(len(t.pyDict))
 	case pyString:
-		return pyInt(len(t))
+		return pyInt(len([]rune(t)))
 	}
 	panic("object of type " + obj.Type() + " has no len()")
 }

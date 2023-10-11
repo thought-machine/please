@@ -342,6 +342,14 @@ func TestInterpreterLen(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/len.build")
 	assert.NoError(t, err)
 	assert.EqualValues(t, "sync", s.Lookup("y"))
+	assert.EqualValues(t, 4, s.Lookup("l1"))
+	assert.EqualValues(t, "l", s.Lookup("c1"))
+	assert.EqualValues(t, 6, s.Lookup("l2"))
+	assert.EqualValues(t, "n", s.Lookup("c2"))
+	assert.EqualValues(t, 5, s.Lookup("l3"))
+	assert.EqualValues(t, "н", s.Lookup("c3"))
+	assert.EqualValues(t, 2, s.Lookup("l4"))
+	assert.EqualValues(t, "ط", s.Lookup("c4"))
 }
 
 func TestInterpreterFStringDollars(t *testing.T) {

@@ -289,7 +289,7 @@ func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 	case NotIn:
 		return newPyBool(!strings.Contains(string(s), string(s2)))
 	case Index:
-		return pyString(s[pyIndex(s, operand, false)])
+		return pyString([]rune(s)[pyIndex(s, operand, false)])
 	}
 	panic("Unknown operator for string")
 }

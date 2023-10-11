@@ -1,2 +1,35 @@
 x = 'golang.org/x/sync'
 y = x[len('golang.org/x/'):]
+
+# U+006C : LATIN SMALL LETTER L
+# U+0069 : LATIN SMALL LETTER I
+# U+006E : LATIN SMALL LETTER N
+# U+0065 : LATIN SMALL LETTER E
+s1 = "line"
+l1 = len(s1)
+c1 = s1[0]
+
+# U+006C : LATIN SMALL LETTER L
+# U+0069 : LATIN SMALL LETTER I
+# U+0301 : COMBINING ACUTE ACCENT {stress mark; Greek oxia, tonos}
+# U+006E : LATIN SMALL LETTER N
+# U+0065 : LATIN SMALL LETTER E
+# U+0061 : LATIN SMALL LETTER A
+s2 = "línea"
+l2 = len(s2)
+c2 = s2[3]
+
+# U+043B : CYRILLIC SMALL LETTER EL
+# U+0438 : CYRILLIC SMALL LETTER I
+# U+043D : CYRILLIC SMALL LETTER EN
+# U+0438 : CYRILLIC SMALL LETTER I
+# U+044F : CYRILLIC SMALL LETTER YA
+s3 = "линия"
+l3 = len(s3)
+c3 = s3[2]
+
+# U+062E : ARABIC LETTER KHAH
+# U+0637 : ARABIC LETTER TAH
+s4 = "خط"
+l4 = len(s4)
+c4 = s4[1]
