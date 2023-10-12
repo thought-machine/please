@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
@@ -47,6 +48,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "all", allFunc)
 	setNativeCode(s, "min", min)
 	setNativeCode(s, "max", max)
+	setNativeCode(s, "chr", chr)
 	setNativeCode(s, "len", lenFunc)
 	setNativeCode(s, "glob", glob)
 	setNativeCode(s, "bool", boolType)
@@ -400,6 +402,13 @@ func objLen(obj pyObject) pyInt {
 		return pyInt(len([]rune(t)))
 	}
 	panic("object of type " + obj.Type() + " has no len()")
+}
+
+func chr(s *scope, args []pyObject) pyObject {
+	i, isInt := args[0].(pyInt)
+	s.Assert(isInt, "Argument i must be an integer, not %s", args[0].Type())
+	s.Assert(i >= 0 && i <= unicode.MaxRune, "Argument i must be within the Unicode code point range")
+	return pyString(rune(i))
 }
 
 func isinstance(s *scope, args []pyObject) pyObject {

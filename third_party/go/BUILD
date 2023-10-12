@@ -83,7 +83,7 @@ go_repo(
 
 go_repo(
     module = "github.com/stretchr/testify",
-    version = "v1.7.0",
+    version = "v1.8.4",
 )
 
 go_repo(

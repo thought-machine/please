@@ -1,0 +1,4 @@
+null = chr(0)
+a = chr(97)
+euro = chr(8364)
+maximum = chr(1114111)
