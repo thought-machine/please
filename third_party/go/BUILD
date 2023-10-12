@@ -118,7 +118,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/net",
-    version = "853a461950ffd0dac439017081f0f3bd9242bb17",
+    version = "v0.17.0",
 )
 
 go_repo(
