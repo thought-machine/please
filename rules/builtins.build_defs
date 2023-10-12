@@ -18,6 +18,8 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str=''
 
 def chr(i:int) -> str:
     pass
+def ord(c:str) -> int:
+    pass
 def len(obj:list|dict|str) -> int:
     pass
 def enumerate(seq:list):

@@ -49,6 +49,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "min", min)
 	setNativeCode(s, "max", max)
 	setNativeCode(s, "chr", chr)
+	setNativeCode(s, "ord", ord)
 	setNativeCode(s, "len", lenFunc)
 	setNativeCode(s, "glob", glob)
 	setNativeCode(s, "bool", boolType)
@@ -409,6 +410,13 @@ func chr(s *scope, args []pyObject) pyObject {
 	s.Assert(isInt, "Argument i must be an integer, not %s", args[0].Type())
 	s.Assert(i >= 0 && i <= unicode.MaxRune, "Argument i must be within the Unicode code point range")
 	return pyString(rune(i))
+}
+
+func ord(s *scope, args []pyObject) pyObject {
+	c, isStr := args[0].(pyString)
+	s.Assert(isStr, "Argument c must be a string, not %s", args[0].Type())
+	s.Assert(objLen(c) == 1, "Argument c must be a string containing a single Unicode character")
+	return pyInt([]rune(c)[0])
 }
 
 func isinstance(s *scope, args []pyObject) pyObject {

@@ -1,0 +1,3 @@
+# U+0069 : LATIN SMALL LETTER I
+# U+0301 : COMBINING ACUTE ACCENT {stress mark; Greek oxia, tonos}
+x = ord("í")
