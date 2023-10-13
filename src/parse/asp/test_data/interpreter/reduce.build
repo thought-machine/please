@@ -3,7 +3,7 @@ r1 = reduce(lambda x, y: x + y, [0, 1, 2, 3])
 
 # with init
 r2 = reduce(
-    function=lambda x, y: x + y,
+    reducer=lambda x, y: x + y,
     seq=[0, 1, 2, 3],
     initializer=10,
 )
@@ -15,3 +15,6 @@ r4 = reduce(lambda x, y: x + y, [])
 r5 = reduce(lambda x, y: x + y, [], initializer=5)
 r6 = reduce(lambda x, y: x + y, [1], initializer=5)
 r7 = reduce(lambda x, y: x + y, [7])
+
+# string (non-commutative) 
+r8 = reduce(lambda x, y: ''.join((x, y)), ["a", "b", "c", "d", "e"])
