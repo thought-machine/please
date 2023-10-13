@@ -41,12 +41,10 @@ func Format(config *core.Configuration, filenames []string, rewrite, quiet bool)
 func formatAll(filenames <-chan string, parallelism int, rewrite, quiet bool) (bool, error) {
 	var changed int64
 	var g errgroup.Group
-	limiter := make(chan struct{}, parallelism)
+        g.SetLimit(parallelism)
 	for filename := range filenames {
 		filename := filename
 		g.Go(func() error {
-			limiter <- struct{}{}
-			defer func() { <-limiter }()
 			c, err := format(filename, rewrite, quiet)
 			if c {
 				atomic.AddInt64(&changed, 1)
