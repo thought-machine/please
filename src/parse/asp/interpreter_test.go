@@ -525,6 +525,28 @@ func TestChr(t *testing.T) {
 	})
 }
 
+func TestOrd(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		s, err := parseFile("src/parse/asp/test_data/interpreter/ord.build")
+		assert.NoError(t, err)
+		assert.EqualValues(t, pyInt(97), s.Lookup("a"))
+		assert.EqualValues(t, pyInt(8364), s.Lookup("euro"))
+		assert.EqualValues(t, pyInt(8984), s.Lookup("cmd"))
+	})
+	t.Run("Wrong parameter type", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/ord_wrong_type.build")
+		assert.ErrorContains(t, err, "Invalid type for argument c to ord; expected str, was int")
+	})
+	t.Run("Parameter too short", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/ord_empty.build")
+		assert.ErrorContains(t, err, "Argument c must be a string containing a single Unicode character")
+	})
+	t.Run("Parameter out of bounds (too high)", func(t *testing.T) {
+		_, err := parseFile("src/parse/asp/test_data/interpreter/ord_multiple.build")
+		assert.ErrorContains(t, err, "Argument c must be a string containing a single Unicode character")
+	})
+}
+
 func TestIsSemver(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		s, err := parseFile("src/parse/asp/test_data/interpreter/is_semver.build")
