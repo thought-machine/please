@@ -39,7 +39,7 @@ func Parallel(ctx context.Context, state *core.BuildState, labels []core.Annotat
 	prepareRun()
 
 	var g errgroup.Group
-        g.SetLimit(numTasks)
+	g.SetLimit(numTasks)
 	for _, label := range labels {
 		label := label // capture locally
 		g.Go(func() error {

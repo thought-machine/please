@@ -41,7 +41,7 @@ func Format(config *core.Configuration, filenames []string, rewrite, quiet bool)
 func formatAll(filenames <-chan string, parallelism int, rewrite, quiet bool) (bool, error) {
 	var changed int64
 	var g errgroup.Group
-        g.SetLimit(parallelism)
+	g.SetLimit(parallelism)
 	for filename := range filenames {
 		filename := filename
 		g.Go(func() error {
