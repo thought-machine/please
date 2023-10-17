@@ -38,14 +38,11 @@ func Run(state *core.BuildState, label core.AnnotatedOutputLabel, args []string,
 func Parallel(ctx context.Context, state *core.BuildState, labels []core.AnnotatedOutputLabel, args []string, numTasks int, outputMode process.OutputMode, remote, env, detach, inTmp bool, dir string) int {
 	prepareRun()
 
-	limiter := make(chan struct{}, numTasks)
 	var g errgroup.Group
+	g.SetLimit(numTasks)
 	for _, label := range labels {
 		label := label // capture locally
 		g.Go(func() error {
-			limiter <- struct{}{}
-			defer func() { <-limiter }()
-
 			err := runWithOutput(ctx, state, label, args, outputMode, remote, env, detach, inTmp, dir)
 			if err != nil && ctx.Err() == nil {
 				log.Error("Command failed: %s", err)
