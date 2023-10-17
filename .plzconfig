@@ -1,13 +1,12 @@
 [parse]
 BlacklistDirs = tree ; The performance test repo
 preloadsubincludes = ///go//build_defs:go
-preloadsubincludes = ///cc//build_defs:cc 
+preloadsubincludes = ///cc//build_defs:cc
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///shell//build_defs:shell
 
 [Plugin "go"]
 Target = //plugins:go
-pleasegotool = ///go//tools/please_go:bootstrap
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 FeatureFlags = go_get
