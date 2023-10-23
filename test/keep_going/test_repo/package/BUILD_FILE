@@ -1,0 +1,46 @@
+build_rule(
+    name = "fail",
+    cmd = "exit 1",
+    outs = ["fail"],
+)
+
+build_rule(
+    name = "fail2",
+    cmd = "exit 1",
+    outs = ["fail2"],
+)
+
+build_rule(
+    name = "pass",
+    cmd = "touch $OUTS",
+    outs = ["pass"],
+)
+
+build_rule(
+    name = "dep_pass",
+    deps = [":pass"],
+    cmd = "touch $OUTS",
+    outs = ["dep_pass"],
+)
+
+build_rule(
+    name = "dep_fail",
+    deps = [":fail"],
+    cmd = "touch $OUTS",
+    outs = ["dep_fail"],
+)
+
+build_rule(
+    name = "dep_dep_fail",
+    deps = [":dep_fail"],
+    cmd = "touch $OUTS",
+    outs = ["dep_dep_fail"],
+)
+
+build_rule(
+    test = True,
+    name = "fail_test",
+    cmd = "touch $OUTS",
+    test_cmd = "exit 1",
+    outs = ["fail_test"],
+)
