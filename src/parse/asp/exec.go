@@ -263,7 +263,11 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 	case "%cn": // committer name
 	case "%ce": // committer email
 	case "%ct": // committer date, UNIX timestamp
-	case "%D": // ref names without the " (", ")" wrapping.
+	case "%ci": // committer date, ISO8601-like format
+	case "%cI": // committer date, strict ISO8601
+	case "%cs": // committer date, short format (YYYY-MM-DD)
+	case "%ch": // committer date, human style
+	case "%D": // ref names without the " (", ")" wrapping
 	case "%e": // encoding
 	case "%s": // subject
 	case "%f": // sanitized subject line, suitable for a filename
