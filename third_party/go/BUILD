@@ -5,14 +5,13 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "79715ca5b8becd120703ac9af5d1da749e095d2b9bf830c4f3af4b15b2cb049d",  # darwin-amd64
-        "94ad76b7e1593bb59df7fd35a738194643d6eed26a4181c94e3ee91381e40459",  # darwin-arm64
-        "eda6cf7495c95fc3f57d3a62cb63d321269198e1a6960563a1d894ed767b1301",  # freebsd-amd64
-        "d7ec48cde0d3d2be2c69203bc3e0a44de8660b9c09a6e85c4732a3f7dc442612",  # linux-amd64
-        "aa2fab0a7da20213ff975fa7876a66d47b48351558d98851b87d1cfef4360d09",  # linux-arm64
+        "27014fc69e301d7588a169ca239b3cc609f0aa1abf38528bf0d20d3b259211eb",  # darwin-amd64
+        "65302a7a9f7a4834932b3a7a14cb8be51beddda757b567a2f9e0cbd0d7b5a6ab",  # darwin-arm64
+        "1241381b2843fae5a9707eec1f8fb2ef94d827990582c7c7c32f5bdfbfd420c8",  # linux-amd64
+        "fc90fa48ae97ba6368eecb914343590bbb61b388089510d0c56c2dde52987ef3",  # linux-arm64
     ],
     install_std = True,
-    version = "1.20.5",
+    version = "1.21.3",
 )
 
 go_stdlib(
