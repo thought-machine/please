@@ -339,7 +339,6 @@ func (s BuildTargetState) String() string {
 		return "Building"
 	} else if s == Stopped {
 		return "Stopped"
-
 	} else if s == Built {
 		return "Built"
 	} else if s == Cached {

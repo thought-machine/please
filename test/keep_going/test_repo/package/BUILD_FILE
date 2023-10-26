@@ -39,8 +39,18 @@ build_rule(
 
 build_rule(
     test = True,
-    name = "fail_test",
+    name = "fail_test_pass_dep",
     cmd = "touch $OUTS",
     test_cmd = "exit 1",
-    outs = ["fail_test"],
+    outs = ["fail_test_pass_dep"],
+    deps = [":pass"],
+)
+
+build_rule(
+    test = True,
+    name = "pass_test_fail_dep",
+    cmd = "touch $OUTS",
+    test_cmd = "exit 0",
+    outs = ["pass_test_fail_deps"],
+    deps = [":fail"],
 )
