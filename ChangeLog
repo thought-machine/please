@@ -1,3 +1,9 @@
+Version 17.4.0
+--------------
+    * added --keep_going which continues exhasting tasks from the queue even
+      on failures. This can be useful if you want to collect all possible errors
+      in a single please build.
+
 Version 17.3.1
 --------------
     * Fixed `plz query somepath` to not hang in the face of a graph cycle (#2893)
