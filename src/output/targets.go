@@ -80,7 +80,9 @@ func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
 		if result.Status != core.TargetTestFailed {
 			// Reset colour so the entire compiler error output doesn't appear red.
 			log.Errorf("%s failed:\x1b[0m\n%s", label, shortError(result.Err))
-			bt.state.Stop()
+			if !bt.state.KeepGoing {
+				bt.state.Stop()
+			}
 		} else if msg := shortError(result.Err); msg != "" {
 			log.Errorf("%s failed: %s", result.Label, msg)
 		} else {

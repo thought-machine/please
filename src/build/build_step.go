@@ -70,6 +70,7 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}
 		target.SetState(core.Failed)
+		target.FinishBuild()
 		return
 	}
 	if remote {

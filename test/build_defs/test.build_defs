@@ -29,7 +29,7 @@ def please_repo_e2e_test(
         test_cmd += [f'_STR="$(cat {o})" _SUBSTR="{c}" && if [ "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi' for o, c in expect_output_contains.items()]
 
     if expect_output_doesnt_contain:
-        test_cmd += [f'_STR="$(cat {o})" _SUBSTR="{c}" && if [ -z "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi' for o, c in expect_output_contains.items()]
+        test_cmd += [f'_STR="$(cat {o})" _SUBSTR="{c}" && if [ -z "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi' for o, c in expect_output_doesnt_contain.items()]
 
     test_cmd = ' && '.join(test_cmd)
 

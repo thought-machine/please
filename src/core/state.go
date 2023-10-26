@@ -173,6 +173,8 @@ type BuildState struct {
 	Arch cli.Arch
 	// Aggregated coverage for this run
 	Coverage TestCoverage
+	// True if we want to keep going on build failures and not exit early on the first error encountered
+	KeepGoing bool
 	// True if we require rule hashes to be correctly verified (usually the case).
 	VerifyHashes bool
 	// True if tests should calculate coverage metrics
@@ -1141,6 +1143,13 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		if building {
 			for _, t := range target.Dependencies() {
 				t.WaitForBuild()
+				if t.State() >= DependencyFailed { // Either the target failed or its dependencies failed
+					// Give up and set the original target as dependency failed
+					target.SetState(DependencyFailed)
+					state.LogBuildResult(target, TargetBuilt, "Dependency failed")
+					target.FinishBuild()
+					return
+				}
 			}
 		}
 		if !called.Value() {
