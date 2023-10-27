@@ -26,7 +26,7 @@ type regexGlob struct {
 }
 
 func (r regexGlob) Match(name string) (bool, error) {
-	return r.regex.Match([]byte(name)), nil
+	return r.regex.MatchString(name), nil
 }
 
 // This converts the string pattern into a matcher. A matcher can either be one of our homebrew compiled regexs that
