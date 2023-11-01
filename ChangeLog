@@ -1,8 +1,16 @@
 Version 17.4.0
 --------------
-    * added --keep_going which continues exhasting tasks from the queue even
-      on failures. This can be useful if you want to collect all possible errors
-      in a single please build.
+    * keep going flag (#2932)
+    * Fix query somepath when it encounters a cycle (#2893)
+    * Fix text_file strip (#2895)
+      it now doesn't strip tabs and \ characters.
+    * plz run parallel/sequential accepts inline args (#2916)
+    * use character semantics for length and index operations on strings (#2921)
+    * Add chr built-in function (#2922)
+    * Add ord built-in function (#2924)
+    * Add all commit date formats to supported git_show() format verbs (#2930)
+    * Fix reduce builtin (#2925)
+    * Fix issue with completing idents in the language server (#2917)
 
 Version 17.3.1
 --------------
