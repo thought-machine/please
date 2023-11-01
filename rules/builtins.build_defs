@@ -101,7 +101,7 @@ def filter(filter:function, seq:list):
 def map(mapper:function, seq:list):
     pass
 
-def reduce(function:function, seq:list, initializer=None):
+def reduce(reducer:function, seq:list, initializer=None):
     pass
 
 def bool(b) -> bool:

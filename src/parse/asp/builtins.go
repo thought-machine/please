@@ -759,32 +759,29 @@ func mapFunc(s *scope, args []pyObject) pyObject {
 }
 
 func reduce(s *scope, args []pyObject) pyObject {
-	function, isFunc := args[0].(*pyFunc)
+	reducer, isFunc := args[0].(*pyFunc)
 	l, isList := args[1].(pyList)
-	init := args[2]
-	s.Assert(isFunc, "Argument function must be callable, not %s", args[0].Type())
+	s.Assert(isFunc, "Argument reducer must be callable, not %s", args[0].Type())
 	s.Assert(isList, "Argument seq must be a list, not %s", args[1].Type())
 
-	ret := init
-	start := 0
-	if init == None {
-		start = 1
-		if len(l) > 0 {
-			ret = l[0]
-		}
-		if len(l) <= 1 {
-			return ret
-		}
+	if len(l) == 0 {
+		return args[2]
 	}
-	for _, li := range l[start:] {
+
+	var ret pyObject
+	if ret = args[2]; ret == None {
+		ret, l = l[0], l[1:]
+	}
+
+	for _, li := range l {
 		c := &Call{
 			Arguments: []CallArgument{{
-				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
-			}, {
 				Value: Expression{Optimised: &OptimisedExpression{Constant: ret}},
+			}, {
+				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
 			}},
 		}
-		ret = function.Call(s, c)
+		ret = reducer.Call(s, c)
 	}
 	return ret
 }

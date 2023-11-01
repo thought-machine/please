@@ -196,11 +196,11 @@
       <span>
         <code class="code"
           ><span class="fn-name">reduce</span><span class="fn-p">(</span
-          ><span class="fn-arg">function</span>, <span class="fn-arg">seq</span
+          ><span class="fn-arg">reducer</span>, <span class="fn-arg">seq</span
           >, <span class="fn-arg">initializer=None</span
           ><span class="fn-p">)</span></code
         >
-        - apply function of two arguments cumulatively to the items of seq from left to right reducing to a single value returning that value. eg. reduce(lambda x, y: x+y, [0, 1, 2, 3]) would return (((0+1)+2)+3)=6. If initializer is present it is placed before the first item in the sequence.
+        - returns a single value by applying function cumulatively to the list items, from left to right.
       </span>
     </li>
     <li>

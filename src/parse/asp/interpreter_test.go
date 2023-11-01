@@ -205,6 +205,7 @@ func TestReduce(t *testing.T) {
 	assert.Equal(t, pyInt(5), s.Lookup("r5"))
 	assert.Equal(t, pyInt(6), s.Lookup("r6"))
 	assert.Equal(t, pyInt(7), s.Lookup("r7"))
+	assert.EqualValues(t, "abcde", s.Lookup("r8"))
 }
 
 func TestInterpreterUnpacking(t *testing.T) {
