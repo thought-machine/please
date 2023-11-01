@@ -555,6 +555,9 @@ var buildFunctions = map[string]func() int{
 	},
 	"exec.sequential": func() int {
 		annotated, unannotated, args := opts.Exec.Sequential.Args.Targets.Separate()
+		if len(unannotated) == 0 {
+			return 0
+		}
 		success, state := runBuild(unannotated, true, false, false)
 		if !success {
 			return toExitCode(success, state)
@@ -566,6 +569,9 @@ var buildFunctions = map[string]func() int{
 	},
 	"exec.parallel": func() int {
 		annotated, unannotated, args := opts.Exec.Parallel.Args.Targets.Separate()
+		if len(unannotated) == 0 {
+			return 0
+		}
 		success, state := runBuild(unannotated, true, false, false)
 		if !success {
 			return toExitCode(success, state)
@@ -597,6 +603,9 @@ var buildFunctions = map[string]func() int{
 	},
 	"run.parallel": func() int {
 		annotated, unannotated, args := opts.Run.Parallel.PositionalArgs.Targets.Separate()
+		if len(unannotated) == 0 {
+			return 0
+		}
 		if success, state := runBuild(unannotated, true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
@@ -610,6 +619,9 @@ var buildFunctions = map[string]func() int{
 	},
 	"run.sequential": func() int {
 		annotated, unannotated, args := opts.Run.Sequential.PositionalArgs.Targets.Separate()
+		if len(unannotated) == 0 {
+			return 0
+		}
 		if success, state := runBuild(unannotated, true, false, false); success {
 			var dir string
 			if opts.Run.WD != "" {
