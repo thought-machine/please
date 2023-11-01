@@ -8,7 +8,7 @@ URL_PREFIX="https://github.com/please-build/"
 
 failed=0
 for plugin in "${PLUGINS[@]}"; do
-    latest=$(git ls-remote --tags "${URL_PREFIX}""${plugin}"-rules.git | sed 's/.*\///' | sed '/^v[0-9]\+\.[0-9]\+\.[0-9]\+$/!d' | tail -n 1)
+    latest=$(git ls-remote --tags --sort=version:refname "${URL_PREFIX}""${plugin}"-rules.git | sed 's/.*\///' | sed '/^v[0-9]\+\.[0-9]\+\.[0-9]\+$/!d' | tail -n 1)
     if [ -z "$latest" ]; then
         echo "No tags found for ${plugin}"
         exit 1
