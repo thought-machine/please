@@ -39,6 +39,18 @@ please_repo_e2e_test(
 )
 
 please_repo_e2e_test(
+    name = "std_in_empty_parallel_test",
+    plz_command = "echo '' | plz run parallel -",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "std_in_empty_sequential_test",
+    plz_command = "echo '' | plz run sequential -",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
     name = "std_in_sequential_test",
     expected_output = {
         "wibble.txt": "wibble\nwobble",
