@@ -32,3 +32,15 @@ please_repo_e2e_test(
     plz_command = "plz exec parallel //:failure",
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "exec_stdin_parallel_test",
+    plz_command = "echo '' | plz exec parallel -",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "exec_stdin_sequential_test",
+    plz_command = "echo '' | plz exec sequential -",
+    repo = "test_repo",
+)
