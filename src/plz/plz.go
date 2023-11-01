@@ -61,6 +61,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		for task := range actions {
 			go func(task core.Task) {
 				remote := anyRemote && !task.Target.Local
+				log.Debug("%v: acquiring build/test task limiter", task.Target.Label)
 				if remote {
 					remoteLimiter.Acquire()
 					defer remoteLimiter.Release()
@@ -68,6 +69,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 					localLimiter.Acquire()
 					defer localLimiter.Release()
 				}
+				log.Debug("%v: acquired build/test task limiter", task.Target.Label)
 				switch task.Type {
 				case core.TestTask:
 					test.Test(state, task.Target, remote, int(task.Run))

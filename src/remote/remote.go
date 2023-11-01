@@ -575,7 +575,10 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
 			if command != nil {
+				log.Debug("%v: verifying action results", target.Label)
 				err = c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs, isTest)
+				log.Debug("%v: verified action results", target.Label)
+
 			}
 			if err == nil {
 				c.locallyCacheResults(target, digest, metadata, ar)
