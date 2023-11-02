@@ -11,6 +11,7 @@ Version 17.4.0
     * Add all commit date formats to supported git_show() format verbs (#2930)
     * Fix reduce builtin (#2925)
     * Fix issue with completing idents in the language server (#2917)
+	* Improve performance when a large number of input targets are supplied (#2942)
 
 Version 17.3.1
 --------------
