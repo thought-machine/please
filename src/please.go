@@ -613,6 +613,7 @@ var buildFunctions = map[string]func() int{
 			}
 			output := opts.Run.Parallel.Output
 			args = append(args, opts.Run.Sequential.Args.AsStrings()...)
+			annotated = state.ExpandMaybeAnnotatedLabels(annotated)
 			os.Exit(run.Parallel(context.Background(), state, annotated, args, opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
 		return 1
@@ -633,6 +634,7 @@ var buildFunctions = map[string]func() int{
 				output = process.Quiet
 			}
 			args = append(args, opts.Run.Sequential.Args.AsStrings()...)
+			annotated = state.ExpandMaybeAnnotatedLabels(annotated)
 			os.Exit(run.Sequential(state, annotated, args, output, opts.Run.Remote, opts.Run.Env, opts.Run.InTempDir, dir))
 		}
 		return 1
