@@ -286,8 +286,7 @@ type stateProgress struct {
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
-	originalTargets     []BuildLabel
-	originalTargetMutex sync.Mutex
+	originalTargets TargetSet
 	// True if something about the build has failed.
 	failed atomicBool
 	// True if >= 1 target has failed to build
@@ -423,14 +422,10 @@ func (state *BuildState) IsOriginalTarget(target *BuildTarget) bool {
 }
 
 func (state *BuildState) isOriginalTarget(target *BuildTarget, exact bool) bool {
-	state.progress.originalTargetMutex.Lock()
-	defer state.progress.originalTargetMutex.Unlock()
-	for _, original := range state.progress.originalTargets {
-		if original == target.Label || (!exact && original.IsAllTargets() && original.PackageName == target.Label.PackageName && state.ShouldInclude(target)) {
-			return true
-		}
+	if exact {
+		return state.progress.originalTargets.MatchExact(target.Label)
 	}
-	return false
+	return state.progress.originalTargets.Match(target.Label) && state.ShouldInclude(target)
 }
 
 // IsOriginalTargetOrParent is like IsOriginalTarget but checks the target's parent too (if it has one)
@@ -480,9 +475,7 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 		}
 	}
 	if addToList {
-		state.progress.originalTargetMutex.Lock()
-		state.progress.originalTargets = append(state.progress.originalTargets, label)
-		state.progress.originalTargetMutex.Unlock()
+		state.progress.originalTargets.Add(label)
 	}
 	state.addPendingParse(label, OriginalTarget, ParseModeNormal)
 }
