@@ -7,6 +7,12 @@ sh_binary(
     main = "env_printer.sh",
 )
 
+filegroup(
+    name = "arg_printer",
+    srcs = ["arg_printer.sh"],
+    binary = True,
+)
+
 sh_cmd(
     name = "wibble",
     cmd = "echo wibble",

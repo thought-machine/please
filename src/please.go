@@ -612,7 +612,7 @@ var buildFunctions = map[string]func() int{
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
 			}
 			output := opts.Run.Parallel.Output
-			args = append(args, opts.Run.Sequential.Args.AsStrings()...)
+			args = append(args, opts.Run.Parallel.Args.AsStrings()...)
 			annotated = state.ExpandMaybeAnnotatedLabels(annotated)
 			os.Exit(run.Parallel(context.Background(), state, annotated, args, opts.Run.Parallel.NumTasks, output, opts.Run.Remote, opts.Run.Env, opts.Run.Parallel.Detach, opts.Run.InTempDir, dir))
 		}
