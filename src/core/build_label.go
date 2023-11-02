@@ -312,7 +312,7 @@ func (label BuildLabel) Less(other BuildLabel) bool {
 	} else if label.PackageName != other.PackageName {
 		return label.PackageName < other.PackageName
 	}
-	return label.PackageName < other.PackageName
+	return label.Name < other.Name
 }
 
 // Paths is an implementation of BuildInput interface; we use build labels directly as inputs.

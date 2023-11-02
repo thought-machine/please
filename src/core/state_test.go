@@ -59,7 +59,8 @@ func TestExpandVisibleOriginalTargets(t *testing.T) {
 
 func TestExpandOriginalSubLabels(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "..."}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"}, true)
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 	addTarget(state, "//src/core:target1", "go")
@@ -76,17 +77,18 @@ func TestExpandOriginalSubLabels(t *testing.T) {
 func TestExpandOriginalLabelsOrdering(t *testing.T) {
 	state := NewDefaultBuildState()
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "..."}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"}, true)
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/build", Name: "build"}, true)
 	addTarget(state, "//src/core:target1", "go")
 	addTarget(state, "//src/core:target2", "py")
 	addTarget(state, "//src/core/tests:target3", "go")
 	expected := BuildLabels{
-		{PackageName: "src/parse", Name: "parse"},
+		{PackageName: "src/build", Name: "build"},
 		{PackageName: "src/core", Name: "target1"},
 		{PackageName: "src/core", Name: "target2"},
 		{PackageName: "src/core/tests", Name: "target3"},
-		{PackageName: "src/build", Name: "build"},
+		{PackageName: "src/parse", Name: "parse"},
 	}
 	assert.Equal(t, expected, state.ExpandOriginalLabels())
 }
