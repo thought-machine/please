@@ -425,7 +425,8 @@ func (state *BuildState) isOriginalTarget(target *BuildTarget, exact bool) bool 
 	if exact {
 		return state.progress.originalTargets.MatchExact(target.Label)
 	}
-	return state.progress.originalTargets.Match(target.Label) && state.ShouldInclude(target)
+	matched, wasExact := state.progress.originalTargets.Match(target.Label)
+	return matched && (wasExact || state.ShouldInclude(target))
 }
 
 // IsOriginalTargetOrParent is like IsOriginalTarget but checks the target's parent too (if it has one)

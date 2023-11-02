@@ -36,14 +36,15 @@ func (ts *TargetSet) Add(label BuildLabel) {
 }
 
 // Match checks if this label is covered by the set (either explicitly or via :all)
-func (ts *TargetSet) Match(label BuildLabel) bool {
+// The first return checks if it's matched, the second if the match was exact or not.
+func (ts *TargetSet) Match(label BuildLabel) (bool, bool) {
 	ts.mutex.RLock()
 	defer ts.mutex.RUnlock()
 	if _, present := ts.targets[label]; present {
-		return true
+		return true, true
 	}
 	_, present := ts.packages[label.packageKey()]
-	return present
+	return present, false
 }
 
 // MatchExact checks if this label was explicitly added to the set (i.e. :all doesn't count)
