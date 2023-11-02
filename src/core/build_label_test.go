@@ -179,6 +179,38 @@ func TestSingleSlash(t *testing.T) {
 	assert.Equal(t, BuildLabel{PackageName: "common/go/pool", Name: "pool"}, label)
 }
 
+func TestLess(t *testing.T) {
+	foo := ParseBuildLabel("//third_party:foo", "")
+	bar := ParseBuildLabel("//third_party:bar", "")
+	assert.True(t, bar.Less(foo))
+	assert.False(t, foo.Less(bar))
+	assert.False(t, foo.Less(foo))
+}
+
+func TestLessSubrepo(t *testing.T) {
+	foo := ParseBuildLabel("//third_party:foo", "")
+	bar := ParseBuildLabel("///baz//third_party:bar", "")
+	assert.False(t, bar.Less(foo))
+	assert.True(t, foo.Less(bar))
+	assert.False(t, foo.Less(foo))
+}
+
+func TestCompare(t *testing.T) {
+	foo := ParseBuildLabel("//third_party:foo", "")
+	bar := ParseBuildLabel("//third_party:bar", "")
+	assert.Equal(t, -1, bar.Compare(foo))
+	assert.Equal(t, 1, foo.Compare(bar))
+	assert.Equal(t, 0, foo.Compare(foo))
+}
+
+func TestCompareSubrepo(t *testing.T) {
+	foo := ParseBuildLabel("//third_party:foo", "")
+	bar := ParseBuildLabel("///baz//third_party:bar", "")
+	assert.Equal(t, 1, bar.Compare(foo))
+	assert.Equal(t, -1, foo.Compare(bar))
+	assert.Equal(t, 0, foo.Compare(foo))
+}
+
 func TestMain(m *testing.M) {
 	// Used to support TestComplete, the function it's testing re-execs
 	// itself thinking that it's actually plz.
