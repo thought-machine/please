@@ -284,10 +284,33 @@ func (label BuildLabel) Includes(that BuildLabel) bool {
 	return false
 }
 
+// Compare compares this build label to another one (suitable for using with slices.SortFunc)
+func (label BuildLabel) Compare(other BuildLabel) int {
+	if label.Subrepo != other.Subrepo {
+		if label.Subrepo < other.Subrepo {
+			return -1
+		}
+		return 1
+	} else if label.PackageName != other.PackageName {
+		if label.PackageName < other.PackageName {
+			return -1
+		}
+		return 1
+	} else if label.Name != other.Name {
+		if label.Name < other.Name {
+			return -1
+		}
+		return 1
+	}
+	return 0
+}
+
 // Less returns true if this build label would sort less than another one.
 func (label BuildLabel) Less(other BuildLabel) bool {
-	if label.PackageName == other.PackageName {
-		return label.Name < other.Name
+	if label.Subrepo != other.Subrepo {
+		return label.Subrepo < other.Subrepo
+	} else if label.PackageName != other.PackageName {
+		return label.PackageName < other.PackageName
 	}
 	return label.PackageName < other.PackageName
 }
@@ -533,6 +556,15 @@ func (key packageKey) String() string {
 		return "@" + key.Subrepo + "//" + key.Name
 	}
 	return key.Name
+}
+
+// BuildLabel returns a build label representing this package key.
+func (key packageKey) BuildLabel() BuildLabel {
+	return BuildLabel{
+		Subrepo:     key.Subrepo,
+		PackageName: key.Name,
+		Name:        "all",
+	}
 }
 
 // LooksLikeABuildLabel returns true if the string appears to be a build label, false if not.

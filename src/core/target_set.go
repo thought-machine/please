@@ -1,6 +1,7 @@
 package core
 
 import (
+	"slices"
 	"sync"
 )
 
@@ -50,4 +51,19 @@ func (ts *TargetSet) MatchExact(label BuildLabel) bool {
 	defer ts.mutex.RUnlock()
 	_, present := ts.targets[label]
 	return present
+}
+
+// AllTargets returns a copy of the set of targets
+func (ts *TargetSet) AllTargets() []BuildLabel {
+	ts.mutex.RLock()
+	defer ts.mutex.RUnlock()
+	ret := make([]BuildLabel, 0, len(ts.targets)+len(ts.packages))
+	for target := range ts.targets {
+		ret = append(ret, target)
+	}
+	for pkg := range ts.packages {
+		ret = append(ret, pkg.BuildLabel())
+	}
+	slices.SortFunc(ret, BuildLabel.Compare)
+	return ret
 }

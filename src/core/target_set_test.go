@@ -27,3 +27,17 @@ func TestTargetSetMatchExact(t *testing.T) {
 	assert.False(t, ts.MatchExact(ParseBuildLabel("//src/parse:parse_test", "")))
 	assert.False(t, ts.MatchExact(ParseBuildLabel("//src/build", "")))
 }
+
+func TestAllTargets(t *testing.T) {
+	ts := NewTargetSet()
+	labels := []BuildLabel{
+		ParseBuildLabel("//src/core:core", ""),
+		ParseBuildLabel("//src/core:core_test", ""),
+		ParseBuildLabel("//src/parse:all", ""),
+		ParseBuildLabel("//src/parse:parse_test", ""),
+	}
+	for _, label := range labels {
+		ts.Add(label)
+	}
+	assert.Equal(t, labels, ts.AllTargets())
+}

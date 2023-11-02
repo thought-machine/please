@@ -286,7 +286,7 @@ type stateProgress struct {
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
-	originalTargets TargetSet
+	originalTargets *TargetSet
 	// True if something about the build has failed.
 	failed atomicBool
 	// True if >= 1 target has failed to build
@@ -695,18 +695,12 @@ func (state *BuildState) NumDone() int {
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original labels. This will exclude non-test targets when we're building for test.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
-	state.progress.originalTargetMutex.Lock()
-	targets := state.progress.originalTargets[:]
-	state.progress.originalTargetMutex.Unlock()
-	return state.ExpandLabels(targets)
+	return state.ExpandLabels(state.progress.originalTargets.AllTargets())
 }
 
 // ExpandAllOriginalLabels is the same as ExpandOriginalLabels except it always includes non-test targets
 func (state *BuildState) ExpandAllOriginalLabels() BuildLabels {
-	state.progress.originalTargetMutex.Lock()
-	targets := state.progress.originalTargets[:]
-	state.progress.originalTargetMutex.Unlock()
-	return state.expandLabels(targets, false)
+	return state.expandLabels(state.progress.originalTargets.AllTargets(), false)
 }
 
 func AnnotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
@@ -1387,6 +1381,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			packageWaits:    cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
+			originalTargets: NewTargetSet(),
 		},
 		initOnce:            new(sync.Once),
 		preloadDownloadOnce: new(sync.Once),
