@@ -23,6 +23,7 @@ issues:
       linters:
         - errcheck
         - dupl
+        - gocritic
     - path: src/core/config.go # The config struct is big & complex and there's usually only one.
       text: fieldalignment
       linters:
