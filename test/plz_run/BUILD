@@ -92,3 +92,40 @@ please_repo_e2e_test(
     plz_command = "mkdir -p path/to/some/dir/ && cd path/to && plz run --wd ./some/dir //src:write_guava_to_file && cd -",
     repo = "test_repo",
 )
+
+# Test printing args
+please_repo_e2e_test(
+    name = "test_arg_flags_sequential",
+    expected_output = {
+        "args.txt": "wibble wobble",
+    },
+    plz_command = "plz run sequential //src:arg_printer -a wibble -a wobble > args.txt",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "test_arg_flags_parallel",
+    expected_output = {
+        "args.txt": "wibble wobble",
+    },
+    plz_command = "plz run parallel //src:arg_printer -a wibble -a wobble > args.txt",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "test_args_sequential",
+    expected_output = {
+        "args.txt": "wibble wobble",
+    },
+    plz_command = "plz run sequential //src:arg_printer wibble wobble > args.txt",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "test_args_parallel",
+    expected_output = {
+        "args.txt": "wibble wobble",
+    },
+    plz_command = "plz run parallel //src:arg_printer wibble wobble > args.txt",
+    repo = "test_repo",
+)
