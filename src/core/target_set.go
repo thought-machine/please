@@ -1,16 +1,16 @@
 package core
 
 import (
-	"slices"
 	"sync"
 )
 
 // A TargetSet contains a series of targets and supports efficiently checking for membership
 // The zero value is not safe for use.
 type TargetSet struct {
-	targets  map[BuildLabel]struct{}
-	packages map[packageKey]struct{}
-	mutex    sync.RWMutex
+	targets    map[BuildLabel]struct{}
+	packages   map[packageKey]struct{}
+	everything []BuildLabel
+	mutex      sync.RWMutex
 }
 
 // NewTargetSet returns a new TargetSet.
@@ -32,6 +32,7 @@ func (ts *TargetSet) Add(label BuildLabel) {
 	} else {
 		ts.targets[label] = struct{}{}
 	}
+	ts.everything = append(ts.everything, label)
 }
 
 // Match checks if this label is covered by the set (either explicitly or via :all)
@@ -57,13 +58,5 @@ func (ts *TargetSet) MatchExact(label BuildLabel) bool {
 func (ts *TargetSet) AllTargets() []BuildLabel {
 	ts.mutex.RLock()
 	defer ts.mutex.RUnlock()
-	ret := make([]BuildLabel, 0, len(ts.targets)+len(ts.packages))
-	for target := range ts.targets {
-		ret = append(ret, target)
-	}
-	for pkg := range ts.packages {
-		ret = append(ret, pkg.BuildLabel())
-	}
-	slices.SortFunc(ret, BuildLabel.Compare)
-	return ret
+	return ts.everything[:]
 }

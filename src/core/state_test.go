@@ -84,11 +84,11 @@ func TestExpandOriginalLabelsOrdering(t *testing.T) {
 	addTarget(state, "//src/core:target2", "py")
 	addTarget(state, "//src/core/tests:target3", "go")
 	expected := BuildLabels{
-		{PackageName: "src/build", Name: "build"},
+		{PackageName: "src/parse", Name: "parse"},
 		{PackageName: "src/core", Name: "target1"},
 		{PackageName: "src/core", Name: "target2"},
 		{PackageName: "src/core/tests", Name: "target3"},
-		{PackageName: "src/parse", Name: "parse"},
+		{PackageName: "src/build", Name: "build"},
 	}
 	assert.Equal(t, expected, state.ExpandOriginalLabels())
 }
