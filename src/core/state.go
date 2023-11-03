@@ -286,8 +286,7 @@ type stateProgress struct {
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
-	originalTargets     []BuildLabel
-	originalTargetMutex sync.Mutex
+	originalTargets *TargetSet
 	// True if something about the build has failed.
 	failed atomicBool
 	// True if >= 1 target has failed to build
@@ -423,14 +422,11 @@ func (state *BuildState) IsOriginalTarget(target *BuildTarget) bool {
 }
 
 func (state *BuildState) isOriginalTarget(target *BuildTarget, exact bool) bool {
-	state.progress.originalTargetMutex.Lock()
-	defer state.progress.originalTargetMutex.Unlock()
-	for _, original := range state.progress.originalTargets {
-		if original == target.Label || (!exact && original.IsAllTargets() && original.PackageName == target.Label.PackageName && state.ShouldInclude(target)) {
-			return true
-		}
+	if exact {
+		return state.progress.originalTargets.MatchExact(target.Label)
 	}
-	return false
+	matched, wasExact := state.progress.originalTargets.Match(target.Label)
+	return matched && (wasExact || state.ShouldInclude(target))
 }
 
 // IsOriginalTargetOrParent is like IsOriginalTarget but checks the target's parent too (if it has one)
@@ -480,9 +476,7 @@ func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
 		}
 	}
 	if addToList {
-		state.progress.originalTargetMutex.Lock()
-		state.progress.originalTargets = append(state.progress.originalTargets, label)
-		state.progress.originalTargetMutex.Unlock()
+		state.progress.originalTargets.Add(label)
 	}
 	state.addPendingParse(label, OriginalTarget, ParseModeNormal)
 }
@@ -702,18 +696,12 @@ func (state *BuildState) NumDone() int {
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
 // from the set of original labels. This will exclude non-test targets when we're building for test.
 func (state *BuildState) ExpandOriginalLabels() BuildLabels {
-	state.progress.originalTargetMutex.Lock()
-	targets := state.progress.originalTargets[:]
-	state.progress.originalTargetMutex.Unlock()
-	return state.ExpandLabels(targets)
+	return state.ExpandLabels(state.progress.originalTargets.AllTargets())
 }
 
 // ExpandAllOriginalLabels is the same as ExpandOriginalLabels except it always includes non-test targets
 func (state *BuildState) ExpandAllOriginalLabels() BuildLabels {
-	state.progress.originalTargetMutex.Lock()
-	targets := state.progress.originalTargets[:]
-	state.progress.originalTargetMutex.Unlock()
-	return state.expandLabels(targets, false)
+	return state.expandLabels(state.progress.originalTargets.AllTargets(), false)
 }
 
 func AnnotateLabels(labels []BuildLabel) []AnnotatedOutputLabel {
@@ -1394,6 +1382,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			packageWaits:    cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
+			originalTargets: NewTargetSet(),
 		},
 		initOnce:            new(sync.Once),
 		preloadDownloadOnce: new(sync.Once),
