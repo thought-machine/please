@@ -19,6 +19,7 @@ go_test(
         ":cmap",
         "///third_party/go/github.com_cespare_xxhash_v2//:v2",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/golang.org_x_sync//errgroup",
     ],
 )
 
@@ -28,6 +29,7 @@ go_benchmark(
     deps = [
         ":cmap",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/golang.org_x_sync//errgroup",
     ],
 )
 
