@@ -101,7 +101,7 @@ type awaitableValue[V any] struct {
 // A shard is one of the individual shards of a map.
 type shard[K comparable, V any] struct {
 	m map[K]awaitableValue[V]
-	l sync.Mutex
+	l sync.RWMutex
 }
 
 // Set is the equivalent of `map[key] = val`.
@@ -136,6 +136,13 @@ func (s *shard[K, V]) Set(key K, val V, overwrite bool) (V, bool) {
 // Exactly one of the target or channel will be returned.
 // The third value is true if it is the first call that is waiting on this value.
 func (s *shard[K, V]) Get(key K) (val V, wait <-chan struct{}, first bool) {
+	s.l.RLock()
+	if v, ok := s.m[key]; ok {
+		s.l.RUnlock()
+		return v.Val, v.Wait, false
+	}
+	s.l.RUnlock()
+
 	s.l.Lock()
 	defer s.l.Unlock()
 	if v, ok := s.m[key]; ok {
@@ -150,8 +157,8 @@ func (s *shard[K, V]) Get(key K) (val V, wait <-chan struct{}, first bool) {
 
 // Values returns a copy of all the targets currently in the map.
 func (s *shard[K, V]) Values() []V {
-	s.l.Lock()
-	defer s.l.Unlock()
+	s.l.RLock()
+	defer s.l.RUnlock()
 	ret := make([]V, 0, len(s.m))
 	for _, v := range s.m {
 		if v.Wait == nil {

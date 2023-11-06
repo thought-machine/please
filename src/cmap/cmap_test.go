@@ -1,11 +1,13 @@
 package cmap
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 func hashInts(k int) uint64 {
@@ -83,4 +85,35 @@ func TestResize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkMapInsertsAndGets(b *testing.B) {
+	// Attempts to mimic a vaguely realistic blend of writes and (more) reads.
+	m := New[int, int](DefaultShardCount, hashInts)
+	var wg, rg errgroup.Group
+	wg.SetLimit(3)
+	rg.SetLimit(12)
+	for i := 0; i < b.N; i++ {
+		x := i
+		for j := 0; j < 10; j++ {
+			wg.Go(func() error {
+				for k := 0; k < 1000; k++ {
+					m.Set(x, x)
+				}
+				return nil
+			})
+		}
+		for j := 0; j < 100; j++ {
+			rg.Go(func() error {
+				for k := 0; k < 1000; k++ {
+					if y := m.Get(x); y != x && y != 0 {
+						return fmt.Errorf("incorrect result, was %d, should be %d", y, x)
+					}
+				}
+				return nil
+			})
+		}
+	}
+	assert.NoError(b, wg.Wait())
+	assert.NoError(b, rg.Wait())
 }
