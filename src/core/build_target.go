@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -1082,10 +1083,12 @@ func match(pattern, s string) bool {
 	if pattern == s {
 		return true
 	}
-	if strings.HasSuffix(pattern, "*") && strings.HasPrefix(s, pattern[:len(pattern)-1]) {
-		return true
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		log.Warning("Error compiling pattern %s: %v", pattern, err)
+		return false
 	}
-	return false
+	return re.MatchString(s)
 }
 
 // PrefixedLabels returns all labels of this target with the given prefix.
