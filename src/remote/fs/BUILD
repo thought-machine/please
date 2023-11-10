@@ -1,6 +1,9 @@
 go_library(
     name = "fs",
-    srcs = ["fs.go"],
+    srcs = [
+        "fs.go",
+        "info.go",
+    ],
     deps = [
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/client",
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/digest",

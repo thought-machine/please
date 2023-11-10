@@ -4,17 +4,15 @@ package fs
 import (
 	"context"
 	"errors"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"google.golang.org/protobuf/proto"
 	"io"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
-
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"google.golang.org/protobuf/proto"
 )
 
 type Client interface {
@@ -27,7 +25,7 @@ type fs struct {
 	dir *pb.Directory
 }
 
-// New creates
+// New creates a new filesystem on top of the given proto, using client to download files on demand.
 func New(c Client, root *pb.Directory) iofs.FS {
 	return &fs{
 		c:   c,
@@ -53,10 +51,11 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 			return &file{
 				bs: bs,
 				info: info{
-					isDir: false,
-					size:  int64(len(bs)),
-					mode:  iofs.FileMode(f.NodeProperties.UnixMode.Value),
-					name:  f.Name,
+					isDir:   false,
+					size:    int64(len(bs)),
+					mode:    iofs.FileMode(f.NodeProperties.UnixMode.Value),
+					modTime: f.NodeProperties.GetMtime().AsTime(),
+					name:    f.Name,
 				},
 			}, nil
 		}
@@ -79,9 +78,10 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 			if rest == "" {
 				return &dir{
 					info: info{
-						mode:  iofs.FileMode(dirPb.NodeProperties.UnixMode.Value),
-						name:  name,
-						isDir: true,
+						mode:    iofs.FileMode(dirPb.NodeProperties.UnixMode.Value),
+						modTime: dirPb.NodeProperties.GetMtime().AsTime(),
+						name:    name,
+						isDir:   true,
 					},
 					pb: dirPb,
 				}, nil
@@ -90,47 +90,6 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 		}
 	}
 	return nil, iofs.ErrNotExist
-}
-
-// info represents information about a file/directory
-type info struct {
-	name     string
-	isDir    bool
-	size     int64
-	mode     os.FileMode
-	typeMode os.FileMode
-}
-
-func (i *info) Type() iofs.FileMode {
-	return i.typeMode
-}
-
-func (i *info) Info() (iofs.FileInfo, error) {
-	return i, nil
-}
-
-func (i *info) Name() string {
-	return i.name
-}
-
-func (i *info) Size() int64 {
-	return i.size
-}
-
-func (i *info) Mode() iofs.FileMode {
-	return i.mode
-}
-
-func (i *info) ModTime() time.Time {
-	return time.Now()
-}
-
-func (i *info) IsDir() bool {
-	return false
-}
-
-func (i *info) Sys() any {
-	return nil
 }
 
 type file struct {
