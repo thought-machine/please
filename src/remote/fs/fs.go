@@ -37,11 +37,16 @@ func New(c Client, root *pb.Directory) iofs.FS {
 
 // Open opens the file with the given name
 func (fs *fs) Open(name string) (iofs.File, error) {
-	return fs.open(".", name, fs.root)
+	return fs.open(".", filepath.Clean(name), fs.root)
 }
 
 func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
-	name, rest, _ := strings.Cut(name, string(filepath.Separator))
+	name, rest, hasToBeDir := strings.Cut(name, string(filepath.Separator))
+	// Must be a dodgy symlink that goes past our root.
+	if name == ".." || name == "." {
+		return nil, os.ErrNotExist
+	}
+
 	for _, d := range wd.Directories {
 		if d.Name == name {
 			dg, err := digest.NewFromProto(d.Digest)
@@ -72,7 +77,7 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 	}
 
 	// If the path contains a /, we only resolve against dirs.
-	if rest == "" {
+	if hasToBeDir {
 		return nil, iofs.ErrNotExist
 	}
 
@@ -109,7 +114,7 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 			}
 			ret, err := fs.Open(filepath.Join(path, l.Target))
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve symlink %v: %v", filepath.Join(path, l.Target), err)
+				return nil, fmt.Errorf("failed to resolve symlink %v: %w", filepath.Join(path, l.Target), err)
 			}
 			return ret, nil
 		}

@@ -3,6 +3,7 @@ package fs
 import (
 	"context"
 	iofs "io/fs"
+	"os"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -77,6 +78,13 @@ func TestFS(t *testing.T) {
 					Value: 0777,
 				}},
 			},
+			{
+				Name:   "badlink",
+				Target: "../../foo",
+				NodeProperties: &pb.NodeProperties{UnixMode: &wrappers.UInt32Value{
+					Value: 0777,
+				}},
+			},
 		},
 		NodeProperties: &pb.NodeProperties{UnixMode: &wrappers.UInt32Value{
 			Value: 0777,
@@ -106,9 +114,13 @@ func TestFS(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "wibble wibble wibble", string(bs))
 
+	bs, err = iofs.ReadFile(fs, "bar/badlink")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, os.ErrNotExist)
+
 	entries, err := iofs.ReadDir(fs, "bar")
 	require.NoError(t, err)
-	assert.Len(t, entries, 4)
+	assert.Len(t, entries, 5)
 
 	matches, err := iofs.Glob(fs, "bar/*.go")
 	require.NoError(t, err)
