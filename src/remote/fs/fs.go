@@ -4,15 +4,16 @@ package fs
 import (
 	"context"
 	"errors"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"google.golang.org/protobuf/proto"
 	"io"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"google.golang.org/protobuf/proto"
 )
 
 type Client interface {
