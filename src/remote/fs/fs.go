@@ -41,40 +41,6 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 }
 
 func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
-	for _, f := range wd.Files {
-		if f.Name == name {
-			d, err := digest.NewFromProto(f.Digest)
-			if err != nil {
-				return nil, err
-			}
-			bs, _, err := fs.c.ReadBlob(context.Background(), d)
-			if err != nil {
-				return nil, err
-			}
-			return &file{
-				bs: bs,
-				info: info{
-					isDir:   false,
-					size:    int64(len(bs)),
-					mode:    iofs.FileMode(f.NodeProperties.UnixMode.Value),
-					modTime: f.NodeProperties.GetMtime().AsTime(),
-					name:    f.Name,
-				},
-			}, nil
-		}
-	}
-	for _, l := range wd.Symlinks {
-		if l.Name == name {
-			if filepath.IsAbs(l.Target) {
-				// The doc comments suggest that sometimes this is supported. I'm not sure how this would be useful in
-				// the context of Please so I'll just return an error here to assert it's never used.
-				path = filepath.Join(path, name)
-				return nil, fmt.Errorf("symlink %v is has abs target %v. This is not supported", path, l.Target)
-			}
-			return fs.Open(filepath.Join(path, l.Target))
-		}
-	}
-
 	name, rest, _ := strings.Cut(name, string(filepath.Separator))
 	for _, d := range wd.Directories {
 		if d.Name == name {
@@ -102,6 +68,50 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 				}, nil
 			}
 			return fs.open(filepath.Join(path, name), rest, dirPb)
+		}
+	}
+
+	// If the path contains a /, we only resolve against dirs.
+	if rest == "" {
+		return nil, iofs.ErrNotExist
+	}
+
+	for _, f := range wd.Files {
+		if f.Name == name {
+			d, err := digest.NewFromProto(f.Digest)
+			if err != nil {
+				return nil, err
+			}
+			bs, _, err := fs.c.ReadBlob(context.Background(), d)
+			if err != nil {
+				return nil, err
+			}
+			return &file{
+				bs: bs,
+				info: info{
+					isDir:   false,
+					size:    int64(len(bs)),
+					mode:    iofs.FileMode(f.NodeProperties.UnixMode.Value),
+					modTime: f.NodeProperties.GetMtime().AsTime(),
+					name:    f.Name,
+				},
+			}, nil
+		}
+	}
+
+	for _, l := range wd.Symlinks {
+		if l.Name == name {
+			if filepath.IsAbs(l.Target) {
+				// The doc comments suggest that sometimes this is supported. I'm not sure how this would be useful in
+				// the context of Please so I'll just return an error here to assert it's never used.
+				path = filepath.Join(path, name)
+				return nil, fmt.Errorf("symlink %v is has abs target %v. This is not supported", path, l.Target)
+			}
+			ret, err := fs.Open(filepath.Join(path, l.Target))
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve symlink %v: %v", filepath.Join(path, l.Target), err)
+			}
+			return ret, nil
 		}
 	}
 	return nil, iofs.ErrNotExist
