@@ -4,6 +4,7 @@ package fs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	iofs "io/fs"
 	"os"
@@ -22,24 +23,25 @@ type Client interface {
 
 // fs is an io/fs.FS implemented on top of a REAPI directory. This will download files on demand, as they are needed.
 type fs struct {
-	c   Client
-	dir *pb.Directory
+	c    Client
+	root *pb.Directory
 }
 
 // New creates a new filesystem on top of the given proto, using client to download files on demand.
 func New(c Client, root *pb.Directory) iofs.FS {
 	return &fs{
-		c:   c,
-		dir: root,
+		c:    c,
+		root: root,
 	}
 }
 
 // Open opens the file with the given name
 func (fs *fs) Open(name string) (iofs.File, error) {
-	if len(fs.dir.Symlinks) > 0 {
-		panic("not implemented yet")
-	}
-	for _, f := range fs.dir.Files {
+	return fs.open(".", name, fs.root)
+}
+
+func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
+	for _, f := range wd.Files {
 		if f.Name == name {
 			d, err := digest.NewFromProto(f.Digest)
 			if err != nil {
@@ -61,8 +63,20 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 			}, nil
 		}
 	}
+	for _, l := range wd.Symlinks {
+		if l.Name == name {
+			if filepath.IsAbs(l.Target) {
+				// The doc comments suggest that sometimes this is supported. I'm not sure how this would be useful in
+				// the context of Please so I'll just return an error here to assert it's never used.
+				path = filepath.Join(path, name)
+				return nil, fmt.Errorf("symlink %v is has abs target %v. This is not supported", path, l.Target)
+			}
+			return fs.Open(filepath.Join(path, l.Target))
+		}
+	}
+
 	name, rest, _ := strings.Cut(name, string(filepath.Separator))
-	for _, d := range fs.dir.Directories {
+	for _, d := range wd.Directories {
 		if d.Name == name {
 			dg, err := digest.NewFromProto(d.Digest)
 			if err != nil {
@@ -87,7 +101,7 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 					pb: dirPb,
 				}, nil
 			}
-			return New(fs.c, dirPb).Open(rest)
+			return fs.open(filepath.Join(path, name), rest, dirPb)
 		}
 	}
 	return nil, iofs.ErrNotExist
@@ -128,9 +142,6 @@ type dir struct {
 // have with a filesystem. We can't know this information without downloading more digests from the client, however we
 // likely will never need this. This is enough to facilitate globbing.
 func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
-	if len(p.pb.Symlinks) > 0 {
-		panic("not implemented yet")
-	}
 	dirSize := n
 	if n <= 0 {
 		dirSize = len(p.pb.Files) + len(p.pb.Symlinks) + len(p.pb.Files)
@@ -155,6 +166,17 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 			name: file.Name,
 			mode: os.FileMode(file.NodeProperties.UnixMode.Value),
 			size: 0, // We can't know this without downloading the file.
+		})
+	}
+	for _, link := range p.pb.Symlinks {
+		if n > 0 && len(ret) == n {
+			return ret, nil
+		}
+		ret = append(ret, &info{
+			name:     link.Name,
+			mode:     os.FileMode(link.NodeProperties.UnixMode.Value),
+			typeMode: os.ModeSymlink,
+			size:     0, // We can't know this without downloading the file.
 		})
 	}
 	return ret, nil

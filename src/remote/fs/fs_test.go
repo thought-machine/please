@@ -69,6 +69,15 @@ func TestFS(t *testing.T) {
 				}},
 			},
 		},
+		Symlinks: []*pb.SymlinkNode{
+			{
+				Name:   "link",
+				Target: "../foo",
+				NodeProperties: &pb.NodeProperties{UnixMode: &wrappers.UInt32Value{
+					Value: 0777,
+				}},
+			},
+		},
 		NodeProperties: &pb.NodeProperties{UnixMode: &wrappers.UInt32Value{
 			Value: 0777,
 		}},
@@ -93,9 +102,13 @@ func TestFS(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "wibble wibble wibble", string(bs))
 
+	bs, err = iofs.ReadFile(fs, "bar/link")
+	require.NoError(t, err)
+	assert.Equal(t, "wibble wibble wibble", string(bs))
+
 	entries, err := iofs.ReadDir(fs, "bar")
 	require.NoError(t, err)
-	assert.Len(t, entries, 3)
+	assert.Len(t, entries, 4)
 
 	matches, err := iofs.Glob(fs, "bar/*.go")
 	require.NoError(t, err)
