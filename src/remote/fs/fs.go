@@ -4,15 +4,16 @@ package fs
 import (
 	"context"
 	"errors"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"github.com/golang/protobuf/proto"
 	"io"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/golang/protobuf/proto"
 )
 
 type Client interface {
@@ -137,7 +138,7 @@ func (b *byteFile) Stat() (iofs.FileInfo, error) {
 }
 
 func (b *byteFile) Read(bytes []byte) (int, error) {
-	for i, _ := range bytes {
+	for i := range bytes {
 		if i == len(b.bs) {
 			return i, io.EOF
 		}
@@ -162,10 +163,14 @@ type pbDir struct {
 // have with a filesystem. We can't know this information without downloading more digests from the client, however we
 // likely will never need this. This is enough to facilitate globbing.
 func (p *pbDir) ReadDir(n int) ([]iofs.DirEntry, error) {
-	if len(p.pb.Symlinks) >0 {
+	if len(p.pb.Symlinks) > 0 {
 		panic("not implemented yet")
 	}
-	var ret []iofs.DirEntry
+	dirSize := n
+	if n <= 0 {
+		dirSize = len(p.pb.Files) + len(p.pb.Symlinks) + len(p.pb.Files)
+	}
+	ret := make([]iofs.DirEntry, dirSize)
 	for _, dir := range p.pb.Directories {
 		if n > 0 && len(ret) == n {
 			return ret, nil
@@ -174,7 +179,7 @@ func (p *pbDir) ReadDir(n int) ([]iofs.DirEntry, error) {
 			name:     dir.Name,
 			isDir:    true,
 			typeMode: os.ModeDir,
-			mode: 0, // We can't know this without downloading the Directory proto
+			mode:     0, // We can't know this without downloading the Directory proto
 		})
 	}
 	for _, file := range p.pb.Files {

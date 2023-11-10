@@ -2,14 +2,15 @@ package fs
 
 import (
 	"context"
+	iofs "io/fs"
+	"testing"
+
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	iofs "io/fs"
-	"testing"
 )
 
 type fakeClient struct {
@@ -26,7 +27,6 @@ func newDigest(str string) digest.Digest {
 }
 
 func TestFS(t *testing.T) {
-
 	fooDigest := newDigest("foo")
 	barDigest := newDigest("bar")
 
