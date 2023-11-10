@@ -5,6 +5,7 @@ import (
 	iofs "io/fs"
 	"testing"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
@@ -17,9 +18,9 @@ type fakeClient struct {
 	results map[digest.Digest][]byte
 }
 
-func (f *fakeClient) ReadBlob(ctx context.Context, d digest.Digest) ([]byte, error) {
+func (f *fakeClient) ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client.MovedBytesMetadata, error) {
 	res := f.results[d]
-	return res, nil
+	return res, nil, nil
 }
 
 func newDigest(str string) digest.Digest {

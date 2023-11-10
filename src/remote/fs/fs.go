@@ -11,20 +11,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"google.golang.org/protobuf/proto"
 )
 
 type Client interface {
-	ReadBlob(ctx context.Context, d digest.Digest) ([]byte, error)
+	ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client.MovedBytesMetadata, error)
 }
 
+// fs is an io/fs.FS implemented on top of a REAPI directory. This will download files on demand, as they are needed.
 type fs struct {
 	c   Client
 	dir *pb.Directory
 }
 
+// New creates
 func New(c Client, root *pb.Directory) iofs.FS {
 	return &fs{
 		c:   c,
@@ -43,7 +46,7 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 			if err != nil {
 				return nil, err
 			}
-			bs, err := fs.c.ReadBlob(context.Background(), d)
+			bs, _, err := fs.c.ReadBlob(context.Background(), d)
 			if err != nil {
 				return nil, err
 			}
@@ -65,7 +68,7 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 			if err != nil {
 				return nil, err
 			}
-			bs, err := fs.c.ReadBlob(context.Background(), dg)
+			bs, _, err := fs.c.ReadBlob(context.Background(), dg)
 			if err != nil {
 				return nil, err
 			}
@@ -172,7 +175,7 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 	if n <= 0 {
 		dirSize = len(p.pb.Files) + len(p.pb.Symlinks) + len(p.pb.Files)
 	}
-	ret := make([]iofs.DirEntry, dirSize)
+	ret := make([]iofs.DirEntry, 0, dirSize)
 	for _, dir := range p.pb.Directories {
 		if n > 0 && len(ret) == n {
 			return ret, nil
