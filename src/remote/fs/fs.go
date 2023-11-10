@@ -32,48 +32,49 @@ func New(c Client, root *pb.Directory) iofs.FS {
 	}
 }
 
-func (f *fs) Open(name string) (iofs.File, error) {
-	if len(f.dir.Symlinks) > 0 {
+// Open opens the file with the given name
+func (fs *fs) Open(name string) (iofs.File, error) {
+	if len(fs.dir.Symlinks) > 0 {
 		panic("not implemented yet")
 	}
-	for _, file := range f.dir.Files {
-		if file.Name == name {
-			d, err := digest.NewFromProto(file.Digest)
+	for _, f := range fs.dir.Files {
+		if f.Name == name {
+			d, err := digest.NewFromProto(f.Digest)
 			if err != nil {
 				return nil, err
 			}
-			bs, err := f.c.ReadBlob(context.Background(), d)
+			bs, err := fs.c.ReadBlob(context.Background(), d)
 			if err != nil {
 				return nil, err
 			}
-			return &byteFile{
+			return &file{
 				bs: bs,
 				info: info{
 					isDir: false,
 					size:  int64(len(bs)),
-					mode:  iofs.FileMode(file.NodeProperties.UnixMode.Value),
-					name:  file.Name,
+					mode:  iofs.FileMode(f.NodeProperties.UnixMode.Value),
+					name:  f.Name,
 				},
 			}, nil
 		}
 	}
 	name, rest, _ := strings.Cut(name, string(filepath.Separator))
-	for _, dir := range f.dir.Directories {
-		if dir.Name == name {
-			d, err := digest.NewFromProto(dir.Digest)
+	for _, d := range fs.dir.Directories {
+		if d.Name == name {
+			dg, err := digest.NewFromProto(d.Digest)
 			if err != nil {
 				return nil, err
 			}
-			dir, err := f.c.ReadBlob(context.Background(), d)
+			bs, err := fs.c.ReadBlob(context.Background(), dg)
 			if err != nil {
 				return nil, err
 			}
 			dirPb := &pb.Directory{}
-			if err := proto.Unmarshal(dir, dirPb); err != nil {
+			if err := proto.Unmarshal(bs, dirPb); err != nil {
 				return nil, err
 			}
 			if rest == "" {
-				return &pbDir{
+				return &dir{
 					info: info{
 						mode:  iofs.FileMode(dirPb.NodeProperties.UnixMode.Value),
 						name:  name,
@@ -82,12 +83,13 @@ func (f *fs) Open(name string) (iofs.File, error) {
 					pb: dirPb,
 				}, nil
 			}
-			return New(f.c, dirPb).Open(rest)
+			return New(fs.c, dirPb).Open(rest)
 		}
 	}
 	return nil, iofs.ErrNotExist
 }
 
+// info represents information about a file/directory
 type info struct {
 	name     string
 	isDir    bool
@@ -128,16 +130,16 @@ func (i *info) Sys() any {
 	return nil
 }
 
-type byteFile struct {
+type file struct {
 	bs []byte
 	info
 }
 
-func (b *byteFile) Stat() (iofs.FileInfo, error) {
+func (b *file) Stat() (iofs.FileInfo, error) {
 	return b, nil
 }
 
-func (b *byteFile) Read(bytes []byte) (int, error) {
+func (b *file) Read(bytes []byte) (int, error) {
 	for i := range bytes {
 		if i == len(b.bs) {
 			return i, io.EOF
@@ -150,11 +152,11 @@ func (b *byteFile) Read(bytes []byte) (int, error) {
 	return len(b.bs), nil
 }
 
-func (b *byteFile) Close() error {
+func (b *file) Close() error {
 	return nil
 }
 
-type pbDir struct {
+type dir struct {
 	pb *pb.Directory
 	info
 }
@@ -162,7 +164,7 @@ type pbDir struct {
 // ReadDir is a slightly incorrect implementation of ReadDir. It doesn't return all the information you would normally
 // have with a filesystem. We can't know this information without downloading more digests from the client, however we
 // likely will never need this. This is enough to facilitate globbing.
-func (p *pbDir) ReadDir(n int) ([]iofs.DirEntry, error) {
+func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 	if len(p.pb.Symlinks) > 0 {
 		panic("not implemented yet")
 	}
@@ -195,14 +197,14 @@ func (p *pbDir) ReadDir(n int) ([]iofs.DirEntry, error) {
 	return ret, nil
 }
 
-func (p *pbDir) Stat() (iofs.FileInfo, error) {
+func (p *dir) Stat() (iofs.FileInfo, error) {
 	return p, nil
 }
 
-func (p *pbDir) Read(_ []byte) (int, error) {
+func (p *dir) Read(_ []byte) (int, error) {
 	return 0, errors.New("attempt to read a directory")
 }
 
-func (p *pbDir) Close() error {
+func (p *dir) Close() error {
 	return nil
 }
