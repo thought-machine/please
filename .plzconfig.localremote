@@ -1,0 +1,15 @@
+# Steps to build with remote execution locally:
+# 1) git clone https://github.com/thought-machine/please-servers
+# 2) cd please-servers && plz localremote
+# 3) you can then build and run with --profile localremote in this repo
+
+[Remote]
+URL = 127.0.0.1:7772
+CasUrl = 127.0.0.1:7777
+AssetUrl = 127.0.0.1:7776
+NumExecutors = 20
+# This file should be kept up to date with the file in grpcutil/token.txt from please-servers
+TokenFile = please-servers-token.txt
+Secure = false
+DisplayUrl = http://localhost:7779
+Instance = mettle
