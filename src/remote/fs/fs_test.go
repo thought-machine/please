@@ -12,7 +12,6 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
 type fakeClient struct {
@@ -29,8 +28,17 @@ func newDigest(str string) digest.Digest {
 }
 
 func TestFS(t *testing.T) {
+	// Directory structure:
+	// . (root)
+	// |- foo (file containing wibble wibble wibble)
+	// |- bar
+	//    |- foo (same file as above)
+	//    |- example.go
+	//    |- example_test.go
+	//    |- link (a symlink to ../foo i.e. foo in the root dir)
+	//    |- badlink (a symlink to ../../foo which is root/.. i.e. invalid)
+
 	fooDigest := newDigest("foo")
-	barDigest := newDigest("bar")
 
 	foo := &pb.FileNode{
 		Name: "foo",
@@ -38,18 +46,6 @@ func TestFS(t *testing.T) {
 			Value: 0777,
 		}},
 		Digest: fooDigest.ToProto(),
-	}
-
-	root := &pb.Directory{
-		Files: []*pb.FileNode{
-			foo,
-		},
-		Directories: []*pb.DirectoryNode{
-			{
-				Name:   "bar",
-				Digest: barDigest.ToProto(),
-			},
-		},
 	}
 
 	bar := &pb.Directory{
@@ -91,17 +87,34 @@ func TestFS(t *testing.T) {
 		}},
 	}
 
-	barBs, err := proto.Marshal(bar)
+	barDigest, err := digest.NewFromMessage(bar)
 	require.NoError(t, err)
+
+	root := &pb.Directory{
+		Files: []*pb.FileNode{
+			foo,
+		},
+		Directories: []*pb.DirectoryNode{
+			{
+				Name:   "bar",
+				Digest: barDigest.ToProto(),
+			},
+		},
+	}
 
 	fc := &fakeClient{
 		results: map[digest.Digest][]byte{
 			fooDigest: []byte("wibble wibble wibble"),
-			barDigest: barBs,
+		},
+	}
+	tree := &pb.Tree{
+		Root: root,
+		Children: []*pb.Directory{
+			bar,
 		},
 	}
 
-	fs := New(fc, root)
+	fs := New(fc, tree)
 	bs, err := iofs.ReadFile(fs, "foo")
 	require.NoError(t, err)
 	assert.Equal(t, "wibble wibble wibble", string(bs))

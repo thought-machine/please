@@ -14,24 +14,34 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"google.golang.org/protobuf/proto"
 )
 
 type Client interface {
 	ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client.MovedBytesMetadata, error)
 }
 
-// fs is an io/fs.FS implemented on top of a REAPI directory. This will download files on demand, as they are needed.
+// fs is an io/fs.FS implemented on top of a REAPI directory. This will download files as they are needed.
 type fs struct {
-	c    Client
-	root *pb.Directory
+	c           Client
+	root        *pb.Directory
+	directories map[digest.Digest]*pb.Directory
 }
 
 // New creates a new filesystem on top of the given proto, using client to download files on demand.
-func New(c Client, root *pb.Directory) iofs.FS {
+func New(c Client, tree *pb.Tree) iofs.FS {
+	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
+	for _, child := range tree.Children {
+		dg, err := digest.NewFromMessage(child)
+		if err != nil {
+			panic(fmt.Errorf("failed to create reapi fs: failed to calculate digest: %v", err))
+		}
+		directories[dg] = child
+	}
+
 	return &fs{
-		c:    c,
-		root: root,
+		c:           c,
+		root:        tree.Root,
+		directories: directories,
 	}
 }
 
@@ -42,25 +52,14 @@ func (fs *fs) Open(name string) (iofs.File, error) {
 
 func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 	name, rest, hasToBeDir := strings.Cut(name, string(filepath.Separator))
-	// Must be a dodgy symlink that goes past our root.
+	// Must be a dodgy symlink that goes past our tree.
 	if name == ".." || name == "." {
 		return nil, os.ErrNotExist
 	}
 
 	for _, d := range wd.Directories {
 		if d.Name == name {
-			dg, err := digest.NewFromProto(d.Digest)
-			if err != nil {
-				return nil, err
-			}
-			bs, _, err := fs.c.ReadBlob(context.Background(), dg)
-			if err != nil {
-				return nil, err
-			}
-			dirPb := &pb.Directory{}
-			if err := proto.Unmarshal(bs, dirPb); err != nil {
-				return nil, err
-			}
+			dirPb := fs.directories[digest.NewFromProtoUnvalidated(d.Digest)]
 			if rest == "" {
 				return &dir{
 					info: info{
@@ -83,11 +82,7 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 
 	for _, f := range wd.Files {
 		if f.Name == name {
-			d, err := digest.NewFromProto(f.Digest)
-			if err != nil {
-				return nil, err
-			}
-			bs, _, err := fs.c.ReadBlob(context.Background(), d)
+			bs, _, err := fs.c.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(f.Digest))
 			if err != nil {
 				return nil, err
 			}
