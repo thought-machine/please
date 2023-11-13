@@ -41,7 +41,7 @@ func (i *info) ModTime() time.Time {
 }
 
 func (i *info) IsDir() bool {
-	return false
+	return i.isDir
 }
 
 func (i *info) Sys() any {

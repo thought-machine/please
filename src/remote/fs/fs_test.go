@@ -32,6 +32,7 @@ func TestFS(t *testing.T) {
 	// . (root)
 	// |- foo (file containing wibble wibble wibble)
 	// |- bar
+	//    |- empty (an empty directory)
 	//    |- foo (same file as above)
 	//    |- example.go
 	//    |- example_test.go
@@ -47,6 +48,13 @@ func TestFS(t *testing.T) {
 		}},
 		Digest: fooDigest.ToProto(),
 	}
+
+	empty := &pb.Directory{
+		NodeProperties: &pb.NodeProperties{UnixMode: &wrappers.UInt32Value{
+			Value: 0777,
+		}}}
+	emptyDigest, err := digest.NewFromMessage(empty)
+	require.NoError(t, err)
 
 	bar := &pb.Directory{
 		Files: []*pb.FileNode{
@@ -82,6 +90,12 @@ func TestFS(t *testing.T) {
 				}},
 			},
 		},
+		Directories: []*pb.DirectoryNode{
+			{
+				Name:   "empty",
+				Digest: emptyDigest.ToProto(),
+			},
+		},
 		NodeProperties: &pb.NodeProperties{UnixMode: &wrappers.UInt32Value{
 			Value: 0777,
 		}},
@@ -111,6 +125,7 @@ func TestFS(t *testing.T) {
 		Root: root,
 		Children: []*pb.Directory{
 			bar,
+			empty,
 		},
 	}
 
@@ -133,7 +148,14 @@ func TestFS(t *testing.T) {
 
 	entries, err := iofs.ReadDir(fs, "bar")
 	require.NoError(t, err)
-	assert.Len(t, entries, 5)
+	assert.Len(t, entries, 6)
+
+	for _, e := range entries {
+		i, err := e.Info()
+		require.NoError(t, err)
+		// We set them all to 0777 above
+		assert.Equal(t, iofs.FileMode(0777), i.Mode(), "%v mode was wrong", e.Name())
+	}
 
 	matches, err := iofs.Glob(fs, "bar/*.go")
 	require.NoError(t, err)

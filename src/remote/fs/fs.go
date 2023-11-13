@@ -68,7 +68,8 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 						name:    name,
 						isDir:   true,
 					},
-					pb: dirPb,
+					pb:       dirPb,
+					children: fs.directories,
 				}, nil
 			}
 			return fs.open(filepath.Join(path, name), rest, dirPb)
@@ -102,8 +103,7 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 	for _, l := range wd.Symlinks {
 		if l.Name == name {
 			if filepath.IsAbs(l.Target) {
-				// The doc comments suggest that sometimes this is supported. I'm not sure how this would be useful in
-				// the context of Please so I'll just return an error here to assert it's never used.
+				// Some REAPI implementations support this, but this is considered invalid where Please is concerned.
 				path = filepath.Join(path, name)
 				return nil, fmt.Errorf("symlink %v is has abs target %v. This is not supported", path, l.Target)
 			}
@@ -144,28 +144,30 @@ func (b *file) Close() error {
 }
 
 type dir struct {
-	pb *pb.Directory
+	pb       *pb.Directory
+	children map[digest.Digest]*pb.Directory
 	info
 }
 
-// ReadDir is a slightly incorrect implementation of ReadDir. It doesn't return all the information you would normally
-// have with a filesystem. We can't know this information without downloading more digests from the client, however we
-// likely will never need this. This is enough to facilitate globbing.
+// ReadDir is a slightly incorrect implementation of ReadDir. It deviates slightly as it will report all files have 0
+// size. This seems to work for our limited purposes though.
 func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 	dirSize := n
 	if n <= 0 {
 		dirSize = len(p.pb.Files) + len(p.pb.Symlinks) + len(p.pb.Files)
 	}
 	ret := make([]iofs.DirEntry, 0, dirSize)
-	for _, dir := range p.pb.Directories {
+	for _, dirNode := range p.pb.Directories {
 		if n > 0 && len(ret) == n {
 			return ret, nil
 		}
+		dir := p.children[digest.NewFromProtoUnvalidated(dirNode.Digest)]
 		ret = append(ret, &info{
-			name:     dir.Name,
+			name:     dirNode.Name,
 			isDir:    true,
 			typeMode: os.ModeDir,
-			mode:     0, // We can't know this without downloading the Directory proto
+			mode:     os.FileMode(dir.NodeProperties.UnixMode.Value),
+			modTime:  dir.NodeProperties.GetMtime().AsTime(),
 		})
 	}
 	for _, file := range p.pb.Files {
@@ -175,7 +177,9 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 		ret = append(ret, &info{
 			name: file.Name,
 			mode: os.FileMode(file.NodeProperties.UnixMode.Value),
-			size: 0, // We can't know this without downloading the file.
+			// TODO(jpoole): technically we could calculate this on demand by allowing info.Size() to download the file
+			// 	from the CAS... we don't need to for now though.
+			size: 0,
 		})
 	}
 	for _, link := range p.pb.Symlinks {
@@ -186,7 +190,6 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 			name:     link.Name,
 			mode:     os.FileMode(link.NodeProperties.UnixMode.Value),
 			typeMode: os.ModeSymlink,
-			size:     0, // We can't know this without downloading the file.
 		})
 	}
 	return ret, nil
