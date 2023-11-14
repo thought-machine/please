@@ -1,4 +1,4 @@
-// Package fs provides an io/fs.FS implementation over the remote API
+// Package fs provides an io/fs.FS implementation over the remote execution API content addressable store (CAS)
 package fs
 
 import (
@@ -17,30 +17,31 @@ import (
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
+// Client is an interface to the REAPI CAS
 type Client interface {
 	ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client.MovedBytesMetadata, error)
 }
 
-// fs is an io/fs.FS implemented on top of a REAPI directory. This will download files as they are needed.
-type fs struct {
+// CASFileSystem is an fs.FS implemented on top of a Tree proto. This will download files as they are needed.
+type CASFileSystem struct {
 	c           Client
 	root        *pb.Directory
 	directories map[digest.Digest]*pb.Directory
 	workingDir  string
 }
 
-// New creates a new filesystem on top of the given proto, using client to download files on demand.
-func New(c Client, tree *pb.Tree, workingDir string) iofs.FS {
+// New creates a new filesystem on top of the given proto, using client to download files from the CAS on demand.
+func New(c Client, tree *pb.Tree, workingDir string) *CASFileSystem {
 	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
 	for _, child := range tree.Children {
 		dg, err := digest.NewFromMessage(child)
 		if err != nil {
-			panic(fmt.Errorf("failed to create reapi fs: failed to calculate digest: %v", err))
+			panic(fmt.Errorf("failed to create CASFileSystem: failed to calculate digest: %v", err))
 		}
 		directories[dg] = child
 	}
 
-	return &fs{
+	return &CASFileSystem{
 		c:           c,
 		root:        tree.Root,
 		directories: directories,
@@ -49,74 +50,103 @@ func New(c Client, tree *pb.Tree, workingDir string) iofs.FS {
 }
 
 // Open opens the file with the given name
-func (fs *fs) Open(name string) (iofs.File, error) {
-	return fs.open(".", filepath.Join(fs.workingDir, name), fs.root)
+func (fs *CASFileSystem) Open(name string) (iofs.File, error) {
+	return fs.open(filepath.Join(fs.workingDir, name))
 }
 
-func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
+// FindNode returns the node proto for the given name. Up to one of the node types may be set, where none being set
+// representing the path not existing.
+func (fs *CASFileSystem) FindNode(name string) (*pb.FileNode, *pb.DirectoryNode, *pb.SymlinkNode, error) {
+	return fs.findNode(fs.root, filepath.Join(fs.workingDir, name))
+}
+
+func (fs *CASFileSystem) open(name string) (iofs.File, error) {
+	fileNode, dirNode, linkNode, err := fs.findNode(fs.root, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if linkNode != nil {
+		if filepath.IsAbs(linkNode.Target) {
+			return nil, fmt.Errorf("%v: symlink target was absolute which is invalid", name)
+		}
+		return fs.open(filepath.Join(filepath.Dir(name), linkNode.Target))
+	}
+
+	if fileNode != nil {
+		return fs.openFile(fileNode)
+	}
+	if dirNode != nil {
+		return fs.openDir(dirNode)
+	}
+	return nil, os.ErrNotExist
+}
+
+// openFile downloads a file from the CAS and returns it as an iofs.File
+func (fs *CASFileSystem) openFile(f *pb.FileNode) (*file, error) {
+	bs, _, err := fs.c.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(f.Digest))
+	if err != nil {
+		return nil, err
+	}
+
+	i := info{
+		size: int64(len(bs)),
+		name: f.Name,
+	}
+
+	return &file{
+		ReadSeeker: bytes.NewReader(bs),
+		info:       i.withProperties(f.NodeProperties),
+	}, nil
+}
+
+func (fs *CASFileSystem) openDir(d *pb.DirectoryNode) (iofs.File, error) {
+	dirPb := fs.directories[digest.NewFromProtoUnvalidated(d.Digest)]
+	i := &info{
+		name:  d.Name,
+		isDir: true,
+	}
+	return &dir{
+		info:     i.withProperties(dirPb.NodeProperties),
+		pb:       dirPb,
+		children: fs.directories,
+	}, nil
+}
+
+func (fs *CASFileSystem) findNode(wd *pb.Directory, name string) (*pb.FileNode, *pb.DirectoryNode, *pb.SymlinkNode, error) {
 	name, rest, hasToBeDir := strings.Cut(name, string(filepath.Separator))
 	// Must be a dodgy symlink that goes past our tree.
 	if name == ".." || name == "." {
-		return nil, os.ErrNotExist
+		return nil, nil, nil, os.ErrNotExist
 	}
 
 	for _, d := range wd.Directories {
 		if d.Name == name {
 			dirPb := fs.directories[digest.NewFromProtoUnvalidated(d.Digest)]
 			if rest == "" {
-				i := &info{
-					name:  name,
-					isDir: true,
-				}
-				return &dir{
-					info:     i.withProperties(dirPb.NodeProperties),
-					pb:       dirPb,
-					children: fs.directories,
-				}, nil
+				return nil, d, nil, nil
 			}
-			return fs.open(filepath.Join(path, name), rest, dirPb)
+			return fs.findNode(dirPb, rest)
 		}
 	}
 
 	// If the path contains a /, we only resolve against dirs.
 	if hasToBeDir {
-		return nil, iofs.ErrNotExist
+		return nil, nil, nil, os.ErrNotExist
 	}
 
 	for _, f := range wd.Files {
 		if f.Name == name {
-			bs, _, err := fs.c.ReadBlob(context.Background(), digest.NewFromProtoUnvalidated(f.Digest))
-			if err != nil {
-				return nil, err
-			}
-
-			i := info{
-				size: int64(len(bs)),
-				name: f.Name,
-			}
-
-			return &file{
-				ReadSeeker: bytes.NewReader(bs),
-				info:       i.withProperties(f.NodeProperties),
-			}, nil
+			return f, nil, nil, nil
 		}
 	}
 
 	for _, l := range wd.Symlinks {
 		if l.Name == name {
-			if filepath.IsAbs(l.Target) {
-				// Some REAPI implementations support this, but this is considered invalid where Please is concerned.
-				path = filepath.Join(path, name)
-				return nil, fmt.Errorf("symlink %v is has abs target %v. This is not supported", path, l.Target)
-			}
-			ret, err := fs.Open(filepath.Join(path, l.Target))
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve symlink %v: %w", filepath.Join(path, l.Target), err)
-			}
-			return ret, nil
+			return nil, nil, l, nil
 		}
 	}
-	return nil, iofs.ErrNotExist
+	return nil, nil, nil, os.ErrNotExist
 }
 
 type file struct {
