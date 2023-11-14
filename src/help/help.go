@@ -239,7 +239,7 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 	for _, dir := range dirs {
 		dirEntries, err := fs.ReadDir(subrepo.FS, dir)
 		if err != nil {
-			log.Errorf("Failed to read %s: %s", dir, err)
+			log.Warningf("Failed to read %s: %s", dir, err)
 		}
 		for _, entry := range dirEntries {
 			if entry.IsDir() {
@@ -249,12 +249,12 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 			path := filepath.Join(dir, entry.Name())
 			bs, err := fs.ReadFile(subrepo.FS, path)
 			if err != nil {
-				log.Errorf("Failed to read %s: %s", path, err)
+				log.Warningf("Failed to read %s: %s", path, err)
 			}
 
 			stmts, err := p.ParseData(bs, path)
 			if err != nil {
-				log.Errorf("Failed to parse %s: %s", path, err)
+				log.Warningf("Failed to parse %s: %s", path, err)
 			}
 
 			addAllFunctions(ret, stmts, false)
