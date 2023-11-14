@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -236,28 +237,27 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 	p := asp.NewParser(subrepo.State)
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
-		if err := fs.WalkDir(subrepo.FS, dir, func(path string, d fs.DirEntry, err error) error {
+		dirEntries, err := fs.ReadDir(subrepo.FS, dir)
+		if err != nil {
+			log.Errorf("Failed to read %s: %s", dir, err)
+		}
+		for _, entry := range dirEntries {
+			if entry.IsDir() {
+				continue
+			}
+
+			path := filepath.Join(dir, entry.Name())
+			bs, err := fs.ReadFile(subrepo.FS, path)
 			if err != nil {
-				return err
+				log.Errorf("Failed to read %s: %s", path, err)
 			}
 
-			if !d.IsDir() {
-				bs, err := fs.ReadFile(subrepo.FS, path)
-				if err != nil {
-					return err
-				}
-
-				stmts, err := p.ParseData(bs, path)
-				if err != nil {
-					return err
-				}
-
-				addAllFunctions(ret, stmts, false)
+			stmts, err := p.ParseData(bs, path)
+			if err != nil {
+				log.Errorf("Failed to parse %s: %s", path, err)
 			}
 
-			return nil
-		}); err != nil {
-			log.Warningf("Couldn't read directory %v in subrepo %v", dir, subrepo.Name)
+			addAllFunctions(ret, stmts, false)
 		}
 	}
 
