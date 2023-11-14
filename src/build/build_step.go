@@ -318,7 +318,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 
 		// Add optional outputs to target metadata
 		metadata.OptionalOutputs = make([]string, 0)
-		for _, output := range fs.Glob(state.Config.Parse.BuildFileName, target.TmpDir(), target.OptionalOutputs, nil, true) {
+		for _, output := range fs.Glob(fs.HostFS, state.Config.Parse.BuildFileName, target.TmpDir(), target.OptionalOutputs, nil, true) {
 			log.Debug("Add discovered optional output to metadata %s", output)
 			metadata.OptionalOutputs = append(metadata.OptionalOutputs, output)
 		}
@@ -709,7 +709,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	}
 	// Optional outputs get moved but don't contribute to the hash or for incrementality.
 	// Glob patterns are supported on these.
-	for _, output := range fs.Glob(state.Config.Parse.BuildFileName, tmpDir, target.OptionalOutputs, nil, true) {
+	for _, output := range fs.Glob(fs.HostFS, state.Config.Parse.BuildFileName, tmpDir, target.OptionalOutputs, nil, true) {
 		log.Debug("Discovered optional output %s", output)
 		tmpOutput := filepath.Join(tmpDir, output)
 		realOutput := filepath.Join(outDir, output)

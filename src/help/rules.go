@@ -12,6 +12,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
@@ -41,7 +42,7 @@ func PrintRuleArgs(files cli.StdinStrings) {
 func newState() *core.BuildState {
 	// If we're in a repo, we might be able to read some stuff from there.
 	if core.FindRepoRoot() {
-		if config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil); err == nil {
+		if config, err := core.ReadDefaultConfigFiles(fs.HostFS, nil); err == nil {
 			return core.NewBuildState(config)
 		}
 	}

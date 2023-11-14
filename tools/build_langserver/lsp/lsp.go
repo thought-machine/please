@@ -19,6 +19,7 @@ import (
 
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/plz"
 )
@@ -187,7 +188,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 	if err := os.Chdir(h.root); err != nil {
 		return nil, err
 	}
-	config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil)
+	config, err := core.ReadDefaultConfigFiles(fs.HostFS, nil)
 	if err != nil {
 		log.Error("Error reading configuration: %s", err)
 		config = core.DefaultConfiguration()
