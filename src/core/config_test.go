@@ -13,11 +13,12 @@ import (
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 func TestPlzConfigWorking(t *testing.T) {
 	RepoRoot = "/repo/root"
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/working.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/working.plzconfig"}, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
@@ -31,12 +32,12 @@ func TestPlzConfigWorking(t *testing.T) {
 }
 
 func TestPlzConfigFailing(t *testing.T) {
-	_, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/failing.plzconfig"}, nil)
+	_, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/failing.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestPlzConfigProfile(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/working.plzconfig"}, []string{"dev"})
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/working.plzconfig"}, []string{"dev"})
 	assert.NoError(t, err)
 	assert.Equal(t, "pexmabob", config.Python.PexTool)
 	assert.Equal(t, "/opt/java/bin/javac", config.Java.JavacTool)
@@ -46,7 +47,7 @@ func TestPlzConfigProfile(t *testing.T) {
 }
 
 func TestMultiplePlzConfigFiles(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{
+	config, err := ReadConfigFiles(fs.HostFS, []string{
 		"src/core/test_data/working.plzconfig",
 		"src/core/test_data/failing.plzconfig",
 	}, nil)
@@ -56,7 +57,7 @@ func TestMultiplePlzConfigFiles(t *testing.T) {
 }
 
 func TestConfigSlicesOverwrite(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/slices.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/slices.plzconfig"}, nil)
 	assert.NoError(t, err)
 	// This should be completely overwritten by the config file
 	assert.Equal(t, []string{"/sbin"}, config.Build.Path)
@@ -175,29 +176,29 @@ func TestPleaseTildeLocationOverride(t *testing.T) {
 }
 
 func TestReadSemver(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/version_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/version_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 2, config.Please.Version.Major)
 	assert.EqualValues(t, 3, config.Please.Version.Minor)
 	assert.EqualValues(t, 4, config.Please.Version.Patch)
-	_, err = ReadConfigFiles(HostFS(), []string{"src/core/test_data/version_bad.plzconfig"}, nil)
+	_, err = ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/version_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestReadDurations(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/duration_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/duration_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 500*time.Millisecond, config.Build.Timeout)
 	assert.EqualValues(t, 5*time.Second, config.Test.Timeout)
-	_, err = ReadConfigFiles(HostFS(), []string{"src/core/test_data/duration_bad.plzconfig"}, nil)
+	_, err = ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/duration_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestReadByteSizes(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/bytesize_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/bytesize_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.EqualValues(t, 500*1000*1000, config.Cache.DirCacheHighWaterMark)
-	_, err = ReadConfigFiles(HostFS(), []string{"src/core/test_data/bytesize_bad.plzconfig"}, nil)
+	_, err = ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/bytesize_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
@@ -210,29 +211,29 @@ func TestCompletions(t *testing.T) {
 }
 
 func TestConfigVerifiesOptions(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/testrunner_good.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/testrunner_good.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "pytest", config.Python.TestRunner)
-	_, err = ReadConfigFiles(HostFS(), []string{"src/core/test_data/testrunner_bad.plzconfig"}, nil)
+	_, err = ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/testrunner_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }
 
 func TestDefaultHashCheckers(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), nil, nil)
+	config, err := ReadConfigFiles(fs.HostFS, nil, nil)
 
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{"sha1", "sha256", "blake3"}, config.Build.HashCheckers)
 }
 
 func TestHashCheckersConfig(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
 
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{"blake3"}, config.Build.HashCheckers)
 }
 
 func TestOverrideHashCheckersConfig(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/hashcheckers.plzconfig"}, nil)
 	assert.NoError(t, err)
 
 	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "sha256"})
@@ -241,7 +242,7 @@ func TestOverrideHashCheckersConfig(t *testing.T) {
 }
 
 func TestOverrideHashCheckersNoConfig(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), nil, nil)
+	config, err := ReadConfigFiles(fs.HostFS, nil, nil)
 	assert.NoError(t, err)
 
 	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "sha1,blake3"})
@@ -250,7 +251,7 @@ func TestOverrideHashCheckersNoConfig(t *testing.T) {
 }
 
 func TestUnknownHashChecker(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), nil, nil)
+	config, err := ReadConfigFiles(fs.HostFS, nil, nil)
 	assert.NoError(t, err)
 
 	err = config.ApplyOverrides(map[string]string{"build.hashcheckers": "fake-algo"})
@@ -258,7 +259,7 @@ func TestUnknownHashChecker(t *testing.T) {
 }
 
 func TestBuildEnvSection(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/buildenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/buildenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"BAR_BAR=first",
@@ -271,7 +272,7 @@ func TestBuildEnvSection(t *testing.T) {
 func TestPassEnv(t *testing.T) {
 	t.Setenv("FOO", "first")
 	t.Setenv("BAR", "second")
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/passenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"BAR=second",
@@ -284,7 +285,7 @@ func TestPassEnv(t *testing.T) {
 func TestPassUnsafeEnv(t *testing.T) {
 	t.Setenv("FOO", "first")
 	t.Setenv("BAR", "second")
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := []string{
 		"BAR=second",
@@ -301,7 +302,7 @@ func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
 	err = os.Unsetenv("BAR")
 	require.NoError(t, err)
 
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
 	require.NoError(t, err)
 
 	expected := config.Hash()
@@ -313,7 +314,7 @@ func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
 }
 
 func TestBuildPathWithPathEnv(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/passenv.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, config.Build.Path, strings.Split(os.Getenv("PATH"), ":"))
 }
@@ -348,7 +349,7 @@ func TestUpdateArgsWithQuotedAliases(t *testing.T) {
 }
 
 func TestParseNewFormatAliases(t *testing.T) {
-	c, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/alias.plzconfig"}, nil)
+	c, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(c.Alias))
 	a := c.Alias["auth"]
@@ -358,7 +359,7 @@ func TestParseNewFormatAliases(t *testing.T) {
 }
 
 func TestAttachAliasFlags(t *testing.T) {
-	c, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/alias.plzconfig"}, nil)
+	c, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	t.Setenv("GO_FLAGS_COMPLETION", "1")
 	p := flags.NewParser(&struct{}{}, 0)
@@ -394,7 +395,7 @@ func TestAttachAliasFlags(t *testing.T) {
 }
 
 func TestPrintAliases(t *testing.T) {
-	c, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/alias.plzconfig"}, nil)
+	c, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/alias.plzconfig"}, nil)
 	assert.NoError(t, err)
 	var buf bytes.Buffer
 	c.PrintAliases(&buf)
@@ -436,7 +437,7 @@ func TestEnsurePleaseLocation(t *testing.T) {
 }
 
 func TestPluginConfig(t *testing.T) {
-	config, err := ReadConfigFiles(HostFS(), []string{"src/core/test_data/plugin.plzconfig"}, nil)
+	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/plugin.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
 }

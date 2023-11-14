@@ -16,6 +16,7 @@ go_library(
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
+        "//src/fs",
         "//src/parse/asp",
         "//src/plz",
     ],

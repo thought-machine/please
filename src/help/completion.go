@@ -4,6 +4,7 @@ import (
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // Topic is a help topic that implements completion for flags.
@@ -18,7 +19,7 @@ func (topic *Topic) UnmarshalFlag(value string) error {
 
 // Complete implements the flags.Completer interface, which is used for shell completion.
 func (topic Topic) Complete(match string) []flags.Completion {
-	config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil)
+	config, err := core.ReadDefaultConfigFiles(fs.HostFS, nil)
 	if err != nil {
 		config = core.DefaultConfiguration()
 	}

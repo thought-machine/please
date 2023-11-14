@@ -12,6 +12,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/plz"
 )
 
@@ -22,7 +23,7 @@ const size = 1000
 var state *core.BuildState
 
 func TestBuildLotsOfTargets(t *testing.T) {
-	config, _ := core.ReadConfigFiles(core.HostFS(), nil, nil)
+	config, _ := core.ReadConfigFiles(fs.HostFS, nil, nil)
 	config.Please.NumThreads = 10
 	state = core.NewBuildState(config)
 	state.Parser = &fakeParser{

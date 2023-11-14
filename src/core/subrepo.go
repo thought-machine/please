@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // A Subrepo stores information about a registered subrepository, typically one
@@ -82,7 +83,7 @@ func (s *Subrepo) Dir(dir string) string {
 
 func readConfigFilesInto(repoConfig *Configuration, files []string) error {
 	for _, file := range files {
-		err := readConfigFile(HostFS(), repoConfig, file, true)
+		err := readConfigFile(fs.HostFS, repoConfig, file, true)
 		if err != nil {
 			return err
 		}
