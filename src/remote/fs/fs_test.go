@@ -53,7 +53,8 @@ func getTree(t *testing.T) (*fakeClient, *pb.Tree) {
 	empty := &pb.Directory{
 		NodeProperties: &pb.NodeProperties{UnixMode: &wrappers.UInt32Value{
 			Value: 0777,
-		}}}
+		}},
+	}
 	emptyDigest, err := digest.NewFromMessage(empty)
 	require.NoError(t, err)
 
