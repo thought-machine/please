@@ -10,7 +10,7 @@ func TestStampFile(t *testing.T) {
 	config := DefaultConfiguration()
 	config.Licences.Accept = []string{"bsd-2-clause"}
 	t1 := NewBuildTarget(ParseBuildLabel("//src/core:core", ""))
-	t2 := NewBuildTarget(ParseBuildLabel("//src/wdFS:wdFS", ""))
+	t2 := NewBuildTarget(ParseBuildLabel("//src/fs:fs", ""))
 	t3 := NewBuildTarget(ParseBuildLabel("//third_party/go:errors", ""))
 	t1.AddLabel("go")
 	t3.AddLabel("go_get:github.com/pkg/errors")
@@ -28,7 +28,7 @@ func TestStampFile(t *testing.T) {
         "go"
       ]
     },
-    "//src/wdFS:wdFS": {},
+    "//src/fs:fs": {},
     "//third_party/go:errors": {
       "labels": [
         "go_get:github.com/pkg/errors"
