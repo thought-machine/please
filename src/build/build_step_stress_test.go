@@ -5,7 +5,6 @@ package build_test
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/fs"
 	"io"
 	"testing"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/plz"
 )
 

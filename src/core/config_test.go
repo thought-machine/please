@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"github.com/thought-machine/please/src/fs"
 	"os"
 	"reflect"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 func TestPlzConfigWorking(t *testing.T) {

@@ -3,7 +3,6 @@ package help
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/plz"
 )

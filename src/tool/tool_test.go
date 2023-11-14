@@ -1,12 +1,12 @@
 package tool
 
 import (
-	"github.com/thought-machine/please/src/fs"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 func TestMatchingTools(t *testing.T) {

@@ -241,7 +241,7 @@ var opts struct {
 	} `command:"exec" subcommands-optional:"true" description:"Executes a single target in a hermetic build environment"`
 
 	Clean struct {
-		NoBackground bool `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
 		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`

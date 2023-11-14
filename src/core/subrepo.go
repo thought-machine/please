@@ -2,11 +2,11 @@ package core
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/fs"
 	"path/filepath"
 	"strings"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // A Subrepo stores information about a registered subrepository, typically one
