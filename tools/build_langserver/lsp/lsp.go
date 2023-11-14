@@ -187,7 +187,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 	if err := os.Chdir(h.root); err != nil {
 		return nil, err
 	}
-	config, err := core.ReadDefaultConfigFiles(nil)
+	config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil)
 	if err != nil {
 		log.Error("Error reading configuration: %s", err)
 		config = core.DefaultConfiguration()

@@ -1013,7 +1013,7 @@ var buildFunctions = map[string]func() int{
 // Check if tool is given as label or path and then run
 func runTool(_tool tool.Tool) int {
 	c := core.DefaultConfiguration()
-	if cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile); err == nil {
+	if cfg, err := core.ReadDefaultConfigFiles(core.HostFS(), opts.BuildFlags.Profile); err == nil {
 		c = cfg
 	}
 	t, _ := tool.MatchingTool(c, string(_tool))
@@ -1257,7 +1257,7 @@ func (l TargetsOrArgs) SeparateUnannotated() ([]core.BuildLabel, []string) {
 
 // readConfig reads the initial configuration files
 func readConfig() *core.Configuration {
-	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
+	cfg, err := core.ReadDefaultConfigFiles(core.HostFS(), opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {

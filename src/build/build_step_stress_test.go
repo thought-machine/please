@@ -6,6 +6,7 @@ package build_test
 import (
 	"fmt"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,7 @@ const size = 1000
 var state *core.BuildState
 
 func TestBuildLotsOfTargets(t *testing.T) {
-	config, _ := core.ReadConfigFiles(nil, nil)
+	config, _ := core.ReadConfigFiles(os.DirFS("."), nil, nil)
 	config.Please.NumThreads = 10
 	state = core.NewBuildState(config)
 	state.Parser = &fakeParser{

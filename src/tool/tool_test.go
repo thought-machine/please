@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestMatchingTools(t *testing.T) {
-	c, err := core.ReadConfigFiles(nil, nil)
+	c, err := core.ReadConfigFiles(os.DirFS("."), nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{"langserver": "//_please:build_langserver"}, matchingTools(c, "la"))
 	assert.Equal(t, map[string]string{"langserver": "//_please:build_langserver"}, matchingTools(c, "lang"))
@@ -19,7 +20,7 @@ func TestMatchingTools(t *testing.T) {
 }
 
 func TestAllToolNames(t *testing.T) {
-	c, err := core.ReadConfigFiles(nil, nil)
+	c, err := core.ReadConfigFiles(os.DirFS("."), nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"javacworker"}, allToolNames(c, "ja"))
 }

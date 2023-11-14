@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,6 +37,17 @@ func FindRepoRoot() bool {
 	return RepoRoot != ""
 }
 
+type osFS func(name string) (*os.File, error)
+
+func (r osFS) Open(name string) (iofs.File, error) {
+	return r(name)
+}
+
+// HostFS returns an io/fs.FS that behaves the same as the host OS i.e. the same way os.Open works.
+func HostFS() iofs.FS {
+	return osFS(os.Open)
+}
+
 // MustFindRepoRoot returns the root directory of the current repo and sets the initial working dir.
 // It dies on failure, although will fall back to looking for a Bazel WORKSPACE file first.
 func MustFindRepoRoot() string {
@@ -53,7 +65,7 @@ func MustFindRepoRoot() string {
 	}
 	// Check the config for a default repo location. Of course, we have to load system-level config
 	// in order to do that...
-	config, err := ReadConfigFiles(defaultGlobalConfigFiles(), nil)
+	config, err := ReadConfigFiles(HostFS(), defaultGlobalConfigFiles(), nil)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	}
