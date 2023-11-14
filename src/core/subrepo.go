@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/thought-machine/please/src/fs"
 	"path/filepath"
 	"strings"
 
@@ -77,7 +78,7 @@ func (s *Subrepo) Dir(dir string) string {
 
 func readConfigFilesInto(repoConfig *Configuration, files []string) error {
 	for _, file := range files {
-		err := readConfigFile(HostFS(), repoConfig, file, true)
+		err := readConfigFile(fs.HostFS, repoConfig, file, true)
 		if err != nil {
 			return err
 		}

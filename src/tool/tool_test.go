@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"github.com/thought-machine/please/src/fs"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestMatchingTools(t *testing.T) {
-	c, err := core.ReadConfigFiles(core.HostFS(), nil, nil)
+	c, err := core.ReadConfigFiles(fs.HostFS, nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{"langserver": "//_please:build_langserver"}, matchingTools(c, "la"))
 	assert.Equal(t, map[string]string{"langserver": "//_please:build_langserver"}, matchingTools(c, "lang"))
@@ -19,7 +20,7 @@ func TestMatchingTools(t *testing.T) {
 }
 
 func TestAllToolNames(t *testing.T) {
-	c, err := core.ReadConfigFiles(core.HostFS(), nil, nil)
+	c, err := core.ReadConfigFiles(fs.HostFS, nil, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"javacworker"}, allToolNames(c, "ja"))
 }

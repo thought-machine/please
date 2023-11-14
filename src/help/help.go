@@ -3,6 +3,7 @@ package help
 
 import (
 	"fmt"
+	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,7 +28,7 @@ const maxSuggestionDistance = 4
 // Help prints help on a particular topic.
 // It returns true if the topic is known or false if it isn't.
 func Help(topic string) bool {
-	config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil)
+	config, err := core.ReadDefaultConfigFiles(fs.HostFS, nil)
 	if err != nil {
 		// Don't bother the user if we can't load config files or whatever - just do our best.
 		config = core.DefaultConfiguration()

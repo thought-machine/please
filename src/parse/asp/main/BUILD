@@ -7,6 +7,7 @@ go_binary(
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
+        "//src/fs",
         "//src/parse/asp",
     ],
 )

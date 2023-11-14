@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -203,7 +204,7 @@ func main() {
 	config := core.DefaultConfiguration()
 	if !opts.NoConfig {
 		var err error
-		config, err = core.ReadConfigFiles(core.HostFS(), []string{filepath.Join(core.MustFindRepoRoot(), core.ConfigFileName)}, nil)
+		config, err = core.ReadConfigFiles(fs.HostFS, []string{filepath.Join(core.MustFindRepoRoot(), core.ConfigFileName)}, nil)
 		if err != nil {
 			log.Fatalf("%s", err)
 		}

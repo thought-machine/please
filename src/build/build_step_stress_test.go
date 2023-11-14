@@ -5,6 +5,7 @@ package build_test
 
 import (
 	"fmt"
+	"github.com/thought-machine/please/src/fs"
 	"io"
 	"testing"
 
@@ -22,7 +23,7 @@ const size = 1000
 var state *core.BuildState
 
 func TestBuildLotsOfTargets(t *testing.T) {
-	config, _ := core.ReadConfigFiles(core.HostFS(), nil, nil)
+	config, _ := core.ReadConfigFiles(fs.HostFS, nil, nil)
 	config.Please.NumThreads = 10
 	state = core.NewBuildState(config)
 	state.Parser = &fakeParser{

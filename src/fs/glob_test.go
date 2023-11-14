@@ -13,7 +13,7 @@ import (
 var buildFileNames = []string{"TEST_BUILD", "BUILD"}
 
 func glob(rootPath string, glob string, excludes []string, includeHidden bool) ([]string, error) {
-	return NewGlobber(buildFileNames).glob(rootPath, glob, excludes, includeHidden, true)
+	return NewGlobber(HostFS, buildFileNames).glob(rootPath, glob, excludes, includeHidden, true)
 }
 
 func TestCanGlobFileAtRootWithDoubleStar(t *testing.T) {
@@ -72,7 +72,7 @@ func TestGlobPlusPlusInDirName(t *testing.T) {
 
 func TestGlobExcludes(t *testing.T) {
 	t.Run("relative glob", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test.txt"}, false)
+		files := Glob(HostFS, buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test.txt"}, false)
 		expected := []string{
 			"test_data/test_subfolder1/a.txt",
 			"test_data/test_subfolder1/sub_sub_folder/b.txt",
@@ -81,7 +81,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("exact glob", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/*.txt"}, false)
+		files := Glob(HostFS, buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/*.txt"}, false)
 		expected := []string{
 			"test_data/test_subfolder1/a.txt",
 			"test_data/test_subfolder1/sub_sub_folder/b.txt",
@@ -91,7 +91,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("entire directory", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1/**"}, false)
+		files := Glob(HostFS, buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1/**"}, false)
 		expected := []string{
 			"test_data/test_subfolder++/test.txt",
 			"test_data/test.txt",
@@ -100,7 +100,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("entire directory via base path exclusion", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1"}, false)
+		files := Glob(HostFS, buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test_data/test_subfolder1"}, false)
 		expected := []string{
 			"test_data/test_subfolder++/test.txt",
 			"test_data/test.txt",
@@ -109,7 +109,7 @@ func TestGlobExcludes(t *testing.T) {
 	})
 
 	t.Run("mix of relative and total", func(t *testing.T) {
-		files := Glob(buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test.txt", "test_data/test_subfolder1/a.txt"}, false)
+		files := Glob(HostFS, buildFileNames, "src/fs", []string{"test_data/**.txt"}, []string{"test.txt", "test_data/test_subfolder1/a.txt"}, false)
 		expected := []string{
 			"test_data/test_subfolder1/sub_sub_folder/b.txt",
 		}
@@ -118,7 +118,7 @@ func TestGlobExcludes(t *testing.T) {
 }
 
 func TestCannotGlobBetweenPackageBoundaries(t *testing.T) {
-	files := Glob(buildFileNames, "src/fs", []string{"**/*.txt", "**/*.py"}, nil, false)
+	files := Glob(HostFS, buildFileNames, "src/fs", []string{"**/*.txt", "**/*.py"}, nil, false)
 	expected := []string{
 		"test_data/test_subfolder++/test.txt",
 		"test_data/test_subfolder1/a.txt",

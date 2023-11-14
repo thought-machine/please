@@ -2,6 +2,7 @@ package help
 
 import (
 	"encoding/json"
+	"github.com/thought-machine/please/src/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,7 +42,7 @@ func PrintRuleArgs(files cli.StdinStrings) {
 func newState() *core.BuildState {
 	// If we're in a repo, we might be able to read some stuff from there.
 	if core.FindRepoRoot() {
-		if config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil); err == nil {
+		if config, err := core.ReadDefaultConfigFiles(fs.HostFS, nil); err == nil {
 			return core.NewBuildState(config)
 		}
 	}

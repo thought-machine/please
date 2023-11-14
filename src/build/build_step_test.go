@@ -519,7 +519,7 @@ func TestSha1SingleHash(t *testing.T) {
 }
 
 func newStateWithHashCheckers(label, hashFunction string, hashCheckers ...string) (*core.BuildState, *core.BuildTarget) {
-	config, _ := core.ReadConfigFiles(core.HostFS(), nil, nil)
+	config, _ := core.ReadConfigFiles(fs.HostFS, nil, nil)
 	if hashFunction != "" {
 		config.Build.HashFunction = hashFunction
 	}
@@ -538,7 +538,7 @@ func newStateWithHashCheckers(label, hashFunction string, hashCheckers ...string
 }
 
 func newStateWithHashFunc(label, hashFunc string) (*core.BuildState, *core.BuildTarget) {
-	config, _ := core.ReadConfigFiles(core.HostFS(), nil, nil)
+	config, _ := core.ReadConfigFiles(fs.HostFS, nil, nil)
 	config.Build.HashFunction = hashFunc
 	state := core.NewBuildState(config)
 	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
@@ -552,7 +552,7 @@ func newStateWithHashFunc(label, hashFunc string) (*core.BuildState, *core.Build
 }
 
 func newState(label string) (*core.BuildState, *core.BuildTarget) {
-	config, _ := core.ReadConfigFiles(core.HostFS(), nil, nil)
+	config, _ := core.ReadConfigFiles(fs.HostFS, nil, nil)
 	state := core.NewBuildState(config)
 	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
 	target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))

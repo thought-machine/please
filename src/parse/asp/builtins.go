@@ -607,7 +607,7 @@ func glob(s *scope, args []pyObject) pyObject {
 	allowEmpty := args[4].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
-		s.globber = fs.NewGlobber(s.state.Config.Parse.BuildFileName)
+		s.globber = fs.NewGlobber(fs.HostFS, s.state.Config.Parse.BuildFileName)
 	}
 
 	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)

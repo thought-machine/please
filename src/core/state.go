@@ -1192,12 +1192,12 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	configPath := ".plzconfig_" + arch.String()
 
 	config := state.Config.copyConfig()
-	if err := readConfigFile(HostFS(), config, configPath, false); err != nil {
+	if err := readConfigFile(fs.HostFS, config, configPath, false); err != nil {
 		log.Fatalf("%v", err)
 	}
 
 	repoConfig := state.Config.copyConfig()
-	if err := readConfigFile(HostFS(), repoConfig, configPath, false); err != nil {
+	if err := readConfigFile(fs.HostFS, repoConfig, configPath, false); err != nil {
 		log.Fatalf("%v", err)
 	}
 
