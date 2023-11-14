@@ -226,9 +226,7 @@ func formatPluginHelpMessage(message, description, docSite string, options map[s
 func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 	var dirs []string
 	if len(subrepo.State.Config.PluginDefinition.BuildDefsDir) > 0 {
-		for _, dir := range subrepo.State.Config.PluginDefinition.BuildDefsDir {
-			dirs = append(dirs, dir)
-		}
+		dirs = append(dirs, subrepo.State.Config.PluginDefinition.BuildDefsDir...)
 	} else {
 		// By default, check the build_defs dir in the plugin
 		dirs = append(dirs, "build_defs")
