@@ -104,7 +104,7 @@ func findRootAndReadConfigFilesOnly() *core.Configuration {
 		core.RepoRoot = abs
 	} else if !core.FindRepoRoot() {
 		log.Debug("Trying to find the default repo root on global config files")
-		if err := core.ReadDefaultGlobalConfigFilesOnly(config); err != nil {
+		if err := core.ReadDefaultGlobalConfigFilesOnly(core.HostFS(), config); err != nil {
 			log.Fatalf("Error reading default global config file: %s", err)
 		}
 		// We are done here. There's no default repo root and we've read all
@@ -116,7 +116,7 @@ func findRootAndReadConfigFilesOnly() *core.Configuration {
 	}
 
 	// At this point the repo root is known so read its config files.
-	if err := core.ReadDefaultConfigFilesOnly(config, opts.BuildFlags.Profile); err != nil {
+	if err := core.ReadDefaultConfigFilesOnly(core.HostFS(), config, opts.BuildFlags.Profile); err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	}
 
@@ -165,7 +165,7 @@ func maybeUpdatePlease(state state, isUpdateCommand bool) {
 	core.PleaseVersion = strings.TrimPrefix(strings.TrimSpace(string(out)), "Please version ")
 
 	// Read and load the configuration as it would have been done by the main binary.
-	cfg, err := core.ReadDefaultConfigFiles(opts.BuildFlags.Profile)
+	cfg, err := core.ReadDefaultConfigFiles(core.HostFS(), opts.BuildFlags.Profile)
 	if err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	} else if err := cfg.ApplyOverrides(opts.BuildFlags.Option); err != nil {

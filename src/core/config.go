@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -57,31 +58,41 @@ const DefaultPleaseLocation = "~/.please"
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
 // readConfigFileOnly reads a single config file into the config struct
-func readConfigFileOnly(config *Configuration, filename string, quiet bool) error {
+func readConfigFileOnly(fs iofs.FS, config *Configuration, filename string, quiet bool) error {
 	log.Debug("Attempting to read config from %s...", filename)
-	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
-		return nil // It's not an error to not have the file at all.
-	} else if gcfg.FatalOnly(err) != nil {
-		return err
-	} else if err != nil {
-		if quiet {
-			log.Debug("Error in config file %s: %s", filename, err)
-		} else {
-			log.Warning("Error in config file %s: %s", filename, err)
+	f, err := fs.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
 		}
-	} else {
+		return err
+	}
+	defer f.Close()
+
+	err = gcfg.ReadInto(config, f)
+	if err == nil {
 		log.Debug("Read config from %s", filename)
+		return nil
+	}
+
+	if gcfg.FatalOnly(err) != nil {
+		return err
+	}
+	if quiet {
+		log.Debug("Error in config file %s: %s", filename, err)
+	} else {
+		log.Warning("Error in config file %s: %s", filename, err)
 	}
 	return nil
 }
 
 // readConfigFile reads a single config file into the config struct taking into account
 // some context like subrepos and plugins.
-func readConfigFile(config *Configuration, filename string, subrepo bool) error {
+func readConfigFile(fs iofs.FS, config *Configuration, filename string, subrepo bool) error {
 	plugins := config.Plugin
 	config.Plugin = map[string]*Plugin{}
 
-	if err := readConfigFileOnly(config, filename, subrepo); err != nil {
+	if err := readConfigFileOnly(fs, config, filename, subrepo); err != nil {
 		return err
 	}
 
@@ -108,28 +119,28 @@ func checkPluginVersionRequirements(config *Configuration) {
 // ReadDefaultConfigFiles reads all the config files from the default locations and
 // merges them into a config object.
 // The repo root must have already have been set before calling this.
-func ReadDefaultConfigFiles(profiles []ConfigProfile) (*Configuration, error) {
+func ReadDefaultConfigFiles(fs iofs.FS, profiles []ConfigProfile) (*Configuration, error) {
 	s := make([]string, len(profiles))
 	for i, p := range profiles {
 		s[i] = string(p)
 	}
-	return ReadConfigFiles(defaultConfigFiles(), s)
+	return ReadConfigFiles(fs, defaultConfigFiles(), s)
 }
 
 // ReadDefaultGlobalConfigFilesOnly reads all the default global config files and
 // merges them into a config object.
-func ReadDefaultGlobalConfigFilesOnly(config *Configuration) error {
-	return ReadConfigFilesOnly(config, defaultGlobalConfigFiles(), nil)
+func ReadDefaultGlobalConfigFilesOnly(fs iofs.FS, config *Configuration) error {
+	return ReadConfigFilesOnly(fs, config, defaultGlobalConfigFiles(), nil)
 }
 
 // ReadDefaultConfigFilesOnly reads all the default config files and
 // merges them into a config object.
-func ReadDefaultConfigFilesOnly(config *Configuration, profiles []ConfigProfile) error {
+func ReadDefaultConfigFilesOnly(fs iofs.FS, config *Configuration, profiles []ConfigProfile) error {
 	s := make([]string, len(profiles))
 	for i, p := range profiles {
 		s[i] = string(p)
 	}
-	return ReadConfigFilesOnly(config, defaultConfigFiles(), s)
+	return ReadConfigFilesOnly(fs, config, defaultConfigFiles(), s)
 }
 
 // defaultGlobalConfigFiles returns the set of global default config file names.
@@ -168,13 +179,13 @@ func defaultConfigFiles() []string {
 }
 
 // ReadConfigFilesOnly reads all the config locations, in order, and merges them into a config object.
-func ReadConfigFilesOnly(config *Configuration, filenames []string, profiles []string) error {
+func ReadConfigFilesOnly(fs iofs.FS, config *Configuration, filenames []string, profiles []string) error {
 	for _, filename := range filenames {
-		if err := readConfigFileOnly(config, filename, false); err != nil {
+		if err := readConfigFileOnly(fs, config, filename, false); err != nil {
 			return err
 		}
 		for _, profile := range profiles {
-			if err := readConfigFileOnly(config, filename+"."+profile, false); err != nil {
+			if err := readConfigFileOnly(fs, config, filename+"."+profile, false); err != nil {
 				return err
 			}
 		}
@@ -184,14 +195,14 @@ func ReadConfigFilesOnly(config *Configuration, filenames []string, profiles []s
 
 // ReadConfigFiles reads all the config locations, in order, and merges them into a config object.
 // Values are filled in by defaults initially and then overridden by each file in turn.
-func ReadConfigFiles(filenames []string, profiles []string) (*Configuration, error) {
+func ReadConfigFiles(fs iofs.FS, filenames []string, profiles []string) (*Configuration, error) {
 	config := DefaultConfiguration()
 	for _, filename := range filenames {
-		if err := readConfigFile(config, filename, false); err != nil {
+		if err := readConfigFile(fs, config, filename, false); err != nil {
 			return config, err
 		}
 		for _, profile := range profiles {
-			if err := readConfigFile(config, filename+"."+profile, false); err != nil {
+			if err := readConfigFile(fs, config, filename+"."+profile, false); err != nil {
 				return config, err
 			}
 		}

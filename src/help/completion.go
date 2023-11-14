@@ -18,7 +18,7 @@ func (topic *Topic) UnmarshalFlag(value string) error {
 
 // Complete implements the flags.Completer interface, which is used for shell completion.
 func (topic Topic) Complete(match string) []flags.Completion {
-	config, err := core.ReadDefaultConfigFiles(nil)
+	config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil)
 	if err != nil {
 		config = core.DefaultConfiguration()
 	}
