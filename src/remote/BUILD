@@ -39,6 +39,7 @@ go_library(
         "//src/fs",
         "//src/metrics",
         "//src/process",
+        "//src/remote/fs",
     ],
 )
 

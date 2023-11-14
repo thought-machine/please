@@ -257,6 +257,27 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 			}
 			continue
 		}
+		if subrepoFileLabel, ok := input.(core.SubrepoFileLabel); c.state.FFRemoteSubrepoFS && ok {
+			tree, err := c.getTargetOutputTree(target.Subrepo.Target.Label)
+			if err != nil {
+				return nil, err
+			}
+			fullPaths := subrepoFileLabel.FullPaths(c.state.Graph)
+			for i, path := range subrepoFileLabel.Paths(c.state.Graph) {
+				in := fullPaths[i]
+				file, dir := findInTree(tree, in)
+
+				parent := b.Dir(filepath.Dir(path))
+				if file != nil {
+					parent.Files = append(parent.Files, file)
+				} else if dir != nil {
+					parent.Directories = append(parent.Directories, dir)
+				} else {
+					log.Fatalf("failed to find expected subrepo output ///%v//%v", target.Label.Subrepo, path)
+				}
+			}
+			continue
+		}
 		if err := c.uploadInput(b, ch, input); err != nil {
 			return nil, err
 		}

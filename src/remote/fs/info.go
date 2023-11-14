@@ -4,6 +4,8 @@ import (
 	iofs "io/fs"
 	"os"
 	"time"
+
+	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
 // info represents information about a file/directory
@@ -46,4 +48,19 @@ func (i *info) IsDir() bool {
 
 func (i *info) Sys() any {
 	return nil
+}
+
+func (i *info) withProperties(nodeProperties *pb.NodeProperties) *info {
+	if nodeProperties == nil {
+		return i
+	}
+
+	if nodeProperties.UnixMode != nil {
+		i.mode = os.FileMode(nodeProperties.UnixMode.Value)
+	}
+
+	if nodeProperties.Mtime != nil {
+		i.modTime = nodeProperties.Mtime.AsTime()
+	}
+	return i
 }

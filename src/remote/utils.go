@@ -121,7 +121,9 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
 	c.outputs[target.Label] = o
-	return nil
+	_, err := c.client.WriteProto(context.Background(), o)
+
+	return err
 }
 
 func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
@@ -325,12 +327,6 @@ func printVer(v *semver.SemVer) string {
 	return msg
 }
 
-// IsNotFound returns true if a given error is a "not found" error (which may be treated
-// differently, for example if trying to retrieve artifacts that may not be there).
-func IsNotFound(err error) bool {
-	return status.Code(err) == codes.NotFound
-}
-
 // hasChild returns true if a Directory has a child directory by the given name.
 func hasChild(dir *pb.Directory, child string) bool {
 	for _, d := range dir.Directories {
@@ -423,6 +419,48 @@ func (b *dirBuilder) dir(dir, child string) *pb.Directory {
 		d.Directories = append(d.Directories, &pb.DirectoryNode{Name: child})
 	}
 	return d
+}
+
+func findInTree(tree *pb.Tree, path string) (*pb.FileNode, *pb.DirectoryNode) {
+	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
+	for _, child := range tree.Children {
+		dg, err := digest.NewFromMessage(child)
+		if err != nil {
+			panic(fmt.Errorf("failed to create reapi fs: failed to calculate digest: %v", err))
+		}
+		directories[dg] = child
+	}
+	return reallyFindInTree(tree, directories, tree.Root, path, ".")
+}
+
+func reallyFindInTree(tree *pb.Tree, dirs map[digest.Digest]*pb.Directory, curDir *pb.Directory, path, wd string) (*pb.FileNode, *pb.DirectoryNode) {
+	// we need to keep going if we find a path separator. This path matches something deeper in the tree.
+	name, rest, keepGoing := strings.Cut(path, string(filepath.Separator))
+
+	for _, dirNode := range curDir.Directories {
+		if dirNode.Name == name {
+			if keepGoing {
+				dir := dirs[digest.NewFromProtoUnvalidated(dirNode.Digest)]
+				return reallyFindInTree(tree, dirs, dir, rest, filepath.Join(wd, name))
+			}
+			return nil, dirNode
+		}
+	}
+	if keepGoing {
+		return nil, nil
+	}
+	for _, fileNode := range curDir.Files {
+		if fileNode.Name == name {
+			return fileNode, nil
+		}
+	}
+	for _, symlinkNode := range curDir.Symlinks {
+		if symlinkNode.Name == name {
+			// Start over with the new path
+			return reallyFindInTree(tree, dirs, tree.Root, filepath.Join(wd, symlinkNode.Target), ".")
+		}
+	}
+	return nil, nil
 }
 
 // Build "builds" the directory. It calculate the digests of all the items in the directory tree, and returns the root

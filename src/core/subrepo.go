@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	iofs "io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -41,6 +43,18 @@ func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch 
 	}
 }
 
+func (s *Subrepo) GetFS() (iofs.FS, error) {
+	if s.State.RemoteClient == nil || s.Target == nil || s.Target.Local {
+		return os.DirFS(s.Root), nil
+	}
+	root := s.Target.Label.Name
+	if len(s.Target.Outputs()) == 1 {
+		root = s.Target.Outputs()[0]
+	}
+
+	return s.State.RemoteClient.RemoteFS(s.Target, root)
+}
+
 // SubrepoForArch creates a new subrepo for the given architecture.
 func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 	s := NewSubrepo(state.ForArch(arch), arch.String(), "", nil, arch, true)
@@ -75,9 +89,23 @@ func (s *Subrepo) Dir(dir string) string {
 	return filepath.Join(s.Root, dir)
 }
 
-func readConfigFilesInto(repoConfig *Configuration, files []string) error {
+func readConfigFilesInto(subrepo *Subrepo, repoConfig *Configuration, files []string) error {
 	for _, file := range files {
-		err := readConfigFile(repoConfig, file, true)
+		fs, err := subrepo.GetFS()
+		if err != nil {
+			return err
+		}
+
+		f, err := fs.Open(file)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+
+		err = readConfigFileReader(repoConfig, f, file, true)
+		f.Close()
 		if err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@
 package fs
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -25,10 +26,11 @@ type fs struct {
 	c           Client
 	root        *pb.Directory
 	directories map[digest.Digest]*pb.Directory
+	workingDir  string
 }
 
 // New creates a new filesystem on top of the given proto, using client to download files on demand.
-func New(c Client, tree *pb.Tree) iofs.FS {
+func New(c Client, tree *pb.Tree, workingDir string) iofs.FS {
 	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
 	for _, child := range tree.Children {
 		dg, err := digest.NewFromMessage(child)
@@ -42,12 +44,13 @@ func New(c Client, tree *pb.Tree) iofs.FS {
 		c:           c,
 		root:        tree.Root,
 		directories: directories,
+		workingDir:  workingDir,
 	}
 }
 
 // Open opens the file with the given name
 func (fs *fs) Open(name string) (iofs.File, error) {
-	return fs.open(".", filepath.Clean(name), fs.root)
+	return fs.open(".", filepath.Join(fs.workingDir, name), fs.root)
 }
 
 func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
@@ -61,13 +64,12 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 		if d.Name == name {
 			dirPb := fs.directories[digest.NewFromProtoUnvalidated(d.Digest)]
 			if rest == "" {
+				i := &info{
+					name:  name,
+					isDir: true,
+				}
 				return &dir{
-					info: info{
-						mode:    iofs.FileMode(dirPb.NodeProperties.UnixMode.Value),
-						modTime: dirPb.NodeProperties.GetMtime().AsTime(),
-						name:    name,
-						isDir:   true,
-					},
+					info:     i.withProperties(dirPb.NodeProperties),
 					pb:       dirPb,
 					children: fs.directories,
 				}, nil
@@ -87,15 +89,15 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 			if err != nil {
 				return nil, err
 			}
+			i := &info{
+				isDir: false,
+				size:  int64(len(bs)),
+				name:  f.Name,
+			}
+
 			return &file{
-				bs: bs,
-				info: info{
-					isDir:   false,
-					size:    int64(len(bs)),
-					mode:    iofs.FileMode(f.NodeProperties.UnixMode.Value),
-					modTime: f.NodeProperties.GetMtime().AsTime(),
-					name:    f.Name,
-				},
+				ReadSeeker: bytes.NewReader(bs),
+				info:       i.withProperties(f.NodeProperties),
 			}, nil
 		}
 	}
@@ -118,27 +120,13 @@ func (fs *fs) open(path, name string, wd *pb.Directory) (iofs.File, error) {
 }
 
 type file struct {
-	bs []byte
-	info
+	io.ReadSeeker
+	*info
 }
 
 func (b *file) Stat() (iofs.FileInfo, error) {
 	return b, nil
 }
-
-func (b *file) Read(bytes []byte) (int, error) {
-	for i := range bytes {
-		if i == len(b.bs) {
-			return i, io.EOF
-		}
-		if i == len(bytes) {
-			return i, nil
-		}
-		bytes[i] = b.bs[i]
-	}
-	return len(b.bs), nil
-}
-
 func (b *file) Close() error {
 	return nil
 }
@@ -146,7 +134,7 @@ func (b *file) Close() error {
 type dir struct {
 	pb       *pb.Directory
 	children map[digest.Digest]*pb.Directory
-	info
+	*info
 }
 
 // ReadDir is a slightly incorrect implementation of ReadDir. It deviates slightly as it will report all files have 0
@@ -162,35 +150,40 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 			return ret, nil
 		}
 		dir := p.children[digest.NewFromProtoUnvalidated(dirNode.Digest)]
-		ret = append(ret, &info{
+
+		i := &info{
 			name:     dirNode.Name,
 			isDir:    true,
 			typeMode: os.ModeDir,
-			mode:     os.FileMode(dir.NodeProperties.UnixMode.Value),
-			modTime:  dir.NodeProperties.GetMtime().AsTime(),
-		})
+		}
+
+		i.withProperties(dir.NodeProperties)
+
+		ret = append(ret, i)
 	}
 	for _, file := range p.pb.Files {
 		if n > 0 && len(ret) == n {
 			return ret, nil
 		}
-		ret = append(ret, &info{
+		i := &info{
 			name: file.Name,
-			mode: os.FileMode(file.NodeProperties.UnixMode.Value),
 			// TODO(jpoole): technically we could calculate this on demand by allowing info.Size() to download the file
 			// 	from the CAS... we don't need to for now though.
 			size: 0,
-		})
+		}
+		i.withProperties(file.NodeProperties)
+		ret = append(ret, i)
 	}
 	for _, link := range p.pb.Symlinks {
 		if n > 0 && len(ret) == n {
 			return ret, nil
 		}
-		ret = append(ret, &info{
+		i := &info{
 			name:     link.Name,
-			mode:     os.FileMode(link.NodeProperties.UnixMode.Value),
 			typeMode: os.ModeSymlink,
-		})
+		}
+		i.withProperties(link.NodeProperties)
+		ret = append(ret, i)
 	}
 	return ret, nil
 }

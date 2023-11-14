@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
+	remotefs "github.com/thought-machine/please/src/remote/fs"
 )
 
 var log = logging.Log
@@ -112,6 +114,34 @@ type Client struct {
 	// existingBlobs is used to track the set of existing blobs remotely.
 	existingBlobs     map[string]struct{}
 	existingBlobMutex sync.Mutex
+}
+
+func (c *Client) getTargetOutputTree(label core.BuildLabel) (*pb.Tree, error) {
+	c.outputMutex.RLock()
+	root := c.outputs[label]
+	dg, err := digest.NewFromMessage(root)
+	if err != nil {
+		return nil, err
+	}
+
+	children, err := c.client.GetDirectoryTree(context.Background(), dg.ToProto())
+	if err != nil {
+		return nil, err
+	}
+	c.outputMutex.RUnlock()
+
+	return &pb.Tree{
+		Root:     root,
+		Children: children,
+	}, nil
+}
+
+func (c *Client) RemoteFS(target *core.BuildTarget, workingDir string) (iofs.FS, error) {
+	tree, err := c.getTargetOutputTree(target.Label)
+	if err != nil {
+		return nil, err
+	}
+	return remotefs.New(c.client, tree, workingDir), nil
 }
 
 type actionDigestMap struct {

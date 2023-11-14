@@ -56,21 +56,35 @@ const DefaultPleaseLocation = "~/.please"
 // DefaultPath is the default location please looks for programs in
 var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
-// readConfigFileOnly reads a single config file into the config struct
 func readConfigFileOnly(config *Configuration, filename string, quiet bool) error {
-	log.Debug("Attempting to read config from %s...", filename)
-	if err := gcfg.ReadFileInto(config, filename); err != nil && os.IsNotExist(err) {
-		return nil // It's not an error to not have the file at all.
-	} else if gcfg.FatalOnly(err) != nil {
-		return err
-	} else if err != nil {
-		if quiet {
-			log.Debug("Error in config file %s: %s", filename, err)
-		} else {
-			log.Warning("Error in config file %s: %s", filename, err)
+	file, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
 		}
-	} else {
+		return err
+	}
+
+	return readInto(config, file, filename, quiet)
+}
+
+func readInto(config *Configuration, reader io.Reader, filename string, quiet bool) error {
+	log.Debug("Attempting to read config from %s...", filename)
+	err := gcfg.ReadInto(config, reader)
+	if err == nil {
 		log.Debug("Read config from %s", filename)
+	}
+
+	// Return the err if it's fatal
+	if gcfg.FatalOnly(err) != nil {
+		return err
+	}
+
+	// This error wasn't fatal so we treat it as a warning.
+	if quiet {
+		log.Debug("Error in config file %s: %s", filename, err)
+	} else {
+		log.Warning("Error in config file %s: %s", filename, err)
 	}
 	return nil
 }
@@ -78,16 +92,25 @@ func readConfigFileOnly(config *Configuration, filename string, quiet bool) erro
 // readConfigFile reads a single config file into the config struct taking into account
 // some context like subrepos and plugins.
 func readConfigFile(config *Configuration, filename string, subrepo bool) error {
-	plugins := config.Plugin
-	config.Plugin = map[string]*Plugin{}
-
-	if err := readConfigFileOnly(config, filename, subrepo); err != nil {
+	file, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 
-	if subrepo {
-		checkPluginVersionRequirements(config)
+	return readConfigFileReader(config, file, filename, subrepo)
+}
+
+func readConfigFileReader(config *Configuration, reader io.Reader, filename string, subrepo bool) error {
+	plugins := config.Plugin
+	config.Plugin = map[string]*Plugin{}
+
+	if err := readInto(config, reader, filename, subrepo); err != nil {
+		return err
 	}
+
 	normaliseAndMergePluginConfig(config, plugins)
 
 	return nil

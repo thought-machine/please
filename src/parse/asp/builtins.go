@@ -1289,11 +1289,15 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
 		target = s.pkg.TargetOrDie(s.parseLabelInPackage(dep, s.pkg).Name)
+		dirPrefix := target.OutDir()
+		if s.state.FFRemoteSubrepoFS && s.state.RemoteClient != nil && !target.Local {
+			dirPrefix = ""
+		}
 		if len(target.Outputs()) == 1 {
-			root = filepath.Join(target.OutDir(), target.Outputs()[0])
+			root = filepath.Join(dirPrefix, target.Outputs()[0])
 		} else {
 			// TODO(jpoole): perhaps this should be a fatal error?
-			root = filepath.Join(target.OutDir(), name)
+			root = filepath.Join(dirPrefix, name)
 		}
 	} else if args[PathArgIdx] != None {
 		root = string(args[PathArgIdx].(pyString))

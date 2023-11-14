@@ -10,6 +10,9 @@ go_library(
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/execution/v2",
         "///third_party/go/google.golang.org_protobuf//proto",
     ],
+    visibility = [
+        "//src/remote",
+    ],
 )
 
 go_test(

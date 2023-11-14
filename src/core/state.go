@@ -8,6 +8,7 @@ import (
 	"hash/crc32"
 	"hash/crc64"
 	"io"
+	iofs "io/fs"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -111,6 +112,8 @@ type RemoteClient interface {
 	DataRate() (int, int, int, int)
 	// Disconnect disconnects from the remote execution server.
 	Disconnect() error
+	// RemoteFS creates a filesystem for a build targets output directory, with the provided working directory
+	RemoteFS(target *BuildTarget, workingDir string) (iofs.FS, error)
 }
 
 // A TargetHasher is a thing that knows how to create hashes for targets.
@@ -235,6 +238,10 @@ type BuildState struct {
 
 	// preloadDownloadOnce is used
 	preloadDownloadOnce *sync.Once
+
+	// FFRemoteSubrepoFS, when enabled, uses the remote subrepo file system feature, that enables us to parse and build
+	// subrepo targets without downloading the subrepo locally during remote execution.
+	FFRemoteSubrepoFS bool
 }
 
 // Copy creates a copy of this state object
@@ -251,11 +258,11 @@ func (state *BuildState) Copy() *BuildState {
 // it's not done up front. Once we have done that, we can initialise the parser for the subrepo.
 func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 	state.initOnce.Do(func() {
-		// If we are the root repo, or an cross-compilation of that, we don't want to re-load the config files. That's
+		// If we are the root repo, or a cross-compilation of that, we don't want to re-load the config files. That's
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
 			state.RepoConfig = &Configuration{}
-			err = readConfigFilesInto(state.RepoConfig, append(subrepo.AdditionalConfigFiles, filepath.Join(subrepo.Root, ".plzconfig")))
+			err = readConfigFilesInto(subrepo, state.RepoConfig, append(subrepo.AdditionalConfigFiles, ".plzconfig"))
 			if err != nil {
 				return
 			}
@@ -854,8 +861,8 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 }
 
 // WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
-func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
-	return state.waitForBuiltTarget(l, dependent, ParseModeForSubinclude)
+func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
+	return state.waitForBuiltTarget(l, dependent, mode|ParseModeForSubinclude)
 }
 
 func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
@@ -1078,7 +1085,7 @@ func (state *BuildState) QueueTestTarget(target *BuildTarget) {
 func (state *BuildState) queueTargetData(target *BuildTarget) {
 	for _, data := range target.AllData() {
 		if l, ok := data.Label(); ok {
-			state.WaitForBuiltTarget(l, target.Label)
+			state.WaitForBuiltTarget(l, target.Label, ParseModeForSubinclude)
 		}
 	}
 }

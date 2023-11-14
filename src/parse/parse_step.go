@@ -7,6 +7,8 @@ package parse
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -62,7 +64,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label, mode.IsPreload())
+		state.WaitForBuiltTarget(subrepo.Target.Label, label, mode)
 		if err := subrepo.State.Initialise(subrepo); err != nil {
 			return err
 		}
@@ -156,10 +158,14 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
-		filename, dir := buildFileName(state, label.PackageName, subrepo)
-		if filename != "" {
+
+		filename, reader, dir, err := findBuildFile(state, label.PackageName, subrepo)
+		if err != nil {
+			log.Fatalf("failed to find build file: %v", err)
+		}
+		if reader != nil && state.FFRemoteSubrepoFS {
 			pkg.Filename = filename
-			if err := state.Parser.ParseFile(pkg, &label, &dependent, mode, pkg.Filename); err != nil {
+			if err := state.Parser.ParseReader(pkg, reader, &label, &dependent, mode); err != nil {
 				return nil, err
 			}
 		} else {
@@ -184,26 +190,48 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	return pkg, nil
 }
 
-// buildFileName returns the name of the BUILD file for a package, or the empty string if one
+// findBuildFile returns the name of the BUILD file for a package, or the empty string if one
 // doesn't exist. It also returns the directory that it looked in.
-func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo) (string, string) {
+func findBuildFile(state *core.BuildState, pkgName string, subrepo *core.Subrepo) (string, io.ReadSeeker, string, error) {
 	config := state.Config
 	if subrepo != nil {
-		pkgName = subrepo.Dir(pkgName)
 		config = subrepo.State.Config
 	}
 	// Bazel defines targets in its "external" package from its WORKSPACE file.
 	// We will fake this by treating that as an actual package file...
 	// TODO(peterebden): They may be moving away from their "external" nomenclature?
 	if state.Config.Bazel.Compatibility && pkgName == "external" || pkgName == "workspace" {
-		return "WORKSPACE", ""
+		return "WORKSPACE", nil, "", nil
 	}
 	for _, buildFileName := range config.Parse.BuildFileName {
-		if filename := filepath.Join(pkgName, buildFileName); fs.FileExists(filename) {
-			return filename, pkgName
+		filename := filepath.Join(pkgName, buildFileName)
+		if subrepo != nil && state.FFRemoteSubrepoFS {
+			subrepoFS, err := subrepo.GetFS()
+			if err != nil {
+				return "", nil, "", err
+			}
+
+			file, err := subrepoFS.Open(filename)
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return "", nil, "", err
+			}
+			rs, ok := file.(io.ReadSeeker)
+			if !ok {
+				// Either the file is an os.File for the local subrepo's or a bytes.Reader for remote subrepos. Both of
+				// which should be ReadSeekers.
+				log.Fatalf("opened file was not a read seeker: %v", filepath.Join(subrepo.Root, filename))
+			}
+			return filename, rs, pkgName, nil
+
+		}
+		if fs.FileExists(filename) {
+			return filename, nil, pkgName, nil
 		}
 	}
-	return "", pkgName
+	return "", nil, pkgName, nil
 }
 
 // buildFileNames returns a descriptive version of the configured BUILD file names.

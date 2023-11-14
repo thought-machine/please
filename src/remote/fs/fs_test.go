@@ -2,6 +2,7 @@ package fs
 
 import (
 	"context"
+	"io"
 	iofs "io/fs"
 	"os"
 	"testing"
@@ -129,8 +130,13 @@ func TestFS(t *testing.T) {
 		},
 	}
 
-	fs := New(fc, tree)
+	fs := New(fc, tree, "")
 	bs, err := iofs.ReadFile(fs, "foo")
+	require.NoError(t, err)
+	assert.Equal(t, "wibble wibble wibble", string(bs))
+
+	f, err := fs.Open("foo")
+	bs, err = io.ReadAll(f)
 	require.NoError(t, err)
 	assert.Equal(t, "wibble wibble wibble", string(bs))
 
