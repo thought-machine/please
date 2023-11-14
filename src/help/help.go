@@ -3,7 +3,7 @@ package help
 
 import (
 	"fmt"
-	"io/fs"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -236,7 +236,7 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 	p := asp.NewParser(subrepo.State)
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
-		dirEntries, err := fs.ReadDir(subrepo.FS, dir)
+		dirEntries, err := iofs.ReadDir(subrepo.FS, dir)
 		if err != nil {
 			log.Warningf("Failed to read %s: %s", dir, err)
 		}
@@ -246,7 +246,7 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 			}
 
 			path := filepath.Join(dir, entry.Name())
-			bs, err := fs.ReadFile(subrepo.FS, path)
+			bs, err := iofs.ReadFile(subrepo.FS, path)
 			if err != nil {
 				log.Warningf("Failed to read %s: %s", path, err)
 			}

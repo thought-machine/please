@@ -2,7 +2,7 @@ package core
 
 import (
 	"fmt"
-	"io/fs"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +19,7 @@ type Subrepo struct {
 	// The root directory to load it from.
 	Root string
 	// A file system rooted at the subrepo's root directory.
-	FS fs.FS
+	FS iofs.FS
 	// A root directory for outputs of this subrepo's targets
 	PackageRoot string
 	// If this repo is output by a target, this is the target that creates it. Can be nil.
