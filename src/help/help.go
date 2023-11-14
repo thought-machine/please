@@ -3,8 +3,8 @@ package help
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -223,29 +223,44 @@ func formatPluginHelpMessage(message, description, docSite string, options map[s
 }
 
 func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
-	p := asp.NewParser(subrepo.State)
 	var dirs []string
 	if len(subrepo.State.Config.PluginDefinition.BuildDefsDir) > 0 {
 		for _, dir := range subrepo.State.Config.PluginDefinition.BuildDefsDir {
-			dirs = append(dirs, filepath.Join(subrepo.Root, dir))
+			dirs = append(dirs, dir)
 		}
 	} else {
 		// By default, check the build_defs dir in the plugin
-		dirs = append(dirs, filepath.Join(subrepo.Root, "build_defs"))
+		dirs = append(dirs, "build_defs")
 	}
 
+	p := asp.NewParser(subrepo.State)
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
-		if files, err := os.ReadDir(dir); err == nil {
-			for _, file := range files {
-				if !file.IsDir() {
-					if stmts, err := p.ParseFileOnly(filepath.Join(dir, file.Name())); err == nil {
-						addAllFunctions(ret, stmts, false)
-					}
-				}
+		if err := fs.WalkDir(subrepo.FS, dir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
+
+			if !d.IsDir() {
+				bs, err := fs.ReadFile(subrepo.FS, path)
+				if err != nil {
+					return err
+				}
+
+				stmts, err := p.ParseData(bs, path)
+				if err != nil {
+					return err
+				}
+
+				addAllFunctions(ret, stmts, false)
+			}
+
+			return nil
+		}); err != nil {
+			log.Warningf("Couldn't read directory %v in subrepo %v", dir, subrepo.Name)
 		}
 	}
+
 	return ret
 }
 

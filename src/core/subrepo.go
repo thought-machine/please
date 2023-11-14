@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -15,6 +17,8 @@ type Subrepo struct {
 	Name string
 	// The root directory to load it from.
 	Root string
+	// A file system rooted at the subrepo's root directory.
+	FS fs.FS
 	// A root directory for outputs of this subrepo's targets
 	PackageRoot string
 	// If this repo is output by a target, this is the target that creates it. Can be nil.
@@ -34,6 +38,7 @@ func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch 
 	return &Subrepo{
 		Name:           name,
 		Root:           root,
+		FS:             os.DirFS(root),
 		State:          state,
 		Target:         target,
 		Arch:           arch,
