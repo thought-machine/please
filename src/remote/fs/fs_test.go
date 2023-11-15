@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var fooContent = "wibble wibble wibble"
+
 type fakeClient struct {
 	results map[digest.Digest][]byte
 }
@@ -39,8 +41,7 @@ func newDigest(str string) digest.Digest {
 //	|- badlink (a symlink to ../../foo which is root/.. i.e. invalid)
 func getTree(t *testing.T) (*fakeClient, *pb.Tree) {
 	t.Helper()
-
-	fooDigest := newDigest("foo")
+	fooDigest := newDigest(fooContent)
 
 	foo := &pb.FileNode{
 		Name: "foo",
@@ -120,7 +121,7 @@ func getTree(t *testing.T) (*fakeClient, *pb.Tree) {
 
 	fc := &fakeClient{
 		results: map[digest.Digest][]byte{
-			fooDigest: []byte("wibble wibble wibble"),
+			fooDigest: []byte(fooContent),
 		},
 	}
 	tree := &pb.Tree{
@@ -146,6 +147,9 @@ func TestReadDir(t *testing.T) {
 		require.NoError(t, err)
 		// We set them all to 0777 above
 		assert.Equal(t, iofs.FileMode(0777), i.Mode(), "%v mode was wrong", e.Name())
+		if e.Name() == "foo" {
+			assert.Equal(t, len([]byte(fooContent)), int(i.Size()))
+		}
 	}
 
 	entries, err = iofs.ReadDir(fs, ".")

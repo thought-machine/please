@@ -186,8 +186,8 @@ type dir struct {
 	*info
 }
 
-// ReadDir is a slightly incorrect implementation of ReadDir. It deviates slightly as it will report all files have 0
-// size. This seems to work for our limited purposes though.
+// ReadDir implements listing the contents of a directory stored in the CAS. This is entirely based off the original
+// data from the Tree proto so doesn't do any additional fetching.
 func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 	dirSize := n
 	if n <= 0 {
