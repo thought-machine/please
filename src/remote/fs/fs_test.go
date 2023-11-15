@@ -147,6 +147,10 @@ func TestReadDir(t *testing.T) {
 		// We set them all to 0777 above
 		assert.Equal(t, iofs.FileMode(0777), i.Mode(), "%v mode was wrong", e.Name())
 	}
+
+	entries, err = iofs.ReadDir(fs, ".")
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
 }
 
 func TestGlob(t *testing.T) {
@@ -173,6 +177,12 @@ func TestReadFile(t *testing.T) {
 			name:           "Open file in root",
 			wd:             ".",
 			file:           "foo",
+			expectedOutput: "wibble wibble wibble",
+		},
+		{
+			name:           "Open file in root with .",
+			wd:             ".",
+			file:           "./foo",
 			expectedOutput: "wibble wibble wibble",
 		},
 		{

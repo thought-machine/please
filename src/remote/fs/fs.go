@@ -38,7 +38,7 @@ type CASFileSystem struct {
 // New creates a new filesystem on top of the given proto, using client to download files from the CAS on demand.
 func New(c Client, tree *pb.Tree, workingDir string) *CASFileSystem {
 	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
-	for _, child := range tree.Children {
+	for _, child := range append(tree.Children, tree.Root) {
 		dg, err := digest.NewFromMessage(child)
 		if err != nil {
 			log.Fatalf("Failed to create CASFileSystem: failed to calculate digest: %v", err)
@@ -50,7 +50,7 @@ func New(c Client, tree *pb.Tree, workingDir string) *CASFileSystem {
 		c:           c,
 		root:        tree.Root,
 		directories: directories,
-		workingDir:  workingDir,
+		workingDir:  filepath.Clean(workingDir),
 	}
 }
 
@@ -119,9 +119,24 @@ func (fs *CASFileSystem) openDir(d *pb.DirectoryNode) (iofs.File, error) {
 }
 
 func (fs *CASFileSystem) findNode(wd *pb.Directory, name string) (*pb.FileNode, *pb.DirectoryNode, *pb.SymlinkNode, error) {
+	// When the path contains a /, we only want to match name as a directory. This is because if we have foo/bar, and we
+	// matched foo as a file, we still need to descend further, which we can't do if it's a file or symlink.
 	name, rest, hasToBeDir := strings.Cut(name, string(filepath.Separator))
+
+	if name == "." {
+		if rest != "" {
+			return fs.findNode(wd, rest)
+		}
+		dg, err := digest.NewFromMessage(wd)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		node := &pb.DirectoryNode{Name: ".", Digest: dg.ToProto()}
+		return nil, node, nil, nil
+	}
+
 	// Must be a dodgy symlink that goes past our tree.
-	if name == ".." || name == "." {
+	if name == ".." {
 		return nil, nil, nil, os.ErrNotExist
 	}
 
@@ -135,7 +150,6 @@ func (fs *CASFileSystem) findNode(wd *pb.Directory, name string) (*pb.FileNode, 
 		}
 	}
 
-	// If the path contains a /, we only resolve against dirs.
 	if hasToBeDir {
 		return nil, nil, nil, os.ErrNotExist
 	}
