@@ -22,7 +22,8 @@ type Client interface {
 	ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client.MovedBytesMetadata, error)
 }
 
-// CASFileSystem is an fs.FS implemented on top of a Tree proto. This will download files as they are needed.
+// CASFileSystem is an fs.FS implemented on top of a Tree proto. This will download files as they are needed from the
+// CAS when they are opened.
 type CASFileSystem struct {
 	c           Client
 	root        *pb.Directory
@@ -54,8 +55,8 @@ func (fs *CASFileSystem) Open(name string) (iofs.File, error) {
 	return fs.open(filepath.Join(fs.workingDir, name))
 }
 
-// FindNode returns the node proto for the given name. Up to one of the node types may be set, where none being set
-// representing the path not existing.
+// FindNode returns the node proto for the given name. Either FileNode, DirectoryNode or SymlinkNode will be set, or an
+// error will be returned. The error will be os.ErrNotExist if the path doesn't exist.
 func (fs *CASFileSystem) FindNode(name string) (*pb.FileNode, *pb.DirectoryNode, *pb.SymlinkNode, error) {
 	return fs.findNode(fs.root, filepath.Join(fs.workingDir, name))
 }
@@ -195,8 +196,8 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 		ret = append(ret, &info{
 			name: file.Name,
 			mode: os.FileMode(file.NodeProperties.UnixMode.Value),
-			// TODO(jpoole): technically we could calculate this on demand by allowing info.Size() to download the file
-			// 	from the CAS... we don't need to for now though.
+			// Technically we could calculate this on demand by allowing info.Size() to download the file from the
+			// CAS... we don't need to for now though.
 			size: 0,
 		})
 	}
