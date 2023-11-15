@@ -48,6 +48,7 @@ go_test(
         "///third_party/go/github.com_stretchr_testify//require",
         "//src/cli/logging",
         "//src/core",
+        "//src/fs",
         "//src/output",
         "//src/plz",
     ],

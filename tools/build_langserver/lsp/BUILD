@@ -16,6 +16,7 @@ go_library(
         "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//rules",
         "//src/core",
+        "//src/fs",
         "//src/parse/asp",
         "//src/plz",
         "//tools/build_langserver/lsp/astutils",

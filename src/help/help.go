@@ -3,6 +3,7 @@ package help
 
 import (
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/plz"
 )
@@ -27,7 +29,7 @@ const maxSuggestionDistance = 4
 // Help prints help on a particular topic.
 // It returns true if the topic is known or false if it isn't.
 func Help(topic string) bool {
-	config, err := core.ReadDefaultConfigFiles(core.HostFS(), nil)
+	config, err := core.ReadDefaultConfigFiles(fs.HostFS, nil)
 	if err != nil {
 		// Don't bother the user if we can't load config files or whatever - just do our best.
 		config = core.DefaultConfiguration()
@@ -223,29 +225,41 @@ func formatPluginHelpMessage(message, description, docSite string, options map[s
 }
 
 func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
-	p := asp.NewParser(subrepo.State)
 	var dirs []string
 	if len(subrepo.State.Config.PluginDefinition.BuildDefsDir) > 0 {
-		for _, dir := range subrepo.State.Config.PluginDefinition.BuildDefsDir {
-			dirs = append(dirs, filepath.Join(subrepo.Root, dir))
-		}
+		dirs = append(dirs, subrepo.State.Config.PluginDefinition.BuildDefsDir...)
 	} else {
 		// By default, check the build_defs dir in the plugin
-		dirs = append(dirs, filepath.Join(subrepo.Root, "build_defs"))
+		dirs = append(dirs, "build_defs")
 	}
 
+	p := asp.NewParser(subrepo.State)
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
-		if files, err := os.ReadDir(dir); err == nil {
-			for _, file := range files {
-				if !file.IsDir() {
-					if stmts, err := p.ParseFileOnly(filepath.Join(dir, file.Name())); err == nil {
-						addAllFunctions(ret, stmts, false)
-					}
-				}
+		dirEntries, err := iofs.ReadDir(subrepo.FS, dir)
+		if err != nil {
+			log.Warningf("Failed to read %s: %s", dir, err)
+		}
+		for _, entry := range dirEntries {
+			if entry.IsDir() {
+				continue
 			}
+
+			path := filepath.Join(dir, entry.Name())
+			bs, err := iofs.ReadFile(subrepo.FS, path)
+			if err != nil {
+				log.Warningf("Failed to read %s: %s", path, err)
+			}
+
+			stmts, err := p.ParseData(bs, path)
+			if err != nil {
+				log.Warningf("Failed to parse %s: %s", path, err)
+			}
+
+			addAllFunctions(ret, stmts, false)
 		}
 	}
+
 	return ret
 }
 

@@ -10,6 +10,7 @@ go_library(
         "home.go",
         "sort.go",
         "walk.go",
+        "iofs.go",
     ],
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],

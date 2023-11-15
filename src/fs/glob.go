@@ -2,6 +2,7 @@ package fs
 
 import (
 	"fmt"
+	iofs "io/fs"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -63,14 +64,15 @@ func IsGlob(pattern string) bool {
 
 // Glob implements matching using Go's built-in filepath.Glob, but extends it to support
 // Ant-style patterns using **.
-func Glob(buildFileNames []string, rootPath string, includes, excludes []string, includeHidden bool) []string {
-	return NewGlobber(buildFileNames).Glob(rootPath, includes, excludes, includeHidden, true)
+func Glob(fs iofs.FS, buildFileNames []string, rootPath string, includes, excludes []string, includeHidden bool) []string {
+	return NewGlobber(fs, buildFileNames).Glob(rootPath, includes, excludes, includeHidden, true)
 }
 
 // A Globber is used to implement Glob. You can persist one for use to save repeated filesystem calls, but
 // it isn't safe for use in concurrent goroutines.
 type Globber struct {
 	buildFileNames []string
+	fs             iofs.ReadDirFS
 	walkedDirs     map[string]walkedDir
 }
 
@@ -87,9 +89,14 @@ func Match(glob, path string) (bool, error) {
 }
 
 // NewGlobber creates a new Globber. You should call this rather than creating one directly (or use Glob() if you don't care).
-func NewGlobber(buildFileNames []string) *Globber {
+func NewGlobber(fs iofs.FS, buildFileNames []string) *Globber {
+	rdfs, ok := fs.(iofs.ReadDirFS)
+	if !ok {
+		log.Fatalf("NewGlobber must be constructed with a ReadDirFS")
+	}
 	return &Globber{
 		buildFileNames: buildFileNames,
+		fs:             rdfs,
 		walkedDirs:     map[string]walkedDir{},
 	}
 }
@@ -165,25 +172,27 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 		return dir, nil
 	}
 	dir := walkedDir{}
-	if err := WalkMode(rootPath, func(name string, mode Mode) error {
-		if isBuildFile(globber.buildFileNames, name) {
-			packageName := filepath.Dir(name)
+	err := iofs.WalkDir(globber.fs, rootPath, func(path string, d iofs.DirEntry, err error) error {
+		typeMode := mode(d.Type())
+		if isBuildFile(globber.buildFileNames, path) {
+			packageName := filepath.Dir(path)
 			if packageName != rootPath {
 				dir.subPackages = append(dir.subPackages, packageName)
 				return filepath.SkipDir
 			}
 		}
 		// Exclude plz-out
-		if name == "plz-out" && rootPath == "." {
+		if d.Name() == "plz-out" && rootPath == "." {
 			return filepath.SkipDir
 		}
-		if mode.IsSymlink() {
-			dir.symlinks = append(dir.symlinks, name)
+		if typeMode.IsSymlink() {
+			dir.symlinks = append(dir.symlinks, path)
 		} else {
-			dir.fileNames = append(dir.fileNames, name)
+			dir.fileNames = append(dir.fileNames, path)
 		}
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return dir, err
 	}
 	globber.walkedDirs[rootPath] = dir

@@ -2,10 +2,13 @@ package core
 
 import (
 	"fmt"
+	iofs "io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // A Subrepo stores information about a registered subrepository, typically one
@@ -15,6 +18,8 @@ type Subrepo struct {
 	Name string
 	// The root directory to load it from.
 	Root string
+	// A file system rooted at the subrepo's root directory.
+	FS iofs.FS
 	// A root directory for outputs of this subrepo's targets
 	PackageRoot string
 	// If this repo is output by a target, this is the target that creates it. Can be nil.
@@ -34,6 +39,7 @@ func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch 
 	return &Subrepo{
 		Name:           name,
 		Root:           root,
+		FS:             os.DirFS(root),
 		State:          state,
 		Target:         target,
 		Arch:           arch,
@@ -77,7 +83,7 @@ func (s *Subrepo) Dir(dir string) string {
 
 func readConfigFilesInto(repoConfig *Configuration, files []string) error {
 	for _, file := range files {
-		err := readConfigFile(HostFS(), repoConfig, file, true)
+		err := readConfigFile(fs.HostFS, repoConfig, file, true)
 		if err != nil {
 			return err
 		}
