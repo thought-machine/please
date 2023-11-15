@@ -12,10 +12,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/thought-machine/please/src/cli/logging"
+
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
+
+var log = logging.Log
 
 // Client is an interface to the REAPI CAS
 type Client interface {
@@ -37,7 +41,7 @@ func New(c Client, tree *pb.Tree, workingDir string) *CASFileSystem {
 	for _, child := range tree.Children {
 		dg, err := digest.NewFromMessage(child)
 		if err != nil {
-			panic(fmt.Errorf("failed to create CASFileSystem: failed to calculate digest: %v", err))
+			log.Fatalf("Failed to create CASFileSystem: failed to calculate digest: %v", err)
 		}
 		directories[dg] = child
 	}

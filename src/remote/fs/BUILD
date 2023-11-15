@@ -8,7 +8,7 @@ go_library(
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/client",
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/digest",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/execution/v2",
-        "///third_party/go/google.golang.org_protobuf//proto",
+        "//src/cli/logging",
     ],
 )
 
@@ -20,7 +20,6 @@ go_test(
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/client",
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/digest",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/execution/v2",
-        "///third_party/go/github.com_golang_protobuf//proto",
         "///third_party/go/github.com_golang_protobuf//ptypes/wrappers",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
