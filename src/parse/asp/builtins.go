@@ -607,10 +607,14 @@ func glob(s *scope, args []pyObject) pyObject {
 	allowEmpty := args[4].IsTruthy()
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
-		s.globber = fs.NewGlobber(fs.HostFS, s.state.Config.Parse.BuildFileName)
+		if s.pkg.Subrepo != nil {
+			s.globber = fs.NewGlobber(s.pkg.Subrepo.FS, s.state.Config.Parse.BuildFileName)
+		} else {
+			s.globber = fs.NewGlobber(fs.HostFS, s.state.Config.Parse.BuildFileName)
+		}
 	}
 
-	glob := s.globber.Glob(s.pkg.SourceRoot(), include, exclude, hidden, includeSymlinks)
+	glob := s.globber.Glob(s.pkg.Name, include, exclude, hidden, includeSymlinks)
 	if !allowEmpty && len(glob) == 0 {
 		// Strip build file name from exclude list for error message
 		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]

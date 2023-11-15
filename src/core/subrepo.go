@@ -36,10 +36,15 @@ type Subrepo struct {
 }
 
 func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch cli.Arch, isCrosscompile bool) *Subrepo {
+	subrepoFS := os.DirFS(root)
+	if root == "" {
+		// This happens for architecture subrepos, which should use the same FS as the host repo
+		subrepoFS = fs.HostFS
+	}
 	return &Subrepo{
 		Name:           name,
 		Root:           root,
-		FS:             os.DirFS(root),
+		FS:             subrepoFS,
 		State:          state,
 		Target:         target,
 		Arch:           arch,
@@ -81,14 +86,14 @@ func (s *Subrepo) Dir(dir string) string {
 	return filepath.Join(s.Root, dir)
 }
 
-func readConfigFilesInto(repoConfig *Configuration, files []string) error {
-	for _, file := range files {
+func readSubrepoConfig(repoConfig *Configuration, subrepo *Subrepo) error {
+	for _, file := range subrepo.AdditionalConfigFiles {
 		err := readConfigFile(fs.HostFS, repoConfig, file, true)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return readConfigFile(subrepo.FS, repoConfig, ".plzconfig", true)
 }
 
 func validateSubrepoNameAndPluginConfig(config, repoConfig *Configuration, subrepo *Subrepo) error {

@@ -67,15 +67,6 @@ func (pkg *Package) TargetOrDie(name string) *BuildTarget {
 	return t
 }
 
-// SourceRoot returns the root directory of source files for this package.
-// This is equivalent to .Name for in-repo packages but differs for those in subrepos.
-func (pkg *Package) SourceRoot() string {
-	if pkg.Subrepo != nil {
-		return pkg.Subrepo.Dir(pkg.Name)
-	}
-	return pkg.Name
-}
-
 // AddTarget adds a new target to this package with the given name.
 // It doesn't check for duplicates.
 func (pkg *Package) AddTarget(target *BuildTarget) {
