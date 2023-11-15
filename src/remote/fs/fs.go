@@ -214,9 +214,7 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 		ret = append(ret, &info{
 			name: file.Name,
 			mode: os.FileMode(file.NodeProperties.UnixMode.Value),
-			// Technically we could calculate this on demand by allowing info.Size() to download the file from the
-			// CAS... we don't need to for now though.
-			size: 0,
+			size: file.Digest.SizeBytes,
 		})
 	}
 	for _, link := range p.pb.Symlinks {
