@@ -24,4 +24,3 @@ please_repo_e2e_test(
     plz_command = "plz test --keep_going //package:all",
     repo = "test_repo",
 )
-
