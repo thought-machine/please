@@ -199,33 +199,33 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 			return ret, nil
 		}
 		dir := p.children[digest.NewFromProtoUnvalidated(dirNode.Digest)]
-		ret = append(ret, &info{
+		i := &info{
 			name:     dirNode.Name,
 			isDir:    true,
 			typeMode: os.ModeDir,
-			mode:     os.FileMode(dir.NodeProperties.UnixMode.Value),
-			modTime:  dir.NodeProperties.GetMtime().AsTime(),
-		})
+		}
+
+		ret = append(ret, i.withProperties(dir.NodeProperties))
 	}
 	for _, file := range p.pb.Files {
 		if n > 0 && len(ret) == n {
 			return ret, nil
 		}
-		ret = append(ret, &info{
+		i := &info{
 			name: file.Name,
-			mode: os.FileMode(file.NodeProperties.UnixMode.Value),
 			size: file.Digest.SizeBytes,
-		})
+		}
+		ret = append(ret, i.withProperties(file.NodeProperties))
 	}
 	for _, link := range p.pb.Symlinks {
 		if n > 0 && len(ret) == n {
 			return ret, nil
 		}
-		ret = append(ret, &info{
+		i := &info{
 			name:     link.Name,
-			mode:     os.FileMode(link.NodeProperties.UnixMode.Value),
 			typeMode: os.ModeSymlink,
-		})
+		}
+		ret = append(ret, i.withProperties(link.NodeProperties))
 	}
 	return ret, nil
 }
