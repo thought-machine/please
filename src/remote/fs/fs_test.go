@@ -192,6 +192,12 @@ func TestReadFile(t *testing.T) {
 			expectedOutput: "wibble wibble wibble",
 		},
 		{
+			name:           "Open file in dir with .",
+			wd:             ".",
+			file:           "bar/./foo",
+			expectedOutput: "wibble wibble wibble",
+		},
+		{
 			name:           "Open file with working dir",
 			wd:             "bar",
 			file:           "foo",
