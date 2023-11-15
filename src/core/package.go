@@ -67,7 +67,6 @@ func (pkg *Package) TargetOrDie(name string) *BuildTarget {
 	return t
 }
 
-
 // AddTarget adds a new target to this package with the given name.
 // It doesn't check for duplicates.
 func (pkg *Package) AddTarget(target *BuildTarget) {

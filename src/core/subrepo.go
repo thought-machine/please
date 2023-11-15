@@ -36,10 +36,15 @@ type Subrepo struct {
 }
 
 func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch cli.Arch, isCrosscompile bool) *Subrepo {
+	subrepoFS := os.DirFS(root)
+	if root == "" {
+		// This happens for architecture subrepos, which should use the same FS as the host repo
+		subrepoFS = fs.HostFS
+	}
 	return &Subrepo{
 		Name:           name,
 		Root:           root,
-		FS:             os.DirFS(root),
+		FS:             subrepoFS,
 		State:          state,
 		Target:         target,
 		Arch:           arch,
