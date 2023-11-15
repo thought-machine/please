@@ -48,7 +48,7 @@ func (i *info) withProperties(nodeProperties *pb.NodeProperties) *info {
 	if nodeProperties.UnixMode != nil {
 		// This should in theory have the type mode set already but we bitwise or here to to make sure this is preserved
 		// from the constructors above in case the remote doesn't set this.
-		i.mode = i.mode | os.FileMode(nodeProperties.UnixMode.Value)
+		i.mode |= os.FileMode(nodeProperties.UnixMode.Value)
 	}
 
 	if nodeProperties.Mtime != nil {
