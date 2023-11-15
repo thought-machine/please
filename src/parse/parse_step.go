@@ -221,7 +221,7 @@ func buildFileName(state *core.BuildState, subrepo *core.Subrepo, fs iofs.FS, pk
 	}
 	for _, buildFileName := range config.Parse.BuildFileName {
 		filename := filepath.Join(pkgName, buildFileName)
-		if _, err := iofs.Stat(fs, filename); err == nil {
+		if info, err := iofs.Stat(fs, filename); err == nil && !info.IsDir() {
 			return filename, pkgName
 		}
 	}
