@@ -3,6 +3,7 @@ package fs
 import (
 	"context"
 	iofs "io/fs"
+	"os"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -146,7 +147,7 @@ func TestReadDir(t *testing.T) {
 		i, err := e.Info()
 		require.NoError(t, err)
 		// We set them all to 0777 above
-		assert.Equal(t, iofs.FileMode(0777), i.Mode(), "%v mode was wrong", e.Name())
+		assert.Equal(t, iofs.FileMode(0777), i.Mode().Perm(), "%v mode was wrong", e.Name())
 		if e.Name() == "foo" {
 			assert.Equal(t, len([]byte(fooContent)), int(i.Size()))
 		}
@@ -225,6 +226,18 @@ func TestReadFile(t *testing.T) {
 			file:        "bar/badlink",
 			expectError: true,
 		},
+		{
+			name:        "Open missing file",
+			wd:          ".",
+			file:        "bar/faff",
+			expectError: true,
+		},
+		{
+			name:        "Open directory passed file",
+			wd:          ".",
+			file:        "foo/bar",
+			expectError: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -236,6 +249,52 @@ func TestReadFile(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedOutput, string(bs))
+		})
+	}
+}
+
+func TestStat(t *testing.T) {
+	fc, tree := getTree(t)
+
+	tests := []struct {
+		name           string
+		file           string
+		expectNotExist bool
+		expectedType   os.FileMode
+	}{
+		{
+			name:         "Stat file",
+			file:         "bar/example.go",
+			expectedType: 0,
+		},
+		{
+			name:         "Stat dir",
+			file:         "bar",
+			expectedType: os.ModeDir,
+		},
+		{
+			name:         "Stat symlink",
+			file:         "bar/link",
+			expectedType: os.ModeSymlink,
+		},
+		{
+			name:           "Stat not exist",
+			file:           "bar/not_exist.go",
+			expectNotExist: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			i, err := iofs.Stat(New(fc, tree, "."), tc.file)
+			if tc.expectNotExist {
+				assert.True(t, os.IsNotExist(err))
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedType.IsDir(), i.Mode().IsDir())
+			assert.Equal(t, tc.expectedType.IsRegular(), i.Mode().IsRegular())
+			assert.Equal(t, tc.expectedType&os.ModeSymlink != 0, i.Mode()&os.ModeSymlink != 0)
 		})
 	}
 }

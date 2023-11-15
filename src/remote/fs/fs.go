@@ -35,6 +35,25 @@ type CASFileSystem struct {
 	workingDir  string
 }
 
+// Stat implements StatFS so that iofs.Stat doesn't download the file to determine this info.
+func (fs *CASFileSystem) Stat(name string) (iofs.FileInfo, error) {
+	file, dir, link, err := fs.FindNode(name)
+	if err != nil {
+		return nil, err
+	}
+	if file != nil {
+		return newFileInfo(file), nil
+	}
+	if dir != nil {
+		dirPB := fs.directories[digest.NewFromProtoUnvalidated(dir.Digest)]
+		return newDirInfo(dir.Name, dirPB), nil
+	}
+	if link != nil {
+		return newSymlinkInfo(link), nil
+	}
+	return nil, os.ErrNotExist
+}
+
 // New creates a new filesystem on top of the given proto, using client to download files from the CAS on demand.
 func New(c Client, tree *pb.Tree, workingDir string) *CASFileSystem {
 	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
@@ -94,25 +113,17 @@ func (fs *CASFileSystem) openFile(f *pb.FileNode) (*file, error) {
 		return nil, err
 	}
 
-	i := info{
-		size: int64(len(bs)),
-		name: f.Name,
-	}
-
 	return &file{
 		ReadSeeker: bytes.NewReader(bs),
-		info:       i.withProperties(f.NodeProperties),
+		info:       newFileInfo(f),
 	}, nil
 }
 
 func (fs *CASFileSystem) openDir(d *pb.DirectoryNode) (iofs.File, error) {
 	dirPb := fs.directories[digest.NewFromProtoUnvalidated(d.Digest)]
-	i := &info{
-		name:  d.Name,
-		isDir: true,
-	}
+
 	return &dir{
-		info:     i.withProperties(dirPb.NodeProperties),
+		info:     newDirInfo(d.Name, dirPb),
 		pb:       dirPb,
 		children: fs.directories,
 	}, nil
@@ -199,33 +210,20 @@ func (p *dir) ReadDir(n int) ([]iofs.DirEntry, error) {
 			return ret, nil
 		}
 		dir := p.children[digest.NewFromProtoUnvalidated(dirNode.Digest)]
-		i := &info{
-			name:     dirNode.Name,
-			isDir:    true,
-			typeMode: os.ModeDir,
-		}
-
-		ret = append(ret, i.withProperties(dir.NodeProperties))
+		ret = append(ret, newDirInfo(dirNode.Name, dir))
 	}
 	for _, file := range p.pb.Files {
 		if n > 0 && len(ret) == n {
 			return ret, nil
 		}
-		i := &info{
-			name: file.Name,
-			size: file.Digest.SizeBytes,
-		}
-		ret = append(ret, i.withProperties(file.NodeProperties))
+
+		ret = append(ret, newFileInfo(file))
 	}
 	for _, link := range p.pb.Symlinks {
 		if n > 0 && len(ret) == n {
 			return ret, nil
 		}
-		i := &info{
-			name:     link.Name,
-			typeMode: os.ModeSymlink,
-		}
-		ret = append(ret, i.withProperties(link.NodeProperties))
+		ret = append(ret, newSymlinkInfo(link))
 	}
 	return ret, nil
 }
