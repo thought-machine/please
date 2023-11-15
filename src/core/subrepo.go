@@ -81,14 +81,14 @@ func (s *Subrepo) Dir(dir string) string {
 	return filepath.Join(s.Root, dir)
 }
 
-func readConfigFilesInto(repoConfig *Configuration, files []string) error {
-	for _, file := range files {
+func readSubrepoConfig(repoConfig *Configuration, subrepo *Subrepo) error {
+	for _, file := range subrepo.AdditionalConfigFiles {
 		err := readConfigFile(fs.HostFS, repoConfig, file, true)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return readConfigFile(subrepo.FS, repoConfig, ".plzconfig", true)
 }
 
 func validateSubrepoNameAndPluginConfig(config, repoConfig *Configuration, subrepo *Subrepo) error {

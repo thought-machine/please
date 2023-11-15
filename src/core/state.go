@@ -255,7 +255,7 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
 			state.RepoConfig = &Configuration{}
-			err = readConfigFilesInto(state.RepoConfig, append(subrepo.AdditionalConfigFiles, filepath.Join(subrepo.Root, ".plzconfig")))
+			err = readSubrepoConfig(state.RepoConfig, subrepo)
 			if err != nil {
 				return
 			}
