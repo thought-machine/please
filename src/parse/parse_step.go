@@ -7,6 +7,8 @@ package parse
 
 import (
 	"fmt"
+	"io"
+	iofs "io/fs"
 	"path/filepath"
 	"strings"
 
@@ -138,13 +140,28 @@ func parseSubrepoPackage(state *core.BuildState, pkg, subrepo string, dependent 
 	return state.CheckArchSubrepo(dependent.Subrepo), nil
 }
 
+func openFile(fs iofs.FS, subrepoName, name string) (io.ReadSeekCloser, error) {
+	file, err := fs.Open(name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open build file: %v", err)
+	}
+
+	reader, ok := file.(io.ReadSeekCloser)
+	if !ok {
+		return nil, fmt.Errorf("opened file is not seekable: ///%v/%v", subrepoName, name)
+	}
+	return reader, nil
+}
+
 // parsePackage parses a BUILD file and adds the package to the build graph
 func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo, mode core.ParseMode) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
+	var fileSystem iofs.FS = fs.HostFS
 	if subrepo != nil {
 		pkg.SubrepoName = subrepo.Name
+		fileSystem = subrepo.FS
 	}
 	// Only load the internal package for the host repo's state
 	if state.ParentState == nil && packageName == InternalPackageName {
@@ -156,10 +173,15 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
-		filename, dir := buildFileName(state, label.PackageName, subrepo)
+		filename, dir := buildFileName(state, subrepo, fileSystem, label.PackageName)
 		if filename != "" {
+			file, err := openFile(fileSystem, pkg.SubrepoName, filename)
+			if err != nil {
+				return nil, err
+			}
+			defer file.Close()
 			pkg.Filename = filename
-			if err := state.Parser.ParseFile(pkg, &label, &dependent, mode, pkg.Filename); err != nil {
+			if err := state.Parser.ParseReader(pkg, file, &label, &dependent, mode); err != nil {
 				return nil, err
 			}
 		} else {
@@ -186,10 +208,9 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 
 // buildFileName returns the name of the BUILD file for a package, or the empty string if one
 // doesn't exist. It also returns the directory that it looked in.
-func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo) (string, string) {
+func buildFileName(state *core.BuildState, subrepo *core.Subrepo, fs iofs.FS, pkgName string) (string, string) {
 	config := state.Config
 	if subrepo != nil {
-		pkgName = subrepo.Dir(pkgName)
 		config = subrepo.State.Config
 	}
 	// Bazel defines targets in its "external" package from its WORKSPACE file.
@@ -199,7 +220,8 @@ func buildFileName(state *core.BuildState, pkgName string, subrepo *core.Subrepo
 		return "WORKSPACE", ""
 	}
 	for _, buildFileName := range config.Parse.BuildFileName {
-		if filename := filepath.Join(pkgName, buildFileName); fs.FileExists(filename) {
+		filename := filepath.Join(pkgName, buildFileName)
+		if _, err := iofs.Stat(fs, filename); err == nil {
 			return filename, pkgName
 		}
 	}
