@@ -863,7 +863,8 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 	}); err != nil {
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
-	return &core.BuildMetadata{}, ar, nil
+	md, err := c.buildMetadata(target, ar, false, false)
+	return md, ar, err
 }
 
 // buildFilegroup "builds" a single filegroup target.
@@ -906,7 +907,8 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	}); err != nil {
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
-	return &core.BuildMetadata{}, ar, nil
+	md, err := c.buildMetadata(target, ar, false, false)
+	return md, ar, err
 }
 
 // buildTextFile "builds" uploads a text file to the CAS
@@ -939,7 +941,8 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 	}); err != nil {
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
-	return &core.BuildMetadata{}, ar, nil
+	md, err := c.buildMetadata(target, ar, false, false)
+	return md, ar, err
 }
 
 // A grpcLogMabob is an implementation of grpc's logging interface using our backend.
