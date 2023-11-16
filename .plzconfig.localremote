@@ -13,3 +13,6 @@ TokenFile = please-servers-token.txt
 Secure = false
 DisplayUrl = http://localhost:7779
 Instance = mettle
+
+[Plugin "go"]
+GoTool = go ; This is way too slow otherwise

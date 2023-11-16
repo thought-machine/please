@@ -351,7 +351,7 @@ func (c *Client) uploadInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, input c
 
 // buildMetadata converts an ActionResult into one of our BuildMetadata protos.
 // N.B. this always returns a non-nil metadata object for the first response.
-func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
+func (c *Client) buildMetadata(target *core.BuildTarget, ar *pb.ActionResult, needStdout, needStderr bool) (*core.BuildMetadata, error) {
 	metadata := &core.BuildMetadata{
 		Stdout: ar.StdoutRaw,
 		Stderr: ar.StderrRaw,
@@ -370,6 +370,23 @@ func (c *Client) buildMetadata(ar *pb.ActionResult, needStdout, needStderr bool)
 		}
 		metadata.Stderr = b
 	}
+	outputs, err := c.calculateOutputTree(target, ar)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata.RemoteAction, err = proto.Marshal(ar)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata.RemoteOutputs, err = proto.Marshal(outputs)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata.Timestamp = time.Now()
+
 	return metadata, nil
 }
 
@@ -485,7 +502,12 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 	if err := c.uploadIfMissing(context.Background(), entries); err != nil {
 		return err
 	}
-	return c.setOutputs(target, ar)
+	outs, err := c.calculateOutputTree(target, ar)
+	if err != nil {
+		return err
+	}
+	c.setOutputs(target, outs)
+	return nil
 }
 
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.

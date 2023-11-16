@@ -36,12 +36,6 @@ var downloadErrors = metrics.NewCounter(
 	"Number of times the an error has been seen during a tree digest download",
 )
 
-var directoriesStored = metrics.NewCounter(
-	"remote",
-	"dirs_stored_total",
-	"Number of directories cached locally",
-)
-
 var directoriesRetrieved = metrics.NewCounter(
 	"remote",
 	"dirs_retrieved_total",
@@ -72,12 +66,38 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 	return c.outputs[label]
 }
 
-// setOutputs sets the outputs for a previously executed target.
-func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error {
-	o := &pb.Directory{
-		Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
-		Directories: make([]*pb.DirectoryNode, 0, len(ar.OutputDirectories)),
-		Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
+// setOutputs sets the outputs for the target so we can refer to them later by build label from dependent rules. We also
+// save the full Tree proto for subrepos so we can parse and build subrepo targets without downloading the sources.
+func (c *Client) setOutputs(target *core.BuildTarget, tree *pb.Tree) {
+	c.outputMutex.Lock()
+	defer c.outputMutex.Unlock()
+
+	if target.IsSubrepo {
+		c.subrepoTrees[target.Label] = tree
+	}
+	c.outputs[target.Label] = tree.Root
+}
+
+func (c *Client) setOutputsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata) {
+	tree := new(pb.Tree)
+	if err := proto.Unmarshal(md.RemoteOutputs, tree); err != nil || tree.Root == nil {
+		// Something has gone very wrong here if we hit this line, as we should have already checked the proto is valid.
+		// tree.Root should never be nil either, but if it is, we will set a nil entry in the outputs map, which will be
+		// really hard to debug.
+		log.Fatalf("%v: failed to unmarshal output pb.Tree from action metadata: %v", target.Label, err)
+	}
+	c.setOutputs(target, tree)
+}
+
+// calculateOutputTree get the output tree for an action result, as it should be presented to downstream actions,
+// handling the output directory semantics. It stores the output directories in the client's cache.
+func (c *Client) calculateOutputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.Tree, error) {
+	o := &pb.Tree{
+		Root: &pb.Directory{
+			Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
+			Directories: make([]*pb.DirectoryNode, 0, len(ar.OutputDirectories)),
+			Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
+		},
 	}
 	// N.B. At this point the various things we stick into this Directory proto can be in
 	//      subdirectories. This is not how a Directory proto is meant to work but it makes things
@@ -85,7 +105,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 	//      without downloading their respective Directory protos). Later on we sort this out in
 	//      uploadInputDir.
 	for i, f := range ar.OutputFiles {
-		o.Files[i] = &pb.FileNode{
+		o.Root.Files[i] = &pb.FileNode{
 			Name:         f.Path,
 			Digest:       f.Digest,
 			IsExecutable: f.IsExecutable,
@@ -95,33 +115,32 @@ func (c *Client) setOutputs(target *core.BuildTarget, ar *pb.ActionResult) error
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
 			downloadErrors.Inc()
-			return wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
+			return nil, wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
+
+		o.Children = append(o.Children, tree.Children...)
 
 		if outDir := maybeGetOutDir(d.Path, target.OutputDirectories); outDir != "" {
 			files, dirs, err := c.getOutputsForOutDir(target, outDir, tree)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			o.Directories = append(o.Directories, dirs...)
-			o.Files = append(o.Files, files...)
+			o.Root.Directories = append(o.Root.Directories, dirs...)
+			o.Root.Files = append(o.Root.Files, files...)
 		} else {
-			o.Directories = append(o.Directories, &pb.DirectoryNode{
+			o.Root.Directories = append(o.Root.Directories, &pb.DirectoryNode{
 				Name:   d.Path,
 				Digest: c.digestMessage(tree.Root),
 			})
 		}
 	}
 	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
-		o.Symlinks[i] = &pb.SymlinkNode{
+		o.Root.Symlinks[i] = &pb.SymlinkNode{
 			Name:   s.Path,
 			Target: s.Target,
 		}
 	}
-	c.outputMutex.Lock()
-	defer c.outputMutex.Unlock()
-	c.outputs[target.Label] = o
-	return nil
+	return o, nil
 }
 
 func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
@@ -211,29 +230,9 @@ func (c *Client) actionURL(digest *pb.Digest, prefix bool) string {
 }
 
 // locallyCacheResults stores the actionresult for an action in the local (usually dir) cache.
-func (c *Client) locallyCacheResults(target *core.BuildTarget, dg *pb.Digest, metadata *core.BuildMetadata, ar *pb.ActionResult) {
+func (c *Client) locallyCacheResults(target *core.BuildTarget, dg *pb.Digest, metadata *core.BuildMetadata) {
 	if c.state.Cache == nil {
 		return
-	}
-	data, _ := proto.Marshal(ar)
-	metadata.RemoteAction = data
-	metadata.Timestamp = time.Now()
-
-	if len(ar.OutputDirectories) > 0 {
-		tree := pb.Tree{}
-		for _, d := range ar.OutputDirectories {
-			t := pb.Tree{}
-			if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), &t); err == nil {
-				tree.Children = append(tree.Children, t.Root)
-				tree.Children = append(tree.Children, t.Children...)
-			}
-		}
-		for _, dir := range tree.Children {
-			c.directories.Store(c.digestMessage(dir).Hash, dir)
-		}
-		directoriesStored.Add(float64(len(tree.Children)))
-		data, _ := proto.Marshal(&tree)
-		metadata.RemoteOutputs = data
 	}
 
 	if err := c.mdStore.storeMetadata(dg.Hash, metadata); err != nil {
@@ -251,17 +250,19 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		}
 		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
-			if err := proto.Unmarshal(metadata.RemoteAction, ar); err == nil {
-				if len(metadata.RemoteOutputs) > 0 {
-					tree := pb.Tree{}
-					if err := proto.Unmarshal(metadata.RemoteOutputs, &tree); err == nil {
-						for _, dir := range tree.Children {
-							c.directories.Store(c.digestMessage(dir).Hash, dir)
-						}
-					}
-				}
-				return metadata, ar
+			outputs := &pb.Tree{}
+			if err := proto.Unmarshal(metadata.RemoteAction, ar); err != nil {
+				return nil, nil
 			}
+			if err := proto.Unmarshal(metadata.RemoteOutputs, outputs); err != nil {
+				return nil, nil
+			}
+
+			if outputs.Root == nil {
+				return nil, nil
+			}
+
+			return metadata, ar
 		}
 	}
 	return nil, nil
