@@ -37,6 +37,7 @@ go_library(
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
+        "//src/remote/fs",
         "//src/metrics",
         "//src/process",
     ],

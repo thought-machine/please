@@ -119,6 +119,7 @@ func (c *Client) calculateOutputTree(target *core.BuildTarget, ar *pb.ActionResu
 		}
 
 		o.Children = append(o.Children, tree.Children...)
+		o.Children = append(o.Children, tree.Root)
 
 		if outDir := maybeGetOutDir(d.Path, target.OutputDirectories); outDir != "" {
 			files, dirs, err := c.getOutputsForOutDir(target, outDir, tree)

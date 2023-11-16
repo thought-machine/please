@@ -18,8 +18,6 @@ type Subrepo struct {
 	Name string
 	// The root directory to load it from.
 	Root string
-	// A file system rooted at the subrepo's root directory.
-	FS iofs.FS
 	// A root directory for outputs of this subrepo's targets
 	PackageRoot string
 	// If this repo is output by a target, this is the target that creates it. Can be nil.
@@ -36,20 +34,25 @@ type Subrepo struct {
 }
 
 func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch cli.Arch, isCrosscompile bool) *Subrepo {
-	subrepoFS := os.DirFS(root)
-	if root == "" {
-		// This happens for architecture subrepos, which should use the same FS as the host repo
-		subrepoFS = fs.HostFS
-	}
 	return &Subrepo{
 		Name:           name,
 		Root:           root,
-		FS:             subrepoFS,
 		State:          state,
 		Target:         target,
 		Arch:           arch,
 		IsCrossCompile: isCrosscompile,
 	}
+}
+
+func (s *Subrepo) FS() iofs.FS {
+	if s == nil || s.Target == nil || s.Root == "" {
+		// Must be an architecture subrepo
+		return fs.HostFS
+	}
+	if s.Target.Local || s.State.RemoteClient == nil {
+		return os.DirFS(s.Root)
+	}
+	return s.State.RemoteClient.SubrepoFS(s.Target, s.Root)
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
@@ -93,7 +96,7 @@ func readSubrepoConfig(repoConfig *Configuration, subrepo *Subrepo) error {
 			return err
 		}
 	}
-	return readConfigFile(subrepo.FS, repoConfig, ".plzconfig", true)
+	return readConfigFile(subrepo.FS(), repoConfig, ".plzconfig", true)
 }
 
 func validateSubrepoNameAndPluginConfig(config, repoConfig *Configuration, subrepo *Subrepo) error {

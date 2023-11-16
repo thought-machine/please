@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
+	remotefs "github.com/thought-machine/please/src/remote/fs"
 )
 
 var log = logging.Log
@@ -311,6 +313,14 @@ func (c *Client) digestEnum() pb.DigestFunction_Value {
 	default:
 		return pb.DigestFunction_UNKNOWN // Shouldn't get here
 	}
+}
+
+func (c *Client) SubrepoFS(target *core.BuildTarget, root string) iofs.FS {
+	tree := c.subrepoTrees[target.Label]
+	if tree == nil {
+		panic("wat")
+	}
+	return remotefs.New(c.client, tree, root)
 }
 
 // Build executes a remote build of the given target.

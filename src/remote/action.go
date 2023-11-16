@@ -24,6 +24,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
+	remotefs "github.com/thought-machine/please/src/remote/fs"
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
@@ -254,6 +255,30 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 					Name:   filepath.Base(s.Name),
 					Target: s.Target,
 				})
+			}
+			continue
+		}
+		if i, ok := input.(core.SubrepoFileLabel); ok && !target.Local {
+			for _, p := range i.Paths(c.state.Graph) {
+				subrepoPath, err := filepath.Rel(target.Subrepo.PackageRoot, p)
+				if err != nil {
+					return nil, fmt.Errorf("failed to ")
+				}
+				fileNode, dirNode, symlinkNode, err := remotefs.FindNode(target.Subrepo.FS(), subrepoPath)
+				if err != nil {
+					return nil, err
+				}
+
+				dir := b.Dir(filepath.Dir(p))
+				if fileNode != nil {
+					dir.Files = append(dir.Files, fileNode)
+				}
+				if dirNode != nil {
+					dir.Directories = append(dir.Directories, dirNode)
+				}
+				if symlinkNode != nil {
+					dir.Symlinks = append(dir.Symlinks, symlinkNode)
+				}
 			}
 			continue
 		}
