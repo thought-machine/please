@@ -65,8 +65,11 @@ type Client struct {
 	// Stored output directories from previously executed targets.
 	// This isn't just a cache - it is needed for cases where we don't actually
 	// have the files physically on disk.
-	outputs     map[core.BuildLabel]*pb.Directory
-	outputMutex sync.RWMutex
+	outputs map[core.BuildLabel]*pb.Directory
+	// subrepoTrees is used to cache the full output tree of a subrepo so we can parse and build those targets without
+	// downloading the subrepo locally.
+	subrepoTrees map[core.BuildLabel]*pb.Tree
+	outputMutex  sync.RWMutex
 
 	// The unstamped build action digests. Stamped and test digests are not stored.
 	// This isn't just a cache - it is needed because building a target can modify the target and things like plz hash
@@ -141,10 +144,11 @@ type pendingDownload struct {
 // It begins the process of contacting the remote server but does not wait for it.
 func New(state *core.BuildState) *Client {
 	c := &Client{
-		state:    state,
-		instance: state.Config.Remote.Instance,
-		outputs:  map[core.BuildLabel]*pb.Directory{},
-		mdStore:  newDirMDStore(state.Config.Remote.Instance, time.Duration(state.Config.Remote.CacheDuration)),
+		state:        state,
+		instance:     state.Config.Remote.Instance,
+		outputs:      map[core.BuildLabel]*pb.Directory{},
+		subrepoTrees: map[core.BuildLabel]*pb.Tree{},
+		mdStore:      newDirMDStore(state.Config.Remote.Instance, time.Duration(state.Config.Remote.CacheDuration)),
 		existingBlobs: map[string]struct{}{
 			digest.Empty.Hash: {},
 		},
@@ -314,7 +318,7 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	metadata, ar, digest, err := c.build(target)
+	metadata, ar, _, err := c.build(target)
 	if err != nil {
 		return metadata, err
 	}
@@ -322,9 +326,8 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 		hash, _ := hex.DecodeString(c.outputHash(ar))
 		c.state.TargetHasher.SetHash(target, hash)
 	}
-	if err := c.setOutputs(target, ar); err != nil {
-		return metadata, c.wrapActionErr(err, digest)
-	}
+
+	c.setOutputsFromMetadata(target, metadata)
 
 	if c.state.ShouldDownload(target) {
 		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading")
@@ -395,7 +398,7 @@ func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.Actio
 		err = c.verifyActionResult(target, command, unstampedDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
 		if err == nil {
 			// Store results under unstamped digest too.
-			c.locallyCacheResults(target, unstampedDigest, metadata, ar)
+			c.locallyCacheResults(target, unstampedDigest, metadata)
 		}
 		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
@@ -572,13 +575,13 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 	}); err == nil {
 		// This action already exists and has been cached.
 		remoteCacheReadDuration.Observe(float64(time.Since(start).Milliseconds()))
-		if metadata, err := c.buildMetadata(ar, needStdout, false); err == nil {
+		if metadata, err := c.buildMetadata(target, ar, needStdout, false); err == nil {
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
 			if command != nil {
 				err = c.verifyActionResult(target, command, digest, ar, c.state.Config.Remote.VerifyOutputs, isTest)
 			}
 			if err == nil {
-				c.locallyCacheResults(target, digest, metadata, ar)
+				c.locallyCacheResults(target, digest, metadata)
 				metadata.Cached = true
 				return metadata, ar
 			}
@@ -752,7 +755,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 			log.Debug("Message from build server:\n     %s", response.Message)
 		}
 		failed := respErr != nil || response.Result.ExitCode != 0
-		metadata, err := c.buildMetadata(response.Result, needStdout || failed, failed)
+		metadata, err := c.buildMetadata(target, response.Result, needStdout || failed, failed)
 		logResponseTimings(target, response.Result)
 		// The original error is higher priority than us trying to retrieve the
 		// output of the thing that failed.
@@ -785,7 +788,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 		if err := c.verifyActionResult(target, command, digest, response.Result, c.state.Config.Remote.VerifyOutputs && !isTest, isTest); err != nil {
 			return metadata, response.Result, err
 		}
-		c.locallyCacheResults(target, digest, metadata, response.Result)
+		c.locallyCacheResults(target, digest, metadata)
 		return metadata, response.Result, nil
 	default:
 		if !resp.Done {
@@ -860,7 +863,8 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 	}); err != nil {
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
-	return &core.BuildMetadata{}, ar, nil
+	md, err := c.buildMetadata(target, ar, false, false)
+	return md, ar, err
 }
 
 // buildFilegroup "builds" a single filegroup target.
@@ -903,7 +907,8 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 	}); err != nil {
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
-	return &core.BuildMetadata{}, ar, nil
+	md, err := c.buildMetadata(target, ar, false, false)
+	return md, ar, err
 }
 
 // buildTextFile "builds" uploads a text file to the CAS
@@ -936,7 +941,8 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 	}); err != nil {
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
-	return &core.BuildMetadata{}, ar, nil
+	md, err := c.buildMetadata(target, ar, false, false)
+	return md, ar, err
 }
 
 // A grpcLogMabob is an implementation of grpc's logging interface using our backend.
