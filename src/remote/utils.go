@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -28,6 +29,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
+	remotefs "github.com/thought-machine/please/src/remote/fs"
 )
 
 var downloadErrors = metrics.NewCounter(
@@ -68,14 +70,48 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 
 // setOutputs sets the outputs for the target so we can refer to them later by build label from dependent rules. We also
 // save the full Tree proto for subrepos so we can parse and build subrepo targets without downloading the sources.
-func (c *Client) setOutputs(target *core.BuildTarget, tree *pb.Tree) {
+func (c *Client) setOutputs(target *core.BuildTarget, arTree *pb.Tree) error {
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
 
-	if target.IsSubrepo {
-		c.subrepoTrees[target.Label] = tree
+	o := &pb.Directory{
+		Files:          arTree.Root.Files,
+		Symlinks:       arTree.Root.Symlinks,
+		NodeProperties: arTree.Root.NodeProperties,
 	}
-	c.outputs[target.Label] = tree.Root
+
+	// A filesystem representing the output tree of the action result
+	actionResultFS := remotefs.New(c.client, arTree, ".")
+
+	// The action result will contain the raw outputs in their original places. We need to move outputs within
+	// `output_dirs` to the output root.
+	for _, dirNode := range arTree.Root.Directories {
+		if outDir := maybeGetOutDir(dirNode.Name, target.OutputDirectories); outDir != "" {
+			// Make sure we add all the outputs to the target
+			if err := c.setOutputDirectoryOuts(target, actionResultFS, outDir); err != nil {
+				return err
+			}
+
+			// Now flatten the contents of the directory into the action result root
+			dir := actionResultFS.Dir(digest.NewFromProtoUnvalidated(dirNode.Digest))
+			o.Directories = append(o.Directories, dir.Directories...)
+			o.Files = append(o.Files, dir.Files...)
+			o.Symlinks = append(o.Symlinks, dir.Symlinks...)
+		} else {
+			o.Directories = append(o.Directories, dirNode)
+		}
+	}
+
+	outputTree := &pb.Tree{
+		Root:     o,
+		Children: arTree.Children,
+	}
+
+	if target.IsSubrepo {
+		c.subrepoTrees[target.Label] = outputTree
+	}
+	c.outputs[target.Label] = outputTree.Root
+	return nil
 }
 
 func (c *Client) setOutputsFromMetadata(target *core.BuildTarget, md *core.BuildMetadata) {
@@ -89,9 +125,8 @@ func (c *Client) setOutputsFromMetadata(target *core.BuildTarget, md *core.Build
 	c.setOutputs(target, tree)
 }
 
-// calculateOutputTree get the output tree for an action result, as it should be presented to downstream actions,
-// handling the output directory semantics. It stores the output directories in the client's cache.
-func (c *Client) calculateOutputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.Tree, error) {
+// outputTree returns a tree representing the outputs of an action result
+func (c *Client) outputTree(ar *pb.ActionResult) (*pb.Tree, error) {
 	o := &pb.Tree{
 		Root: &pb.Directory{
 			Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
@@ -118,22 +153,11 @@ func (c *Client) calculateOutputTree(target *core.BuildTarget, ar *pb.ActionResu
 			return nil, wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 
-		o.Children = append(o.Children, tree.Children...)
-		o.Children = append(o.Children, tree.Root)
-
-		if outDir := maybeGetOutDir(d.Path, target.OutputDirectories); outDir != "" {
-			files, dirs, err := c.getOutputsForOutDir(target, outDir, tree)
-			if err != nil {
-				return nil, err
-			}
-			o.Root.Directories = append(o.Root.Directories, dirs...)
-			o.Root.Files = append(o.Root.Files, files...)
-		} else {
-			o.Root.Directories = append(o.Root.Directories, &pb.DirectoryNode{
-				Name:   d.Path,
-				Digest: c.digestMessage(tree.Root),
-			})
-		}
+		o.Children = append(o.Children, append(tree.Children, tree.Root)...)
+		o.Root.Directories = append(o.Root.Directories, &pb.DirectoryNode{
+			Name:   d.Path,
+			Digest: c.digestMessage(tree.Root),
+		})
 	}
 	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
 		o.Root.Symlinks[i] = &pb.SymlinkNode{
@@ -144,39 +168,27 @@ func (c *Client) calculateOutputTree(target *core.BuildTarget, ar *pb.ActionResu
 	return o, nil
 }
 
-func (c *Client) getOutputsForOutDir(target *core.BuildTarget, outDir core.OutputDirectory, tree *pb.Tree) ([]*pb.FileNode, []*pb.DirectoryNode, error) {
-	files := make([]*pb.FileNode, 0, len(tree.Root.Files))
-	dirs := make([]*pb.DirectoryNode, 0, len(tree.Root.Directories))
-
+// setOutputDirectoryOuts sets the output on the target based on the outputs in the action result
+func (c *Client) setOutputDirectoryOuts(target *core.BuildTarget, actionResultFS *remotefs.CASFileSystem, outDir core.OutputDirectory) error {
+	outDirFS := actionResultFS.ChangeDir(outDir.Dir())
 	if outDir.ShouldAddFiles() {
-		outs, err := c.client.FlattenTree(tree, "")
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, o := range outs {
-			if o.IsEmptyDirectory {
-				continue
+		err := iofs.WalkDir(outDirFS, ".", func(path string, d iofs.DirEntry, err error) error {
+			if !d.IsDir() {
+				target.AddOutput(path)
 			}
-			target.AddOutput(o.Path)
-			files = append(files, &pb.FileNode{
-				Digest:       o.Digest.ToProto(),
-				Name:         o.Path,
-				IsExecutable: o.IsExecutable,
-			})
-		}
-		return files, dirs, nil
+			return nil
+		})
+		return err
 	}
 
-	for _, out := range tree.Root.Files {
-		target.AddOutput(out.Name)
-		files = append(files, out)
+	entries, err := iofs.ReadDir(outDirFS, ".")
+	if err != nil {
+		return err
 	}
-	for _, out := range tree.Root.Directories {
-		target.AddOutput(out.Name)
-		dirs = append(dirs, out)
+	for _, e := range entries {
+		target.AddOutput(e.Name())
 	}
-
-	return files, dirs, nil
+	return nil
 }
 
 // readDirectory reads a Directory proto, possibly using a local cache, otherwise going to the remote

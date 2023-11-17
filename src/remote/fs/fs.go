@@ -92,6 +92,21 @@ func (fs *CASFileSystem) FindNode(name string) (*pb.FileNode, *pb.DirectoryNode,
 	return fs.findNode(fs.root, filepath.Join(fs.workingDir, name))
 }
 
+// Dir returns the directory with the given digest
+func (fs *CASFileSystem) Dir(dg digest.Digest) *pb.Directory {
+	return fs.directories[dg]
+}
+
+// ChangeDir returns a new filesystem with the provided working dir
+func (fs *CASFileSystem) ChangeDir(path string) *CASFileSystem {
+	return &CASFileSystem{
+		c:           fs.c,
+		root:        fs.root,
+		directories: fs.directories,
+		workingDir:  path,
+	}
+}
+
 func (fs *CASFileSystem) open(name string) (iofs.File, error) {
 	fileNode, dirNode, linkNode, err := fs.findNode(fs.root, name)
 	if err != nil {
