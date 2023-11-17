@@ -129,3 +129,21 @@ please_repo_e2e_test(
     plz_command = "plz run parallel //src:arg_printer wibble wobble > args.txt",
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "test_args_sequential_no_slashes",
+    expected_output = {
+        "args.txt": "wibble wobble",
+    },
+    plz_command = "plz run sequential src:arg_printer wibble wobble > args.txt",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "test_args_parallel_no_slashes",
+    expected_output = {
+        "args.txt": "wibble wobble",
+    },
+    plz_command = "plz run parallel src:arg_printer wibble wobble > args.txt",
+    repo = "test_repo",
+)
