@@ -370,7 +370,7 @@ func (c *Client) buildMetadata(target *core.BuildTarget, ar *pb.ActionResult, ne
 		}
 		metadata.Stderr = b
 	}
-	outputs, err := c.calculateOutputTree(target, ar)
+	outputs, err := c.outputTree(ar)
 	if err != nil {
 		return nil, err
 	}
@@ -502,12 +502,11 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 	if err := c.uploadIfMissing(context.Background(), entries); err != nil {
 		return err
 	}
-	outs, err := c.calculateOutputTree(target, ar)
+	outs, err := c.outputTree(ar)
 	if err != nil {
 		return err
 	}
-	c.setOutputs(target, outs)
-	return nil
+	return c.setOutputs(target, outs)
 }
 
 // translateOS converts the OS name of a subrepo into a Bazel-style OS name.
