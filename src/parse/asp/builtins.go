@@ -1300,7 +1300,6 @@ func subrepo(s *scope, args []pyObject) pyObject {
 		if target.Local || s.state.RemoteClient == nil {
 			root = filepath.Join(target.OutDir(), root)
 		}
-
 	} else if args[PathArgIdx] != None {
 		root = string(args[PathArgIdx].(pyString))
 	}

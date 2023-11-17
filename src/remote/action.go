@@ -262,11 +262,11 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 			for _, p := range i.Paths(c.state.Graph) {
 				subrepoPath, err := filepath.Rel(target.Subrepo.PackageRoot, p)
 				if err != nil {
-					return nil, fmt.Errorf("failed to ")
+					return nil, fmt.Errorf("%v: source file not in subrepo package root (%v): %v", target.Label, p, err)
 				}
 				fileNode, dirNode, symlinkNode, err := remotefs.FindNode(target.Subrepo.FS(), subrepoPath)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("%v: failed to find file in subrepo output: %v", target.Label, err)
 				}
 
 				dir := b.Dir(filepath.Dir(p))
