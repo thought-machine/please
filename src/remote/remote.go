@@ -316,10 +316,10 @@ func (c *Client) digestEnum() pb.DigestFunction_Value {
 }
 
 func (c *Client) SubrepoFS(target *core.BuildTarget, root string) iofs.FS {
+	c.outputMutex.RLock()
+	defer c.outputMutex.RUnlock()
+
 	tree := c.subrepoTrees[target.Label]
-	if tree == nil {
-		panic("wat")
-	}
 	return remotefs.New(c.client, tree, root)
 }
 
