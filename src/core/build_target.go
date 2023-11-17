@@ -359,6 +359,10 @@ func (s BuildTargetState) String() string {
 	return "Unknown"
 }
 
+func (s BuildTargetState) IsBuilt() bool {
+	return Built <= s && s < DependencyFailed
+}
+
 // NewBuildTarget constructs & returns a new BuildTarget.
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return &BuildTarget{

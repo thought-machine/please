@@ -845,7 +845,7 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
-		if s := t.State(); s >= Built && s != Failed {
+		if t.State().IsBuilt() {
 			return t
 		}
 	}
@@ -940,6 +940,9 @@ func (state *BuildState) WaitForInitialTargetAndEnsureDownload(l, dependent Buil
 
 func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
 	target := state.WaitForBuiltTarget(l, dependent, mode)
+	if !target.State().IsBuilt() {
+		return nil
+	}
 	if err := state.EnsureDownloaded(target); err != nil {
 		panic(fmt.Errorf("failed to download target outputs: %w", err))
 	}

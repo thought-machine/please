@@ -24,3 +24,13 @@ please_repo_e2e_test(
     plz_command = "plz test --keep_going //package:all",
     repo = "test_repo",
 )
+
+# Make sure we don't hang when we encounter a parse failure
+# TODO(rgodden): Assert we see the outputs for //package:all once we fix the issue closing pending targets on parse
+#  parse failure.
+please_repo_e2e_test(
+    name = "test_parse_failure",
+    expected_failure = True,
+    plz_command = "plz build --keep_going //package:all //package2:all",
+    repo = "test_repo",
+)
