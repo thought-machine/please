@@ -173,6 +173,9 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
+		if label.Name == "nested_lib" {
+			print()
+		}
 		filename, dir := buildFileName(state, subrepo, fileSystem, label.PackageName)
 		if filename != "" {
 			file, err := openFile(fileSystem, pkg.SubrepoName, filename)
@@ -180,6 +183,9 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 				return nil, err
 			}
 			defer file.Close()
+
+			bs, _ := iofs.ReadFile(fileSystem, filename)
+			_ = bs
 			pkg.Filename = filename
 			if err := state.Parser.ParseReader(pkg, file, &label, &dependent, mode); err != nil {
 				return nil, err

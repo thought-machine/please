@@ -11,7 +11,6 @@ go_library(
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/execution/v2",
         "//src/cli/logging",
     ],
-    visibility = ["//src/remote"],
 )
 
 go_test(

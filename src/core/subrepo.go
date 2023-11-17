@@ -45,11 +45,11 @@ func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch 
 }
 
 func (s *Subrepo) FS() iofs.FS {
-	if s == nil || s.Target == nil || s.Root == "" {
+	if s == nil || s.Root == "" {
 		// Must be an architecture subrepo
 		return fs.HostFS
 	}
-	if s.Target.Local || s.State.RemoteClient == nil {
+	if s.Target == nil || s.Target.Local || s.State.RemoteClient == nil {
 		return os.DirFS(s.Root)
 	}
 	return s.State.RemoteClient.SubrepoFS(s.Target, s.Root)
