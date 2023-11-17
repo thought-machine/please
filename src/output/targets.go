@@ -80,7 +80,9 @@ func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
 		if result.Status != core.TargetTestFailed {
 			// Reset colour so the entire compiler error output doesn't appear red.
 			log.Errorf("%s failed:\x1b[0m\n%s", label, shortError(result.Err))
-			if !bt.state.KeepGoing {
+			// TODO(rgodden): make sure we close off any pending targets when their package fails to parse e.g. because
+			// 	a subrepo failed to build.
+			if !bt.state.KeepGoing || result.Status == core.ParseFailed {
 				bt.state.Stop()
 			}
 		} else if msg := shortError(result.Err); msg != "" {

@@ -1,0 +1,4 @@
+build_rule(
+    name = "transitive_parse_fail",
+    deps = ["//parse_failure:test"],
+)
