@@ -554,7 +554,7 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"exec.sequential": func() int {
-		annotated, unannotated, args := opts.Exec.Sequential.Args.Targets.Separate()
+		annotated, unannotated, args := opts.Exec.Sequential.Args.Targets.Separate(true)
 		if len(unannotated) == 0 {
 			return 0
 		}
@@ -568,7 +568,7 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"exec.parallel": func() int {
-		annotated, unannotated, args := opts.Exec.Parallel.Args.Targets.Separate()
+		annotated, unannotated, args := opts.Exec.Parallel.Args.Targets.Separate(true)
 		if len(unannotated) == 0 {
 			return 0
 		}
@@ -602,7 +602,7 @@ var buildFunctions = map[string]func() int{
 		return 1 // We should never return from run.Run so if we make it here something's wrong.
 	},
 	"run.parallel": func() int {
-		annotated, unannotated, args := opts.Run.Parallel.PositionalArgs.Targets.Separate()
+		annotated, unannotated, args := opts.Run.Parallel.PositionalArgs.Targets.Separate(true)
 		if len(unannotated) == 0 {
 			return 0
 		}
@@ -619,7 +619,7 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"run.sequential": func() int {
-		annotated, unannotated, args := opts.Run.Sequential.PositionalArgs.Targets.Separate()
+		annotated, unannotated, args := opts.Run.Sequential.PositionalArgs.Targets.Separate(true)
 		if len(unannotated) == 0 {
 			return 0
 		}
@@ -1224,7 +1224,12 @@ func (arg *TargetOrArg) UnmarshalFlag(value string) error {
 type TargetsOrArgs []TargetOrArg
 
 // Separate splits the targets & arguments into the labels (in both annotated & unannotated forms) and the arguments.
-func (l TargetsOrArgs) Separate() (annotated []core.AnnotatedOutputLabel, unannotated []core.BuildLabel, args []string) {
+func (l TargetsOrArgs) Separate(requireOneLabel bool) (annotated []core.AnnotatedOutputLabel, unannotated []core.BuildLabel, args []string) {
+	if requireOneLabel && l[0].arg != "" && l[0].arg != "-" {
+		if err := l[0].label.UnmarshalFlag(l[0].arg); err != nil {
+			log.Fatalf("First argument must be a build label: %s", l[0].arg)
+		}
+	}
 	for _, arg := range l {
 		if l, _ := arg.label.Label(); l.IsEmpty() {
 			if arg.arg == "-" {
@@ -1246,7 +1251,7 @@ func (l TargetsOrArgs) Separate() (annotated []core.AnnotatedOutputLabel, unanno
 
 // SeparateUnannotated splits the targets & arguments into two slices. Annotations aren't permitted.
 func (l TargetsOrArgs) SeparateUnannotated() ([]core.BuildLabel, []string) {
-	annotated, unannotated, args := l.Separate()
+	annotated, unannotated, args := l.Separate(false)
 	for _, a := range annotated {
 		if a.Annotation != "" {
 			log.Fatalf("Invalid build label; annotations are not permitted here: %s", a)
