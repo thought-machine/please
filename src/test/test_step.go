@@ -336,7 +336,7 @@ func pluralise(word string, quantity int) string {
 }
 
 // testCommandAndEnv returns the test command & environment for a target.
-func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int) (string, []string, error) {
+func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int) (string, core.BuildEnv, error) {
 	replacedCmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	env := core.TestEnvironment(state, target, filepath.Join(core.RepoRoot, target.TestDir(run)))
 	if len(state.TestArgs) > 0 {
@@ -350,7 +350,7 @@ func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte,
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Running test %s#%d\nENVIRONMENT:\n%s\n%s", target.Label, run, strings.Join(env, "\n"), replacedCmd)
+	log.Debugf("Running test %s#%d\nENVIRONMENT:\n%s\n%s", target.Label, run, env, replacedCmd)
 	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env, target.Test.Timeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Test.Sandbox, target.Test.Sandbox), replacedCmd, state.DebugFailingTests)
 	return stderr, err
 }
