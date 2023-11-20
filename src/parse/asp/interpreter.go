@@ -306,15 +306,21 @@ func (s *scope) parseAnnotatedLabelInPackage(label string, pkg *core.Package) co
 // parseLabelInPackage parses a build label in the scope of the package given the current scope.
 func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildLabel {
 	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
+		arch := cli.HostArch()
+		if pkg.Subrepo != nil {
+			arch = pkg.Subrepo.Arch
+		}
+		subrepoArch := ""
+		if idx := strings.LastIndex(subrepo, "@"); idx != -1 {
+			subrepoArch = subrepo[idx+1:]
+		}
 		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
 			subrepo = pkg.SubrepoName
-		} else if arch := cli.HostArch(); strings.Contains(subrepo, "@"+arch.String()) {
-			subrepo = strings.TrimSuffix(subrepo, "@"+arch.String())
-		} else if subrepo == arch.String() {
-			subrepo = ""
+			subrepoArch = arch.String()
 		} else if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {
 			subrepo = ""
-		} else {
+		}
+		if subrepoArch == "" && subrepo != arch.String() {
 			subrepo = pkg.SubrepoArchName(subrepo)
 		}
 		return core.BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
