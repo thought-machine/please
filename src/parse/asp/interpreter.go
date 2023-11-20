@@ -314,7 +314,7 @@ func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildL
 			subrepo = ""
 		} else if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {
 			subrepo = ""
-		} else {
+		} else if pkg.Subrepo == nil || subrepo != pkg.Subrepo.Arch.String() {
 			subrepo = pkg.SubrepoArchName(subrepo)
 		}
 		return core.BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
