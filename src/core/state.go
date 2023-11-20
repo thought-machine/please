@@ -8,6 +8,7 @@ import (
 	"hash/crc32"
 	"hash/crc64"
 	"io"
+	iofs "io/fs"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -111,6 +112,8 @@ type RemoteClient interface {
 	DataRate() (int, int, int, int)
 	// Disconnect disconnects from the remote execution server.
 	Disconnect() error
+	// SubrepoFS returns a virtual filesystem for the subrepo target
+	SubrepoFS(target *BuildTarget, root string) iofs.FS
 }
 
 // A TargetHasher is a thing that knows how to create hashes for targets.
@@ -840,12 +843,7 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 	return state.WaitForPackage(l, dependent, mode)
 }
 
-// WaitForBuiltTarget blocks until the given label is available as a build target and has been successfully built.
-func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel) *BuildTarget {
-	return state.waitForBuiltTarget(l, dependent, ParseModeForSubinclude)
-}
-
-func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
+func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
 	if t := state.Graph.Target(l); t != nil {
 		if t.State().IsBuilt() {
 			return t
@@ -865,7 +863,7 @@ func (state *BuildState) waitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	// Do this all over; the re-checking that happens here is actually fairly important to resolve
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
-	return state.waitForBuiltTarget(l, dependent, mode)
+	return state.WaitForBuiltTarget(l, dependent, mode)
 }
 
 // AddTarget adds a new target to the build graph.
@@ -941,7 +939,7 @@ func (state *BuildState) WaitForInitialTargetAndEnsureDownload(l, dependent Buil
 }
 
 func (state *BuildState) waitForTargetAndEnsureDownload(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
-	target := state.waitForBuiltTarget(l, dependent, mode)
+	target := state.WaitForBuiltTarget(l, dependent, mode)
 	if !target.State().IsBuilt() {
 		return nil
 	}
@@ -1068,7 +1066,7 @@ func (state *BuildState) QueueTestTarget(target *BuildTarget) {
 func (state *BuildState) queueTargetData(target *BuildTarget) {
 	for _, data := range target.AllData() {
 		if l, ok := data.Label(); ok {
-			state.WaitForBuiltTarget(l, target.Label)
+			state.WaitForBuiltTarget(l, target.Label, ParseModeForSubinclude)
 		}
 	}
 }
