@@ -271,6 +271,12 @@
     if they make mistakes in their BUILD files (e.g. passing a string where a
     list is required).
   </p>
+  <p>
+    Additionally, arguments can be aliased using the
+    <code class="code">def func(arg_name: str&arg_alias):...</code> syntax, such that
+    <code class="code">func(arg_name="example")</code> and
+    <code class="code">func(arg_alias="example")</code> are equivalent.
+  </p>
 
   <p>User-defined varargs and kwargs functions are not supported.</p>
 
