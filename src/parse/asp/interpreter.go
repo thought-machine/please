@@ -308,8 +308,8 @@ func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildL
 	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
 		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
 			subrepo = pkg.SubrepoName
-		} else if arch := cli.HostArch(); strings.Contains(subrepo, "_"+arch.String()) {
-			subrepo = strings.TrimSuffix(subrepo, "_"+arch.String())
+		} else if arch := cli.HostArch(); strings.Contains(subrepo, "@"+arch.String()) {
+			subrepo = strings.TrimSuffix(subrepo, "@"+arch.String())
 		} else if subrepo == arch.String() {
 			subrepo = ""
 		} else if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {

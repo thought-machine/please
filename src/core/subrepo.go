@@ -65,7 +65,7 @@ func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 
 // SubrepoArchName returns the subrepo name augmented for the given architecture
 func SubrepoArchName(subrepo string, arch cli.Arch) string {
-	return subrepo + "_" + arch.String()
+	return subrepo + "@" + arch.String()
 }
 
 // LabelToArch converts the provided label to the given architecture
@@ -101,7 +101,7 @@ func validateSubrepoNameAndPluginConfig(config, repoConfig *Configuration, subre
 	if pluginID := repoConfig.PluginDefinition.Name; pluginID != "" {
 		subrepoName := subrepo.Name
 		if subrepo.Arch.String() != "" {
-			subrepoName = strings.TrimSuffix(subrepo.Name, "_"+subrepo.Arch.String())
+			subrepoName = strings.TrimSuffix(subrepo.Name, "@"+subrepo.Arch.String())
 		}
 		if !strings.EqualFold(pluginID, subrepoName) {
 			return fmt.Errorf("Subrepo name %q should be the same as the plugin ID %q", subrepoName, pluginID)

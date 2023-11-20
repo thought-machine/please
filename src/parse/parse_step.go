@@ -36,6 +36,9 @@ func Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 }
 
 func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
+	if label.Name == "generate-types" {
+		print()
+	}
 	subrepo, err := checkSubrepo(state, label, dependent, mode)
 	if err != nil {
 		return err
@@ -109,7 +112,7 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 	}
 
 	// Try parsing the package in the host repo first.
-	s, err := parseSubrepoPackage(state, sl.PackageName, "", label, mode)
+	s, err := parseSubrepoPackage(state, sl.PackageName, sl.Subrepo, label, mode)
 	if err != nil || s != nil {
 		return s, err
 	}

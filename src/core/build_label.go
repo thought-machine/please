@@ -430,7 +430,7 @@ func (label BuildLabel) SubrepoLabel(state *BuildState, dependentSubrepo string)
 		}
 		return plugin.Target
 	}
-	pluginName := strings.TrimSuffix(label.Subrepo, fmt.Sprintf("_%v", arch))
+	pluginName := strings.TrimSuffix(label.Subrepo, fmt.Sprintf("@%v", arch))
 	if plugin, ok := state.Config.Plugin[pluginName]; ok {
 		if plugin.Target.String() == "" {
 			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
@@ -441,11 +441,17 @@ func (label BuildLabel) SubrepoLabel(state *BuildState, dependentSubrepo string)
 }
 
 func (label BuildLabel) subrepoLabel() BuildLabel {
-	if idx := strings.LastIndexByte(label.Subrepo, '/'); idx != -1 {
-		return BuildLabel{PackageName: label.Subrepo[:idx], Name: label.Subrepo[idx+1:]}
+	subrepo := ""
+	name := label.Subrepo
+	if idx := strings.LastIndex(label.Subrepo, "@"); idx != -1 {
+		subrepo = label.Subrepo[idx+1:]
+		name = label.Subrepo[:idx]
+	}
+	if idx := strings.LastIndexByte(name, '/'); idx != -1 {
+		return BuildLabel{PackageName: name[:idx], Name: name[idx+1:], Subrepo: subrepo}
 	}
 	// This is legit, the subrepo is defined at the root.
-	return BuildLabel{Name: label.Subrepo}
+	return BuildLabel{Name: name, Subrepo: subrepo}
 }
 
 func hashBuildLabel(l BuildLabel) uint64 {
