@@ -12,6 +12,13 @@ Version 17.4.0
     * Fix reduce builtin (#2925)
     * Fix issue with completing idents in the language server (#2917)
     * Improve performance when a large number of input targets are supplied (#2942)
+    * Virtualise the subrepo filesystem for remote execution to avoid downloading
+      the whole subrepo to plz-out (#2952, #2954, #2953, #2955, #2960, #2961,
+      #2962, #2963, #2966, #2968, #2965)
+    * Fix issue where we would double the architecture subrepo if it was explicitly
+      specified in a subrepo (#2973)
+    * Always treat the first argument of `plz run` commands as a build label (#2967)
+    * Redact secrets from test step logging (#2970)
 
 Version 17.3.1
 --------------
