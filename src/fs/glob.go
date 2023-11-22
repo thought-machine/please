@@ -72,7 +72,7 @@ func Glob(fs iofs.FS, buildFileNames []string, rootPath string, includes, exclud
 // it isn't safe for use in concurrent goroutines.
 type Globber struct {
 	buildFileNames []string
-	fs             iofs.ReadDirFS
+	fs             iofs.FS
 	walkedDirs     map[string]walkedDir
 }
 
@@ -90,13 +90,9 @@ func Match(glob, path string) (bool, error) {
 
 // NewGlobber creates a new Globber. You should call this rather than creating one directly (or use Glob() if you don't care).
 func NewGlobber(fs iofs.FS, buildFileNames []string) *Globber {
-	rdfs, ok := fs.(iofs.ReadDirFS)
-	if !ok {
-		log.Fatalf("NewGlobber must be constructed with a ReadDirFS")
-	}
 	return &Globber{
 		buildFileNames: buildFileNames,
-		fs:             rdfs,
+		fs:             fs,
 		walkedDirs:     map[string]walkedDir{},
 	}
 }

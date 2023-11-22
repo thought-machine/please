@@ -49,10 +49,15 @@ func (s *Subrepo) FS() iofs.FS {
 		// Must be an architecture subrepo
 		return fs.HostFS
 	}
-	if s.Target == nil || s.Target.Local || s.State.RemoteClient == nil {
-		return os.DirFS(s.Root)
+	if s.IsRemoteSubrepo() {
+		return s.State.RemoteClient.SubrepoFS(s.Target, s.Root)
 	}
-	return s.State.RemoteClient.SubrepoFS(s.Target, s.Root)
+	return os.DirFS(s.Root)
+}
+
+// IsRemoteSubrepo returns true when the subrepo sources are remote i.e. not downloaded to plz-out
+func (s *Subrepo) IsRemoteSubrepo() bool {
+	return s.Root != "" && s.Target != nil && !s.Target.Local && s.State.RemoteClient != nil
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
