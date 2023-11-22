@@ -258,7 +258,7 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 			}
 			continue
 		}
-		if i, ok := input.(core.SubrepoFileLabel); ok && !target.Local {
+		if i, ok := input.(core.SubrepoFileLabel); ok && target.Subrepo.IsRemoteSubrepo() {
 			for _, p := range i.Paths(c.state.Graph) {
 				subrepoPath, err := filepath.Rel(target.Subrepo.PackageRoot, p)
 				if err != nil {
