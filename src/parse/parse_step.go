@@ -100,7 +100,7 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 		return subrepo, nil
 	}
 
-	sl := label.SubrepoLabel(state, dependent.Subrepo)
+	sl := label.SubrepoLabel(state)
 
 	// Local subincludes are when we subinclude from a subrepo defined in the current package
 	localSubinclude := label.Subrepo == dependent.Subrepo && label.PackageName == dependent.PackageName && mode.IsForSubinclude()

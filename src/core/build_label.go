@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/thought-machine/please/src/cli"
 	"os"
 	"path/filepath"
 	"strings"
@@ -152,6 +153,25 @@ func TryParseBuildLabel(target, currentPath, subrepo string) (BuildLabel, error)
 		return BuildLabel{PackageName: pkg, Name: name, Subrepo: subrepo}, nil
 	}
 	return BuildLabel{}, fmt.Errorf("Invalid build label: %s", target)
+}
+
+// SplitSubrepoArch splits a subrepo name into the subrepo and architecture parts
+func SplitSubrepoArch(subrepoName string) (string, string) {
+	if idx := strings.LastIndex(subrepoName, "@"); idx != -1 {
+		return subrepoName[:idx], subrepoName[(idx+1):]
+	}
+	return subrepoName, ""
+}
+
+// JoinSubrepoArch joins a subrepo name with an architecture
+func JoinSubrepoArch(subrepoName, arch string) string {
+	if subrepoName == "" {
+		return arch
+	}
+	if arch == "" {
+		return subrepoName
+	}
+	return fmt.Sprintf("%v@%v", subrepoName, arch)
 }
 
 // ParseBuildLabelParts parses a build label into the package & name parts.
@@ -415,43 +435,54 @@ func (label BuildLabel) PackageDir() string {
 }
 
 // SubrepoLabel returns a build label corresponding to the subrepo part of this build label.
-func (label BuildLabel) SubrepoLabel(state *BuildState, dependentSubrepo string) BuildLabel {
-	arch := ""
-	if dependentSubrepo != "" {
-		a := state.Graph.Subrepo(dependentSubrepo).Arch
-		if a != state.Arch {
-			arch = a.String()
-		}
+func (label BuildLabel) SubrepoLabel(state *BuildState) BuildLabel {
+	if strings.Contains(label.String(), "golang.org_x_net") {
+		print()
 	}
 
-	if plugin, ok := state.Config.Plugin[label.Subrepo]; ok {
-		if plugin.Target.String() == "" {
-			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", label.Subrepo)
-		}
-		return plugin.Target
+	if strings.Contains(label.Subrepo, "@") {
+		print()
 	}
-	pluginName := strings.TrimSuffix(label.Subrepo, fmt.Sprintf("@%v", arch))
-	if plugin, ok := state.Config.Plugin[pluginName]; ok {
-		if plugin.Target.String() == "" {
-			log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
-		}
-		return plugin.Target
+	pluginName, arch := SplitSubrepoArch(label.Subrepo)
+	if arch == "" && state.Arch != cli.HostArch() {
+		arch = state.Arch.String()
 	}
-	return label.subrepoLabel()
+
+	plugin, ok := state.Config.Plugin[pluginName]
+	if !ok {
+		return label.subrepoLabel(state)
+	}
+
+	if plugin.Target.String() == "" {
+		log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
+	}
+
+	t := plugin.Target
+	// If the plugin already specifies an architecture, don't override it
+	if strings.Contains(t.Subrepo, "@") {
+		return t
+	}
+
+	// Otherwise we need to set it to match our architecture
+	if t.Subrepo == "" {
+		t.Subrepo = arch
+	} else {
+		t.Subrepo = fmt.Sprintf("%v@%v", t.Subrepo, arch)
+	}
+	return t
 }
 
-func (label BuildLabel) subrepoLabel() BuildLabel {
-	subrepo := ""
-	name := label.Subrepo
-	if idx := strings.LastIndex(label.Subrepo, "@"); idx != -1 {
-		subrepo = label.Subrepo[idx+1:]
-		name = label.Subrepo[:idx]
+func (label BuildLabel) subrepoLabel(state *BuildState) BuildLabel {
+	subrepoName, arch := SplitSubrepoArch(label.Subrepo)
+	if arch == "" && state.Arch != cli.HostArch() {
+		arch = state.Arch.String()
 	}
-	if idx := strings.LastIndexByte(name, '/'); idx != -1 {
-		return BuildLabel{PackageName: name[:idx], Name: name[idx+1:], Subrepo: subrepo}
+
+	if idx := strings.LastIndexByte(subrepoName, '/'); idx != -1 {
+		return BuildLabel{PackageName: subrepoName[:idx], Name: subrepoName[idx+1:], Subrepo: arch}
 	}
 	// This is legit, the subrepo is defined at the root.
-	return BuildLabel{Name: name, Subrepo: subrepo}
+	return BuildLabel{Name: subrepoName, Subrepo: arch}
 }
 
 func hashBuildLabel(l BuildLabel) uint64 {

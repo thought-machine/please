@@ -305,25 +305,44 @@ func (s *scope) parseAnnotatedLabelInPackage(label string, pkg *core.Package) co
 
 // parseLabelInPackage parses a build label in the scope of the package given the current scope.
 func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildLabel {
+	if label == "//route" {
+		print()
+	}
 	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
 		arch := cli.HostArch()
-		if pkg.Subrepo != nil {
-			arch = pkg.Subrepo.Arch
-		}
-		subrepoArch := ""
-		if idx := strings.LastIndex(subrepo, "@"); idx != -1 {
-			subrepoArch = subrepo[idx+1:]
-		}
-		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
-			subrepo = pkg.SubrepoName
-			subrepoArch = arch.String()
-		} else if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {
+
+		subrepo, subrepoArch := core.SplitSubrepoArch(subrepo)
+
+		// Strip out the host arch as that's the default
+		if subrepo == arch.String() {
 			subrepo = ""
 		}
-		if subrepoArch == "" && subrepo != arch.String() {
+
+		// Similarly trim the architecture if it's the host subrepo
+		if subrepoArch == arch.String() {
+			subrepoArch = ""
+		}
+
+		// If the subrepo matches the host repo's plugin name, then strip it out e.g. if we're in the Go plugin repo,
+		// then ///go//build_defs:go should translate to just //build_defs:go
+		if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {
+			subrepo = ""
+		}
+
+		pkgArch := ""
+		if pkg.Subrepo != nil && pkg.Subrepo.Arch != cli.HostArch() {
+			pkgArch = pkg.Subrepo.Arch.String()
+		}
+
+
+		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
+			subrepo = pkg.SubrepoName
+		}
+
+		if subrepoArch == "" && pkgArch != "" && pkgArch != subrepo {
 			subrepo = pkg.SubrepoArchName(subrepo)
 		}
-		return core.BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
+		return core.BuildLabel{PackageName: p, Name: name, Subrepo: core.JoinSubrepoArch(subrepo, subrepoArch)}
 	}
 	return core.ParseBuildLabel(label, pkg.Name)
 }

@@ -347,7 +347,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	//
 	// By parsing the package first, the subrepo package's subinclude will queue the subrepo target to be built before
 	// we call WaitForSubincludedTarget below avoiding the lockup.
-	subrepoLabel := l.SubrepoLabel(s.state, "")
+	subrepoLabel := l.SubrepoLabel(s.state)
 	if l.Subrepo != "" && subrepoLabel.PackageName != pkg.Name && l.Subrepo != pkg.SubrepoName {
 		subrepoPackageLabel := core.BuildLabel{
 			PackageName: subrepoLabel.PackageName,
