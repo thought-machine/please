@@ -250,9 +250,6 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 
 // populateTarget sets the assorted attributes on a build target.
 func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
-	if t.Label.String() == "///third_party/go/golang.org_x_net@darwin_amd64//:installs" {
-		print()
-	}
 	if t.IsRemoteFile {
 		for _, url := range mustList(args[urlsBuildRuleArgIdx]) {
 			t.AddSource(core.URLLabel(url.(pyString)))

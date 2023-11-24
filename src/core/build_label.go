@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/thought-machine/please/src/cli"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/thought-machine/go-flags"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/cmap"
 	"github.com/thought-machine/please/src/process"
@@ -158,7 +158,7 @@ func TryParseBuildLabel(target, currentPath, subrepo string) (BuildLabel, error)
 // SplitSubrepoArch splits a subrepo name into the subrepo and architecture parts
 func SplitSubrepoArch(subrepoName string) (string, string) {
 	if idx := strings.LastIndex(subrepoName, "@"); idx != -1 {
-		return subrepoName[:idx], subrepoName[(idx+1):]
+		return subrepoName[:idx], subrepoName[(idx + 1):]
 	}
 	return subrepoName, ""
 }
@@ -436,13 +436,6 @@ func (label BuildLabel) PackageDir() string {
 
 // SubrepoLabel returns a build label corresponding to the subrepo part of this build label.
 func (label BuildLabel) SubrepoLabel(state *BuildState) BuildLabel {
-	if strings.Contains(label.String(), "golang.org_x_net") {
-		print()
-	}
-
-	if strings.Contains(label.Subrepo, "@") {
-		print()
-	}
 	pluginName, arch := SplitSubrepoArch(label.Subrepo)
 	if arch == "" && state.Arch != cli.HostArch() {
 		arch = state.Arch.String()

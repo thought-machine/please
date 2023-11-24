@@ -305,9 +305,6 @@ func (s *scope) parseAnnotatedLabelInPackage(label string, pkg *core.Package) co
 
 // parseLabelInPackage parses a build label in the scope of the package given the current scope.
 func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildLabel {
-	if label == "//route" {
-		print()
-	}
 	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
 		arch := cli.HostArch()
 
@@ -329,16 +326,17 @@ func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildL
 			subrepo = ""
 		}
 
+		// Otherwise if the label didn't have any subrepo defined, use the pkg subrepo
+		if subrepo == "" && subrepoArch == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
+			subrepo, subrepoArch = core.SplitSubrepoArch(pkg.SubrepoName)
+		}
+
 		pkgArch := ""
 		if pkg.Subrepo != nil && pkg.Subrepo.Arch != cli.HostArch() {
 			pkgArch = pkg.Subrepo.Arch.String()
 		}
 
-
-		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
-			subrepo = pkg.SubrepoName
-		}
-
+		// Otherwise, if we don't have any specific architecture, and the pkg does, use the package arch
 		if subrepoArch == "" && pkgArch != "" && pkgArch != subrepo {
 			subrepo = pkg.SubrepoArchName(subrepo)
 		}

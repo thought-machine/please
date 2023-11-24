@@ -36,9 +36,6 @@ func Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 }
 
 func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
-	if label.Name == "generate-types" {
-		print()
-	}
 	subrepo, err := checkSubrepo(state, label, dependent, mode)
 	if err != nil {
 		return err

@@ -257,7 +257,7 @@ func (arch *Arch) UnmarshalText(text []byte) error {
 
 // UnmarshalFlag implements the flags.Unmarshaler interface.
 func (arch *Arch) UnmarshalFlag(in string) error {
-	if parts := strings.Split(in, "_"); len(parts) == 2 && !strings.ContainsRune(in, '/') && !strings.Contains(in, "@"){
+	if parts := strings.Split(in, "_"); len(parts) == 2 && !strings.ContainsRune(in, '/') && !strings.Contains(in, "@") {
 		arch.OS = parts[0]
 		arch.Arch = parts[1]
 		return nil
