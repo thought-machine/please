@@ -26,6 +26,14 @@ type Client interface {
 	ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client.MovedBytesMetadata, error)
 }
 
+func FindNode(fs iofs.FS, path string) (*pb.FileNode, *pb.DirectoryNode, *pb.SymlinkNode, error) {
+	casFS, ok := fs.(*CASFileSystem)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("not supported")
+	}
+	return casFS.FindNode(path)
+}
+
 // CASFileSystem is an fs.FS implemented on top of a Tree proto. This will download files as they are needed from the
 // CAS when they are opened.
 type CASFileSystem struct {

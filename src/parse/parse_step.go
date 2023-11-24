@@ -67,7 +67,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo but it depends on something, make sure that has been built.
-		state.WaitForTargetAndEnsureDownload(subrepo.Target.Label, label, mode.IsPreload())
+		state.WaitForBuiltTarget(subrepo.Target.Label, label, mode|core.ParseModeForSubinclude)
 		if !subrepo.Target.State().IsBuilt() {
 			return fmt.Errorf("%v: failed to build subrepo", label)
 		}
@@ -167,7 +167,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	var fileSystem iofs.FS = fs.HostFS
 	if subrepo != nil {
 		pkg.SubrepoName = subrepo.Name
-		fileSystem = subrepo.FS
+		fileSystem = subrepo.FS()
 	}
 	// Only load the internal package for the host repo's state
 	if state.ParentState == nil && packageName == InternalPackageName {
@@ -186,6 +186,7 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 				return nil, err
 			}
 			defer file.Close()
+
 			pkg.Filename = filename
 			if err := state.Parser.ParseReader(pkg, file, &label, &dependent, mode); err != nil {
 				return nil, err

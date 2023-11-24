@@ -608,7 +608,7 @@ func glob(s *scope, args []pyObject) pyObject {
 	exclude = append(exclude, s.state.Config.Parse.BuildFileName...)
 	if s.globber == nil {
 		if s.pkg.Subrepo != nil {
-			s.globber = fs.NewGlobber(s.pkg.Subrepo.FS, s.state.Config.Parse.BuildFileName)
+			s.globber = fs.NewGlobber(s.pkg.Subrepo.FS(), s.state.Config.Parse.BuildFileName)
 		} else {
 			s.globber = fs.NewGlobber(fs.HostFS, s.state.Config.Parse.BuildFileName)
 		}
@@ -1293,11 +1293,12 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	if dep != "" {
 		// N.B. The target must be already registered on this package.
 		target = s.pkg.TargetOrDie(s.parseLabelInPackage(dep, s.pkg).Name)
+		root = target.Label.Name
 		if len(target.Outputs()) == 1 {
-			root = filepath.Join(target.OutDir(), target.Outputs()[0])
-		} else {
-			// TODO(jpoole): perhaps this should be a fatal error?
-			root = filepath.Join(target.OutDir(), name)
+			root = target.Outputs()[0]
+		}
+		if target.Local || s.state.RemoteClient == nil {
+			root = filepath.Join(target.OutDir(), root)
 		}
 	} else if args[PathArgIdx] != None {
 		root = string(args[PathArgIdx].(pyString))

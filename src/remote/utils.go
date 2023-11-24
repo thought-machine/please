@@ -74,37 +74,42 @@ func (c *Client) setOutputs(target *core.BuildTarget, arTree *pb.Tree) error {
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
 
-	o := &pb.Directory{
-		Files:          arTree.Root.Files,
-		Symlinks:       arTree.Root.Symlinks,
-		NodeProperties: arTree.Root.NodeProperties,
-	}
-
-	// A filesystem representing the output tree of the action result
-	actionResultFS := remotefs.New(c.client, arTree, ".")
-
-	// The action result will contain the raw outputs in their original places. We need to move outputs within
-	// `output_dirs` to the output root.
-	for _, dirNode := range arTree.Root.Directories {
-		if outDir := maybeGetOutDir(dirNode.Name, target.OutputDirectories); outDir != "" {
-			// Make sure we add all the outputs to the target
-			if err := c.setOutputDirectoryOuts(target, actionResultFS, outDir); err != nil {
-				return err
-			}
-
-			// Now flatten the contents of the directory into the action result root
-			dir := actionResultFS.Dir(digest.NewFromProtoUnvalidated(dirNode.Digest))
-			o.Directories = append(o.Directories, dir.Directories...)
-			o.Files = append(o.Files, dir.Files...)
-			o.Symlinks = append(o.Symlinks, dir.Symlinks...)
-		} else {
-			o.Directories = append(o.Directories, dirNode)
+	var outputTree *pb.Tree
+	if len(target.OutputDirectories) == 0 {
+		outputTree = arTree
+	} else {
+		o := &pb.Directory{
+			Files:          arTree.Root.Files,
+			Symlinks:       arTree.Root.Symlinks,
+			NodeProperties: arTree.Root.NodeProperties,
+			Directories:    make([]*pb.DirectoryNode, 0, len(arTree.Root.Directories)),
 		}
-	}
+		// A filesystem representing the output tree of the action result
+		actionResultFS := remotefs.New(c.client, arTree, ".")
 
-	outputTree := &pb.Tree{
-		Root:     o,
-		Children: arTree.Children,
+		// The action result will contain the raw outputs in their original places. We need to move outputs within
+		// `output_dirs` to the output root.
+		for _, dirNode := range arTree.Root.Directories {
+			if outDir := maybeGetOutDir(dirNode.Name, target.OutputDirectories); outDir != "" {
+				// Make sure we add all the outputs to the target
+				if err := c.setOutputDirectoryOuts(target, actionResultFS, outDir); err != nil {
+					return err
+				}
+
+				// Now flatten the contents of the directory into the action result root
+				dir := actionResultFS.Dir(digest.NewFromProtoUnvalidated(dirNode.Digest))
+				o.Directories = append(o.Directories, dir.Directories...)
+				o.Files = append(o.Files, dir.Files...)
+				o.Symlinks = append(o.Symlinks, dir.Symlinks...)
+			} else {
+				o.Directories = append(o.Directories, dirNode)
+			}
+		}
+
+		outputTree = &pb.Tree{
+			Root:     o,
+			Children: arTree.Children,
+		}
 	}
 
 	if target.IsSubrepo {
@@ -152,7 +157,6 @@ func (c *Client) outputTree(ar *pb.ActionResult) (*pb.Tree, error) {
 			downloadErrors.Inc()
 			return nil, wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
-
 		o.Children = append(o.Children, append(tree.Children, tree.Root)...)
 		o.Root.Directories = append(o.Root.Directories, &pb.DirectoryNode{
 			Name:   d.Path,

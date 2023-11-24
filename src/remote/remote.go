@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
+	remotefs "github.com/thought-machine/please/src/remote/fs"
 )
 
 var log = logging.Log
@@ -146,8 +148,8 @@ func New(state *core.BuildState) *Client {
 	c := &Client{
 		state:        state,
 		instance:     state.Config.Remote.Instance,
-		outputs:      map[core.BuildLabel]*pb.Directory{},
-		subrepoTrees: map[core.BuildLabel]*pb.Tree{},
+		outputs:      make(map[core.BuildLabel]*pb.Directory, 100),
+		subrepoTrees: make(map[core.BuildLabel]*pb.Tree, 10),
 		mdStore:      newDirMDStore(state.Config.Remote.Instance, time.Duration(state.Config.Remote.CacheDuration)),
 		existingBlobs: map[string]struct{}{
 			digest.Empty.Hash: {},
@@ -311,6 +313,14 @@ func (c *Client) digestEnum() pb.DigestFunction_Value {
 	default:
 		return pb.DigestFunction_UNKNOWN // Shouldn't get here
 	}
+}
+
+func (c *Client) SubrepoFS(target *core.BuildTarget, root string) iofs.FS {
+	c.outputMutex.RLock()
+	defer c.outputMutex.RUnlock()
+
+	tree := c.subrepoTrees[target.Label]
+	return remotefs.New(c.client, tree, root)
 }
 
 // Build executes a remote build of the given target.
