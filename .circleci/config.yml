@@ -124,7 +124,7 @@ jobs:
    build-darwin-arm64:
      working_directory: ~/please
      macos:
-       xcode: "13.4.1"
+       xcode: "14.3.1"
      steps:
        - checkout
        - attach_workspace:
@@ -201,7 +201,7 @@ jobs:
            paths: [ ".plz-cache/third_party/go" ]
    build-darwin:
       macos:
-        xcode: "13.4.1"
+        xcode: "14.3.1"
       environment:
         PLZ_ARGS: "-p --profile ci --exclude pip --exclude embed"
       steps:
