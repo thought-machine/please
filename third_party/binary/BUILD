@@ -20,11 +20,10 @@ remote_file(
     ),
 )
 
-GO_DEPS_VERSION = "v1.4.1"
+version = "1.1.1"
 
-# TODO(jpoole): this should support other platforms than just linux_amd64
 remote_file(
-    name = "go-deps",
+    name = "puku",
     binary = True,
-    url = f"https://github.com/Tatskaari/go-deps/releases/download/{GO_DEPS_VERSION}/go_deps_{GO_DEPS_VERSION}_{CONFIG.OS}_{CONFIG.ARCH}",
+    url = f"https://github.com/please-build/puku/releases/download/v{version}/puku-{version}-{CONFIG.OS}_{CONFIG.ARCH}",
 )

@@ -1,11 +1,10 @@
 module github.com/thought-machine/please
 
 require (
-	cloud.google.com/go/longrunning v0.4.1
+	cloud.google.com/go/longrunning v0.4.0
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
 	github.com/alessio/shellescape v1.4.1
-	github.com/bazelbuild/buildtools v0.0.0-20230510134650-37bd1811516d
 	github.com/bazelbuild/remote-apis v0.0.0-20210718193713-0ecef08215cf
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20221114180157-e62cf9b8696a
 	github.com/cespare/xxhash/v2 v2.2.0
@@ -47,28 +46,28 @@ require (
 	golang.org/x/sys v0.13.0
 	golang.org/x/term v0.13.0
 	golang.org/x/tools v0.6.0
-	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
-	google.golang.org/grpc v1.56.3
+	google.golang.org/genproto v0.0.0-20230124163310-31e0e69b6fc2
+	google.golang.org/grpc v1.53.0-dev
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 )
 
 require (
-	cloud.google.com/go/compute v1.19.1 // indirect
+	cloud.google.com/go/compute v1.18.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v0.13.0 // indirect
-	cloud.google.com/go/kms v1.10.1 // indirect
+	cloud.google.com/go/iam v0.10.0 // indirect
+	cloud.google.com/go/kms v1.8.0 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
-	github.com/golang/glog v1.1.0 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/go-containerregistry v0.12.1 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
-	github.com/googleapis/gax-go/v2 v2.7.1 // indirect
+	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jellydator/ttlcache/v2 v2.11.1 // indirect
@@ -84,6 +83,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/please-build/buildtools v0.0.0-20231122153602-22bdf3fe4f1d // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
@@ -91,11 +91,13 @@ require (
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
+	github.com/x1ddos/csslex v0.0.0-20160125172232-7894d8ab8bfe // indirect
+	github.com/yuin/goldmark v1.6.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
-	google.golang.org/api v0.114.0 // indirect
+	google.golang.org/api v0.109.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

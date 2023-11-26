@@ -38,12 +38,7 @@ gentest(
     labels = ["rex"],
     no_test_output = True,
     test_cmd = """
-        $TOOL $(location :multilines_file) \
-            'This is a multi lines file,' \
-            'use strip option to remove first empty newline' \
-            'and all empty spaces on the left of the text.' \
-            't - t should not be stripped' \
-            '\ - nor backslash'
+        $TOOL $(location :multilines_file)             'This is a multi lines file,'             'use strip option to remove first empty newline'             'and all empty spaces on the left of the text.'             't - t should not be stripped'             '\\ - nor backslash'
     """,
     test_tools = ["//test/build_defs:content_checker"],
 )
