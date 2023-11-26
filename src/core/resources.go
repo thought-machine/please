@@ -80,5 +80,8 @@ func getCPUTimes() (float64, float64) {
 		return 0.0, 0.0
 	}
 	t := ts[0]
-	return t.Total() - t.Idle - t.Iowait, t.Iowait
+
+	total := t.User + t.System + t.Idle + t.Nice + t.Iowait + t.Irq +
+		t.Softirq + t.Steal + t.Guest + t.GuestNice
+	return total - t.Idle - t.Iowait, t.Iowait
 }

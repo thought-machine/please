@@ -84,7 +84,7 @@ func createTargets(n int) []*BuildTarget {
 	targets := make([]*BuildTarget, n)
 	seen := map[BuildLabel]bool{}
 
-	rand.Seed(42) // Make sure it does the same thing every time.
+	rand.New(rand.NewSource(42)) // Make sure it does the same thing every time.
 
 	components := []string{
 		"src", "main", "cmd", "tools", "utils", "common", "query", "process", "update",
