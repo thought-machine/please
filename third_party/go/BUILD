@@ -28,19 +28,19 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/text",
-    version = "v0.13.0",
+    version = "v0.14.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/tools",
-    version = "v0.6.0",
+    version = "v0.15.0",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/yuin/goldmark",
-    version = "v1.6.0",
+    version = "v1.4.13",
 )
 
 go_repo(
@@ -52,32 +52,31 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/matttproud/golang_protobuf_extensions",
-    requirements = ["github.com/golang/protobuf"],
-    version = "v1.0.1",
+    version = "v1.0.4",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/shirou/gopsutil/v3",
-    version = "v3.22.6",
+    version = "v3.23.10",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/chzyer/readline",
-    version = "v0.0.0-20180603132655-2972be24d48e",
+    version = "v1.5.1",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/coreos/go-semver",
-    version = "v0.3.0",
+    version = "v0.3.1",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/Masterminds/semver/v3",
-    version = "v3.1.1",
+    version = "v3.2.1",
 )
 
 go_repo(
@@ -89,7 +88,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.2.0",
+    version = "v5.2.1",
 )
 
 go_repo(
@@ -105,7 +104,7 @@ go_repo(
         "BSD-3-Clause",
     ],
     module = "github.com/klauspost/compress",
-    version = "v1.15.11",
+    version = "v1.17.3",
 )
 
 go_repo(
@@ -123,19 +122,19 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/ProtonMail/go-crypto",
-    version = "v0.0.0-20210920135941-2c5829bbf927",
+    version = "v0.0.0-20230923063757-afb1ddc0824c",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/net",
-    version = "v0.17.0",
+    version = "v0.18.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/prometheus/client_model",
-    version = "v0.3.0",
+    version = "v0.5.0",
 )
 
 go_repo(
@@ -153,37 +152,37 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/thought-machine/go-flags",
-    version = "v1.6.2",
+    version = "v1.6.3",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/theupdateframework/go-tuf",
-    version = "v0.5.2-0.20220930112810-3890c1e7ace4",
+    version = "v0.6.1",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/oauth2",
-    version = "v0.7.0",
+    version = "v0.14.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/google/shlex",
-    version = "v0.0.0-20181106134648-c34317bd91bf",
+    version = "v0.0.0-20191202100458-e7afc7fbc510",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/mostynb/zstdpool-syncpool",
-    version = "v0.0.7",
+    version = "v0.0.13",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20230124163310-31e0e69b6fc2",
+    version = "v0.0.0-20231120223509-83a465c0220f",
 )
 
 go_repo(
@@ -195,7 +194,7 @@ go_repo(
 go_repo(
     licences = ["MPL-2.0"],
     module = "github.com/hashicorp/go-retryablehttp",
-    version = "v0.7.2",
+    version = "v0.7.5",
 )
 
 go_repo(
@@ -213,37 +212,37 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/tklauser/go-sysconf",
-    version = "v0.3.9",
+    version = "v0.3.12",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/ulikunitz/xz",
-    version = "v0.5.10",
+    version = "v0.5.11",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/mattn/go-isatty",
-    version = "v0.0.16",
+    version = "v0.0.20",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/google/go-containerregistry",
-    version = "v0.12.1",
+    version = "v0.16.1",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/tklauser/numcpus",
-    version = "v0.3.0",
+    version = "v0.6.1",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/prometheus/client_golang",
-    version = "v1.13.0",
+    version = "v1.17.0",
 )
 
 go_repo(
@@ -255,13 +254,13 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/term",
-    version = "v0.13.0",
+    version = "v0.14.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/google/go-cmp",
-    version = "v0.5.9",
+    version = "v0.6.0",
 )
 
 go_repo(
@@ -273,19 +272,19 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/grpc-ecosystem/go-grpc-middleware",
-    version = "v1.3.0",
+    version = "v1.4.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/pborman/uuid",
-    version = "v1.2.0",
+    version = "v1.2.1",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/sigstore/sigstore",
-    version = "v1.5.0",
+    version = "v1.7.5",
 )
 
 go_repo(
@@ -303,7 +302,7 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/googleapis/gax-go/v2",
-    version = "v2.7.0",
+    version = "v2.12.0",
 )
 
 go_repo(
@@ -327,13 +326,13 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sync",
-    version = "v0.1.0",
+    version = "v0.5.0",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/dustin/go-humanize",
-    version = "v1.0.0",
+    version = "v1.0.1",
 )
 
 go_repo(
@@ -345,7 +344,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/googleapis/enterprise-certificate-proxy",
-    version = "v0.2.3",
+    version = "v0.3.2",
 )
 
 go_repo(
@@ -375,7 +374,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/peterebden/go-deferred-regex",
-    version = "v1.0.0",
+    version = "v1.1.0",
 )
 
 go_repo(
@@ -387,7 +386,7 @@ go_repo(
 go_repo(
     licences = ["BSD-2-Clause"],
     module = "github.com/karrick/godirwalk",
-    version = "v1.16.1",
+    version = "v1.17.0",
 )
 
 go_repo(
@@ -399,7 +398,7 @@ go_repo(
 go_repo(
     licences = ["LGPL-3.0"],
     module = "github.com/juju/ansiterm",
-    version = "v0.0.0-20210706145210-9283cdf370b5",
+    version = "v1.0.0",
 )
 
 go_repo(
@@ -411,7 +410,7 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/sys",
-    version = "v0.13.0",
+    version = "v0.14.0",
 )
 
 go_repo(
@@ -432,13 +431,13 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/grpc",
-    version = "v1.53.0-dev",
+    version = "v1.59.0",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/sourcegraph/jsonrpc2",
-    version = "v0.1.0",
+    version = "v0.2.0",
 )
 
 go_repo(
@@ -456,13 +455,13 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/googlecodelabs/tools/claat",
-    version = "v0.0.0-20210914205149-d1177395e3b8",
+    version = "v0.0.0-20231009173428-9f2b585333fc",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/klauspost/cpuid/v2",
-    version = "v2.0.12",
+    version = "v2.2.6",
 )
 
 go_repo(
@@ -486,26 +485,25 @@ go_repo(
 go_repo(
     licences = ["MIT"],
     module = "github.com/alessio/shellescape",
-    version = "v1.4.1",
+    version = "v1.4.2",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/crypto",
-    version = "v0.14.0",
+    version = "v0.15.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "google.golang.org/protobuf",
-    version = "v1.30.0",
+    version = "v1.31.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/golang/glog",
-    patch = ["glog_disable.patch"],
-    version = "v0.0.0-20160126235308-23def4e6c14b",
+    version = "v1.2.0",
 )
 
 go_repo(
@@ -517,19 +515,19 @@ go_repo(
 go_repo(
     licences = ["BSD-2-Clause"],
     module = "github.com/pkg/xattr",
-    version = "v0.4.4",
+    version = "v0.4.9",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "cloud.google.com/go/iam",
-    version = "v0.10.0",
+    version = "v1.1.5",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "go.uber.org/automaxprocs",
-    version = "v1.4.0",
+    version = "v1.5.3",
 )
 
 go_repo(
@@ -548,7 +546,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/prometheus/common",
-    version = "v0.37.0",
+    version = "v0.45.0",
 )
 
 go_repo(
@@ -560,7 +558,7 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "google.golang.org/api",
-    version = "v0.109.0",
+    version = "v0.151.0",
 )
 
 go_repo(
@@ -578,19 +576,19 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "cloud.google.com/go/longrunning",
-    version = "v0.4.0",
+    version = "v0.5.4",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/prometheus/procfs",
-    version = "v0.8.0",
+    version = "v0.12.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/manifoldco/promptui",
-    version = "v0.8.0",
+    version = "v0.9.0",
 )
 
 go_repo(
@@ -602,19 +600,19 @@ go_repo(
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/google/uuid",
-    version = "v1.3.0",
+    version = "v1.4.0",
 )
 
 go_repo(
     licences = ["MPL-2.0"],
     module = "github.com/letsencrypt/boulder",
-    version = "v0.0.0-20221109233200-85aa52084eaf",
+    version = "v0.0.0-20231122214517-54c25f9152c3",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/fsnotify/fsnotify",
-    version = "v1.5.1",
+    version = "v1.7.0",
 )
 
 go_repo(
@@ -632,47 +630,143 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "cloud.google.com/go/kms",
-    version = "v1.8.0",
+    version = "v1.15.5",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/sourcegraph/go-diff",
-    version = "v0.6.1",
+    version = "v0.7.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/exp",
-    version = "v0.0.0-20230116083435-1de6713980de",
+    version = "v0.0.0-20231110203233-9a3e6036ecaa",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/jstemmer/go-junit-report/v2",
-    version = "v2.0.0",
+    version = "v2.1.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "cloud.google.com/go/compute",
-    version = "v1.18.0",
-)
-
-go_repo(
-    licences = ["MIT"],
-    module = "github.com/go-ole/go-ole",
-    version = "v1.2.5",
-)
-
-go_repo(
-    licences = ["Apache-2.0"],
-    module = "google.golang.org/appengine",
-    version = "v1.6.7",
+    version = "v1.23.3",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/please-build/buildtools",
     version = "v0.0.0-20231122153602-22bdf3fe4f1d",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "github.com/sigstore/sigstore/pkg/signature/kms/gcp",
+    version = "v1.7.5",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "google.golang.org/genproto/googleapis/rpc",
+    version = "v0.0.0-20231120223509-83a465c0220f",
+)
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "github.com/cloudflare/circl",
+    version = "v1.3.6",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/go-ole/go-ole",
+    version = "v1.3.0",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "github.com/google/s2a-go",
+    version = "v0.1.7",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/jellydator/ttlcache/v3",
+    version = "v3.1.0",
+)
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "github.com/lufia/plan9stats",
+    version = "v0.0.0-20231016141302-07b5767bb0ed",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "github.com/matttproud/golang_protobuf_extensions/v2",
+    version = "v2.0.0",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/power-devops/perfstat",
+    version = "v0.0.0-20221212215047-62379fc7944b",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/secure-systems-lab/go-securesystemslib",
+    version = "v0.7.0",
+)
+
+go_repo(
+    licences = ["MPL-2.0"],
+    module = "github.com/shoenig/go-m1cpu",
+    version = "v0.1.6",
+)
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "golang.org/x/time",
+    version = "v0.4.0",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "google.golang.org/genproto/googleapis/api",
+    version = "v0.0.0-20231120223509-83a465c0220f",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "google.golang.org/genproto/googleapis/bytestream",
+    version = "v0.0.0-20231120223509-83a465c0220f",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "gopkg.in/go-jose/go-jose.v2",
+    version = "v2.6.1",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/yusufpapurcu/wmi",
+    version = "v1.2.3",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "google.golang.org/appengine",
+    version = "v1.6.8",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/stoewer/go-strcase",
+    version = "v1.2.0",
 )
