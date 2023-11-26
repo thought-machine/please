@@ -11,6 +11,7 @@ importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 FeatureFlags = go_get
 ModFile = //:mod
+RequireLicences = true
 
 [Plugin "cc"]
 target = //plugins:cc
@@ -87,5 +88,7 @@ accept = MPL-2.0
 accept = LGPL
 accept = Artistic License
 accept = ISC
+accept = CC0-1.0
+accept = LGPL-3.0
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice

@@ -12,7 +12,7 @@ text_file(
         use strip option to remove first empty newline
         and all empty spaces on the left of the text.
         t - t should not be stripped
-        \ - nor backslash
+        \\ - nor backslash
     """,
     strip = True,
 )
