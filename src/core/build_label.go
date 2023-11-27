@@ -457,11 +457,7 @@ func (label BuildLabel) SubrepoLabel(state *BuildState) BuildLabel {
 	}
 
 	// Otherwise we need to set it to match our architecture
-	if t.Subrepo == "" {
-		t.Subrepo = arch
-	} else {
-		t.Subrepo = fmt.Sprintf("%v@%v", t.Subrepo, arch)
-	}
+	t.Subrepo = JoinSubrepoArch(t.Subrepo, arch)
 	return t
 }
 
