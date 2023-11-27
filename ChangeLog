@@ -19,6 +19,9 @@ Version 17.4.0
       specified in a subrepo (#2973)
     * Always treat the first argument of `plz run` commands as a build label (#2967)
     * Redact secrets from test step logging (#2970)
+    * Allow `///subrepo@darwin_amd64//package:name` syntax to specify both a subrepo and an
+      architecture on the command line. Also fixes a few issues with cross compiling using
+      `go_repo` (#2972)
 
 Version 17.3.1
 --------------
