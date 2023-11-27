@@ -125,18 +125,19 @@ jobs:
      working_directory: ~/please
      macos:
        xcode: "14.3.1"
+     resource_class: macos.m1.medium.gen1
      steps:
        - checkout
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-darwin-arm64-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v5-{{ checksum "third_party/go/BUILD" }}
        - run:
-           name: Extract plz
-           command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
+           name: Install deps
+           command: ./.circleci/setup_osx.sh arm64
        - run:
-           name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_arm64 -o plugin.go.cgoenabled:1 -o plugin.go.cctool:clang -o "plugin.go.cflags:-target arm64-apple-macos11" //package:release_files
+           name: Build release
+           command: go run src/please.go build -p --profile ci //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -144,7 +145,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-darwin-arm64-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-v5-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
 
    build-freebsd:
@@ -214,7 +215,7 @@ jobs:
            key: python-darwin-v3-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Install deps
-           command: ./.circleci/setup_osx.sh
+           command: ./.circleci/setup_osx.sh amd64
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
