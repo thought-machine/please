@@ -11,7 +11,6 @@ import (
 	iofs "io/fs"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -473,8 +472,9 @@ func (state *BuildState) ShouldInclude(target *BuildTarget) bool {
 
 // AddOriginalTarget adds one of the original targets and enqueues it for parsing / building.
 func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
-	if idx := strings.LastIndex(label.Subrepo, "@"); idx != -1 {
-		state.Graph.AddSubrepo(SubrepoForArch(state, cli.NewArchFromString(label.Subrepo[idx+1:])))
+	_, arch := SplitSubrepoArch(label.Subrepo)
+	if arch != "" {
+		state.Graph.AddSubrepo(SubrepoForArch(state, cli.NewArchFromString(arch)))
 	}
 
 	// Check it's not excluded first.

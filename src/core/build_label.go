@@ -436,18 +436,18 @@ func (label BuildLabel) PackageDir() string {
 
 // SubrepoLabel returns a build label corresponding to the subrepo part of this build label.
 func (label BuildLabel) SubrepoLabel(state *BuildState) BuildLabel {
-	pluginName, arch := SplitSubrepoArch(label.Subrepo)
+	subrepoName, arch := SplitSubrepoArch(label.Subrepo)
 	if arch == "" && state.Arch != cli.HostArch() {
 		arch = state.Arch.String()
 	}
 
-	plugin, ok := state.Config.Plugin[pluginName]
+	plugin, ok := state.Config.Plugin[subrepoName]
 	if !ok {
-		return label.subrepoLabel(state)
+		return subrepoLabel(subrepoName, arch)
 	}
 
 	if plugin.Target.String() == "" {
-		log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", pluginName)
+		log.Fatalf("[Plugin \"%v\"] must have Target set in the .plzconfig", subrepoName)
 	}
 
 	t := plugin.Target
@@ -461,12 +461,7 @@ func (label BuildLabel) SubrepoLabel(state *BuildState) BuildLabel {
 	return t
 }
 
-func (label BuildLabel) subrepoLabel(state *BuildState) BuildLabel {
-	subrepoName, arch := SplitSubrepoArch(label.Subrepo)
-	if arch == "" && state.Arch != cli.HostArch() {
-		arch = state.Arch.String()
-	}
-
+func subrepoLabel(subrepoName, arch string) BuildLabel {
 	if idx := strings.LastIndexByte(subrepoName, '/'); idx != -1 {
 		return BuildLabel{PackageName: subrepoName[:idx], Name: subrepoName[idx+1:], Subrepo: arch}
 	}
