@@ -230,6 +230,11 @@ func NewArch(os, arch string) Arch {
 	return Arch{OS: os, Arch: arch}
 }
 
+func NewArchFromString(arch string) Arch {
+	parts := strings.Split(arch, "_")
+	return Arch{OS: parts[0], Arch: parts[1]}
+}
+
 // HostArch returns the architecture for the host OS.
 func HostArch() Arch {
 	return Arch{OS: runtime.GOOS, Arch: runtime.GOARCH}
@@ -252,7 +257,7 @@ func (arch *Arch) UnmarshalText(text []byte) error {
 
 // UnmarshalFlag implements the flags.Unmarshaler interface.
 func (arch *Arch) UnmarshalFlag(in string) error {
-	if parts := strings.Split(in, "_"); len(parts) == 2 && !strings.ContainsRune(in, '/') {
+	if parts := strings.Split(in, "_"); len(parts) == 2 && !strings.ContainsRune(in, '/') && !strings.Contains(in, "@") {
 		arch.OS = parts[0]
 		arch.Arch = parts[1]
 		return nil

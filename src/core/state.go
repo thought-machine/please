@@ -338,6 +338,7 @@ func (state *BuildState) addActiveTargets(n int) {
 func (state *BuildState) addPendingParse(label, dependent BuildLabel, mode ParseMode) {
 	atomic.AddInt64(&state.progress.numActive, 1)
 	atomic.AddInt64(&state.progress.numPending, 1)
+
 	go func() {
 		defer func() {
 			recover() // Prevent death on 'send on closed channel'
@@ -471,6 +472,11 @@ func (state *BuildState) ShouldInclude(target *BuildTarget) bool {
 
 // AddOriginalTarget adds one of the original targets and enqueues it for parsing / building.
 func (state *BuildState) AddOriginalTarget(label BuildLabel, addToList bool) {
+	_, arch := SplitSubrepoArch(label.Subrepo)
+	if arch != "" {
+		state.Graph.AddSubrepo(SubrepoForArch(state, cli.NewArchFromString(arch)))
+	}
+
 	// Check it's not excluded first.
 	for _, e := range state.ExcludeTargets {
 		if e.Includes(label) {

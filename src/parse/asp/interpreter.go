@@ -306,18 +306,41 @@ func (s *scope) parseAnnotatedLabelInPackage(label string, pkg *core.Package) co
 // parseLabelInPackage parses a build label in the scope of the package given the current scope.
 func (s *scope) parseLabelInPackage(label string, pkg *core.Package) core.BuildLabel {
 	if p, name, subrepo := core.ParseBuildLabelParts(label, pkg.Name, pkg.SubrepoName); name != "" {
-		if subrepo == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
-			subrepo = pkg.SubrepoName
-		} else if arch := cli.HostArch(); strings.Contains(subrepo, "_"+arch.String()) {
-			subrepo = strings.TrimSuffix(subrepo, "_"+arch.String())
-		} else if subrepo == arch.String() {
+		arch := cli.HostArch()
+
+		subrepo, subrepoArch := core.SplitSubrepoArch(subrepo)
+
+		// Strip out the host arch as that's the default
+		if subrepo == arch.String() {
 			subrepo = ""
-		} else if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {
+		}
+
+		// Similarly trim the architecture if it's the host subrepo
+		if subrepoArch == arch.String() {
+			subrepoArch = ""
+		}
+
+		// If the subrepo matches the host repo's plugin name, then strip it out e.g. if we're in the Go plugin repo,
+		// then ///go//build_defs:go should translate to just //build_defs:go
+		if s.state.CurrentSubrepo == "" && subrepo == s.state.Config.PluginDefinition.Name {
 			subrepo = ""
-		} else if pkg.Subrepo == nil || subrepo != pkg.Subrepo.Arch.String() {
+		}
+
+		// Otherwise if the label didn't have any subrepo defined, use the pkg subrepo
+		if subrepo == "" && subrepoArch == "" && pkg.SubrepoName != "" && (label[0] != '@' && !strings.HasPrefix(label, "///")) {
+			subrepo, subrepoArch = core.SplitSubrepoArch(pkg.SubrepoName)
+		}
+
+		pkgArch := ""
+		if pkg.Subrepo != nil && pkg.Subrepo.Arch != cli.HostArch() {
+			pkgArch = pkg.Subrepo.Arch.String()
+		}
+
+		// Otherwise, if we don't have any specific architecture, and the pkg does, use the package arch
+		if subrepoArch == "" && pkgArch != "" && pkgArch != subrepo {
 			subrepo = pkg.SubrepoArchName(subrepo)
 		}
-		return core.BuildLabel{PackageName: p, Name: name, Subrepo: subrepo}
+		return core.BuildLabel{PackageName: p, Name: name, Subrepo: core.JoinSubrepoArch(subrepo, subrepoArch)}
 	}
 	return core.ParseBuildLabel(label, pkg.Name)
 }

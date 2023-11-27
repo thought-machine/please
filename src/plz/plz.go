@@ -144,13 +144,13 @@ func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.B
 		label.Subrepo = ""
 		return label
 	}
-	label.Subrepo = strings.TrimPrefix(label.Subrepo, config.PluginDefinition.Name+"_")
+	label.Subrepo = strings.TrimPrefix(label.Subrepo, config.PluginDefinition.Name+"@")
 
 	hostArch := cli.HostArch()
 	if label.Subrepo == hostArch.String() {
 		label.Subrepo = ""
 	}
-	label.Subrepo = strings.TrimSuffix(label.Subrepo, "_"+hostArch.String())
+	label.Subrepo = strings.TrimSuffix(label.Subrepo, "@"+hostArch.String())
 
 	return label
 }
@@ -166,7 +166,7 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		dir := target.PackageName
 		prefix := ""
 		if target.Subrepo != "" {
-			subrepoLabel := target.SubrepoLabel(state, "")
+			subrepoLabel := target.SubrepoLabel(state)
 			state.WaitForInitialTargetAndEnsureDownload(subrepoLabel, target)
 			// Targets now get activated during parsing, so can be built before we finish parsing their package.
 			state.WaitForPackage(subrepoLabel, target, core.ParseModeNormal)

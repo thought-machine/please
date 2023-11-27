@@ -88,9 +88,17 @@ func TestParseLabelContext(t *testing.T) {
 		},
 		{
 			testName: "Test host arch is stripped from subrepo",
-			label:    fmt.Sprintf("///subrepo_%s//test:target", (&arch).String()),
+			label:    fmt.Sprintf("///subrepo@%s//test:target", (&arch).String()),
 			scope:    newScope("pkg", "", ""),
 			subrepo:  "subrepo",
+			pkg:      "test",
+			name:     "target",
+		},
+		{
+			testName: "Test host arch is stripped from nested subrepo",
+			label:    "///foowin_amd64//test:target",
+			scope:    newScope("pkg", "subrepo2@foowin_amd64", ""),
+			subrepo:  "foowin_amd64",
 			pkg:      "test",
 			name:     "target",
 		},
