@@ -254,7 +254,7 @@ func (state *BuildState) Copy() *BuildState {
 // it's not done up front. Once we have done that, we can initialise the parser for the subrepo.
 func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 	state.initOnce.Do(func() {
-		// If we are the root repo, or an cross-compilation of that, we don't want to re-load the config files. That's
+		// If we are the root repo, or a cross-compilation of that, we don't want to re-load the config files. That's
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
 			state.RepoConfig = &Configuration{}
