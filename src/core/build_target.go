@@ -699,8 +699,14 @@ func (target *BuildTarget) FinishBuild() {
 }
 
 // WaitForBuild blocks until this target has finished building.
-func (target *BuildTarget) WaitForBuild() {
-	<-target.finishedBuilding
+func (target *BuildTarget) WaitForBuild(dependant BuildLabel) {
+	select {
+	case <-target.finishedBuilding:
+		return
+	case <-time.After(time.Minute):
+		log.Debugf("%v: still waiting for %v to build", dependant, target.Label)
+		target.WaitForBuild(dependant)
+	}
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.
