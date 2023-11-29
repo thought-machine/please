@@ -22,6 +22,8 @@ Version 17.4.0
     * Allow `///subrepo@darwin_amd64//package:name` syntax to specify both a subrepo and an
       architecture on the command line. Also fixes a few issues with cross compiling using
       `go_repo` (#2972)
+    * Allow dicts to be passed as `genrule`'s `data` parameter, with similar semantics to
+      those of `srcs` and `tools` (#2985)
 
 Version 17.3.1
 --------------
