@@ -147,8 +147,13 @@ func parseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo stri
 
 	// Now that we know its package is parsed, we expect the subrepo to be registered
 	//
-	// NB: even if we didn't parse it above, this might've been parsed by a different thread. Check again to avoid nasty
-	// race conditions.
+	// NB: even if we didn't parse the package above (i.e. package was non-nil), this might've been parsed by a
+	// different thread, so we need to check if the subrepo exists again.
+	//
+	// We last checked if the subrepo existed at the beginning of the checkSubrepo() function, however we haven't
+	// acquired the package lock. That means another thread may have parsed the package, adding it to the graph by the
+	// time we check above. This means, we need to check if the subrepo exists again here regardless of whether we
+	// actually parsed the package in this thread.
 	s := state.Graph.Subrepo(dependent.Subrepo)
 	if s != nil {
 		return s, nil
