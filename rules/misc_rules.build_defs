@@ -3,7 +3,7 @@
 
 def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs:list|dict=None, deps:list=None,
             exported_deps:list=None, labels:list&features&tags=None, visibility:list=None,
-            building_description:str='Building...', data:list=None, hashes:list=None, timeout:int=0, binary:bool=False,
+            building_description:str='Building...', data:list|dict=None, hashes:list=None, timeout:int=0, binary:bool=False,
             sandbox:bool=None, needs_transitive_deps:bool=False, output_is_complete:bool=True,
             test_only:bool&testonly=False, secrets:list|dict=None, requires:list=None, provides:dict=None,
             pre_build:function=None, post_build:function=None, tools:str|list|dict=None, pass_env:list=None,
@@ -30,7 +30,8 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                           similarly to named srcs; they have separate environment variables and
                           can be accessed directly by other rules.
       out (str): A single output of this rule, as a string. Discouraged in favour of 'outs'.
-      data (list): Runtime data for this rule.
+      data (list | dict): Runtime data for this rule. Can be a list of files or rules, or a dict of
+                          names to lists, with similar semantics to those of srcs.
       deps (list): Dependencies of this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
       tools (str | list | dict): Tools used to build this rule; similar to srcs but are not copied to the
