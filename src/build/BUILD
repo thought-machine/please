@@ -43,13 +43,10 @@ go_test(
     srcs = ["build_step_stress_test.go"],
     external = True,
     deps = [
-        ":build",
         "///third_party/go/github.com_stretchr_testify//assert",
-        "///third_party/go/github.com_stretchr_testify//require",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
-        "//src/output",
         "//src/plz",
     ],
 )

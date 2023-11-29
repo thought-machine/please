@@ -4,7 +4,7 @@ go_library(
     pgo_file = "//:pgo",
     visibility = ["//src/..."],
     deps = [
-        "///third_party/go/github.com_bazelbuild_buildtools//build",
+        "///third_party/go/github.com_please-build_buildtools//build",
         "///third_party/go/golang.org_x_sync//errgroup",
         "//src/cli/logging",
         "//src/core",

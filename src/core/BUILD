@@ -41,6 +41,7 @@ go_test(
         "///third_party/go/github.com_stretchr_testify//require",
         "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
         "//src/cli",
+        "//src/fs",
     ],
 )
 

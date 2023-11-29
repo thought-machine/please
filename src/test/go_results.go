@@ -16,6 +16,14 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+func propertiesToMap(ps []gtr.Property) map[string]string {
+	ret := make(map[string]string, len(ps))
+	for _, p := range ps {
+		ret[p.Name] = p.Value
+	}
+	return ret
+}
+
 func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	parser := gotest.NewParser()
 	report, err := parser.Parse(bytes.NewReader(data))
@@ -30,7 +38,7 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	suite := core.TestSuite{
 		Package:    pkg.Name,
 		Duration:   pkg.Duration,
-		Properties: pkg.Properties,
+		Properties: propertiesToMap(pkg.Properties),
 	}
 	for _, test := range pkg.Tests {
 		execution := core.TestExecution{

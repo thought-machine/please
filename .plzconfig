@@ -10,6 +10,8 @@ Target = //plugins:go
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 FeatureFlags = go_get
+ModFile = //:mod
+RequireLicences = true
 
 [Plugin "cc"]
 target = //plugins:cc
@@ -58,9 +60,10 @@ positionallabels = true
 desc = Runs the linters for this repo
 cmd = run //tools/misc:lint -p --
 
-[alias "go-get"]
-desc = Runs the go deps tool to install new dependencies into the repo
-cmd = run ///go//tools/go_get_migrator --
+[Alias "puku"]
+Cmd = run //third_party/binary:puku --
+PositionalLabels = true
+Desc = A tool to update BUILD files in Go packages
 
 [licences]
 accept = MIT
@@ -85,5 +88,7 @@ accept = MPL-2.0
 accept = LGPL
 accept = Artistic License
 accept = ISC
+accept = CC0-1.0
+accept = LGPL-3.0
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice

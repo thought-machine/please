@@ -6,5 +6,4 @@ go_binary(
     definitions = {"main.pleaseVersion": VERSION},
     test_only = True,
     visibility = ["//src/update:all"],
-    deps = ["//src/core"],
 )

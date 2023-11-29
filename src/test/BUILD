@@ -50,9 +50,7 @@ go_test(
     name = "go_test_panic",
     srcs = ["go_test_panic.go"],
     labels = ["manual"],
-    deps = [
-        "///third_party/go/github.com_stretchr_testify//assert",
-    ],
+    deps = [":test"],
 )
 
 # This test runs the test above (go_test_panic), which panics, and checks that
