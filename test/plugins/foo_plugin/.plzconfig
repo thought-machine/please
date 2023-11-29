@@ -31,3 +31,6 @@ DefaultValue = True
 [PluginConfig "int_test"]
 Type = int
 DefaultValue = 100
+
+[remote]
+url =

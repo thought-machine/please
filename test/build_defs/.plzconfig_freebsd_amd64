@@ -1,3 +1,6 @@
 # Binary downloads are not available for FreeBSD - will have to be added with 'pkg install protobuf'.
 [proto]
 protoctool = protoc
+
+[remote]
+url =

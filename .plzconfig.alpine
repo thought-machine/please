@@ -5,3 +5,6 @@ Stdlib = //third_party/go:std
 
 [buildconfig]
 static-sandbox = true
+
+[remote]
+URL =

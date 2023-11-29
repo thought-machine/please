@@ -3,3 +3,6 @@ BuildFileName = BUILD_FILE
 
 [build]
 LinkGeneratedSources = true
+
+[remote]
+url =

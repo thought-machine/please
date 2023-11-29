@@ -1,3 +1,6 @@
 [please]
 location = ./please
 version = 16.18.0
+
+[remote]
+url =

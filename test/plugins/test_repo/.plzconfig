@@ -5,3 +5,6 @@ bartool = bar
 CompileFlag = -sha256
 BoolTest = False
 IntTest = 15
+
+[remote]
+url =

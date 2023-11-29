@@ -1,3 +1,6 @@
 [Plugin "foo"]
 CompileFlag=
 bartool=bar-dev
+
+[remote]
+url =

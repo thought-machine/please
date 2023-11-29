@@ -9,3 +9,6 @@ target = //plugins:shell
 [Parse]
 preloadsubincludes = ///shell//build_defs:shell
 buildFileName = BUILD
+
+[remote]
+url =
