@@ -47,6 +47,7 @@ def please_repo_e2e_test(
         deps = deps,
         env = {
             "PLZ_CONFIG_PROFILE": "e2e",
+            "PLZ_OVERRIDES": "remote.URL:",
         },
         no_test_output = True,
         labels = labels + ["plz_e2e_test", "e2e"],
@@ -104,6 +105,9 @@ def plz_e2e_test(name:str, cmd:str, pre_cmd:str=None, expected_output:str=None,
         },
         data = data,
         deps = deps,
+        env = {
+            "PLZ_OVERRIDES": "remote.URL:",
+        },
         test_tools = ["//package:installed_files|please"],
         labels = ['e2e'] + (labels or []),
         no_test_output = True,
