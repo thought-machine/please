@@ -1,6 +1,3 @@
 [build]
 LinkGeneratedSources = true
 UpdateGitignore = true
-
-[remote]
-url =

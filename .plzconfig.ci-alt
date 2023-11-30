@@ -6,5 +6,3 @@ dircompress = true
 [buildconfig]
 ci = true
 
-[remote]
-URL =

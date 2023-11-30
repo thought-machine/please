@@ -4,6 +4,3 @@ preloadsubincludes = ///shell//build_defs:shell
 
 [plugin "shell"]
 target = //plugins:shell
-
-[remote]
-url =

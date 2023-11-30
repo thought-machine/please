@@ -8,6 +8,3 @@ ci = true
 
 ; CI should disable all feature flags so we're actually testing the default distribution.
 [featureflags]
-
-[remote]
-url = 

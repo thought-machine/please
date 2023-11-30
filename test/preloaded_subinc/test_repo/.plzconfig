@@ -9,6 +9,3 @@ Target = //plugins:shell
 
 [Plugin "pleasings"]
 Target = //plugins:pleasings
-
-[remote]
-url =

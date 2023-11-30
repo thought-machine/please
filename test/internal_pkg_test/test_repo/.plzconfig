@@ -3,6 +3,3 @@ BuildFileName = BUILD_FILE
 
 [FeatureFlags]
 PleaseDownloadTools = true
-
-[remote]
-url =

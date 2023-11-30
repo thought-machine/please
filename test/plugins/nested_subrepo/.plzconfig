@@ -4,6 +4,3 @@ BuildFileName = BUILD.plugin
 [Plugin "foo"]
 ModulePath = nested
 FoocTool = invalid ; This config should be inherited from the host repo
-
-[remote]
-url =

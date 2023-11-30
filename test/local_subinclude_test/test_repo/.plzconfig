@@ -1,6 +1,3 @@
 [parse]
 BuildFileName = BUILD_FILE
 BuildFileName = BUILD
-
-[remote]
-url =

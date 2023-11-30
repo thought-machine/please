@@ -1,5 +1,2 @@
 [Plugin "foo"]
 fooctool = bar66
-
-[remote]
-url =
