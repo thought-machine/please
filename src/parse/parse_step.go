@@ -90,7 +90,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 }
 
 func inSamePackage(label, dependent core.BuildLabel) bool {
-	return label.Subrepo == dependent.Subrepo && label.PackageName == dependent.PackageName
+	return !dependent.IsOriginalTarget() && label.Subrepo == dependent.Subrepo && label.PackageName == dependent.PackageName
 }
 
 // checkSubrepo checks if the label we're parsing is within a subrepo, returning that subrepo, if present in the label.
@@ -108,16 +108,16 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 		return subrepo, nil
 	}
 
-	// This can happen when we subinclude() a target in a subrepo from the same package the subrepo is defined in. In,
-	// this case, the subrepo must be registered by now. We shouldn't continue to try and parse the subrepo package, as
-	// it's the current package we're parsing, which would result in a lockup.
-	if inSamePackage(label, dependent) {
-		return nil, fmt.Errorf("subrepo %v is not defined yet in this package yet. It must appear before it is used by %v", label.Subrepo, dependent)
-	}
-
 	// SubrepoLabel returns the expected build label for the subrepo's target. Parsing its package should give us the
 	// subrepo we're looking for.
 	sl := label.SubrepoLabel(state)
+
+	// This can happen when we subinclude() a target in a subrepo from the same package the subrepo is defined in. In,
+	// this case, the subrepo must be registered by now. We shouldn't continue to try and parse the subrepo package, as
+	// it's the current package we're parsing, which would result in a lockup.
+	if inSamePackage(sl, dependent) {
+		return nil, fmt.Errorf("subrepo %v is not defined in this package yet. It must appear before it is used by %v", sl.Subrepo, dependent)
+	}
 
 	// Try parsing the package in the host repo first.
 	s, err := parseSubrepoPackage(state, sl.PackageName, sl.Subrepo, label, mode)

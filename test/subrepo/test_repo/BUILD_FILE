@@ -1,0 +1,6 @@
+subinclude("///subrepo//:foo")
+
+local_repository(
+    name = "subrepo",
+    path = "subrepo",
+)
