@@ -47,7 +47,7 @@ func (label BuildLabel) String() string {
 	zero := BuildLabel{} //nolint:ifshort
 	if label == zero {
 		return ""
-	} else if label == OriginalTarget {
+	} else if label.IsOriginalTarget() {
 		return "command-line targets"
 	}
 	s := "//" + label.PackageName
@@ -61,6 +61,10 @@ func (label BuildLabel) String() string {
 		return s + "/..."
 	}
 	return s + ":" + label.Name
+}
+
+func (label BuildLabel) IsOriginalTarget() bool {
+	return label == OriginalTarget
 }
 
 // ShortString returns a string representation of this build label, abbreviated if

@@ -1,0 +1,4 @@
+genrule(
+    name = "foo",
+    cmd = "touch foo.txt",
+)
