@@ -554,8 +554,8 @@ func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 	}
 }
 
-// LogTestStarted logs a target beginning testing.
-func (state *BuildState) LogTestStarted(target *BuildTarget, run int, status BuildResultStatus, message string) {
+// LogTestRunning logs a target while its tests are running.
+func (state *BuildState) LogTestRunning(target *BuildTarget, run int, status BuildResultStatus, message string) {
 	state.logResult(&BuildResult{
 		Label:       target.Label,
 		target:      target,
