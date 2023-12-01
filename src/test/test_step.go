@@ -169,10 +169,10 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 	}
 
 	// Wait if another process is currently testing this target
-	state.LogBuildResult(target, core.TargetTesting, "Acquiring target lock...")
+	state.LogTestRunning(target, run, core.TargetTesting, "Acquiring target lock...")
 	file := core.AcquireExclusiveFileLock(target.TestLockFile(run))
 	defer core.ReleaseFileLock(file)
-	state.LogBuildResult(target, core.TargetTesting, "Testing...")
+	state.LogTestRunning(target, run, core.TargetTesting, "Testing...")
 
 	// Don't cache when doing multiple runs, presumably the user explicitly wants to check it.
 	if state.NumTestRuns == 1 && !runRemotely && !needToRun() {
@@ -195,7 +195,7 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 	coverage := &core.TestCoverage{}
 	if state.NumTestRuns == 1 {
 		var results core.TestSuite
-		results, coverage = doFlakeRun(state, target, runRemotely)
+		results, coverage = doFlakeRun(state, target, run, runRemotely)
 		target.AddTestResults(results)
 
 		if target.Test.Results.TestCases.AllSucceeded() {
@@ -240,13 +240,13 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget, hash []
 }
 
 // doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test
-func doFlakeRun(state *core.BuildState, target *core.BuildTarget, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
+func doFlakeRun(state *core.BuildState, target *core.BuildTarget, run int, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
 	coverage := &core.TestCoverage{}
 	results := core.TestSuite{}
 
 	// New group of test cases for each group of flaky runs
 	for flakes := 1; flakes <= int(target.Test.Flakiness); flakes++ {
-		state.LogBuildResult(target, core.TargetTesting, getFlakeStatus(flakes, int(target.Test.Flakiness)))
+		state.LogTestRunning(target, run, core.TargetTesting, getFlakeStatus(flakes, int(target.Test.Flakiness)))
 
 		testSuite, cov := doTest(state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
 
