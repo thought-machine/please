@@ -1,0 +1,21 @@
+constant12 = filegroup(
+    name = "constant12",
+    srcs = ["constant1.build_defs", "constant2.build_defs"],
+)
+
+filegroup(
+    name = "constant34",
+    srcs = {
+        "A": ["constant3.build_defs"],
+        "B": ["constant4.build_defs"],
+    },
+)
+
+CON4 = 0
+
+subinclude(constant12, [":constant34|A"])
+
+assert CON1 == 1
+assert CON2 == 2
+assert CON3 == 3
+assert CON4 == 0
