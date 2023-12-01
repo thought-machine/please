@@ -50,7 +50,7 @@ func Test(state *core.BuildState, target *core.BuildTarget, remote bool, run int
 		}
 	}()
 
-	state.LogBuildResult(target, core.TargetTesting, "Testing...")
+	state.LogTestStarted(target, run, core.TargetTesting, "Testing...")
 	test(state.ForTarget(target), target.Label, target, remote, run)
 }
 
@@ -98,7 +98,7 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 			state.Cache.Clean(target)
 			return nil
 		} else {
-			logTestSuccess(state, target, &results, coverage)
+			logTestSuccess(state, target, run, &results, coverage)
 		}
 		return &results
 	}
@@ -116,13 +116,13 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 		}
 		outs := []string{filepath.Base(target.TestResultsFile())}
 		if err := moveOutputFile(state, hash, outputFile, target.TestResultsFile(), dummyOutput); err != nil {
-			state.LogTestResult(target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
+			state.LogTestResult(target, run, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 			return false
 		}
 
 		if needCoverage || core.PathExists(coverageFile) {
 			if err := moveOutputFile(state, hash, coverageFile, target.CoverageFile(), dummyCoverage); err != nil {
-				state.LogTestResult(target, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
+				state.LogTestResult(target, run, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
 				return false
 			}
 			outs = append(outs, filepath.Base(target.CoverageFile()))
@@ -131,7 +131,7 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 			tmpFile := filepath.Join(target.TestDir(run), output)
 			outFile := filepath.Join(target.OutDir(), output)
 			if err := moveOutputFile(state, hash, tmpFile, outFile, ""); err != nil {
-				state.LogTestResult(target, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
+				state.LogTestResult(target, run, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
 				return false
 			}
 			outs = append(outs, output)
@@ -290,7 +290,7 @@ func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
-		logTestSuccess(state, target, target.Test.Results, coverage)
+		logTestSuccess(state, target, run, target.Test.Results, coverage)
 		return
 	}
 	var resultErr error
@@ -313,10 +313,10 @@ func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage
 		resultErr = fmt.Errorf("unknown error")
 		resultMsg = "Something went wrong"
 	}
-	state.LogTestResult(target, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
+	state.LogTestResult(target, run, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
 }
 
-func logTestSuccess(state *core.BuildState, target *core.BuildTarget, results *core.TestSuite, coverage *core.TestCoverage) {
+func logTestSuccess(state *core.BuildState, target *core.BuildTarget, run int, results *core.TestSuite, coverage *core.TestCoverage) {
 	var description string
 	tests := pluralise("test", results.Tests())
 	if results.Skips() != 0 {
@@ -325,7 +325,7 @@ func logTestSuccess(state *core.BuildState, target *core.BuildTarget, results *c
 	} else {
 		description = fmt.Sprintf("%d %s passed.", len(results.TestCases), tests)
 	}
-	state.LogTestResult(target, core.TargetTested, results, coverage, nil, description)
+	state.LogTestResult(target, run, core.TargetTested, results, coverage, nil, description)
 }
 
 func pluralise(word string, quantity int) string {

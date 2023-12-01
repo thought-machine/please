@@ -554,11 +554,23 @@ func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 	}
 }
 
-// LogTestResult logs the result of a target once its tests have completed.
-func (state *BuildState) LogTestResult(target *BuildTarget, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
+// LogTestStarted logs a target beginning testing.
+func (state *BuildState) LogTestStarted(target *BuildTarget, run int, status BuildResultStatus, message string) {
 	state.logResult(&BuildResult{
 		Label:       target.Label,
 		target:      target,
+		Run:         run,
+		Status:      status,
+		Description: message,
+	})
+}
+
+// LogTestResult logs the result of a target once its tests have completed.
+func (state *BuildState) LogTestResult(target *BuildTarget, run int, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
+	state.logResult(&BuildResult{
+		Label:       target.Label,
+		target:      target,
+		Run:         run,
 		Status:      status,
 		Err:         err,
 		Description: fmt.Sprintf(format, args...),
@@ -1419,6 +1431,8 @@ type BuildResult struct {
 	Label BuildLabel
 	// Target which has changed. Nil if it's a parse action.
 	target *BuildTarget
+	// Test run index. 0 if not a test.
+	Run int
 	// Its current status
 	Status BuildResultStatus
 	// Error, only populated for failure statuses
