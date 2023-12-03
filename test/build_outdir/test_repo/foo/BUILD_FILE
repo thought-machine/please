@@ -1,0 +1,4 @@
+text_file(
+    name = "testy",
+    content = "wibble wibble wibble",
+)
