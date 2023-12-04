@@ -90,7 +90,6 @@ func (p *aspParser) RegisterPreload(label core.BuildLabel) error {
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	state.SyncParsePackage(target.Label)
 	if err := f(); err != nil {
 		state.LogBuildError(target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
 		return err
