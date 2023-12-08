@@ -74,7 +74,7 @@ func (pr *progressReader) update() {
 	if !pr.interactive {
 		// Can't do interactive things, just print dots.
 		if pr.current > pr.last {
-			Printf(strings.Repeat(".", (pr.current-pr.last)/10000))
+			Printf(strings.Repeat(".", (pr.current-pr.last)/100000))
 		}
 		return
 	}
