@@ -24,6 +24,8 @@ Version 17.4.0
       `go_repo` (#2972)
     * Allow dicts to be passed as `genrule`'s `data` parameter, with similar semantics to
       those of `srcs` and `tools` (#2985)
+    * Add `--out_dir` option to `build` command (#2950)
+    * Add `add_entry_point` and `get_entry_points` built-in functions (#2993)
 
 Version 17.3.1
 --------------
