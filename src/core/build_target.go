@@ -1710,6 +1710,25 @@ func (target *BuildTarget) AddNamedOutput(name, output string) {
 	target.namedOutputs[name] = target.insert(target.namedOutputs[name], output)
 }
 
+// AddEntryPoint adds a new entry point to the target. It panics if the given entry
+// point name is disallowed in the context of this build target, or if an entry point
+// with the same name already exists.
+func (target *BuildTarget) AddEntryPoint(name, output string) {
+	if target.EntryPoints == nil {
+		target.EntryPoints = make(map[string]string)
+	}
+	if target.NamedOutputs(name) != nil {
+		panic(fmt.Sprintf("%v already has a named output named %v; entry points may not have the same name as a named output"))
+	}
+	if target.IsFilegroup && target.NamedSources[name] != nil {
+		panic(fmt.Sprintf("%v already has a named source named %v; entry points may not have the same name as a named source on a filegroup"))
+	}
+	if _, exists := target.EntryPoints[name]; exists {
+		panic(fmt.Sprintf("%v already has an entry point named %v", target.Label, name))
+	}
+	target.EntryPoints[name] = output
+}
+
 // insert adds a string into a slice if it's not already there. Sorted order is maintained.
 func (target *BuildTarget) insert(sl []string, s string) []string {
 	if s == "" {

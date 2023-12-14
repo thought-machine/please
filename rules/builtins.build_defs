@@ -258,6 +258,10 @@ def get_outs(target:str):
     pass
 def get_named_outs(target:str) -> dict:
     pass
+def add_entry_point(target:str, name:str, out:str):
+    pass
+def get_entry_points(target:str) -> dict:
+    pass
 def add_licence(target:str, licence:str):
     pass
 def get_licences(target:str):

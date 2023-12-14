@@ -67,6 +67,8 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_out", addOut)
 	setNativeCode(s, "get_outs", getOuts)
 	setNativeCode(s, "get_named_outs", getNamedOuts)
+	setNativeCode(s, "add_entry_point", addEntryPoint)
+	setNativeCode(s, "get_entry_points", getEntryPoints)
 	setNativeCode(s, "add_licence", addLicence)
 	setNativeCode(s, "get_licences", getLicences)
 	setNativeCode(s, "get_command", getCommand)
@@ -1184,6 +1186,32 @@ func getNamedOuts(s *scope, args []pyObject) pyObject {
 			list[i] = pyString(out)
 		}
 		ret[k] = list
+	}
+	return ret
+}
+
+// addEntryPoint adds an entry point to a target.
+func addEntryPoint(s *scope, args []pyObject) pyObject {
+	target := getTargetPost(s, string(args[0].(pyString)))
+	name := string(args[1].(pyString))
+	output := string(args[2].(pyString))
+	target.AddEntryPoint(name, output)
+	return None
+}
+
+// getEntryPoints returns a dict containing the given target's entry points.
+func getEntryPoints(s *scope, args []pyObject) pyObject {
+	var target *core.BuildTarget
+	if name := args[0].String(); core.LooksLikeABuildLabel(name) {
+		label := core.ParseBuildLabel(name, s.pkg.Name)
+		target = s.state.Graph.TargetOrDie(label)
+	} else {
+		target = getTargetPost(s, name)
+	}
+
+	ret := make(pyDict, len(target.EntryPoints))
+	for name, output := range target.EntryPoints {
+		ret[name] = pyString(output)
 	}
 	return ret
 }
