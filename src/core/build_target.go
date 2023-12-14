@@ -1718,10 +1718,10 @@ func (target *BuildTarget) AddEntryPoint(name, output string) {
 		target.EntryPoints = make(map[string]string)
 	}
 	if target.NamedOutputs(name) != nil {
-		panic(fmt.Sprintf("%v already has a named output named %v; entry points may not have the same name as a named output", target.Label))
+		panic(fmt.Sprintf("%v already has a named output named %v; entry points may not have the same name as a named output", target.Label, name))
 	}
 	if target.IsFilegroup && target.NamedSources[name] != nil {
-		panic(fmt.Sprintf("%v already has a named source named %v; entry points may not have the same name as a named source on a filegroup", target.Label))
+		panic(fmt.Sprintf("%v already has a named source named %v; entry points may not have the same name as a named source on a filegroup", target.Label, name))
 	}
 	if _, exists := target.EntryPoints[name]; exists {
 		panic(fmt.Sprintf("%v already has an entry point named %v", target.Label, name))
