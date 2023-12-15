@@ -1,0 +1,21 @@
+name: changelog lint
+on:
+  pull_request:
+    paths:
+      - 'ChangeLog'
+
+jobs:
+  check-changelog:
+    runs-on: ubuntu-latest
+
+  steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+   - name: Check for duplicate versions in Changelog
+     run: |
+       if grep -P 'Version \d+\.\d+\.\d+' ChangeLog | sort | uniq -d; then
+       echo "Duplicate versions found in Changelog"
+       exit 1
+       fi
+
