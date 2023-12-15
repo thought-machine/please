@@ -832,24 +832,14 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 
 	// If something has promised to parse it, wait for them to do so
 	if ch := state.progress.pendingPackages.Get(key); ch != nil {
-		select {
-		case <-ch:
-			return state.Graph.PackageByLabel(l)
-		case <-time.After(time.Minute):
-			log.Debugf("%v: still waiting for package %v to parse", dependent, l)
-			return state.WaitForPackage(l, dependent, mode)
-		}
+		<-ch
+		return state.Graph.PackageByLabel(l)
 	}
 
 	// If something has already queued the package to be parsed, wait for them
 	if ch := state.progress.packageWaits.Get(key); ch != nil {
-		select {
-		case <-ch:
-			return state.Graph.PackageByLabel(l)
-		case <-time.After(time.Minute):
-			log.Debugf("%v: still waiting for package %v to parse", dependent, l)
-			return state.WaitForPackage(l, dependent, mode)
-		}
+		<-ch
+		return state.Graph.PackageByLabel(l)
 	}
 
 	// Otherwise queue the target for parse and recurse
@@ -868,13 +858,9 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, make(chan struct{})); !inserted {
-		select {
-		case <-ch:
-			return state.Graph.Target(l)
-		case <-time.After(time.Minute):
-			log.Debugf("%v: still waiting for %v to build", dependent, l)
-			return state.WaitForBuiltTarget(l, dependent, mode)
-		}
+		// Something's already registered for this, get on the train
+		<-ch
+		return state.Graph.Target(l)
 	}
 	if err := state.queueTarget(l, dependent, mode.IsForSubinclude(), mode); err != nil {
 		log.Fatalf("%v", err)
@@ -1150,7 +1136,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		// Wait for these targets to actually build.
 		if building {
 			for _, t := range target.Dependencies() {
-				t.WaitForBuild(target.Label)
+				t.WaitForBuild()
 				if t.State() >= DependencyFailed { // Either the target failed or its dependencies failed
 					// Give up and set the original target as dependency failed
 					target.SetState(DependencyFailed)
