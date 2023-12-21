@@ -43,8 +43,9 @@ class ReleaseGen:
         self.session.verify = '/etc/ssl/certs/ca-certificates.crt'
         if not dry_run:
             self.session.headers.update({
-                'Accept': 'application/vnd.github.v3+json',
-                'Authorization': 'token ' + github_token,
+                'Accept': 'application/vnd.github+json',
+                'Authorization': 'Bearer ' + github_token,
+                'X-GitHub-Api-Version': '2022-11-28',
             })
         self.version = self.read_file('VERSION').strip()
         self.version_name = 'Version ' + self.version
