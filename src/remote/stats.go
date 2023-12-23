@@ -2,33 +2,25 @@ package remote
 
 import (
 	"context"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc/stats"
 )
 
-// The length of time we keep stats around for.
-const windowDurationSeconds = 5
-const windowDuration = -windowDurationSeconds * time.Second
+// The number of seconds worth of stats that we average over
+const windowSize = 3
 
 // updateFrequency is the rate at which we update stats internally (which is independent of display updates)
 const updateFrequency = 1 * time.Second
-
-// A stat is a single statistic comprising an observation time and size value (in bytes)
-type stat struct {
-	Time time.Time
-	Val  int
-}
 
 // A statsHandler is an implementation of a grpc stats.Handler that calculates an estimate of
 // instantaneous performance.
 type statsHandler struct {
 	client            *Client
-	in, out           []stat
-	mutex             sync.Mutex
-	rateIn, rateOut   int
-	totalIn, totalOut int
+	in, out           [windowSize]atomic.Int64  // most recent first
+	rateIn, rateOut   atomic.Int64
+	totalIn, totalOut atomic.Int64
 }
 
 func newStatsHandler(c *Client) *statsHandler {
@@ -42,15 +34,15 @@ func (h *statsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) conte
 }
 
 func (h *statsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
 	switch p := s.(type) {
+	case *stats.InHeader:
+		h.in[0].Add(int64(p.WireLength))
+	case *stats.OutHeader:
+		// The out header seems not to have any size on it that we can use
 	case *stats.InPayload:
-		h.in = append(h.in, stat{Time: p.RecvTime, Val: p.Length})
-		h.totalIn += p.Length
+		h.in[0].Add(int64(p.WireLength))
 	case *stats.OutPayload:
-		h.out = append(h.out, stat{Time: p.SentTime, Val: p.Length})
-		h.totalOut += p.Length
+		h.out[0].Add(int64(p.WireLength))
 	}
 }
 
@@ -63,45 +55,25 @@ func (h *statsHandler) HandleConn(ctx context.Context, s stats.ConnStats) {
 
 // DataRate returns the current snapshot of the data rate stats.
 func (h *statsHandler) DataRate() (int, int, int, int) {
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
-	return h.rateIn, h.rateOut, h.totalIn, h.totalOut
+	return int(h.rateIn.Load()), int(h.rateOut.Load()), int(h.totalIn.Load()), int(h.totalOut.Load())
 }
 
 // update runs continually, updating the aggregated stats on the Client instance.
 func (h *statsHandler) update() {
 	for range time.NewTicker(updateFrequency).C {
-		h.mutex.Lock()
-		h.rateIn = h.updateStat(&h.in)
-		h.rateOut = h.updateStat(&h.out)
-		h.mutex.Unlock()
-	}
-}
-
-func (h *statsHandler) updateStat(stats *[]stat) int {
-	s := *stats
-	idx := h.survivingStats(s, time.Now().Add(windowDuration))
-	if idx != 0 {
-		// Shuffle them all back by this much. We *could* just slice here but that has rather nasty
-		// allocation behaviour (in that we would be continually reallocating the underlying buffer)
-		copy(s, s[idx:])
-		*stats = s[:idx]
-	}
-	// Now recalculate the observed value
-	total := 0
-	for _, stat := range *stats {
-		total += stat.Val
-	}
-	return total / windowDurationSeconds
-}
-
-func (h *statsHandler) survivingStats(stats []stat, deadline time.Time) int {
-	// This assumes that we receive stats in time order, which seems reasonable; if it turns out not
-	// to be the case we could record the current time ourselves when we get them.
-	for i, stat := range stats {
-		if stat.Time.After(deadline) {
-			return i
+		// Aggregate the total on the handler
+		var in, out int64
+		lastIn := h.in[0].Swap(0)
+		lastOut := h.out[0].Swap(0)
+		h.totalIn.Add(lastIn)
+		h.totalOut.Add(lastOut)
+		for i := 1; i < windowSize; i++ {
+			in += lastIn
+			out += lastOut
+			h.in[i].Store(lastIn)
+			h.out[i].Store(lastOut)
 		}
+		h.rateIn.Store(in / windowSize)
+		h.rateOut.Store(out / windowSize)
 	}
-	return len(stats)
 }
