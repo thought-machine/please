@@ -433,7 +433,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.5.0",
+    version = "v0.17.0",
 )
 
 go_repo(
