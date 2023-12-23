@@ -15,9 +15,9 @@ const updateFrequency = 1 * time.Second
 // instantaneous performance.
 type statsHandler struct {
 	client            *Client
-	in, out           atomic.Int64
-	rateIn, rateOut atomic.Int64
-	totalIn, totalOut atomic.Int64
+	in, out           atomic.Int64 // aggregated for the current second
+	rateIn, rateOut   atomic.Int64 // the stats for the previous second (which gets displayed)
+	totalIn, totalOut atomic.Int64 // aggregated total for all time
 }
 
 func newStatsHandler(c *Client) *statsHandler {
