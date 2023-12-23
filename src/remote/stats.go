@@ -8,9 +8,6 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
-// The number of seconds worth of stats that we average over
-const windowSize = 3
-
 // updateFrequency is the rate at which we update stats internally (which is independent of display updates)
 const updateFrequency = 1 * time.Second
 
@@ -18,8 +15,8 @@ const updateFrequency = 1 * time.Second
 // instantaneous performance.
 type statsHandler struct {
 	client            *Client
-	in, out           [windowSize]atomic.Int64  // most recent first
-	rateIn, rateOut   atomic.Int64
+	in, out           atomic.Int64
+	rateIn, rateOut atomic.Int64
 	totalIn, totalOut atomic.Int64
 }
 
@@ -36,13 +33,13 @@ func (h *statsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) conte
 func (h *statsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
 	switch p := s.(type) {
 	case *stats.InHeader:
-		h.in[0].Add(int64(p.WireLength))
+		h.in.Add(int64(p.WireLength))
 	case *stats.OutHeader:
 		// The out header seems not to have any size on it that we can use
 	case *stats.InPayload:
-		h.in[0].Add(int64(p.WireLength))
+		h.in.Add(int64(p.WireLength))
 	case *stats.OutPayload:
-		h.out[0].Add(int64(p.WireLength))
+		h.out.Add(int64(p.WireLength))
 	}
 }
 
@@ -61,19 +58,11 @@ func (h *statsHandler) DataRate() (int, int, int, int) {
 // update runs continually, updating the aggregated stats on the Client instance.
 func (h *statsHandler) update() {
 	for range time.NewTicker(updateFrequency).C {
-		// Aggregate the total on the handler
-		var in, out int64
-		lastIn := h.in[0].Swap(0)
-		lastOut := h.out[0].Swap(0)
-		h.totalIn.Add(lastIn)
-		h.totalOut.Add(lastOut)
-		for i := 1; i < windowSize; i++ {
-			in += lastIn
-			out += lastOut
-			h.in[i].Store(lastIn)
-			h.out[i].Store(lastOut)
-		}
-		h.rateIn.Store(in / windowSize)
-		h.rateOut.Store(out / windowSize)
+		in := h.in.Swap(0)
+		out := h.out.Swap(0)
+		h.rateIn.Store(in)
+		h.rateOut.Store(out)
+		h.totalIn.Add(in)
+		h.totalOut.Add(out)
 	}
 }
