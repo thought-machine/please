@@ -157,9 +157,8 @@ func New(state *core.BuildState) *Client {
 		fileMetadataCache: filemetadata.NewNoopCache(),
 		shellPath:         state.Config.Remote.Shell,
 		buildID:           state.Config.Remote.BuildID,
+		stats:             newStatsHandler(),
 	}
-
-	c.stats = newStatsHandler(c)
 	go c.CheckInitialised() // Kick off init now, but we don't have to wait for it.
 	return c
 }

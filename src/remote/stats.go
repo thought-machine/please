@@ -14,14 +14,13 @@ const updateFrequency = 1 * time.Second
 // A statsHandler is an implementation of a grpc stats.Handler that calculates an estimate of
 // instantaneous performance.
 type statsHandler struct {
-	client            *Client
 	in, out           atomic.Int64 // aggregated for the current second
 	rateIn, rateOut   atomic.Int64 // the stats for the previous second (which gets displayed)
 	totalIn, totalOut atomic.Int64 // aggregated total for all time
 }
 
-func newStatsHandler(c *Client) *statsHandler {
-	h := &statsHandler{client: c}
+func newStatsHandler() *statsHandler {
+	h := &statsHandler{}
 	go h.update()
 	return h
 }
@@ -55,7 +54,7 @@ func (h *statsHandler) DataRate() (int, int, int, int) {
 	return int(h.rateIn.Load()), int(h.rateOut.Load()), int(h.totalIn.Load()), int(h.totalOut.Load())
 }
 
-// update runs continually, updating the aggregated stats on the Client instance.
+// update runs continually, updating the aggregated stats on the handler.
 func (h *statsHandler) update() {
 	for range time.NewTicker(updateFrequency).C {
 		in := h.in.Swap(0)
