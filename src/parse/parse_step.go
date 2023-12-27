@@ -6,6 +6,7 @@
 package parse
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	iofs "io/fs"
@@ -18,6 +19,8 @@ import (
 )
 
 var log = logging.Log
+
+var ErrMissingPackage = errors.New("missing package")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.
@@ -122,16 +125,26 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 	// Try parsing the package in the host repo first.
 	s, err := parseSubrepoPackage(state, sl.PackageName, sl.Subrepo, label, mode)
 	if err != nil || s != nil {
-		return s, err
+		return s, handleParseSubrepoErr(err, dependent, label)
 	}
 
 	// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host repo
 	s, err = parseSubrepoPackage(state, sl.PackageName, dependent.Subrepo, label, mode)
 	if err != nil || s != nil {
-		return s, err
+		return s, handleParseSubrepoErr(err, dependent, label)
 	}
 
 	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
+}
+
+// handleParseSubrepoErr reports a more sensible error when we go to parse a package in a subrepo, but the subrepo
+// package doesn't exist.
+func handleParseSubrepoErr(err error, dependant, label core.BuildLabel) error {
+	if errors.Is(err, ErrMissingPackage) {
+		log.Debugf("missing subrepo package: %v", err)
+		return fmt.Errorf("%v depends on %v but the subrepo doesn't exist", dependant, label)
+	}
+	return err
 }
 
 // parseSubrepoPackage parses a package to make sure subrepos are available.
@@ -207,13 +220,13 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependent != core.OriginalTarget && exists {
-				return nil, fmt.Errorf("%s depends on %s, but there's no %s file in %s/", dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
+				return nil, fmt.Errorf("%w: %s depends on %s, but there's no %s file in %s/", ErrMissingPackage, dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			} else if dependent != core.OriginalTarget {
-				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist: %s", dependent, label, dir, packageName)
+				return nil, fmt.Errorf("%w: %s depends on %s, but the directory %s doesn't exist: %s", ErrMissingPackage, dependent, label, dir, packageName)
 			} else if exists {
-				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
+				return nil, fmt.Errorf("%w: Can't build %s; there's no %s file in %s/", ErrMissingPackage, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			}
-			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
+			return nil, fmt.Errorf("%w: Can't build %s; the directory %s doesn't exist", ErrMissingPackage, label, dir)
 		}
 	}
 
