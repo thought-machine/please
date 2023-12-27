@@ -451,7 +451,7 @@ func TestAssert(t *testing.T) {
 
 func TestOptimise(t *testing.T) {
 	p := newParser()
-	statements, err := p.parse("src/parse/asp/test_data/optimise.build")
+	statements, err := p.parse(nil, "src/parse/asp/test_data/optimise.build")
 	f := newFile("src/parse/asp/test_data/optimise.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 5, len(statements))
@@ -647,12 +647,12 @@ func TestMissingNewlines(t *testing.T) {
 }
 
 func TestRepeatedArguments(t *testing.T) {
-	_, err := newParser().parse("src/parse/asp/test_data/repeated_arguments.build")
+	_, err := newParser().parse(nil, "src/parse/asp/test_data/repeated_arguments.build")
 	assert.Error(t, err)
 }
 
 func TestConstantAssignments(t *testing.T) {
-	_, err := newParser().parse("src/parse/asp/test_data/constant_assign.build")
+	_, err := newParser().parse(nil, "src/parse/asp/test_data/constant_assign.build")
 	assert.Error(t, err)
 }
 

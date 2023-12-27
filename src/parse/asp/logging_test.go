@@ -30,7 +30,7 @@ func parseFile2(filename string) (*scope, error) {
 		panic(err)
 	}
 	parser.MustLoadBuiltins("builtins.build_defs", src)
-	statements, err := parser.parse(filename)
+	statements, err := parser.parse(nil, filename)
 	if err != nil {
 		panic(err)
 	}

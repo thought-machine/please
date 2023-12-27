@@ -5,7 +5,9 @@ package asp
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"strings"
 
@@ -71,11 +73,11 @@ func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
-func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, filename string) error {
+func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
-	statements, err := p.parse(filename)
+	statements, err := p.parse(fs, filename)
 	if err != nil {
 		return err
 	}
@@ -116,12 +118,12 @@ func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker, forLabel, depen
 
 // ParseFileOnly parses the given file but does not interpret it.
 func (p *Parser) ParseFileOnly(filename string) ([]*Statement, error) {
-	return p.parse(filename)
+	return p.parse(nil, filename)
 }
 
 // parse reads the given file and parses it into a set of statements.
-func (p *Parser) parse(filename string) ([]*Statement, error) {
-	f, err := os.Open(filename)
+func (p *Parser) parse(fs iofs.FS, filename string) ([]*Statement, error) {
+	f, err := p.open(fs, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +134,22 @@ func (p *Parser) parse(filename string) ([]*Statement, error) {
 		f.Close()
 	}
 	return stmts, err
+}
+
+// open opens a file from the given path
+func (p *Parser) open(fs iofs.FS, filename string) (io.ReadSeekCloser, error) {
+	if fs == nil {
+		return os.Open(filename)
+	}
+	f, err := fs.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	r, ok := f.(io.ReadSeekCloser)
+	if !ok {
+		return nil, fmt.Errorf("opened file is not seekable: %s", filename)
+	}
+	return r, nil
 }
 
 // ParseData reads the given byteslice and parses it into a set of statements.

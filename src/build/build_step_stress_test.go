@@ -6,6 +6,7 @@ package build_test
 import (
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -105,7 +106,7 @@ func (fake *fakeParser) RegisterPreload(core.BuildLabel) error {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
 	return nil
 }
 
