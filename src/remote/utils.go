@@ -68,8 +68,9 @@ func (c *Client) targetOutputs(label core.BuildLabel) *pb.Directory {
 	return c.outputs[label]
 }
 
-// setOutputs sets the outputs for the target so we can refer to them later by build label from dependent rules. We also
-// save the full Tree proto for subrepos so we can parse and build subrepo targets without downloading the sources.
+// setOutputs sets the outputs for the target, so we can refer to them later by build label from dependent rules. We
+// also save the full Tree proto for subrepos, so we can parse and build subrepo targets without downloading the
+// sources.
 func (c *Client) setOutputs(target *core.BuildTarget, arTree *pb.Tree) error {
 	c.outputMutex.Lock()
 	defer c.outputMutex.Unlock()
@@ -131,7 +132,7 @@ func (c *Client) setOutputsFromMetadata(target *core.BuildTarget, md *core.Build
 }
 
 // outputTree returns a tree representing the outputs of an action result
-func (c *Client) outputTree(ar *pb.ActionResult) (*pb.Tree, error) {
+func (c *Client) outputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.Tree, error) {
 	o := &pb.Tree{
 		Root: &pb.Directory{
 			Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
@@ -146,7 +147,7 @@ func (c *Client) outputTree(ar *pb.ActionResult) (*pb.Tree, error) {
 	//      uploadInputDir.
 	for i, f := range ar.OutputFiles {
 		o.Root.Files[i] = &pb.FileNode{
-			Name:         f.Path,
+			Name:         target.GetRealOutput(f.Path),
 			Digest:       f.Digest,
 			IsExecutable: f.IsExecutable,
 		}
@@ -159,13 +160,13 @@ func (c *Client) outputTree(ar *pb.ActionResult) (*pb.Tree, error) {
 		}
 		o.Children = append(o.Children, append(tree.Children, tree.Root)...)
 		o.Root.Directories = append(o.Root.Directories, &pb.DirectoryNode{
-			Name:   d.Path,
+			Name:   target.GetRealOutput(d.Path),
 			Digest: c.digestMessage(tree.Root),
 		})
 	}
 	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
 		o.Root.Symlinks[i] = &pb.SymlinkNode{
-			Name:   s.Path,
+			Name:   target.GetRealOutput(s.Path),
 			Target: s.Target,
 		}
 	}
@@ -443,7 +444,7 @@ func (b *dirBuilder) dir(dir, child string) *pb.Directory {
 	return d
 }
 
-// Build "builds" the directory. It calculate the digests of all the items in the directory tree, and returns the root
+// Build "builds" the directory. It calculates the digests of all the items in the directory tree, and returns the root
 // directory. If ch is non-nil, it will upload the directory protos to ch. Build doesn't upload any of the actual files
 // in the directory tree, just the protos.
 func (b *dirBuilder) Build(ch chan<- *uploadinfo.Entry) *pb.Directory {
