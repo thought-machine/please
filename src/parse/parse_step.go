@@ -6,6 +6,7 @@
 package parse
 
 import (
+	"errors"
 	"fmt"
 	iofs "io/fs"
 	"path/filepath"
@@ -17,6 +18,8 @@ import (
 )
 
 var log = logging.Log
+
+var ErrMissingBuildFile = errors.New("build file not found")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
 // It is not an error if the package has already been parsed.
@@ -119,13 +122,13 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 	}
 
 	// Try parsing the package in the host repo first.
-	s, err := parseSubrepoPackage(state, sl.PackageName, sl.Subrepo, label, mode)
+	s, err := maybeParseSubrepoPackage(state, sl.PackageName, sl.Subrepo, label, mode)
 	if err != nil || s != nil {
 		return s, err
 	}
 
 	// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host repo
-	s, err = parseSubrepoPackage(state, sl.PackageName, dependent.Subrepo, label, mode)
+	s, err = maybeParseSubrepoPackage(state, sl.PackageName, dependent.Subrepo, label, mode)
 	if err != nil || s != nil {
 		return s, err
 	}
@@ -133,13 +136,19 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 }
 
-// parseSubrepoPackage parses a package to make sure subrepos are available.
-func parseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo string, dependent core.BuildLabel, mode core.ParseMode) (*core.Subrepo, error) {
+// maybeParseSubrepoPackage parses a package to make sure subrepos are available, returning the subrepo if it exists.
+// Returns nothing if the package doesn't exist, or the package doesn't define the subrepo.
+func maybeParseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo string, dependent core.BuildLabel, mode core.ParseMode) (*core.Subrepo, error) {
 	// Check if the subrepo package exists
 	if state.Graph.Package(subrepoPkg, subrepoSubrepo) == nil {
 		// Don't have it already, must parse.
 		label := core.BuildLabel{Subrepo: subrepoSubrepo, PackageName: subrepoPkg, Name: "all"}
 		if err := parse(state, label, dependent, mode|core.ParseModeForSubinclude); err != nil {
+			// When we try and parse a subrepo package, but the BUILD file or directory doesn't exist, return nil so
+			// this gets handled later on, in the same way as when the package does exist but doesn't define the subrepo
+			if errors.Is(err, ErrMissingBuildFile) {
+				return nil, nil
+			}
 			return nil, err
 		}
 	}
@@ -187,13 +196,13 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 			exists := core.PathExists(dir)
 			// Handle quite a few cases to provide more obvious error messages.
 			if dependent != core.OriginalTarget && exists {
-				return nil, fmt.Errorf("%s depends on %s, but there's no %s file in %s/", dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
+				return nil, fmt.Errorf("%w: %s depends on %s, but there's no %s file in %s/", ErrMissingBuildFile, dependent, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			} else if dependent != core.OriginalTarget {
-				return nil, fmt.Errorf("%s depends on %s, but the directory %s doesn't exist: %s", dependent, label, dir, packageName)
+				return nil, fmt.Errorf("%w: %s depends on %s, but the directory %s doesn't exist: %s", ErrMissingBuildFile, dependent, label, dir, packageName)
 			} else if exists {
-				return nil, fmt.Errorf("Can't build %s; there's no %s file in %s/", label, buildFileNames(state.Config.Parse.BuildFileName), dir)
+				return nil, fmt.Errorf("%w: Can't build %s; there's no %s file in %s/", ErrMissingBuildFile, label, buildFileNames(state.Config.Parse.BuildFileName), dir)
 			}
-			return nil, fmt.Errorf("Can't build %s; the directory %s doesn't exist", label, dir)
+			return nil, fmt.Errorf("%w: Can't build %s; the directory %s doesn't exist", ErrMissingBuildFile, label, dir)
 		}
 	}
 
