@@ -1,3 +1,7 @@
+Version 17.4.1
+--------------
+    * Fix occasional 'too many open files' errors (#2998)
+
 Version 17.4.0
 --------------
     * keep going flag (#2932)

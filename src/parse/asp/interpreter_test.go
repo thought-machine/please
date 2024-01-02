@@ -28,7 +28,7 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 		panic(err)
 	}
 	parser.MustLoadBuiltins("builtins.build_defs", src)
-	statements, err := parser.parse(filename)
+	statements, err := parser.parse(nil, filename)
 	if err != nil {
 		panic(err)
 	}
@@ -570,7 +570,7 @@ func TestJSON(t *testing.T) {
 		panic(err)
 	}
 	parser.MustLoadBuiltins("builtins.build_defs", src)
-	statements, err := parser.parse("src/parse/asp/test_data/json.build")
+	statements, err := parser.parse(nil, "src/parse/asp/test_data/json.build")
 	if err != nil {
 		panic(err)
 	}
@@ -633,7 +633,7 @@ func TestLogConfigVariable(t *testing.T) {
 		panic(err)
 	}
 	parser.MustLoadBuiltins("builtins.build_defs", src)
-	statements, err := parser.parse("src/parse/asp/test_data/log_config.build")
+	statements, err := parser.parse(nil, "src/parse/asp/test_data/log_config.build")
 	if err != nil {
 		panic(err)
 	}

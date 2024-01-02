@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -55,8 +56,8 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, filename string) error {
-	return p.parser.ParseFile(pkg, forLabel, dependent, mode, filename)
+func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
+	return p.parser.ParseFile(pkg, forLabel, dependent, mode, fs, filename)
 }
 
 func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel, mode core.ParseMode) error {

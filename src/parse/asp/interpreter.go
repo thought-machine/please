@@ -103,7 +103,7 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 		}
 		return i.loadBuiltinStatements(s, stmts, err)
 	}
-	stmts, err := i.parser.parse(filename)
+	stmts, err := i.parser.parse(nil, filename)
 	return i.loadBuiltinStatements(s, stmts, err)
 }
 
@@ -213,7 +213,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 	}
 
 	// If we get here, it falls to us to parse this.
-	stmts, err := i.parser.parse(path)
+	stmts, err := i.parser.parse(nil, path)
 	if err != nil {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
 	}

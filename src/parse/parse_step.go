@@ -7,7 +7,6 @@ package parse
 
 import (
 	"fmt"
-	"io"
 	iofs "io/fs"
 	"path/filepath"
 	"strings"
@@ -158,19 +157,6 @@ func parseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo stri
 	return state.CheckArchSubrepo(dependent.Subrepo), nil
 }
 
-func openFile(fs iofs.FS, subrepoName, name string) (io.ReadSeekCloser, error) {
-	file, err := fs.Open(name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open build file: %v", err)
-	}
-
-	reader, ok := file.(io.ReadSeekCloser)
-	if !ok {
-		return nil, fmt.Errorf("opened file is not seekable: ///%v/%v", subrepoName, name)
-	}
-	return reader, nil
-}
-
 // parsePackage parses a BUILD file and adds the package to the build graph
 func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo, mode core.ParseMode) (*core.Package, error) {
 	packageName := label.PackageName
@@ -193,14 +179,8 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 	} else {
 		filename, dir := buildFileName(state, subrepo, fileSystem, label.PackageName)
 		if filename != "" {
-			file, err := openFile(fileSystem, pkg.SubrepoName, filename)
-			if err != nil {
-				return nil, err
-			}
-			defer file.Close()
-
 			pkg.Filename = filename
-			if err := state.Parser.ParseReader(pkg, file, &label, &dependent, mode); err != nil {
+			if err := state.Parser.ParseFile(pkg, &label, &dependent, mode, fileSystem, filename); err != nil {
 				return nil, err
 			}
 		} else {

@@ -84,7 +84,7 @@ const (
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
-	ParseFile(pkg *Package, forLabel, dependent *BuildLabel, mode ParseMode, filename string) error
+	ParseFile(pkg *Package, forLabel, dependent *BuildLabel, mode ParseMode, fs iofs.FS, filename string) error
 	// ParseReader parses a single BUILD file into the given package.
 	ParseReader(pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel, mode ParseMode) error
 	// RunPreBuildFunction runs a pre-build function for a target.
