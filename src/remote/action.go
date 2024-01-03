@@ -395,7 +395,7 @@ func (c *Client) buildMetadata(target *core.BuildTarget, ar *pb.ActionResult, ne
 		}
 		metadata.Stderr = b
 	}
-	outputs, err := c.outputTree(ar)
+	outputs, err := c.outputTree(target, ar)
 	if err != nil {
 		return nil, err
 	}
@@ -527,7 +527,7 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 	if err := c.uploadIfMissing(context.Background(), entries); err != nil {
 		return err
 	}
-	outs, err := c.outputTree(ar)
+	outs, err := c.outputTree(target, ar)
 	if err != nil {
 		return err
 	}
