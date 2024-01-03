@@ -1,3 +1,8 @@
+Version 17.4.2
+--------------
+    * Fix error message when depending on a target in a non-existant subrepo (#3007)
+    * Handle `.out` temporary suffixes in remote execution properly (#3008)
+
 Version 17.4.1
 --------------
     * Fix occasional 'too many open files' errors (#2998)
