@@ -88,7 +88,7 @@ func format(filename string, rewrite, quiet bool) (bool, error) {
 
 // simplify runs a series of syntactical simplifications on the given file contents.
 func simplify(f *build.File) {
-	for i := len(f.Stmt)-2; i >= 0; i-- {
+	for i := len(f.Stmt) - 2; i >= 0; i-- {
 		if call := subinclude(f.Stmt[i]); call != nil {
 			if next := subinclude(f.Stmt[i+1]); next != nil {
 				call.List = append(call.List, next.List...)
