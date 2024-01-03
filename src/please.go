@@ -392,7 +392,7 @@ var opts struct {
 			} `positional-args:"true" required:"true"`
 		} `command:"input" alias:"inputs" description:"Prints all transitive inputs of a target."`
 		Output struct {
-			JSON       bool     `long:"json" description:"Print the outputs as a json map from target to lists of output files, rather than a flat list of files"`
+			JSON bool `long:"json" description:"Print the outputs as a json map from target to lists of output files, rather than a flat list of files"`
 			Args struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to display outputs for" required:"true"`
 			} `positional-args:"true" required:"true"`
