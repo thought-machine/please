@@ -3,8 +3,7 @@ package asp
 import (
 	"fmt"
 	"os"
-
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 // A FilePosition is the more user-friendly equivalent to the Position type.
