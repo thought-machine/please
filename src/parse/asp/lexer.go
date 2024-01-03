@@ -224,7 +224,14 @@ func (l *lex) nextToken() Token {
 			return Token{Type: EOL, Pos: pos}
 		}
 		return l.nextToken()
-	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+	case '0':
+		if l.bytes[l.pos] == 'o' {
+			l.pos++
+			l.col++
+			return l.consumeInteger(next, pos)
+		}
+		fallthrough
+	case '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return l.consumeInteger(next, pos)
 	case '"', '\'':
 		// String literal, consume to end.
