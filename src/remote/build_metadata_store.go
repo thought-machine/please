@@ -61,6 +61,8 @@ func (d *directoryMetadataStore) clean() {
 }
 
 func (d *directoryMetadataStore) storeMetadata(key string, md *core.BuildMetadata) error {
+	md.VersionTag = core.ExpectedBuildMetadataVersionTag
+
 	prefix := key[:2]
 	dir := filepath.Join(d.directory, d.instance, prefix)
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
@@ -89,6 +91,10 @@ func (d *directoryMetadataStore) retrieveMetadata(key string) (*core.BuildMetada
 	}
 
 	if d.hasExpired(md) {
+		return nil, nil
+	}
+	// If the cached version metadata doesn't match the expected version, then we should not use this metadata file
+	if md.VersionTag != core.ExpectedBuildMetadataVersionTag {
 		return nil, nil
 	}
 	return md, nil

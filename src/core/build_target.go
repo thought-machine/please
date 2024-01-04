@@ -241,6 +241,10 @@ type BuildTarget struct {
 	ShowProgress atomicBool `name:"progress"`
 }
 
+// ExpectedBuildMetadataVersionTag is the version tag that the current Please version expects. If this doesn't match
+// the VersionTag of the BuildMetadata object, then Please will not use the cached target metadata.
+var ExpectedBuildMetadataVersionTag = 1
+
 // BuildMetadata is temporary metadata that's stored around a build target - we don't
 // generally persist it indefinitely.
 type BuildMetadata struct {
@@ -260,6 +264,10 @@ type BuildMetadata struct {
 	Test bool
 	// True if the results were retrieved from a cache, false if we ran the full build action.
 	Cached bool
+	// VersionTag is an integer representing the version of this cache object. This is used to invalidate the local
+	// action result cache in the event that the cache has been poisoned due to a bug. If this doesn't match the
+	// expected version above, Please will not use this cached metadata.
+	VersionTag int
 }
 
 // A PreBuildFunction is a type that allows hooking a pre-build callback.
