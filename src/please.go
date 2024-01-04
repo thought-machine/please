@@ -259,7 +259,7 @@ var opts struct {
 
 	Update struct {
 		Force            bool        `long:"force" description:"Forces a re-download of the new version."`
-		NoVerify         bool        `long:"noverify" description:"Skips signature verification of downloaded version"`
+		NoVerify         bool        `long:"noverify" description:"Skips signature and hash verification of downloaded version"`
 		Latest           bool        `long:"latest" description:"Update to latest available version (overrides config)."`
 		LatestPrerelease bool        `long:"latest_prerelease" description:"Update to latest available prerelease version (overrides config)."`
 		Version          cli.Version `long:"version" description:"Updates to a particular version (overrides config)."`

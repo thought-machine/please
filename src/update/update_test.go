@@ -139,7 +139,7 @@ func TestDownloadAndLinkPlease(t *testing.T) {
 
 func TestDownloadAndLinkPleaseBadVersion(t *testing.T) {
 	c := makeConfig("downloadandlink")
-	assert.Panics(t, func() { downloadAndLinkPlease(c, false, true) })
+	assert.Panics(t, func() { downloadAndLinkPlease(c, true, true) })
 	// Should have deleted the thing it downloaded.
 	assert.False(t, core.PathExists(filepath.Join(c.Please.Location, c.Please.Version.String())))
 }
