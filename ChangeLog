@@ -1,3 +1,8 @@
+Version 17.4.3
+--------------
+    * Invalidate the action metadata cache as the action outputs are invalid as of
+      #3008 (#3016)
+
 Version 17.4.2
 --------------
     * Fix error message when depending on a target in a non-existant subrepo (#3007)

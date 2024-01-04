@@ -118,7 +118,7 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 	// this case, the subrepo must be registered by now. We shouldn't continue to try and parse the subrepo package, as
 	// it's the current package we're parsing, which would result in a lockup.
 	if inSamePackage(sl, dependent) {
-		return nil, fmt.Errorf("subrepo %v is not defined in this package yet. It must appear before it is used by %v", sl.Subrepo, dependent)
+		return nil, fmt.Errorf("subrepo %v is not defined in this package yet. It must appear before it is used by %v", label.Subrepo, dependent)
 	}
 
 	// Try parsing the package in the host repo first.
