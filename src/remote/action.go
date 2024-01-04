@@ -28,7 +28,7 @@ import (
 )
 
 // uploadAction uploads a build action for a target and returns its digest.
-func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb.Command, *pb.Digest, error) {
+func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool, run int) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
 	var digest *pb.Digest
 	err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
@@ -39,7 +39,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 		}
 		inputRootEntry, inputRootDigest := c.protoEntry(inputRoot)
 		ch <- inputRootEntry
-		command, err = c.buildCommand(target, inputRoot, isTest, isRun, target.Stamp)
+		command, err = c.buildCommand(target, inputRoot, isTest, isRun, target.Stamp, run)
 		if err != nil {
 			return err
 		}
@@ -59,13 +59,13 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool) (*pb
 }
 
 // buildAction creates a build action for a target and returns the command and the action digest. No uploading is done.
-func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.Command, *pb.Digest, error) {
+func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool, run int) (*pb.Command, *pb.Digest, error) {
 	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err
 	}
 	inputRootDigest := c.digestMessage(inputRoot)
-	command, err := c.buildCommand(target, inputRoot, isTest, false, stamp)
+	command, err := c.buildCommand(target, inputRoot, isTest, false, stamp, run)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,10 +80,10 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool) (*pb.
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool) (*pb.Command, error) {
+func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool, run int) (*pb.Command, error) {
 	state := c.state.ForTarget(target)
 	if isTest {
-		return c.buildTestCommand(state, target)
+		return c.buildTestCommand(state, target, run)
 	} else if isRun {
 		return c.buildRunCommand(state, target)
 	}
@@ -144,7 +144,7 @@ func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.Bu
 }
 
 // buildTestCommand builds a command for a target when testing.
-func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
+func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget, run int) (*pb.Command, error) {
 	paths := target.Test.Outputs
 	if target.NeedCoverage(state) {
 		paths = append(paths, core.CoverageFile)
@@ -170,7 +170,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 			},
 		},
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, "."), target.Test.Sandbox),
+		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
 		OutputPaths:          paths,
 	}, err
 }
