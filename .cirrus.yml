@@ -1,12 +1,12 @@
 freebsd_instance:
-  image_family: freebsd-12-2
+  image_family: freebsd-14-0
 
 env:
   GOPROXY: https://proxy.golang.org
 
 task:
   install_script:
-    "sed -i '' 's/quarterly/latest/' /etc/pkg/FreeBSD.conf && pkg install -y bash protobuf go git python3 && python3 -m ensurepip"
+    "pkg install -y bash protobuf go git python3 && python3 -m ensurepip"
   build_script: ./bootstrap.sh --exclude pip --exclude py2 --exclude=py3 --exclude=python3 --exclude no_cirrus
   always:
     log_artifacts:
