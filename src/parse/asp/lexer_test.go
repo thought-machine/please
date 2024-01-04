@@ -348,3 +348,9 @@ func TestCRLF(t *testing.T) {
 	assertNextToken(t, l, ')', ")", 2, 12, 23)
 	assertNextToken(t, l, EOL, "", 2, 14, 25)
 }
+
+func TestOctal(t *testing.T) {
+	l := newLexer(strings.NewReader("0o604 0604"))
+	assertNextToken(t, l, Int, "0604", 1, 1, 1)
+	assertNextToken(t, l, Int, "0604", 1, 7, 7)
+}
