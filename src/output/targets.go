@@ -24,13 +24,18 @@ type buildingTarget struct {
 	Remote       bool
 }
 
+type buildingTargetKey struct {
+	Label core.BuildLabel
+	Run   int
+}
+
 // Collects all the currently building targets.
 type buildingTargets struct {
 	plain          bool
 	anyRemote      bool
 	state          *core.BuildState
 	targets        []buildingTarget
-	currentTargets map[core.BuildLabel]int
+	currentTargets map[buildingTargetKey]int
 	available      map[int]struct{}
 	FailedTargets  map[core.BuildLabel]error
 	FailedNonTests []core.BuildLabel
@@ -47,7 +52,7 @@ func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTarge
 		anyRemote:      state.Config.NumRemoteExecutors() > 0,
 		state:          state,
 		targets:        make([]buildingTarget, n),
-		currentTargets: make(map[core.BuildLabel]int, n),
+		currentTargets: make(map[buildingTargetKey]int, n),
 		available:      available,
 		FailedTargets:  map[core.BuildLabel]error{},
 	}
@@ -65,7 +70,7 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) int {
 	if result.Status.IsParse() { // Parse tasks don't take a slot here
 		return 0
 	}
-	idx := bt.index(result.Label)
+	idx := bt.index(result.Label, result.Run)
 	if t := bt.state.Graph.Target(result.Label); t != nil {
 		bt.updateTarget(idx, result, t)
 	}
@@ -107,8 +112,8 @@ func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
 }
 
 // index returns the index to use for a result
-func (bt *buildingTargets) index(label core.BuildLabel) int {
-	if idx, present := bt.currentTargets[label]; present {
+func (bt *buildingTargets) index(label core.BuildLabel, run int) int {
+	if idx, present := bt.currentTargets[buildingTargetKey{Label: label, Run: run}]; present {
 		return idx
 	}
 	// Grab whatever is available
@@ -150,11 +155,12 @@ func (bt *buildingTargets) updateTarget(idx int, result *core.BuildResult, t *co
 			log.Info("%s: %s", result.Label, result.Description)
 		}
 	}
+	key := buildingTargetKey{Label: t.Label, Run: result.Run}
 	if !active {
 		bt.available[idx] = struct{}{}
-		delete(bt.currentTargets, t.Label)
+		delete(bt.currentTargets, key)
 	} else {
-		bt.currentTargets[t.Label] = idx
+		bt.currentTargets[key] = idx
 	}
 }
 

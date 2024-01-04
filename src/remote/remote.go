@@ -378,7 +378,7 @@ func (c *Client) Run(target *core.BuildTarget) error {
 		return err
 	}
 	// 24 hours is kind of an arbitrarily long timeout. Basically we just don't want to limit it here.
-	_, _, err = c.execute(target, cmd, digest, false, false)
+	_, _, err = c.execute(target, cmd, digest, false, false, 0)
 	return err
 }
 
@@ -392,7 +392,7 @@ func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.Actio
 		command, digest, err := c.buildAction(target, false, false)
 		if err != nil {
 			return nil, nil, nil, err
-		} else if metadata, ar := c.maybeRetrieveResults(target, command, digest, false, needStdout); metadata != nil {
+		} else if metadata, ar := c.maybeRetrieveResults(target, command, digest, false, needStdout, 0); metadata != nil {
 			c.unstampedBuildActionDigests.Put(target.Label, digest)
 			return metadata, ar, digest, nil
 		}
@@ -402,7 +402,7 @@ func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.Actio
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	metadata, ar, err := c.execute(target, command, stampedDigest, false, needStdout)
+	metadata, ar, err := c.execute(target, command, stampedDigest, false, needStdout, 0)
 	if target.Stamp && err == nil {
 		err = c.verifyActionResult(target, command, unstampedDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
 		if err == nil {
@@ -449,7 +449,7 @@ func (c *Client) Download(target *core.BuildTarget) error {
 			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
 			return nil
 		}
-		_, ar := c.retrieveResults(target, nil, buildAction, false, false)
+		_, ar := c.retrieveResults(target, nil, buildAction, false, false, 0)
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
 		}
@@ -554,7 +554,7 @@ func (c *Client) Test(target *core.BuildTarget, run int) (metadata *core.BuildMe
 	if err != nil {
 		return nil, err
 	}
-	metadata, ar, err := c.execute(target, command, digest, true, false)
+	metadata, ar, err := c.execute(target, command, digest, true, false, run)
 
 	if ar != nil {
 		_, dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
@@ -567,14 +567,14 @@ func (c *Client) Test(target *core.BuildTarget, run int) (metadata *core.BuildMe
 
 // retrieveResults retrieves target results from where it can (either from the local cache or from remote).
 // It returns nil if it cannot be retrieved.
-func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool) (*core.BuildMetadata, *pb.ActionResult) {
+func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest bool, run int) (*core.BuildMetadata, *pb.ActionResult) {
 	// First see if this execution is cached locally
 	if metadata, ar := c.retrieveLocalResults(target, digest); metadata != nil {
 		log.Debug("Got locally cached results for %s %s (age %s)", target.Label, c.actionURL(digest, true), time.Since(metadata.Timestamp).Truncate(time.Second))
 		metadata.Cached = true
 		return metadata, ar
 	}
-	c.state.LogBuildResult(target, core.TargetBuilding, "Checking remote...")
+	c.logActionResult(target, run, "Checking remote...")
 	// Now see if it is cached on the remote server
 	start := time.Now()
 	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
@@ -602,9 +602,9 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 
 // maybeRetrieveResults is like retrieveResults but only retrieves if we aren't forcing a rebuild of the target
 // (i.e. not if we're doing plz build --rebuild or plz test --rerun).
-func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult) {
+func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool, run int) (*core.BuildMetadata, *pb.ActionResult) {
 	if !c.state.ShouldRebuild(target) && !(c.state.NeedTests && isTest && c.state.ForceRerun) {
-		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest); metadata != nil {
+		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest, run); metadata != nil {
 			return metadata, ar
 		}
 	}
@@ -613,9 +613,9 @@ func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Comm
 
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
-func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool, run int) (*core.BuildMetadata, *pb.ActionResult, error) {
 	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
-		if metadata, ar := c.maybeRetrieveResults(target, command, digest, isTest, needStdout); metadata != nil {
+		if metadata, ar := c.maybeRetrieveResults(target, command, digest, isTest, needStdout, run); metadata != nil {
 			return metadata, ar, nil
 		}
 	}
@@ -639,47 +639,32 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 	skipCacheLookup := (isTest && (c.state.ForceRerun || c.state.NumTestRuns != 1)) || (!isTest && c.state.ForceRebuild)
 	skipCacheLookup = skipCacheLookup && c.state.IsOriginalTarget(target)
 
-	return c.reallyExecute(target, command, digest, needStdout, isTest, skipCacheLookup)
+	return c.reallyExecute(target, command, digest, needStdout, isTest, skipCacheLookup, run)
 }
 
 // reallyExecute is like execute but after the initial cache check etc.
 // The action & sources must have already been uploaded.
-func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool, run int) (*core.BuildMetadata, *pb.ActionResult, error) {
 	executing := false
-	building := target.State() <= core.Built
-	if building {
-		c.state.LogBuildResult(target, core.TargetBuilding, "Submitting job...")
-	} else {
-		c.state.LogBuildResult(target, core.TargetTesting, "Submitting job...")
-	}
+	c.logActionResult(target, run, "Submitting job...")
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
 			log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
 		}
-		if building {
-			switch metadata.Stage {
-			case pb.ExecutionStage_CACHE_CHECK:
-				c.state.LogBuildResult(target, core.TargetBuilding, "Checking cache...")
-			case pb.ExecutionStage_QUEUED:
-				c.state.LogBuildResult(target, core.TargetBuilding, "Queued")
-			case pb.ExecutionStage_EXECUTING:
-				executing = true
-				c.state.LogBuildResult(target, core.TargetBuilding, "Building...")
-			case pb.ExecutionStage_COMPLETED:
-				c.state.LogBuildResult(target, core.TargetBuilding, "Completed")
+		switch metadata.Stage {
+		case pb.ExecutionStage_CACHE_CHECK:
+			c.logActionResult(target, run, "Checking cache...")
+		case pb.ExecutionStage_QUEUED:
+			c.logActionResult(target, run, "Queued")
+		case pb.ExecutionStage_EXECUTING:
+			executing = true
+			if target.State() <= core.Built {
+				c.logActionResult(target, run, "Building...")
+			} else {
+				c.logActionResult(target, run, "Testing...")
 			}
-		} else {
-			switch metadata.Stage {
-			case pb.ExecutionStage_CACHE_CHECK:
-				c.state.LogBuildResult(target, core.TargetTesting, "Checking cache...")
-			case pb.ExecutionStage_QUEUED:
-				c.state.LogBuildResult(target, core.TargetTesting, "Queued")
-			case pb.ExecutionStage_EXECUTING:
-				executing = true
-				c.state.LogBuildResult(target, core.TargetTesting, "Testing...")
-			case pb.ExecutionStage_COMPLETED:
-				c.state.LogBuildResult(target, core.TargetTesting, "Completed")
-			}
+		case pb.ExecutionStage_COMPLETED:
+			c.logActionResult(target, run, "Completed")
 		}
 	}
 
@@ -715,7 +700,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 		// Handle timing issues if we try to resume an execution as it fails. If we get a
 		// "not found" we might find that it's already been completed and we can't resume.
 		if status.Code(err) == codes.NotFound {
-			if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest); metadata != nil {
+			if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest, run); metadata != nil {
 				return metadata, ar, nil
 			}
 		}
@@ -733,7 +718,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 			return nil, nil, err
 		}
 		if response.CachedResult {
-			c.state.LogBuildResult(target, core.TargetBuilding, "Cached")
+			c.logActionResult(target, run, "Cached")
 		}
 		for k, v := range response.ServerLogs {
 			log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
@@ -952,6 +937,15 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 	}
 	md, err := c.buildMetadata(target, ar, false, false)
 	return md, ar, err
+}
+
+// logActionResult logs the state of an action while it's building or testing
+func (c *Client) logActionResult(target *core.BuildTarget, run int, message string) {
+	if target.State() <= core.Built {
+		c.state.LogBuildResult(target, core.TargetBuilding, message)
+	} else {
+		c.state.LogTestRunning(target, run, core.TargetTesting, message)
+	}
 }
 
 // A grpcLogMabob is an implementation of grpc's logging interface using our backend.

@@ -142,7 +142,7 @@ func getRuleArgs(statementMap map[string]*asp.Statement) environment {
 				Types:    a.Type,
 				Required: a.Value == nil,
 			}
-			regex := regexp.MustCompile(a.Name + `(?: \(.*\))?: ((?s:.*))`)
+			regex := regexp.MustCompile(a.Name + `(?: \(.*\))?: *((?s:.*))`)
 			if match := regex.FindStringSubmatch(r.Docstring); match != nil {
 				r.Args[i].Comment = filterMatch(match[1])
 			}
