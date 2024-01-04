@@ -27,6 +27,8 @@ func Push(config *core.Configuration) {
 			for _, metric := range fam.Metric {
 				if metric.Counter != nil {
 					log.Debug("Metric recorded: %s: %0.0f", *fam.Name, *metric.Counter.Value)
+				} else if metric.Gauge != nil {
+					log.Debug("Metric recorded: %s: %0.0f", *fam.Name, *metric.Gauge.Value)
 				}
 			}
 		}
