@@ -191,7 +191,7 @@ func downloadAndLinkPlease(config *core.Configuration, verify bool, progress boo
 	if !core.PathExists(newPlease) {
 		downloadPlease(config, verify, progress)
 	}
-	if !verifyNewPlease(newPlease, config.Please.Version.VersionString()) {
+	if verify && !verifyNewPlease(newPlease, config.Please.Version.VersionString()) {
 		cleanDir(filepath.Join(config.Please.Location, config.Please.Version.VersionString()))
 		log.Fatalf("Not continuing.")
 	}
@@ -234,7 +234,7 @@ func downloadPlease(config *core.Configuration, verify bool, progress bool) {
 	defer mustClose(pleaseReadCloser)
 	var pleaseReader io.Reader = bufio.NewReader(pleaseReadCloser)
 
-	if len(config.Please.VersionChecksum) > 0 {
+	if verify && len(config.Please.VersionChecksum) > 0 {
 		pleaseReader = mustVerifyHash(pleaseReader, config.Please.VersionChecksum)
 	}
 
