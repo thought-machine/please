@@ -6,7 +6,7 @@ env:
 
 task:
   install_script:
-    "pkg install -y bash protobuf go121 git python3 && python3 -m ensurepip"
+    "pkg install -y bash protobuf go121 git python3 && python3 -m ensurepip && ln -s `command -v go121` /usr/local/bin/go"
   build_script: ./bootstrap.sh --exclude pip --exclude py2 --exclude=py3 --exclude=python3 --exclude no_cirrus
   always:
     log_artifacts:
