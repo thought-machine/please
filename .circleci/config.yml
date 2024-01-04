@@ -43,7 +43,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230903
+       - image: thoughtmachine/please_ubuntu:20240103
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
@@ -91,7 +91,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu_alt:20230903
+       - image: thoughtmachine/please_ubuntu_alt:20240103
      resource_class: large
      environment:
        PLZ_ARGS: "-p -c cover --profile ci-alt"
@@ -176,7 +176,7 @@ jobs:
    build-linux-arm64:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230903
+       - image: thoughtmachine/please_ubuntu:20240103
      resource_class: large
      steps:
        - checkout
@@ -207,9 +207,9 @@ jobs:
       steps:
        - checkout
        - restore_cache:
-           key: go-mod-darwin-v6-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-v7-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-go119-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go121-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-v3-{{ checksum "third_party/python/BUILD" }}
        - run:
@@ -232,11 +232,11 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: go-mod-darwin-v6-{{ checksum "go.mod" }}
+           key: go-mod-darwin-v7-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-go119-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-go121-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-darwin-v3-{{ checksum "third_party/python/BUILD" }}
@@ -245,7 +245,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230903
+       - image: thoughtmachine/please_ubuntu:20240103
      resource_class: xlarge
      steps:
        - checkout
@@ -262,7 +262,7 @@ jobs:
    test-http-cache:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20230903
+       - image: thoughtmachine/please_ubuntu:20240103
      resource_class: large
      steps:
        - checkout
@@ -305,7 +305,7 @@ jobs:
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
-       - image: thoughtmachine/please_ubuntu:20230903
+       - image: thoughtmachine/please_ubuntu:20240103
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout

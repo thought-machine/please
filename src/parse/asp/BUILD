@@ -23,7 +23,6 @@ go_library(
         "///third_party/go/github.com_Masterminds_semver_v3//:v3",
         "///third_party/go/github.com_manifoldco_promptui//:promptui",
         "///third_party/go/github.com_please-build_gcfg//types",
-        "///third_party/go/golang.org_x_exp//slices",
         "//rules",
         "//src/cli",
         "//src/cli/logging",

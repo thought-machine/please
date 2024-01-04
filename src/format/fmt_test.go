@@ -36,7 +36,7 @@ func TestFormat(t *testing.T) {
 				require.NoError(t, err)
 				afterContents, err := os.ReadFile(after)
 				require.NoError(t, err)
-				assert.Equal(t, beforeContents, afterContents)
+				assert.Equal(t, string(afterContents), string(beforeContents))
 			})
 		}
 	}

@@ -7,6 +7,7 @@ package format
 import (
 	"bytes"
 	"os"
+	"slices"
 	"sync/atomic"
 
 	"github.com/bazelbuild/buildtools/build"
@@ -65,6 +66,7 @@ func format(filename string, rewrite, quiet bool) (bool, error) {
 	if err != nil {
 		return true, err
 	}
+	simplify(f)
 	after := build.Format(f)
 	if bytes.Equal(before, after) {
 		log.Debug("%s is already in canonical format", filename)
@@ -82,4 +84,33 @@ func format(filename string, rewrite, quiet bool) (bool, error) {
 		return true, err
 	}
 	return true, fs.WriteFile(bytes.NewReader(after), filename, info.Mode())
+}
+
+// simplify runs a series of syntactical simplifications on the given file contents.
+func simplify(f *build.File) {
+	for i := len(f.Stmt) - 2; i >= 0; i-- {
+		if call := subinclude(f.Stmt[i]); call != nil {
+			if next := subinclude(f.Stmt[i+1]); next != nil {
+				call.List = append(call.List, next.List...)
+				f.Stmt = slices.Delete(f.Stmt, i+1, i+2)
+				call.ForceCompact = true
+				call.ForceMultiLine = false
+			}
+		}
+	}
+}
+
+// subinclude returns the call expression for a subinclude call, or nil if it's not valid
+func subinclude(expr build.Expr) *build.CallExpr {
+	if call, ok := expr.(*build.CallExpr); ok {
+		if x, ok := call.X.(*build.Ident); ok && x.Name == "subinclude" {
+			for _, arg := range call.List {
+				if _, ok := arg.(*build.StringExpr); !ok {
+					return nil
+				}
+			}
+			return call
+		}
+	}
+	return nil
 }

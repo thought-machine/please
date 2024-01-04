@@ -1,0 +1,10 @@
+subinclude("//build_defs:go")
+
+subinclude("///python//build_defs:python")
+
+subinclude("///cc//build_defs:cc", "//build_defs:test")
+
+python_library(
+    name = "lib",
+    srcs = glob(["*.py"]),
+)
