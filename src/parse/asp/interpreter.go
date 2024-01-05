@@ -785,9 +785,9 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		obj := s.Lookup(stmt.Name)
 		idx := s.interpretExpression(stmt.Index.Expr)
 		if stmt.Index.Assign != nil {
-			obj.IndexAssign(idx, s.interpretExpression(stmt.Index.Assign))
+			s.indexAssign(obj, idx, s.interpretExpression(stmt.Index.Assign))
 		} else {
-			obj.IndexAssign(idx, obj.Operator(Index, idx).Operator(Add, s.interpretExpression(stmt.Index.AugAssign)))
+			s.indexAssign(obj, idx, obj.Operator(Index, idx).Operator(Add, s.interpretExpression(stmt.Index.AugAssign)))
 		}
 	} else if stmt.Unpack != nil {
 		obj := s.interpretExpression(stmt.Unpack.Expr)
@@ -815,6 +815,12 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		return s.Lookup(stmt.Name)
 	}
 	return nil
+}
+
+func (s *scope) indexAssign(obj, idx, val pyObject) {
+	ia, ok := obj.(indexAssignable)
+	s.Assert(ok, "Object of type %s cannot be assigned into", obj.Type())
+	ia.IndexAssign(idx, val)
 }
 
 func (s *scope) interpretList(expr *List) pyList {

@@ -22,8 +22,6 @@ type pyObject interface {
 	Property(scope *scope, name string) pyObject
 	// Invokes the given operator on this object and returns the result.
 	Operator(operator Operator, operand pyObject) pyObject
-	// Used for index-assignment statements
-	IndexAssign(index, value pyObject)
 }
 
 // A freezable represents an object that can be frozen into a readonly state.
@@ -39,6 +37,11 @@ type iterable interface {
 	// This isn't super generic but it works fine for all cases we have right now.
 	Len() int
 	Item(index int) pyObject
+}
+
+// An indexAssignable represents an object that can be assigned to by index (i.e. the x in x[y] = z)
+type indexAssignable interface {
+	IndexAssign(index, value pyObject)
 }
 
 type pyBool bool
@@ -72,10 +75,6 @@ func (b pyBool) Property(scope *scope, name string) pyObject {
 
 func (b pyBool) Operator(operator Operator, operand pyObject) pyObject {
 	panic(fmt.Sprintf("operator %s not implemented on type bool", operator))
-}
-
-func (b pyBool) IndexAssign(index, value pyObject) {
-	panic("bool type is not indexable")
 }
 
 func (b pyBool) String() string {
@@ -113,10 +112,6 @@ func (n pyNone) Operator(operator Operator, operand pyObject) pyObject {
 	panic(fmt.Sprintf("operator %s not implemented on type none", operator))
 }
 
-func (n pyNone) IndexAssign(index, value pyObject) {
-	panic("none type is not indexable")
-}
-
 func (n pyNone) String() string {
 	return "None"
 }
@@ -146,10 +141,6 @@ func (s pySentinel) Property(scope *scope, name string) pyObject {
 
 func (s pySentinel) Operator(operator Operator, operand pyObject) pyObject {
 	panic(fmt.Sprintf("operator %s not implemented on type sentinel", operator))
-}
-
-func (s pySentinel) IndexAssign(index, value pyObject) {
-	panic("sentinel type is not indexable")
 }
 
 func (s pySentinel) String() string {
@@ -228,10 +219,6 @@ func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
 	panic("Cannot operate on int and " + operand.Type())
 }
 
-func (i pyInt) IndexAssign(index, value pyObject) {
-	panic("int type is not indexable")
-}
-
 func (i pyInt) String() string {
 	return strconv.Itoa(int(i))
 }
@@ -301,10 +288,6 @@ func (s pyString) Operator(operator Operator, operand pyObject) pyObject {
 		return pyString([]rune(s)[pyIndex(s, operand, false)])
 	}
 	panic("Unknown operator for string")
-}
-
-func (s pyString) IndexAssign(index, value pyObject) {
-	panic("str type cannot be partially assigned to")
 }
 
 func (s pyString) String() string {
@@ -639,10 +622,6 @@ func (f *pyFunc) Property(scope *scope, name string) pyObject {
 
 func (f *pyFunc) Operator(operator Operator, operand pyObject) pyObject {
 	panic("cannot use operators on a function")
-}
-
-func (f *pyFunc) IndexAssign(index, value pyObject) {
-	panic("function type is not indexable")
 }
 
 func (f *pyFunc) String() string {
@@ -993,10 +972,6 @@ func (r *pyRange) Operator(operator Operator, operand pyObject) pyObject {
 		return append(ret, l...)
 	}
 	panic(fmt.Sprintf("operator %s not implemented on type range", operator))
-}
-
-func (r *pyRange) IndexAssign(index, value pyObject) {
-	panic("range type is not indexable")
 }
 
 func (r *pyRange) Len() int {
