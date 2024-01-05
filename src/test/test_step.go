@@ -204,13 +204,13 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 		}
 	} else if state.TestSequentially {
 		for run := 1; run <= int(state.NumTestRuns); run++ {
-			state.LogTestRunning(target, run, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
+			state.LogTestRunning(target, run, core.TargetTesting, "Testing...")
 			var results core.TestSuite
 			results, coverage = doTest(state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
 			target.AddTestResults(results)
 		}
 	} else {
-		state.LogTestRunning(target, run, core.TargetTesting, getRunStatus(run, int(state.NumTestRuns)))
+		state.LogTestRunning(target, run, core.TargetTesting, "Testing...")
 		var results core.TestSuite
 		results, coverage = doTest(state, target, runRemotely, run)
 		target.AddTestResults(results)
@@ -273,13 +273,6 @@ func getFlakeStatus(flake int, flakes int) string {
 		return "Testing..."
 	}
 	return fmt.Sprintf("Testing (flake %d of %d)...", flake, flakes)
-}
-
-func getRunStatus(run int, numRuns int) string {
-	if numRuns == 1 {
-		return "Testing..."
-	}
-	return fmt.Sprintf("Testing (run %d of %d)...", run, numRuns)
 }
 
 func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage *core.TestCoverage, run int) {

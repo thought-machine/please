@@ -11,6 +11,7 @@ import (
 	iofs "io/fs"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -556,6 +557,10 @@ func (state *BuildState) ArchSubrepoInitialised(subrepoLabel BuildLabel) {
 
 // LogTestRunning logs a target while its tests are running.
 func (state *BuildState) LogTestRunning(target *BuildTarget, run int, status BuildResultStatus, message string) {
+	// Annotate the message with the run number if appropriate.
+	if state.NumTestRuns > 1 {
+		message = strings.TrimSuffix(message, "...") + fmt.Sprintf(" (run %d of %d)...", run, state.NumTestRuns)
+	}
 	state.logResult(&BuildResult{
 		Label:       target.Label,
 		target:      target,
