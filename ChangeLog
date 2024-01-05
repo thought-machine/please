@@ -1,3 +1,11 @@
+Version 17.5.0
+--------------
+    * Add a `--json` flag to `plz query outputs` (#3011)
+    * Repeated `subinclude()` calls are now simplified into one by `plz format` (#3012)
+    * `plz update --noverify` now ignores hash verification (#3017)
+    * `plz test -n X` now creates distinct actions for remote execution (#3021)
+    * Console output for `plz test -n X` improved (#2989)
+
 Version 17.4.3
 --------------
     * Invalidate the action metadata cache as the action outputs are invalid as of
