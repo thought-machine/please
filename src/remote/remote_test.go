@@ -166,7 +166,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 	target.AddOutput("remote_test")
 	target.AddSource(core.FileLabel{Package: "package", File: "file"})
 	target.AddTool(tool.Label)
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
 	testDir := os.Getenv("TEST_DIR")
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
@@ -185,7 +185,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
 	target.AddOutput("remote_test")
 	target.AddTool(core.SystemPathLabel{Path: []string{os.Getenv("TMP_DIR")}, Name: "remote_test"})
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
 			assert.False(t, filepath.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
@@ -199,12 +199,12 @@ func TestRemoteFilesHashConsistently(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "download"})
 	target.IsRemoteFile = true
 	target.AddSource(core.URLLabel("https://localhost/file"))
-	cmd, digest, err := c.buildAction(target, false, false)
+	cmd, digest, err := c.buildAction(target, false, false, 0)
 	assert.NoError(t, err)
 	// After we change this path, the rule should still give back the same protos since it is
 	// not relevant to how we fetch a remote asset.
 	c.state.Config.Build.Path = []string{"/usr/bin/nope"}
-	cmd2, digest2, err := c.buildAction(target, false, false)
+	cmd2, digest2, err := c.buildAction(target, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, cmd, cmd2)
 	assert.Equal(t, digest, digest2)
@@ -318,7 +318,7 @@ func TestTargetPlatform(t *testing.T) {
 	c := newClientInstance("platform_test")
 	c.platform = convertPlatform(c.state.Config.Remote.Platform) // Bit of a hack but we can't go through the normal path.
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target"})
-	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false)
+	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, &pb.Platform{
 		Properties: []*pb.Platform_Property{
@@ -330,7 +330,7 @@ func TestTargetPlatform(t *testing.T) {
 	}, cmd.Platform)
 
 	target.Labels = []string{"remote-platform-property:size=chomky"}
-	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false)
+	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, &pb.Platform{
 		Properties: []*pb.Platform_Property{

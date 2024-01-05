@@ -373,7 +373,7 @@ func (c *Client) Run(target *core.BuildTarget) error {
 	if err := c.CheckInitialised(); err != nil {
 		return err
 	}
-	cmd, digest, err := c.uploadAction(target, false, true)
+	cmd, digest, err := c.uploadAction(target, false, true, 0)
 	if err != nil {
 		return err
 	}
@@ -389,7 +389,7 @@ func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.Actio
 	// This implements the rules of stamp whereby we don't force rebuilds every time e.g. the SCM revision changes.
 	var unstampedDigest *pb.Digest
 	if target.Stamp {
-		command, digest, err := c.buildAction(target, false, false)
+		command, digest, err := c.buildAction(target, false, false, 0)
 		if err != nil {
 			return nil, nil, nil, err
 		} else if metadata, ar := c.maybeRetrieveResults(target, command, digest, false, needStdout, 0); metadata != nil {
@@ -398,7 +398,7 @@ func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.Actio
 		}
 		unstampedDigest = digest
 	}
-	command, stampedDigest, err := c.buildAction(target, false, true)
+	command, stampedDigest, err := c.buildAction(target, false, true, 0)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -550,7 +550,7 @@ func (c *Client) Test(target *core.BuildTarget, run int) (metadata *core.BuildMe
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	command, digest, err := c.buildAction(target, true, false)
+	command, digest, err := c.buildAction(target, true, false, run)
 	if err != nil {
 		return nil, err
 	}
@@ -620,7 +620,7 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 		}
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
-	command, digest, err := c.uploadAction(target, isTest, false)
+	command, digest, err := c.uploadAction(target, isTest, false, 0)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
