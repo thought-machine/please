@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -1628,6 +1629,11 @@ func (target *BuildTarget) AllNamedTools() map[string][]BuildInput {
 // AddDependency adds a dependency to this target. It deduplicates against any existing deps.
 func (target *BuildTarget) AddDependency(dep BuildLabel) {
 	target.AddMaybeExportedDependency(dep, false, false, false)
+}
+
+// HintDependencies allocates space for at least the given number of dependencies without reallocating.
+func (target *BuildTarget) HintDependencies(n int) {
+	target.dependencies = slices.Grow(target.dependencies, n)
 }
 
 // AddMaybeExportedDependency adds a dependency to this target which may be exported. It deduplicates against any existing deps.
