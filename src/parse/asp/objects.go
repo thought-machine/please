@@ -962,3 +962,47 @@ func (c *pyFrozenConfig) Property(scope *scope, name string) pyObject {
 	}
 	return c.pyConfig.Property(scope, name)
 }
+
+// A pyRange implements the result of a range() call
+type pyRange struct {
+	Start, Stop, Step pyInt
+}
+
+func (r *pyRange) String() string {
+	return fmt.Sprintf("range(%d, %d, %d)", r.Start, r.Stop, r.Step)
+}
+
+func (r *pyRange) Type() string {
+	return "range"
+}
+
+func (r *pyRange) IsTruthy() bool {
+	return true
+}
+
+func (r *pyRange) Property(scope *scope, name string) pyObject {
+	panic("range object has no property " + name)
+}
+
+func (r *pyRange) Operator(operator Operator, operand pyObject) pyObject {
+	if l, ok := operand.(pyList); ok {
+		ret := make(pyList, 0, r.Len()+len(l))
+		for i := r.Start; i < r.Stop; i += r.Step {
+			ret = append(ret, i)
+		}
+		return append(ret, l...)
+	}
+	panic(fmt.Sprintf("operator %s not implemented on type range", operator))
+}
+
+func (r *pyRange) IndexAssign(index, value pyObject) {
+	panic("range type is not indexable")
+}
+
+func (r *pyRange) Len() int {
+	return int((r.Stop - r.Start) / r.Step)
+}
+
+func (r *pyRange) Item(index int) pyObject {
+	return r.Start + pyInt(index)*r.Step
+}

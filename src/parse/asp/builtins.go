@@ -41,7 +41,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "map", mapFunc)
 	setNativeCode(s, "reduce", reduce)
 	setNativeCode(s, "isinstance", isinstance)
-	setNativeCode(s, "range", pyRange)
+	setNativeCode(s, "range", pyRangeFunc)
 	setNativeCode(s, "enumerate", enumerate)
 	setNativeCode(s, "zip", zip, varargs)
 	setNativeCode(s, "any", anyFunc)
@@ -869,7 +869,7 @@ func canonicalise(s *scope, args []pyObject) pyObject {
 	return pyString(label.String())
 }
 
-func pyRange(s *scope, args []pyObject) pyObject {
+func pyRangeFunc(s *scope, args []pyObject) pyObject {
 	start := args[0].(pyInt)
 	stop, isInt := args[1].(pyInt)
 	step := args[2].(pyInt)
@@ -878,11 +878,11 @@ func pyRange(s *scope, args []pyObject) pyObject {
 		stop = start
 		start = 0
 	}
-	ret := make(pyList, 0, stop-start)
-	for i := start; i < stop; i += step {
-		ret = append(ret, i)
+	return &pyRange{
+		Start: start,
+		Stop:  stop,
+		Step:  step,
 	}
-	return ret
 }
 
 func enumerate(s *scope, args []pyObject) pyObject {
