@@ -32,6 +32,15 @@ type freezable interface {
 	Freeze() pyObject
 }
 
+// An iterable represents an object that can be iterated (the y in `for x in y`).
+// Not all pyObjects implement this.
+type iterable interface {
+	pyObject
+	// This isn't super generic but it works fine for all cases we have right now.
+	Len() int
+	Item(index int) pyObject
+}
+
 type pyBool bool
 
 // True and False are the singletons representing those values.
@@ -399,6 +408,16 @@ func (l pyList) Repeat(n pyInt) pyList {
 		ret = append(ret, l...)
 	}
 	return ret
+}
+
+// Len returns the length of this list, implementing iterable.
+func (l pyList) Len() int {
+	return len(l)
+}
+
+// Item returns the i'th item of this list, implementing iterable.
+func (l pyList) Item(i int) pyObject {
+	return l[i]
 }
 
 // A pyFrozenList implements an immutable list.
