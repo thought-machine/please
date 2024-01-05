@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -148,6 +149,8 @@ func withUserProvidedEnv(target *BuildTarget, env BuildEnv) BuildEnv {
 func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run int) BuildEnv {
 	env := RuntimeEnvironment(state, target, filepath.IsAbs(testDir), true)
 	resultsFile := filepath.Join(testDir, TestResultsFile)
+	// Make this unintelligible to the consumer so it's at least hard for them to get cute with it.
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%s%d", target.Label, run)))
 
 	env = append(env,
 		"TEST_DIR="+testDir,
@@ -159,7 +162,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run
 		// We shouldn't really have specific things like this here, but it really is just easier to set it.
 		"GTEST_OUTPUT=xml:"+resultsFile,
 		"PEX_NOCACHE=true",
-		fmt.Sprintf("_TEST_RUN=%d", run),
+		"_TEST_RUN="+base64.RawStdEncoding.EncodeToString(hash[:12]),
 	)
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
 		env = append(env,
