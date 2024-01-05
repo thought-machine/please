@@ -263,6 +263,7 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addMaybeNamed(s, "data", args[dataBuildRuleArgIdx], t.AddDatum, t.AddNamedDatum, false, false)
 	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
 	addMaybeNamedOutput(s, "optional_outs", args[optionalOutsBuildRuleArgIdx], t.AddOptionalOutput, nil, t, true)
+	t.HintDependencies(depLen(args[depsBuildRuleArgIdx]) + depLen(args[exportedDepsBuildRuleArgIdx]) + depLen(args[internalDepsBuildRuleArgIdx]))
 	addDependencies(s, "deps", args[depsBuildRuleArgIdx], t, false, false)
 	addDependencies(s, "exported_deps", args[exportedDepsBuildRuleArgIdx], t, true, false)
 	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true)
@@ -299,6 +300,14 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 		addMaybeNamed(s, "debug_data", args[debugDataBuildRuleArgIdx], t.AddDebugDatum, t.AddDebugNamedDatum, false, false)
 		addMaybeNamedOrString(s, "debug_tools", args[debugToolsBuildRuleArgIdx], t.AddDebugTool, t.AddNamedDebugTool, true, true)
 	}
+}
+
+// depLen returns the length of a (potential) list
+func depLen(obj pyObject) int {
+	if l, ok := asList(obj); ok {
+		return len(l)
+	}
+	return 0
 }
 
 // addEntryPoints adds entry points to a target
