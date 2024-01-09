@@ -487,6 +487,19 @@ func TestOptimise(t *testing.T) {
 	assert.Equal(t, 13, f.Pos(statements[3].EndPos).Line)
 }
 
+func TestOptimiseJoin(t *testing.T) {
+	p := newParser()
+	statements, err := p.parse(nil, "src/parse/asp/test_data/optimise_join.build")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(statements))
+	statements = p.optimise(statements)
+	assert.Equal(t, 1, len(statements))
+	assert.NotNil(t, statements[0].Ident.Action.Assign)
+	assert.NotNil(t, statements[0].Ident.Action.Assign.optimised)
+	assert.NotNil(t, statements[0].Ident.Action.Assign.optimised.Join)
+	assert.Nil(t, statements[0].Ident.Action.Assign.Val)
+}
+
 func TestMultilineStringQuotes(t *testing.T) {
 	for _, test := range []struct {
 		Path     string

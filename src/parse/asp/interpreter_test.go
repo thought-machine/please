@@ -306,6 +306,12 @@ func TestInterpreterOptimiseConfig(t *testing.T) {
 	assert.EqualValues(t, "go", s.Lookup("x"))
 }
 
+func TestInterpreterOptimiseJoin(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/optimise_join.build")
+	require.NoError(t, err)
+	assert.EqualValues(t, "123", s.Lookup("x"))
+}
+
 func TestInterpreterPartition(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/partition.build")
 	assert.NoError(t, err)
