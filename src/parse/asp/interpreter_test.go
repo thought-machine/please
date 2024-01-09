@@ -302,7 +302,7 @@ func TestInterpreterOptimiseConfig(t *testing.T) {
 	assert.NotNil(t, statements[0].Ident)
 	assert.NotNil(t, statements[0].Ident.Action)
 	assert.NotNil(t, statements[0].Ident.Action.Assign)
-	assert.Equal(t, "GO_TOOL", statements[0].Ident.Action.Assign.Optimised.Config)
+	assert.Equal(t, "GO_TOOL", statements[0].Ident.Action.Assign.optimised.Config)
 	assert.EqualValues(t, "go", s.Lookup("x"))
 }
 
@@ -436,8 +436,8 @@ func TestFStringOptimisation(t *testing.T) {
 	// Check that it's been optimised to something
 	assign := stmts[0].Ident.Action.Assign
 	assert.Nil(t, assign.Val)
-	assert.NotNil(t, assign.Optimised.Constant)
-	assert.EqualValues(t, "test", assign.Optimised.Constant)
+	assert.NotNil(t, assign.optimised.Constant)
+	assert.EqualValues(t, "test", assign.optimised.Constant)
 }
 
 func TestFormat(t *testing.T) {
