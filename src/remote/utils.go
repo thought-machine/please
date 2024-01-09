@@ -86,7 +86,7 @@ func (c *Client) setOutputs(target *core.BuildTarget, arTree *pb.Tree) error {
 			Directories:    make([]*pb.DirectoryNode, 0, len(arTree.Root.Directories)),
 		}
 		// A filesystem representing the output tree of the action result
-		actionResultFS := remotefs.New(c.client, arTree, ".")
+		actionResultFS := remotefs.New(c.remoteFSClient, arTree, ".")
 
 		// The action result will contain the raw outputs in their original places. We need to move outputs within
 		// `output_dirs` to the output root.
