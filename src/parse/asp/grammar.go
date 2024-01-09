@@ -119,7 +119,7 @@ type optimisedExpression struct {
 
 type optimisedJoin struct {
 	Base string
-	Args *List
+	List *List
 }
 
 // An OpExpression is a operator combined with its following expression.

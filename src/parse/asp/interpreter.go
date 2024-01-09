@@ -580,8 +580,10 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 			return expr.optimised.Constant
 		} else if expr.optimised.Local != "" {
 			return s.Lookup(expr.optimised.Local)
+		} else if expr.optimised.Config != "" {
+			return s.config.Property(s, expr.optimised.Config)
 		}
-		return s.config.Property(s, expr.optimised.Config)
+		return s.interpretJoin(stringLiteral(expr.optimised.Join.Base), expr.optimised.Join.List)
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -627,6 +629,39 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 		}
 	}
 	return obj
+}
+
+func (s *scope) interpretJoin(base string, list *List) pyObject {
+	var b strings.Builder
+	if list.Comprehension == nil {
+		for i, x := range list.Values {
+			if i != 0 {
+				b.WriteString(base)
+			}
+			y := s.interpretExpression(x)
+			z, ok := y.(pyString)
+			s.Assert(ok, "invalid expression of type %s to str.join (must be a string)", y.Type())
+			b.WriteString(string(z))
+		}
+		return pyString(b.String())
+	}
+	// Has a comprehension. Note that there is only ever one level; by the anecdata, two-level ones
+	// are rare in this context so not worth worrying about here.
+	cs := s.NewScope(s.filename, s.mode)
+	it := s.iterable(list.Comprehension.Expr)
+	first := true
+	cs.evaluateComprehension(it, list.Comprehension, func(li pyObject) {
+		if first {
+			first = false
+		} else {
+			b.WriteString(base)
+		}
+		x := cs.interpretExpression(list.Values[0])
+		y, ok := x.(pyString)
+		cs.Assert(ok, "invalid expression of type %s to str.join (must be a string)", x.Type())
+		b.WriteString(string(y))
+	})
+	return pyString(b.String())
 }
 
 func (s *scope) interpretIs(obj pyObject, op OpExpression) pyObject {

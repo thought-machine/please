@@ -224,12 +224,12 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 	}
 	// Spot ' '.join([...]) to be optimised later
 	WalkAST(ret, func(expr *Expression) bool {
-		if expr.Val != nil && expr.Val.String != "" && expr.Val.Property != nil && expr.Val.Property.Name == "join" && len(expr.Val.Property.Action) == 1 {
+		if expr.Val != nil && expr.Val.String != "" && expr.Val.Property != nil && expr.Val.Property.Name == "join" && len(expr.Val.Property.Action) == 1 && expr.If == nil && len(expr.Op) == 0 && expr.UnaryOp == nil {
 			if call := expr.Val.Property.Action[0].Call; call != nil && len(call.Arguments) == 1 {
-				if arg := call.Arguments[0]; arg.Name == "" && arg.Value.Val != nil && arg.Value.Val.List != nil {
+				if arg := call.Arguments[0]; arg.Name == "" && arg.Value.Val != nil && arg.Value.Val.List != nil && arg.Value.UnaryOp == nil && len(arg.Value.Op) == 0 && arg.Value.If == nil {
 					expr.optimised = &optimisedExpression{Join: &optimisedJoin{
 						Base: expr.Val.String,
-						Args: arg.Value.Val.List,
+						List: arg.Value.Val.List,
 					}}
 					expr.Val = nil
 					return false
