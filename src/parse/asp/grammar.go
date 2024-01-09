@@ -113,6 +113,13 @@ type optimisedExpression struct {
 	Local string
 	// And similarly applied to optimise lookups into configuration.
 	Config string
+	// String join expressions (like ' '.join([...])) where we avoid reifying the internal list.
+	Join *optimisedJoin
+}
+
+type optimisedJoin struct {
+	Base string
+	List *List
 }
 
 // An OpExpression is a operator combined with its following expression.
