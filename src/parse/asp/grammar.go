@@ -96,14 +96,13 @@ type Argument struct {
 // An Expression is a generalised Python expression, i.e. anything that can appear where an
 // expression is allowed (including the extra parts like inline if-then-else, operators, etc).
 type Expression struct {
-	Pos     Position
-	EndPos  Position
-	UnaryOp *UnaryOp
-	Val     *ValueExpression
-	Op      []OpExpression
-	If      *InlineIf
-	// For internal optimisation - do not use outside this package.
-	Optimised *OptimisedExpression
+	Pos       Position
+	EndPos    Position
+	UnaryOp   *UnaryOp
+	Val       *ValueExpression
+	Op        []OpExpression
+	If        *InlineIf
+	optimised *OptimisedExpression
 }
 
 // An OptimisedExpression contains information to optimise certain aspects of execution of

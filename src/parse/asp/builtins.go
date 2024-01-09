@@ -736,7 +736,7 @@ func filter(s *scope, args []pyObject) pyObject {
 	for _, li := range l {
 		c := &Call{
 			Arguments: []CallArgument{{
-				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+				Value: Expression{optimised: &OptimisedExpression{Constant: li}},
 			}},
 		}
 		if f.Call(s, c).IsTruthy() {
@@ -756,7 +756,7 @@ func mapFunc(s *scope, args []pyObject) pyObject {
 	for _, li := range l {
 		c := &Call{
 			Arguments: []CallArgument{{
-				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+				Value: Expression{optimised: &OptimisedExpression{Constant: li}},
 			}},
 		}
 		ret = append(ret, mapper.Call(s, c))
@@ -782,9 +782,9 @@ func reduce(s *scope, args []pyObject) pyObject {
 	for _, li := range l {
 		c := &Call{
 			Arguments: []CallArgument{{
-				Value: Expression{Optimised: &OptimisedExpression{Constant: ret}},
+				Value: Expression{optimised: &OptimisedExpression{Constant: ret}},
 			}, {
-				Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+				Value: Expression{optimised: &OptimisedExpression{Constant: li}},
 			}},
 		}
 		ret = reducer.Call(s, c)
@@ -939,7 +939,7 @@ func extreme(s *scope, args []pyObject, cmp Operator) pyObject {
 		if key != nil {
 			c := &Call{
 				Arguments: []CallArgument{{
-					Value: Expression{Optimised: &OptimisedExpression{Constant: li}},
+					Value: Expression{optimised: &OptimisedExpression{Constant: li}},
 				}},
 			}
 			cli = key.Call(s, c)

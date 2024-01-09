@@ -250,15 +250,15 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 	WalkAST(stmts, func(expr *Expression) bool {
 		if constant := i.scope.Constant(expr); constant != nil {
-			expr.Optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
+			expr.optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
 			expr.Val = nil
 			return false
 		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && len(expr.Val.Slices) == 0 {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
-				expr.Optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
+				expr.optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
 				return false
 			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
-				expr.Optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
+				expr.optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
 				expr.Val = nil
 				return false
 			}
@@ -575,13 +575,13 @@ func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 
 func (s *scope) interpretExpression(expr *Expression) pyObject {
 	// Check the optimised sites first
-	if expr.Optimised != nil {
-		if expr.Optimised.Constant != nil {
-			return expr.Optimised.Constant
-		} else if expr.Optimised.Local != "" {
-			return s.Lookup(expr.Optimised.Local)
+	if expr.optimised != nil {
+		if expr.optimised.Constant != nil {
+			return expr.optimised.Constant
+		} else if expr.optimised.Local != "" {
+			return s.Lookup(expr.optimised.Local)
 		}
-		return s.config.Property(s, expr.Optimised.Config)
+		return s.config.Property(s, expr.optimised.Config)
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -941,8 +941,8 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	// Technically some of these might be constant (e.g. 'a,b,c'.split(',') or `1 if True else 2`.
 	// That's probably unlikely to be common though - we could do a generalised constant-folding pass
 	// but it's rare that people would write something of that nature in this language.
-	if expr.Optimised != nil && expr.Optimised.Constant != nil {
-		return expr.Optimised.Constant
+	if expr.optimised != nil && expr.optimised.Constant != nil {
+		return expr.optimised.Constant
 	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
 		return nil
 	} else if expr.Val.True || expr.Val.False || expr.Val.None || expr.Val.IsInt || expr.Val.String != "" {
