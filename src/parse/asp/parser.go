@@ -83,7 +83,7 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	}
 	_, err = p.interpreter.interpretAll(pkg, label, dependent, mode, statements)
 	if err != nil {
-		f, _ := os.Open(filename)
+		f, _ := p.open(fs, filename)
 		p.annotate(err, f)
 	}
 	return err
