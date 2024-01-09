@@ -162,11 +162,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/peterebden/buildtools",
-    version = "f7a36c689cc9e038956d51005332c67ade7aa9c6",
-)
-
-go_repo(
     module = "google.golang.org/genproto",
     version = "v0.0.0-20221206210731-b1a01be3a5f6",
 )
