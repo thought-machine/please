@@ -33,13 +33,13 @@ go_library(
         "///third_party/go/google.golang.org_protobuf//proto",
         "///third_party/go/google.golang.org_protobuf//types/known/durationpb",
         "//src/build",
-        "//src/cache",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/remote/fs",
         "//src/metrics",
         "//src/process",
+        "//src/remote/fs/cache",
     ],
 )
 
@@ -72,5 +72,6 @@ go_test(
         "///third_party/go/google.golang.org_protobuf//types/known/timestamppb",
         "//src/core",
         "//src/fs",
+        "//src/cache",
     ],
 )

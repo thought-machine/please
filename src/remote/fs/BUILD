@@ -4,7 +4,10 @@ go_library(
         "fs.go",
         "info.go",
     ],
-    visibility = ["//src/remote"],
+    visibility = [
+        "//src/remote",
+        "//src/remote/fs/cache:all",
+    ],
     deps = [
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/client",
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/digest",

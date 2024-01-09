@@ -39,6 +39,7 @@ import (
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
 	remotefs "github.com/thought-machine/please/src/remote/fs"
+	"github.com/thought-machine/please/src/remote/fs/cache"
 )
 
 var log = logging.Log
@@ -57,12 +58,13 @@ var remoteCacheReadDuration = metrics.NewHistogram(
 //
 // It provides a higher-level interface over the specific RPCs available.
 type Client struct {
-	client      *client.Client
-	fetchClient fpb.FetchClient
-	initOnce    sync.Once
-	state       *core.BuildState
-	err         error // for initialisation
-	instance    string
+	client         *client.Client
+	remoteFSClient remotefs.Client
+	fetchClient    fpb.FetchClient
+	initOnce       sync.Once
+	state          *core.BuildState
+	err            error // for initialisation
+	instance       string
 
 	// Stored output directories from previously executed targets.
 	// This isn't just a cache - it is needed for cases where we don't actually
@@ -223,6 +225,11 @@ func (c *Client) initExec() error {
 		return err
 	}
 	c.client = client
+	if c.state.Config.Cache.Dir != "" {
+		c.remoteFSClient = cache.New(c.client, filepath.Join(c.state.Config.Cache.Dir, "cas-cache"))
+	} else {
+		c.remoteFSClient = client
+	}
 	// Extend timeouts a bit, RetryTransient only gives about 1.5 seconds total which isn't
 	// necessarily very much if the other end needs to sort its life out.
 	c.client.Retrier.Backoff = retry.ExponentialBackoff(500*time.Millisecond, 5*time.Second, retry.Attempts(8))
@@ -319,7 +326,7 @@ func (c *Client) SubrepoFS(target *core.BuildTarget, root string) iofs.FS {
 	defer c.outputMutex.RUnlock()
 
 	tree := c.subrepoTrees[target.Label]
-	return remotefs.New(c.client, tree, root)
+	return remotefs.New(c.remoteFSClient, tree, root)
 }
 
 // Build executes a remote build of the given target.
