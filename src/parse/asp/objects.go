@@ -644,7 +644,7 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	args := c.Arguments
 	if f.self != nil {
 		args = append([]CallArgument{{
-			Value: Expression{optimised: &OptimisedExpression{Constant: f.self}},
+			Value: Expression{optimised: &optimisedExpression{Constant: f.self}},
 		}}, args...)
 	}
 	for i, a := range args {
