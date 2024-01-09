@@ -250,15 +250,15 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 	WalkAST(stmts, func(expr *Expression) bool {
 		if constant := i.scope.Constant(expr); constant != nil {
-			expr.optimised = &OptimisedExpression{Constant: constant} // Extract constant expression
+			expr.optimised = &optimisedExpression{Constant: constant} // Extract constant expression
 			expr.Val = nil
 			return false
 		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && len(expr.Val.Slices) == 0 {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
-				expr.optimised = &OptimisedExpression{Local: expr.Val.Ident.Name}
+				expr.optimised = &optimisedExpression{Local: expr.Val.Ident.Name}
 				return false
 			} else if expr.Val.Ident.Name == "CONFIG" && len(expr.Val.Ident.Action) == 1 && expr.Val.Ident.Action[0].Property != nil && len(expr.Val.Ident.Action[0].Property.Action) == 0 {
-				expr.optimised = &OptimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
+				expr.optimised = &optimisedExpression{Config: expr.Val.Ident.Action[0].Property.Name}
 				expr.Val = nil
 				return false
 			}

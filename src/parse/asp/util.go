@@ -77,7 +77,7 @@ func walkAST[T any](v reflect.Value, t reflect.Type, callback func(*T) bool) {
 			walkAST(v.Index(i), t, callback)
 		}
 	} else if v.Kind() == reflect.Struct {
-		if v.Type() != t || callback(v.Addr().Interface().(*T)) {
+		if v.Type() != t || (v.CanInterface() && callback(v.Addr().Interface().(*T))) {
 			for i := 0; i < v.NumField(); i++ {
 				walkAST(v.Field(i), t, callback)
 			}

@@ -102,12 +102,11 @@ type Expression struct {
 	Val       *ValueExpression
 	Op        []OpExpression
 	If        *InlineIf
-	optimised *OptimisedExpression
+	optimised *optimisedExpression
 }
 
-// An OptimisedExpression contains information to optimise certain aspects of execution of
-// an expression. It must be public for serialisation but shouldn't be used outside this package.
-type OptimisedExpression struct {
+// An optimisedExpression contains information to optimise certain aspects of execution of an expression.
+type optimisedExpression struct {
 	// Used to optimise constant expressions.
 	Constant pyObject
 	// Similarly applied to optimise simple lookups of local variables.
