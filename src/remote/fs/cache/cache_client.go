@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
@@ -24,6 +25,7 @@ func New(client fs.Client, dir string) *Client {
 type Client struct {
 	dir    string
 	client fs.Client
+	m      sync.RWMutex
 }
 
 func (c *Client) ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client.MovedBytesMetadata, error) {
@@ -48,6 +50,9 @@ func (c *Client) ReadBlob(ctx context.Context, d digest.Digest) ([]byte, *client
 }
 
 func (c *Client) read(d digest.Digest) []byte {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	path := c.pathForDigest(d)
 	if _, err := os.Lstat(path); err != nil {
 		return nil
@@ -60,6 +65,9 @@ func (c *Client) read(d digest.Digest) []byte {
 }
 
 func (c *Client) store(d digest.Digest, bs []byte) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	path := c.pathForDigest(d)
 	if err := os.MkdirAll(filepath.Dir(path), os.ModeDir|0775); err != nil {
 		return err
