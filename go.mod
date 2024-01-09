@@ -5,7 +5,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
 	github.com/alessio/shellescape v1.4.1
-	github.com/bazelbuild/buildtools v0.0.0-20230510134650-37bd1811516d
 	github.com/bazelbuild/remote-apis v0.0.0-20210718193713-0ecef08215cf
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20221114180157-e62cf9b8696a
 	github.com/cespare/xxhash/v2 v2.2.0
@@ -28,6 +27,7 @@ require (
 	github.com/peterebden/go-sri v1.1.1
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.4
+	github.com/please-build/buildtools v0.0.0-20231122153602-22bdf3fe4f1d
 	github.com/please-build/gcfg v1.6.1-0.20220308170049-10ea9d657afb
 	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/common v0.37.0
@@ -42,7 +42,6 @@ require (
 	github.com/ulikunitz/xz v0.5.10
 	github.com/zeebo/blake3 v0.2.3
 	go.uber.org/automaxprocs v1.4.0
-	golang.org/x/exp v0.0.0-20230116083435-1de6713980de
 	golang.org/x/net v0.17.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.15.0
