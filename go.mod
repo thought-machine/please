@@ -27,7 +27,7 @@ require (
 	github.com/peterebden/go-sri v1.1.1
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.4
-	github.com/please-build/buildtools v0.0.0-20231122153602-22bdf3fe4f1d
+	github.com/please-build/buildtools v0.0.0-20240110130546-746673d48318
 	github.com/please-build/gcfg v1.6.1-0.20220308170049-10ea9d657afb
 	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/common v0.37.0
