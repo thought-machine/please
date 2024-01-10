@@ -1,3 +1,11 @@
+Version 17.6.0
+--------------
+    * Various performance improvements in the build language (#3023, #3024, #3025,
+      #3028)
+    * Cache `BUILD` files during remote execution (#3029)
+    * Place `tag` parameter below `name` parameter when formatting build rule
+      invocations (#3033)
+
 Version 17.5.0
 --------------
     * Add a `--json` flag to `plz query outputs` (#3011)
