@@ -19,15 +19,9 @@ go_stdlib(
     name = "std",
 )
 
-go_mod_download(
-    name = "build_tools_dl",
-    module = "github.com/please-build/buildtools",
-    version = "24cce64e067d6147dcfff2a7059fa00c28537597",
-)
-
 go_repo(
-    download = ":build_tools_dl",
-    module = "github.com/bazelbuild/buildtools",
+    module = "github.com/please-build/buildtools",
+    version = "22bdf3fe4f1df0bf44aa0beedf2816ad86609395",
 )
 
 go_repo(

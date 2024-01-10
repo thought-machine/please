@@ -10,7 +10,7 @@ import (
 	"slices"
 	"sync/atomic"
 
-	"github.com/bazelbuild/buildtools/build"
+	"github.com/please-build/buildtools/build"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/cli/logging"
