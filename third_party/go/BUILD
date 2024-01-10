@@ -21,7 +21,7 @@ go_stdlib(
 
 go_repo(
     module = "github.com/please-build/buildtools",
-    version = "22bdf3fe4f1df0bf44aa0beedf2816ad86609395",
+    version = "746673d48318e5a6eb8cf3946d7f08586d85bf37",
 )
 
 go_repo(

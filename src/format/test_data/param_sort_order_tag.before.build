@@ -1,0 +1,6 @@
+filegroup(
+    name = "name",
+    srcs = ["x.txt"],
+    tag = "tag",
+    visibility = ["PUBLIC"],
+)
