@@ -1,3 +1,8 @@
+Version 17.6.1
+--------------
+    * Only automatically sort `tag` parameter below `name` parameter for built-in
+      Please rules (#3036)
+
 Version 17.6.0
 --------------
     * Various performance improvements in the build language (#3023, #3024, #3025,
