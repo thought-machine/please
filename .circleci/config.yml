@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20230903
+       - image: thoughtmachine/please_alpine:20240111
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
@@ -278,7 +278,7 @@ jobs:
    # Releases to github and homebrew
    release:
      docker:
-       - image: thoughtmachine/please_docs:20230116
+       - image: thoughtmachine/please_docs:20240111
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
@@ -293,7 +293,7 @@ jobs:
    # Releases the docs and the binaries to s3 for please.build and get.please.build
    release-s3:
      docker:
-       - image: thoughtmachine/please_docs:20230116
+       - image: thoughtmachine/please_docs:20240111
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:

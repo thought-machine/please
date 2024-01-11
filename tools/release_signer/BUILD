@@ -1,6 +1,7 @@
 go_binary(
     name = "release_signer",
     srcs = ["main.go"],
+    static = True,
     visibility = [
         "//package/...",
         "//tools/javac_worker:all",
