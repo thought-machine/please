@@ -266,7 +266,9 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		if err != nil {
 			log.Warningf("Failed to retrieve stored metadata for target %s, %v", target.Label, err)
 		}
-		if metadata != nil && len(metadata.RemoteAction) > 0 {
+		// Empty filegroups have empty action results
+		isEmptyFilegroup := target.IsFilegroup && len(target.AllSources()) == 0
+		if metadata != nil && (len(metadata.RemoteAction) > 0 || isEmptyFilegroup) {
 			ar := &pb.ActionResult{}
 			outputs := &pb.Tree{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err != nil {

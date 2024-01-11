@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
@@ -31,6 +32,8 @@ type Subrepo struct {
 	IsCrossCompile bool
 	// AdditionalConfigFiles corresponds to the config parameter on `subrepo()`
 	AdditionalConfigFiles []string
+	fs                    iofs.FS
+	fsSync                sync.Once
 }
 
 func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch cli.Arch, isCrosscompile bool) *Subrepo {
@@ -45,14 +48,19 @@ func NewSubrepo(state *BuildState, name, root string, target *BuildTarget, arch 
 }
 
 func (s *Subrepo) FS() iofs.FS {
-	if s == nil || s.Root == "" {
-		// Must be an architecture subrepo
-		return fs.HostFS
-	}
-	if s.IsRemoteSubrepo() {
-		return s.State.RemoteClient.SubrepoFS(s.Target, s.Root)
-	}
-	return os.DirFS(s.Root)
+	s.fsSync.Do(func() {
+		if s == nil || s.Root == "" {
+			// Must be an architecture subrepo
+			s.fs = fs.HostFS
+			return
+		}
+		if s.IsRemoteSubrepo() {
+			s.fs = s.State.RemoteClient.SubrepoFS(s.Target, s.Root)
+			return
+		}
+		s.fs = os.DirFS(s.Root)
+	})
+	return s.fs
 }
 
 // IsRemoteSubrepo returns true when the subrepo sources are remote i.e. not downloaded to plz-out
