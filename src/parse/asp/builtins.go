@@ -457,6 +457,8 @@ func isType(obj pyObject, name string) bool {
 		return name == "int"
 	case pyString:
 		return name == "str"
+	case *pyRange:
+		return name == "range"
 	case pyList:
 		return name == "list"
 	case pyDict:
