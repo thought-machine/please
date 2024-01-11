@@ -1,6 +1,26 @@
+build_rule(
+    name = "a",
+    srcs = ["a.txt"],
+    outs = ["a.out"],
+    cmd = "cp $SRCS $OUTS",
+    # This should sort below "name" (build_rule is a Please built-in):
+    tag = "a_tag",
+    visibility = ["PUBLIC"],
+)
+
 filegroup(
-    name = "name",
+    name = "b",
     srcs = ["x.txt"],
-    tag = "tag",
+    # This should sort below "name" (build_rule is a Please built-in):
+    tag = "b_tag",
+    visibility = ["PUBLIC"],
+)
+
+docker_mirror(
+    name = "c",
+    digest = "sha256:5d37aaee1673c45dba5ed666ae167ed3e5010ec1b5a20ee782197b66092749a0",
+    src_image = "registry.example/images/c",
+    # This should sort normally (docker_mirror isn't a Please built-in):
+    tag = "1.0.0",
     visibility = ["PUBLIC"],
 )
