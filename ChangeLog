@@ -1,3 +1,8 @@
+Version 17.6.2
+--------------
+    * Performance improvements for clean remote execution builds (#3038)
+    * Recognise `range` type in `isinstance` (#3040)
+
 Version 17.6.1
 --------------
     * Only automatically sort `tag` parameter below `name` parameter for built-in
