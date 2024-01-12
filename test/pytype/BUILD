@@ -6,6 +6,8 @@ v_int = 5
 
 v_str = "hello"
 
+v_range = range(1, 6)
+
 v_list = [
     0,
     1,
@@ -27,6 +29,7 @@ all_type = [
     bool,
     int,
     str,
+    range,
     list,
     dict,
     callable,
@@ -48,6 +51,10 @@ matrix = [
     [
         v_str,
         str,
+    ],
+    [
+        v_range,
+        range,
     ],
     [
         v_list,
