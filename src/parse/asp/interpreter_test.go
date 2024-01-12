@@ -608,6 +608,7 @@ func TestJSON(t *testing.T) {
 	assert.Contains(t, s.Lookup("json_config").String(), "\"baz\":6")
 	assert.Contains(t, s.Lookup("json_frozen_config").String(), "\"foo\":\"bar\"")
 	assert.Contains(t, s.Lookup("json_frozen_config").String(), "\"baz\":6")
+	assert.EqualValues(t, "[0,1,2,3]", s.Lookup("json_range"))
 }
 
 func TestSemverCheck(t *testing.T) {

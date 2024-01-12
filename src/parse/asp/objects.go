@@ -965,11 +965,7 @@ func (r *pyRange) Property(scope *scope, name string) pyObject {
 
 func (r *pyRange) Operator(operator Operator, operand pyObject) pyObject {
 	if l, ok := operand.(pyList); ok {
-		ret := make(pyList, 0, r.Len()+len(l))
-		for i := r.Start; i < r.Stop; i += r.Step {
-			ret = append(ret, i)
-		}
-		return append(ret, l...)
+		return append(r.toList(len(l)), l...)
 	}
 	panic(fmt.Sprintf("operator %s not implemented on type range", operator))
 }
@@ -980,4 +976,16 @@ func (r *pyRange) Len() int {
 
 func (r *pyRange) Item(index int) pyObject {
 	return r.Start + pyInt(index)*r.Step
+}
+
+func (r *pyRange) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.toList(0))
+}
+
+func (r *pyRange) toList(extraCapacity int) pyList {
+	ret := make(pyList, 0, r.Len()+extraCapacity)
+	for i := r.Start; i < r.Stop; i += r.Step {
+		ret = append(ret, i)
+	}
+	return ret
 }
