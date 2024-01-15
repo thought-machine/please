@@ -57,7 +57,7 @@ var opts struct {
 	BuildFlags struct {
 		Config     string               `short:"c" long:"config" env:"PLZ_BUILD_CONFIG" description:"Build config to use. Defaults to opt."`
 		Arch       cli.Arch             `short:"a" long:"arch" description:"Architecture to compile for."`
-		RepoRoot   cli.Filepath         `short:"r" long:"repo_root" description:"Root of repository to build."`
+		RepoRoot   cli.Filepath         `short:"r" long:"repo_root" description:"Root of repository to build." env:"PLZ_REPO_ROOT"`
 		NumThreads int                  `short:"n" long:"num_threads" description:"Number of concurrent build operations. Default is number of CPUs + 2."`
 		Include    []string             `short:"i" long:"include" description:"Label of targets to include in automatic detection."`
 		Exclude    []string             `short:"e" long:"exclude" description:"Label of targets to exclude from automatic detection."`
