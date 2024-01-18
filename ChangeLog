@@ -1,3 +1,9 @@
+Version 17.7.0
+--------------
+    * Make `json()` marshal `range` as a list (#3044)
+    * Allow setting `PLZ_REPO_ROOT` env variable to tell Please where the repo
+      root is (#3046)
+
 Version 17.6.2
 --------------
     * Performance improvements for clean remote execution builds (#3038)
