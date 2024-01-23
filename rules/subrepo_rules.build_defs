@@ -118,7 +118,7 @@ def new_http_archive(name:str, urls:list, build_file:str=None, build_file_conten
     else:
         cmd = '$TOOL x $SRCS_REMOTE -o "$OUT"'
     if patches:
-        cmd += ' && ' + ' && '.join([f'patch -d "$OUT" -p1 < "$PKG/{p}"' for p in patches])
+        cmd += ' && ' + ' && '.join([f'patch -f -d "$OUT" -p1 < "$PKG/{p}"' for p in patches])
     if strip_build:
         cmd += ' && find . ' + ' -o '.join([f'-name {name}' for name in CONFIG.BUILD_FILE_NAMES + ["WORKSPACE"]]) + ' | xargs rm -f'
     if build_file:
