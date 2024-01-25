@@ -10,7 +10,7 @@ import (
 // WhatInputs prints the targets with the provided files as sources
 // The targets are printed in the same order as the provided files, separated by a newline
 // Use printFiles to additionally echo the files themselves (i.e. print <file> <target>)
-func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles bool) {
+func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles, ignoreUnknown bool) {
 	targets := graph.AllTargets()
 
 	for _, file := range files {
@@ -21,7 +21,7 @@ func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles bool)
 				}
 				fmt.Printf("%s\n", label)
 			}
-		} else {
+		} else if !ignoreUnknown {
 			log.Fatalf("%s is not a source to any current target", file)
 		}
 	}
