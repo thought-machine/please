@@ -1,0 +1,10 @@
+filegroup(
+    name = "constant",
+    srcs = {
+        "NAMED": ["constant.build_defs"],
+    },
+)
+
+subinclude(":constant|NAMED")
+
+assert ANSWER == 42

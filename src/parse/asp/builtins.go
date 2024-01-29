@@ -316,8 +316,25 @@ func subinclude(s *scope, args []pyObject) pyObject {
 	if s.contextPackage() == nil {
 		s.Error("cannot subinclude from this scope")
 	}
+	var si []string
 	for _, arg := range args {
-		t := subincludeTarget(s, s.parseLabelInContextPkg(string(arg.(pyString))))
+		if l, ok := arg.(pyList); ok {
+			for _, e := range l {
+				if l, ok := e.(pyString); ok {
+					si = append(si, string(l))
+				} else {
+					s.Error("cannot subinclude type %s", e.Type())
+				}
+			}
+		} else if l, ok := arg.(pyString); ok {
+			si = append(si, string(l))
+		} else {
+			s.Error("cannot subinclude type %s", arg.Type())
+		}
+	}
+	for _, arg := range si {
+		label, annotation := core.SplitLabelAnnotation(arg)
+		t := subincludeTarget(s, s.parseLabelInContextPkg(label))
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
 
 		incPkgState := s.state
@@ -327,7 +344,13 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		}
 		s.interpreter.loadPluginConfig(s, incPkgState)
 
-		for _, out := range t.Outputs() {
+		var outs []string
+		if len(annotation) > 0 {
+			outs = t.NamedOutputs(annotation)
+		} else {
+			outs = t.Outputs()
+		}
+		for _, out := range outs {
 			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false)
 		}
 	}
