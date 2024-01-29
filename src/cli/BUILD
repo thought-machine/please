@@ -10,6 +10,7 @@ go_library(
         "suggest.go",
         "winch_other.go",
         "window.go",
+        "winch_windows.go",
     ],
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
