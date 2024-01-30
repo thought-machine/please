@@ -39,5 +39,6 @@ go_test(
         "///third_party/go/github.com_stretchr_testify//assert",
         "//src/cli",
         "//src/core",
+        "///third_party/go/github.com_please-build_buildtools//build",
     ],
 )

@@ -51,7 +51,7 @@ go_test(
     srcs = ["go_test_panic.go"],
     labels = ["manual"],
     deps = [
-        "///third_party/go/github.com_stretchr_testify//assert",
+        ":test",
     ],
 )
 
