@@ -1385,6 +1385,8 @@ func subrepo(s *scope, args []pyObject) pyObject {
 	sr := core.NewSubrepo(state, s.pkg.SubrepoArchName(subrepoName), root, target, arch, isCrossCompile)
 	if args[PackageRootIdx].IsTruthy() {
 		sr.PackageRoot = args[PackageRootIdx].String()
+	} else {
+		sr.PackageRoot = sr.Name
 	}
 
 	// Typically this would be deferred until we have built the subrepo target and have its config available. As we
