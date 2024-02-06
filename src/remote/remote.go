@@ -524,11 +524,7 @@ func (c *Client) DownloadInputs(target *core.BuildTarget, targetDir string, isTe
 
 		var err error
 		pbDir, err = c.uploadInputs(ch, target, isTest)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	})
 	if err != nil {
 		return err
