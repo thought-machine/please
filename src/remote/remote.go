@@ -517,7 +517,19 @@ func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult,
 
 // DownloadInputs downloads all the inputs of a remotely built target into the target directory.
 func (c *Client) DownloadInputs(target *core.BuildTarget, targetDir string, isTest bool) error {
-	pbDir, err := c.uploadInputs(nil, target, isTest)
+	var pbDir *pb.Directory
+	// first ensure all inputs are in the CAS
+	err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
+		defer close(ch)
+
+		var err error
+		pbDir, err = c.uploadInputs(ch, target, isTest)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return err
 	}
