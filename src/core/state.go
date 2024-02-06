@@ -1321,11 +1321,7 @@ func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime boo
 // DownloadAllInputs downloads all inputs (including sources) for the target. Assumes remote execution.
 func (state *BuildState) DownloadAllInputs(target *BuildTarget, targetDir string, isTest bool) error {
 	state.LogBuildResult(target, TargetBuilding, "Downloading inputs...")
-	if err := state.RemoteClient.DownloadInputs(target, targetDir, isTest); err != nil {
-		return err
-	}
-
-	return nil
+	return state.RemoteClient.DownloadInputs(target, targetDir, isTest)
 }
 
 // IterInputs returns a channel that iterates all the input files needed for a target.
