@@ -107,6 +107,9 @@ type RemoteClient interface {
 	Run(target *BuildTarget) error
 	// Download downloads the outputs for the given target that has already been built remotely.
 	Download(target *BuildTarget) error
+	// DownloadInputs downloads the whole of inputs folder for the given target that has already
+	// been built remotely, into the target directory
+	DownloadInputs(target *BuildTarget, targetDir string, isTest bool) error
 	// PrintHashes shows the hashes of a target.
 	PrintHashes(target *BuildTarget, isTest bool)
 	// DataRate returns an estimate of the current in/out RPC data rates and totals so far in bytes per second.
@@ -1298,6 +1301,7 @@ func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
 
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
 func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime bool) error {
+	// TODO(jan): Remove this function once `DownloadAllInputs` has been fully implemented across both build & test.
 	if state.RemoteClient != nil {
 		state.LogBuildResult(target, TargetBuilding, "Downloading inputs...")
 		for input := range state.IterInputs(target, runtime) {
@@ -1312,6 +1316,12 @@ func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime boo
 		}
 	}
 	return nil
+}
+
+// DownloadAllInputs downloads all inputs (including sources) for the target. Assumes remote execution.
+func (state *BuildState) DownloadAllInputs(target *BuildTarget, targetDir string, isTest bool) error {
+	state.LogBuildResult(target, TargetBuilding, "Downloading inputs...")
+	return state.RemoteClient.DownloadInputs(target, targetDir, isTest)
 }
 
 // IterInputs returns a channel that iterates all the input files needed for a target.

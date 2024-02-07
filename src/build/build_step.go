@@ -123,10 +123,17 @@ func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 
 		return fmt.Errorf("can't prepare temporary directory for %s; filegroups don't have temporary directories", target.Label)
 	}
-	// Ensure we have downloaded any previous dependencies if that's relevant.
-	if err := state.DownloadInputsIfNeeded(target, false); err != nil {
-		return err
+
+	if state.RemoteClient != nil {
+		// Targets were built remotely so we can simply download the inputs and place them in the
+		// tmp/ folder and exit.
+		if err := state.DownloadAllInputs(target, target.TmpDir(), false); err != nil {
+			return err
+		}
+
+		return errStop
 	}
+
 	if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
 		return err
 	}

@@ -515,6 +515,37 @@ func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult,
 	return nil
 }
 
+// DownloadInputs downloads all the inputs of a remotely built target into the target directory.
+func (c *Client) DownloadInputs(target *core.BuildTarget, targetDir string, isTest bool) error {
+	var pbDir *pb.Directory
+	// first ensure all inputs are in the CAS
+	err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
+		defer close(ch)
+
+		var err error
+		pbDir, err = c.uploadInputs(ch, target, isTest)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	dirDigest, err := digest.NewFromMessage(pbDir)
+	if err != nil {
+		return fmt.Errorf("could not calculate digest for directory proto: %w", err)
+	}
+
+	if err := os.RemoveAll(targetDir); err != nil {
+		return fmt.Errorf("could not delete target directory %q: %w", targetDir, err)
+	}
+
+	if _, _, err = c.client.DownloadDirectory(context.Background(), dirDigest, targetDir, c.fileMetadataCache); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // moveTmpFilesToOutDir moves files from the target tmp dir to the out dir, handling output directories as well
 func moveTmpFilesToOutDir(target *core.BuildTarget) error {
 	defer os.RemoveAll(target.TmpDir())
