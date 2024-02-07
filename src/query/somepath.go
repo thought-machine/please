@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -21,7 +22,14 @@ func SomePath(graph *core.BuildGraph, from, to, except []core.BuildLabel, showHi
 		for _, l2 := range expandAllTargets(graph, to) {
 			if path := s.SomePath(l1, l2); len(path) != 0 {
 				fmt.Println("Found path:")
-				for _, l := range filterPath(path, showHidden) {
+				if !showHidden {
+					// Filter path to just non-hidden targets
+					for i, x := range path {
+						path[i] = x.Parent()
+					}
+					path = slices.Compact(path)
+				}
+				for _, l := range path {
 					fmt.Printf("  %s\n", l)
 				}
 				return nil
@@ -97,23 +105,4 @@ func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen, 
 		}
 	}
 	return nil
-}
-
-// filterPath filters out any internal targets on a path between two targets.
-func filterPath(path []core.BuildLabel, showHidden bool) []core.BuildLabel {
-	// If --hidden flag passed, do not filter out any targets
-	if showHidden {
-		return path
-	}
-
-	ret := []core.BuildLabel{path[0]}
-	last := path[0]
-	for _, l := range path {
-		l = l.Parent()
-		if l != last {
-			ret = append(ret, l)
-			last = l
-		}
-	}
-	return ret
 }
