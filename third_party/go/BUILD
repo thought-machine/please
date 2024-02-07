@@ -387,7 +387,7 @@ go_repo(
 
 go_repo(
     module = "github.com/cespare/xxhash/v2",
-    version = "v2.1.2",
+    version = "v2.2.0",
 )
 
 go_repo(
