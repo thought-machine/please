@@ -403,9 +403,10 @@ var opts struct {
 			} `positional-args:"true"`
 		} `command:"graph" description:"Prints a representation of the build graph."`
 		WhatInputs struct {
-			Hidden    bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
-			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
-			Args      struct {
+			Hidden        bool `long:"hidden" short:"h" description:"Output internal / hidden targets too."`
+			EchoFiles     bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
+			IgnoreUnknown bool `long:"ignore_unknown" description:"Ignore any files that are not inputs to existing build targets"`
+			Args          struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"whatinputs" description:"Prints out target(s) with provided file(s) as inputs"`
@@ -883,7 +884,7 @@ var buildFunctions = map[string]func() int{
 			labels = append(labels, core.FindOwningPackage(state, file))
 		}
 		return runQuery(true, labels, func(state *core.BuildState) {
-			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles)
+			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles, opts.Query.WhatInputs.IgnoreUnknown)
 		})
 	},
 	"query.whatoutputs": func() int {
