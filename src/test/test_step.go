@@ -69,16 +69,7 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 
 	// If the user passed --shell then just prepare the directory.
 	if state.PrepareOnly {
-		if err := state.DownloadInputsIfNeeded(target, true); err != nil {
-			state.LogBuildError(label, core.TargetTestFailed, err, "Failed to download test inputs")
-			return
-		}
-		if err := core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
-			state.LogBuildError(label, core.TargetTestFailed, err, "Failed to prepare test directory")
-			return
-		}
-		target.SetState(core.Stopped)
-		state.LogBuildResult(target, core.TargetTestStopped, "Test stopped")
+		prepareOnly(state, label, target, run)
 		return
 	}
 
@@ -266,6 +257,25 @@ func doFlakeRun(state *core.BuildState, target *core.BuildTarget, run int, runRe
 	}
 
 	return results, coverage
+}
+
+func prepareOnly(state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runNumber int) {
+	if state.RemoteClient != nil {
+		// Targets were built remotely so we can simply download the inputs and place them in the
+		// tmp/ folder and exit.
+		if err := state.DownloadAllInputs(target, target.TestDir(runNumber), true); err != nil {
+			state.LogBuildError(label, core.TargetTestFailed, err, "Failed to download test inputs")
+			return
+		}
+	} else {
+		if err := core.PrepareRuntimeDir(state, target, target.TestDir(runNumber)); err != nil {
+			state.LogBuildError(label, core.TargetTestFailed, err, "Failed to prepare test directory")
+			return
+		}
+	}
+
+	target.SetState(core.Stopped)
+	state.LogBuildResult(target, core.TargetTestStopped, "Test stopped")
 }
 
 func getFlakeStatus(flake int, flakes int) string {
