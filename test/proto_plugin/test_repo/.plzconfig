@@ -15,5 +15,5 @@ ImportPath = github.com/thought-machine/please/test/proto_plugin
 
 [Plugin "go_proto"]
 Target = //plugins:go-proto
-GrpcPlugin = //third_party/go:protoc-gen-go-grpc
-ProtoPlugin = //third_party/go:protoc-gen-go
+GrpcPlugin = ///third_party/go/google.golang.org_grpc_cmd_protoc-gen-go-grpc//:protoc-gen-go-grpc
+ProtoPlugin = ///third_party/go/google.golang.org_protobuf//cmd/protoc-gen-go
