@@ -44,9 +44,3 @@ filegroup(
     srcs = ["default.pgo"],
     visibility = ["//src/..."],
 )
-
-filegroup(
-    name = "modfile",
-    srcs = ["go.mod"],
-    visibility = ["//third_party/go/..."],
-)

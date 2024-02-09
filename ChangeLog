@@ -1,6 +1,5 @@
 Version 17.8.0
 --------------
-    * Use go-rules v1.16.2
     * Add a --ignore_unknown flag to query whatinputs (#3057)
     * Improve somepath --hidden behaviour (#3067)
     * Enable `plz build `--shell` to work correctly with remote execution and
