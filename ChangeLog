@@ -1,3 +1,11 @@
+Version 17.8.0
+--------------
+    * Add a --ignore_unknown flag to query whatinputs (#3057)
+    * Improve somepath --hidden behaviour (#3067)
+    * Enable `plz build `--shell` to work correctly with remote execution and
+      subrepos (#3066) (#3069)
+    * subinclude can now take annotated label and list (#2990)
+
 Version 17.7.0
 --------------
     * Make `json()` marshal `range` as a list (#3044)
