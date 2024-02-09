@@ -10,6 +10,7 @@ Target = //plugins:go
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 FeatureFlags = go_get
+Modfile = //:modfile
 
 [Plugin "cc"]
 target = //plugins:cc
