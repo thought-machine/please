@@ -5,14 +5,14 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "27014fc69e301d7588a169ca239b3cc609f0aa1abf38528bf0d20d3b259211eb",  # darwin-amd64
-        "65302a7a9f7a4834932b3a7a14cb8be51beddda757b567a2f9e0cbd0d7b5a6ab",  # darwin-arm64
-        "6e74f65f586e93d1f3947894766f69e9b2ebda488592a09df61f36f06bfe58a8",  # freebsd-amd64
-        "1241381b2843fae5a9707eec1f8fb2ef94d827990582c7c7c32f5bdfbfd420c8",  # linux-amd64
-        "fc90fa48ae97ba6368eecb914343590bbb61b388089510d0c56c2dde52987ef3",  # linux-arm64
+        "ebca81df938d2d1047cc992be6c6c759543cf309d401b86af38a6aed3d4090f4",  # darwin-amd64
+        "bf8e388b09134164717cd52d3285a4ab3b68691b80515212da0e9f56f518fb1e",  # darwin-arm64
+        "50f421c7f217083ac94aab1e09400cb9c2fea7d337679ec11f1638a11460da30",  # freebsd-amd64
+        "f6c8a87aa03b92c4b0bf3d558e28ea03006eb29db78917daec5cfb6ec1046265",  # linux-amd64
+        "6a63fef0e050146f275bf02a0896badfe77c11b6f05499bb647e7bd613a45a10",  # linux-arm64
     ],
     install_std = True,
-    version = "1.21.3",
+    version = "1.22.0",
 )
 
 go_stdlib(
@@ -352,7 +352,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sys",
-    version = "v0.0.0-20220315194320-039c03cc5b86",
+    version = "v0.17.0",
 )
 
 go_repo(
@@ -387,7 +387,7 @@ go_repo(
 
 go_repo(
     module = "github.com/cespare/xxhash/v2",
-    version = "v2.1.2",
+    version = "v2.2.0",
 )
 
 go_repo(
