@@ -2,8 +2,9 @@ package query
 
 import (
 	"fmt"
-	"maps"
 	"sort"
+
+	"golang.org/x/exp/maps"
 
 	"github.com/thought-machine/please/src/core"
 )

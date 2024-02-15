@@ -292,6 +292,10 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 			for _, source := range target.AllSources() {
 				// If the label is nil add any input paths contained here.
 				if label, ok := source.nonOutputLabel(); !ok {
+					// Don't emit inputs from subrepos; they appear to be files in many ways but they are themselves generated
+					if _, ok := source.(SubrepoFileLabel); ok {
+						continue
+					}
 					for _, sourcePath := range source.FullPaths(graph) {
 						if !donePaths[sourcePath] {
 							ch <- sourcePath
@@ -311,6 +315,10 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 			for _, data := range target.AllData() {
 				// If the label is nil add any input paths contained here.
 				if label, ok := data.Label(); !ok {
+					// Don't emit inputs from subrepos; they appear to be files in many ways but they are themselves generated
+					if _, ok := data.(SubrepoFileLabel); ok {
+						continue
+					}
 					for _, sourcePath := range data.FullPaths(graph) {
 						if !donePaths[sourcePath] {
 							ch <- sourcePath
