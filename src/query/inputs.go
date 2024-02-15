@@ -2,6 +2,8 @@ package query
 
 import (
 	"fmt"
+	"maps"
+	"sort"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -15,7 +17,9 @@ func TargetInputs(graph *core.BuildGraph, labels []core.BuildLabel) {
 		}
 	}
 
-	for path := range inputPaths {
+	keys := maps.Keys(inputPaths)
+	sort.Strings(keys)
+	for _, path := range keys {
 		fmt.Printf("%s\n", path)
 	}
 }
