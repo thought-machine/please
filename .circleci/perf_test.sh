@@ -20,6 +20,10 @@ echo "Running parse performance test..."
 /tmp/workspace/parse_perf_test.pex --plz plz --revision "$CIRCLE_SHA1"
 
 echo "Uploading results..."
+# Auth against gcp for cli and
+echo $GCLOUD_SERVICE_KEY > $GOOGLE_APPLICATION_CREDENTIALS
+echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+
 gsutil cp plz.prof "${BUCKET}/${CIRCLE_SHA1}.prof"
 gsutil cp results.json "${BUCKET}/${CIRCLE_SHA1}.json"
 if gsutil ls "${BUCKET}/all_results.jsonl"; then

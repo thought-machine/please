@@ -306,6 +306,8 @@ jobs:
    perf-test:
      docker:
        - image: thoughtmachine/please_docs:20240111
+     environment:
+       GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout
