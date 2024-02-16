@@ -290,8 +290,8 @@ jobs:
        - run: echo $GCLOUD_SERVICE_KEY > $GOOGLE_APPLICATION_CREDENTIALS
        - run: /tmp/workspace/gen_release.pex --signer /tmp/workspace/release_signer /tmp/workspace/{*_amd64,*_arm64}/*
 
-   # Releases the docs and the binaries to s3 for please.build and get.please.build
-   release-s3:
+   # Releases the docs and the binaries to gs for please.build and get.please.build
+   release-gs:
      docker:
        - image: thoughtmachine/please_docs:20240111
      environment:
@@ -300,7 +300,7 @@ jobs:
        - checkout
        - attach_workspace:
            at: /tmp/workspace
-       - run: ./.circleci/release_s3.sh
+       - run: ./.circleci/release.sh
 
    # Runs a benchmarking test and records some performance results.
    perf-test:
@@ -353,7 +353,7 @@ workflows:
           filters:
             branches:
               only: master
-      - release-s3:
+      - release-gs:
           requires:
             - release
           filters:

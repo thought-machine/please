@@ -11,7 +11,7 @@ tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz --strip-components=1 -C "$DI
 ln -s "${DIR}/please" "${DIR}/plz"
 export PATH="$DIR:$PATH"
 
-BUCKET="s3://please-docs/performance"
+BUCKET="gs://please.build/performance"
 
 echo "Generating test file tree..."
 /tmp/workspace/gen_parse_tree.pex --plz plz --noprogress --size 300000
@@ -20,14 +20,14 @@ echo "Running parse performance test..."
 /tmp/workspace/parse_perf_test.pex --plz plz --revision "$CIRCLE_SHA1"
 
 echo "Uploading results..."
-aws s3 cp plz.prof "${BUCKET}/${CIRCLE_SHA1}.prof"
-aws s3 cp results.json "${BUCKET}/${CIRCLE_SHA1}.json"
-if aws s3 ls "${BUCKET}/all_results.jsonl"; then
-    aws s3 cp "${BUCKET}/all_results.jsonl" all_results.jsonl
+gsutil cp plz.prof "${BUCKET}/${CIRCLE_SHA1}.prof"
+gsutil cp results.json "${BUCKET}/${CIRCLE_SHA1}.json"
+if gsutil ls "${BUCKET}/all_results.jsonl"; then
+    gsutil cp "${BUCKET}/all_results.jsonl" all_results.jsonl
     cat all_results.jsonl results.json | tail -n 100 > updated_results.jsonl
-    aws s3 cp updated_results.jsonl "${BUCKET}/all_results.jsonl"
+    gsutil cp updated_results.jsonl "${BUCKET}/all_results.jsonl"
 else
-    aws s3 cp results.json "${BUCKET}/all_results.jsonl"
+    gsutil cp results.json "${BUCKET}/all_results.jsonl"
 fi
 
 rm -rf tree
@@ -41,15 +41,15 @@ for RESULT in plz-out/benchmarks/*.json; do
 
   echo "Uploading ${BENCHMARK_NAME} results..."
 
-  aws s3 cp "$RESULT" "${BUCKET}/${BENCHMARK_NAME}_${CIRCLE_SHA1}.json"
+  gsutil cp "$RESULT" "${BUCKET}/${BENCHMARK_NAME}_${CIRCLE_SHA1}.json"
 
   ALL_RESULTS="${BENCHMARK_NAME}_all_results.jsonl"
-  if aws s3 ls "${BUCKET}/${ALL_RESULTS}"; then
-      aws s3 cp "${BUCKET}/${ALL_RESULTS}" "${ALL_RESULTS}"
+  if gsutil ls "${BUCKET}/${ALL_RESULTS}"; then
+      gsutil cp "${BUCKET}/${ALL_RESULTS}" "${ALL_RESULTS}"
       cat "${ALL_RESULTS}" "${RESULT}" | tail -n 100 > "updated_${ALL_RESULTS}"
-      aws s3 cp "updated_${ALL_RESULTS}" "${BUCKET}/${ALL_RESULTS}"
+      gsutil cp "updated_${ALL_RESULTS}" "${BUCKET}/${ALL_RESULTS}"
   else
-      aws s3 cp "${RESULT}" "${BUCKET}/${ALL_RESULTS}"
+      gsutil cp "${RESULT}" "${BUCKET}/${ALL_RESULTS}"
   fi
 done
 
