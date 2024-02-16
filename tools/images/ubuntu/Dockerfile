@@ -11,7 +11,8 @@ RUN truncate -s0 /tmp/preseed.cfg; \
     echo "tzdata tzdata/Zones/Europe select London" >> /tmp/preseed.cfg; \
     apt-get update && \
     apt-get install -y python3 python3-dev python3-pip time \
-    curl unzip git locales pkg-config zlib1g-dev psmisc awscli && \
+    curl unzip git locales pkg-config zlib1g-dev psmisc awscli \
+    openssh-client ca-certificates && \
     apt-get clean
 
 # Go - we want a specific package version here.
@@ -20,6 +21,14 @@ RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofm
 
 # Locale
 RUN locale-gen en_GB.UTF-8
+
+# Downloading gcloud package
+RUN curl https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz > /tmp/google-cloud-sdk.tar.gz
+
+# Installing the package
+RUN mkdir -p /usr/local/gcloud \
+  && tar -C /usr/local/gcloud -xvf /tmp/google-cloud-sdk.tar.gz \
+  && /usr/local/gcloud/google-cloud-sdk/install.sh
 
 # Welcome message
 COPY /motd.txt /etc/motd

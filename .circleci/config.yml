@@ -43,7 +43,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240207
+       - image: thoughtmachine/please_ubuntu:20240216
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
@@ -176,7 +176,7 @@ jobs:
    build-linux-arm64:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240207
+       - image: thoughtmachine/please_ubuntu:20240216
      resource_class: large
      steps:
        - checkout
@@ -245,7 +245,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240207
+       - image: thoughtmachine/please_ubuntu:20240216
      resource_class: xlarge
      steps:
        - checkout
@@ -262,7 +262,7 @@ jobs:
    test-http-cache:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240207
+       - image: thoughtmachine/please_ubuntu:20240216
      resource_class: large
      steps:
        - checkout
@@ -278,7 +278,7 @@ jobs:
    # Releases to github and homebrew
    release:
      docker:
-       - image: thoughtmachine/please_docs:20240111
+       - image: thoughtmachine/please_ubuntu:20240216
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
@@ -293,7 +293,7 @@ jobs:
    # Releases the docs and the binaries to gs for please.build and get.please.build
    release-gs:
      docker:
-       - image: thoughtmachine/please_docs:20240111
+       - image: thoughtmachine/please_ubuntu:20240216
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
@@ -305,7 +305,9 @@ jobs:
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
-       - image: thoughtmachine/please_docs:20240111
+       - image: thoughtmachine/please_ubuntu:20240216
+     environment:
+       GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout
