@@ -9,7 +9,6 @@ release_folder() {
   local folder=$1
   local path=$2
 
-  aws s3 sync $folder s3://please-releases/$path
   gsutil rsync -r $folder gs://get.please.build/$path
 }
 
@@ -20,10 +19,8 @@ release_file() {
   local content_type=$3
 
   if [ -z "$content_type" ]; then
-    aws s3 cp $file s3://please-releases/$path
     gsutil cp $file gs://get.please.build/$path
   else
-    aws s3 cp $file s3://please-releases/$path --content-type $content_type
     gsutil -h "Content-Type:$content_type" cp $file gs://get.please.build/$path
   fi
 }
@@ -34,11 +31,10 @@ echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
 
 echo "Releasing docs website"
 tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && \
-  aws s3 sync /tmp/workspace/docs s3://please-docs && \
   gsutil rsync -r /tmp/workspace/docs gs://please.build
 
 
-if aws s3 ls s3://please-releases/linux_arm64/$VERSION/; then
+if gsutil ls gs://get.please.build/linux_arm64/$VERSION/; then
   echo "Please $VERSION has already been released, nothing to do."
   exit 0
 fi
