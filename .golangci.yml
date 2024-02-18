@@ -18,6 +18,7 @@ issues:
     - empty-block # generally not useful
     - redefines-builtin-id
     - superfluous-else
+    - indent-error-flow # revive getting a bit too pushy here
   exclude-rules:
     - path: _test\.go
       linters:

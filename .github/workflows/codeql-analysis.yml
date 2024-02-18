@@ -19,7 +19,7 @@ jobs:
         language: ['go']
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 2
     - name: Initialize CodeQL
