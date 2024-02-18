@@ -120,10 +120,10 @@ func printMilestoneMessage(pleaseVersion string) {
 		padLen := len(line) + (targetWidth-len(line))/2
 
 		// Prints the string ensuring it's the target width
-		fmtString := "|%-" + fmt.Sprint(targetWidth) + "s|\n"
+		fmtString := "|%-" + strconv.Itoa(targetWidth) + "s|\n"
 
 		// Left pad the string so it's center aligned
-		paddedString := fmt.Sprintf("%"+fmt.Sprint(padLen)+"s", line)
+		paddedString := fmt.Sprintf("%"+strconv.Itoa(padLen)+"s", line)
 
 		fmt.Fprintf(os.Stderr, fmtString, paddedString)
 	}

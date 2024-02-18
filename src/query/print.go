@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -368,9 +369,9 @@ func (p *printer) genericPrint(v reflect.Value) (string, bool) {
 	case reflect.Bool:
 		return "True", v.Bool()
 	case reflect.Int, reflect.Int32:
-		return fmt.Sprintf("%d", v.Int()), true
+		return strconv.FormatInt(v.Int(), 10), true
 	case reflect.Uint8, reflect.Uint16:
-		return fmt.Sprintf("%d", v.Uint()), true
+		return strconv.FormatUint(v.Uint(), 10), true
 	case reflect.Struct, reflect.Interface:
 		if stringer, ok := v.Interface().(fmt.Stringer); ok {
 			return p.quote(stringer.String()), true

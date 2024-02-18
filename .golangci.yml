@@ -51,6 +51,7 @@ linters:
     - ineffassign
     - misspell
     - nilerr
+    - perfsprint
     - prealloc
     - revive
     - staticcheck
@@ -78,3 +79,6 @@ linters-settings:
       - standard # Captures all standard packages if they do not match another section.
       - default # Contains all imports that could not be matched to another section type.
       - prefix(github.com/thought-machine/please)
+
+  perfsprint:
+    errorf: false # sometimes it's easier not to import another package
