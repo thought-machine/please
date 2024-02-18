@@ -37,9 +37,12 @@ issues:
 linters:
   disable-all: true
   enable:
+    - asasalint
     - asciicheck
     - bidichk
     - bodyclose
+    - containedctx
+    - contextcheck
     - dogsled
     - dupl
     - exportloopref
@@ -51,6 +54,7 @@ linters:
     - ineffassign
     - misspell
     - nilerr
+    - nosprintfhostport
     - perfsprint
     - prealloc
     - revive
@@ -61,10 +65,6 @@ linters:
     - unused
     - wastedassign
     - whitespace
-
-    # To consider enabling in future (once we fix errors etc):
-    # - errcheck
-    # - scopelint
 
 linters-settings:
   govet:
