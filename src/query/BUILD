@@ -20,6 +20,7 @@ go_library(
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/golang.org_x_exp//maps",
         "///third_party/go/github.com_please-build_gcfg//:gcfg",
         "//src/build",
         "//src/cli/logging",
