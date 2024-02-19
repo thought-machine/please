@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/peterebden/go-deferred-regex"
@@ -37,13 +38,13 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 		return "10ms | 20s | 5m"
 	} else if t.Kind() == reflect.Int || t.Kind() == reflect.Int64 {
 		if f.Int() != 0 {
-			return fmt.Sprintf("%d", f.Int())
+			return strconv.FormatInt(f.Int(), 10)
 		}
 		return "42"
 	} else if t.Name() == "ByteSize" {
 		return "5K | 10MB | 20GiB"
 	} else if t.Kind() == reflect.Uint64 {
-		return fmt.Sprintf("%d", f.Uint())
+		return strconv.FormatUint(f.Uint(), 10)
 	} else if t.Name() == "BuildLabel" {
 		return "//src/core:core"
 	} else if t.Name() == "Arch" {

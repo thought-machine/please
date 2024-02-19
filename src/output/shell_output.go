@@ -277,7 +277,7 @@ func showExecutionOutput(execution core.TestExecution) {
 
 func formatTestCase(result core.TestCase, name string, detailed bool) string {
 	if len(result.Executions) == 0 {
-		return fmt.Sprintf("%s (No results)", formatTestName(result, name))
+		return formatTestName(result, name) + " (No results)"
 	}
 	var outcome core.TestExecution
 	if len(result.Executions) > 1 && result.Success() != nil {
@@ -317,16 +317,16 @@ func formatTestExecution(execution core.TestExecution, detailed bool) string {
 		return "${BOLD_CYAN}ERROR${RESET}"
 	}
 	if execution.Failure != nil {
-		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", maybeToString(execution.Duration))
+		return "${BOLD_RED}FAIL${RESET} " + maybeToString(execution.Duration)
 	}
 	if execution.Skip != nil {
 		if detailed {
-			return fmt.Sprintf("${BOLD_YELLOW}SKIP\n        Reason:${RESET} %s", execution.Skip.Message)
+			return "${BOLD_YELLOW}SKIP\n        Reason:${RESET} " + execution.Skip.Message
 		}
 		// Not usually interesting to have a duration when we did no work.
 		return "${BOLD_YELLOW}SKIP${RESET}"
 	}
-	return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
+	return "${BOLD_GREEN}PASS${RESET} " + maybeToString(execution.Duration)
 }
 
 func maybeToString(duration *time.Duration) string {
@@ -338,7 +338,7 @@ func maybeToString(duration *time.Duration) string {
 
 // Produces a string describing the results of one test (or a single aggregation).
 func testResultMessage(results *core.TestSuite, showDuration bool) string {
-	msg := fmt.Sprintf("%s run", pluralise(results.Tests(), "test", "tests"))
+	msg := pluralise(results.Tests(), "test", "tests") + " run"
 	if showDuration && results.Duration >= 0.0 {
 		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))
 	}
@@ -494,7 +494,7 @@ func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap ma
 // in at least this one place.
 func pluralise(num int, singular, plural string) string {
 	if num == 1 {
-		return fmt.Sprintf("1 %s", singular)
+		return "1 " + singular
 	}
 	return fmt.Sprintf("%d %s", num, plural)
 }

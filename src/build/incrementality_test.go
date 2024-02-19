@@ -7,7 +7,6 @@
 package build
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -127,7 +126,7 @@ func TestAllTestFieldsArePresentAndAccountedFor(t *testing.T) {
 	val := reflect.ValueOf(fields)
 	typ := val.Elem().Type()
 	for i := 0; i < typ.NumField(); i++ {
-		if field := typ.Field(i); !KnownFields[fmt.Sprintf("Test.%s", field.Name)] {
+		if field := typ.Field(i); !KnownFields["Test."+field.Name] {
 			t.Errorf("Unaccounted field in RuleHash: Test.%s", field.Name)
 		}
 	}
@@ -138,7 +137,7 @@ func TestAllDebugFieldsArePresentAndAccountedFor(t *testing.T) {
 	val := reflect.ValueOf(fields)
 	typ := val.Elem().Type()
 	for i := 0; i < typ.NumField(); i++ {
-		if field := typ.Field(i); !KnownFields[fmt.Sprintf("Debug.%s", field.Name)] {
+		if field := typ.Field(i); !KnownFields["Debug."+field.Name] {
 			t.Errorf("Unaccounted field in RuleHash: Debug.%s", field.Name)
 		}
 	}

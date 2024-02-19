@@ -128,7 +128,7 @@ type actionDigestMap struct {
 func (m *actionDigestMap) Get(label core.BuildLabel) *pb.Digest {
 	d, ok := m.m.Load(label)
 	if !ok {
-		panic(fmt.Sprintf("could not find action digest for label: %s", label.String()))
+		panic("could not find action digest for label: " + label.String())
 	}
 	return d.(*pb.Digest)
 }

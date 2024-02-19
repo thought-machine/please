@@ -37,7 +37,7 @@ type pendingHash struct {
 func NewPathHasher(root string, useXattrs bool, hash func() hash.Hash, algo string) *PathHasher {
 	var hashSuffix string
 	if algo != "sha1" {
-		hashSuffix = fmt.Sprintf("_%s", algo)
+		hashSuffix = "_" + algo
 	}
 	return &PathHasher{
 		new:       hash,

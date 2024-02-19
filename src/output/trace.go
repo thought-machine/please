@@ -83,7 +83,7 @@ func (tw *traceWriter) writeEvent(threadID int, result *core.BuildResult, phase 
 	entry.Tid = fmt.Sprintf("Builder %d", threadID)
 	entry.Args.Description = result.Description
 	if result.Err != nil {
-		entry.Args.Err = fmt.Sprintf("%s", result.Err)
+		entry.Args.Err = result.Err.Error()
 		entry.Cname = "terrible"
 	} else if entry.Cat == "Test" {
 		entry.Cname = "good"

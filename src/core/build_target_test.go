@@ -394,7 +394,7 @@ func TestToolPathWithEntryPoint(t *testing.T) {
 	wd, _ := os.Getwd()
 	RepoRoot = wd
 	root := wd + "/plz-out/gen/src/core"
-	assert.Equal(t, fmt.Sprintf("%s/file1.go", root), target.toolPath(true, "f1"))
+	assert.Equal(t, root+"/file1.go", target.toolPath(true, "f1"))
 	assert.Equal(t, "src/core/file1.go", target.toolPath(false, "f1"))
 }
 
