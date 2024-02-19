@@ -69,7 +69,7 @@ func (h *Handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2
 			// if it's not a jsonrpc error then create a CodeInternalError
 			jsonerr = &jsonrpc2.Error{
 				Code:    jsonrpc2.CodeInternalError,
-				Message: fmt.Sprintf("%s", err),
+				Message: err.Error(),
 			}
 		}
 

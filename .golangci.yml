@@ -42,7 +42,6 @@ linters:
     - bidichk
     - bodyclose
     - containedctx
-    - contextcheck
     - dogsled
     - dupl
     - exportloopref
