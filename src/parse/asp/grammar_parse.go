@@ -385,6 +385,18 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 		e.Val = p.parseValueExpression()
 	}
 	tok := p.l.Peek()
+	if tok.Value ==  "and" || tok.Value == "or" {
+		p.l.Next()
+		lo := LogicalOpExpression{Op: And}
+		if tok.Value == "or" {
+			lo.Op = Or
+		}
+		p.parseUnconditionalExpressionInPlace(&lo.Expr)
+		e.Logical = append(e.Logical, lo)
+
+
+	} else if tok.Value == "or" {
+	}
 	if tok.Value == "not" {
 		// Hack for "not in" which needs an extra token.
 		p.l.Next()
@@ -411,6 +423,7 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 			o.Expr.Op = nil
 		}
 	}
+
 }
 
 func concatStrings(lhs *ValueExpression, rhs *ValueExpression) *ValueExpression {

@@ -101,6 +101,7 @@ type Expression struct {
 	UnaryOp   *UnaryOp
 	Val       *ValueExpression
 	Op        []OpExpression
+	Logical   []LogicalOpExpression
 	If        *InlineIf
 	optimised *optimisedExpression
 }
@@ -126,6 +127,12 @@ type optimisedJoin struct {
 type OpExpression struct {
 	Op   Operator
 	Expr *Expression
+}
+
+// A LogicalOpExpression is a logical operator combined with its following expression
+type LogicalOpExpression struct {
+	Op   LogicalOperator
+	Expr Expression
 }
 
 // A ValueExpression is the value part of an expression, i.e. without surrounding operators.
@@ -307,10 +314,6 @@ const (
 	In = '∈'
 	// NotIn implements "not in" as a single operator.
 	NotIn = '∉'
-	// And etc are logical operators - these are implemented type-independently
-	And Operator = '&'
-	// Or implements the or operator
-	Or = '∨'
 	// Union implements the | or binary or operator, which is only used for dict unions.
 	Union = '∪'
 	// Is implements type identity.
@@ -340,8 +343,6 @@ var operators = map[string]Operator{
 	"%":      Modulo,
 	"<":      LessThan,
 	">":      GreaterThan,
-	"and":    And,
-	"or":     Or,
 	"is":     Is,
 	"is not": IsNot,
 	"in":     In,
@@ -351,4 +352,19 @@ var operators = map[string]Operator{
 	">=":     GreaterThanOrEqual,
 	"<=":     LessThanOrEqual,
 	"|":      Union,
+}
+
+// A LogicalOperator defines a logical binary operator
+type LogicalOperator rune
+
+const (
+	And LogicalOperator = '&'
+	Or = '∨'
+)
+
+func (o LogicalOperator) String() string {
+	if o == And {
+		return "and"
+	}
+	return "or"
 }
