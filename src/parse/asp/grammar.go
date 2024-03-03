@@ -354,7 +354,17 @@ var operators = map[string]Operator{
 	"|":      Union,
 }
 
+// Precedence of operators, from highest to lowest
+// When equal, operators are evaluated left-to-right.
+var precedence = [4][]Operator{
+	{Multiply, Divide, Modulo},
+	{Add, Subtract},
+	{Union},
+	{LessThan, GreaterThan, Is, IsNot, In, NotIn, Equal, NotEqual, GreaterThanOrEqual, LessThanOrEqual},
+}
+
 // A LogicalOperator defines a logical binary operator
+// These are separate from other operators because they short-circuit
 type LogicalOperator rune
 
 const (
