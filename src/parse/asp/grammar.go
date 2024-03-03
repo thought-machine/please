@@ -291,37 +291,37 @@ const (
 	// Add etc are arithmetic operators - these are implemented on a per-type basis
 	Add Operator = '+'
 	// Subtract implements binary - (only works on integers)
-	Subtract = '-'
+	Subtract Operator = '-'
 	// Multiply implements multiplication between two types
-	Multiply = '×'
+	Multiply Operator = '×'
 	// Divide implements division, currently only between integers
-	Divide = '÷'
+	Divide Operator = '÷'
 	// Modulo implements % (including string interpolation)
-	Modulo = '%'
+	Modulo Operator = '%'
 	// LessThan implements <
-	LessThan = '<'
+	LessThan Operator = '<'
 	// GreaterThan implements >
-	GreaterThan = '>'
+	GreaterThan Operator = '>'
 	// LessThanOrEqual implements <=
-	LessThanOrEqual = '≤'
+	LessThanOrEqual Operator = '≤'
 	// GreaterThanOrEqual implements >=
-	GreaterThanOrEqual = '≥'
+	GreaterThanOrEqual Operator = '≥'
 	// Equal etc are comparison operators - also on a per-type basis but have slightly different rules.
-	Equal = '＝'
+	Equal Operator = '＝'
 	// NotEqual implements !=
-	NotEqual = '≠'
+	NotEqual Operator = '≠'
 	// In implements the in operator
-	In = '∈'
+	In Operator = '∈'
 	// NotIn implements "not in" as a single operator.
-	NotIn = '∉'
+	NotIn Operator = '∉'
 	// Union implements the | or binary or operator, which is only used for dict unions.
-	Union = '∪'
+	Union Operator = '∪'
 	// Is implements type identity.
-	Is = '≡'
+	Is Operator = '≡'
 	// IsNot is the inverse of Is.
-	IsNot = '≢'
+	IsNot Operator = '≢'
 	// Index is used in the parser, but not when parsing code.
-	Index = '['
+	Index Operator = '['
 )
 
 // String implements the fmt.Stringer interface. It is not especially efficient and is
@@ -375,7 +375,7 @@ type LogicalOperator rune
 
 const (
 	And LogicalOperator = '&'
-	Or                  = '∨'
+	Or  LogicalOperator = '∨'
 )
 
 func (o LogicalOperator) String() string {
