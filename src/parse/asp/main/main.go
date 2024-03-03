@@ -183,6 +183,10 @@ func cleanup(ast string) string {
 	r = regexp.MustCompile(`(?m)^.*\(<nil>\),?\n`)
 	ast = r.ReplaceAllString(ast, "")
 	r = regexp.MustCompile(`(?m)^.*\) <nil>,?\n`)
+	ast = r.ReplaceAllString(ast, "")
+	r = regexp.MustCompile(`(?m)^.*\(bool\) false,?\n`)
+	ast = r.ReplaceAllString(ast, "")
+	r = regexp.MustCompile(`(?m)^.*\(string\) "",?\n`)
 	return r.ReplaceAllString(ast, "")
 }
 

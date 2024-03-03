@@ -624,7 +624,7 @@ func (s *scope) interpretOps(obj pyObject, ops []OpExpression) pyObject {
 		return s.interpretOpExpr(obj, ops[0])
 	}
 	// Multiple operators, need to take precedence into account
-	if ops[0].Op.Precedence() <= ops[1].Op.Precedence() {
+	if ops[0].Op.Precedence() >= ops[1].Op.Precedence() {
 		// The next operator is not higher than us so we can evaluate one more expression
 		return s.interpretOps(s.interpretOpExpr(obj, ops[0]), ops[1:])
 	}
