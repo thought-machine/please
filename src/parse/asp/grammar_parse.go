@@ -415,9 +415,15 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 			}
 			o.Expr = p.parseUnconditionalExpression()
 			e.Op = append(e.Op, o)
+			// Hoist further operators of the child expression so we can do precedence properly
 			if len(o.Expr.Op) > 0 {
 				e.Op = append(e.Op, o.Expr.Op...)
 				o.Expr.Op = nil
+			}
+			// Similarly for logical operators
+			if e.Op[0].Expr.Logical != nil {
+				e.Logical = e.Op[0].Expr.Logical
+				e.Op[0].Expr.Logical = nil
 			}
 		}
 	}
