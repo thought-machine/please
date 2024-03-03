@@ -833,14 +833,3 @@ func TestFStringIncompleteError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Unterminated brace in fstring")
 }
-
-// Check the precedence covers every (non-logical) operator
-func TestPrecedenceOrderIsComplete(t *testing.T) {
-	prec := map[string]Operator{}
-	for _, level := range precedence {
-		for _, op := range level {
-			prec[op.String()] = op
-		}
-	}
-	assert.Equal(t, operators, prec)
-}

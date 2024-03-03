@@ -621,30 +621,37 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 func (s *scope) interpretOps(obj pyObject, ops []OpExpression) pyObject {
 	// Quick short circuit if there's only one operator
 	if len(ops) == 1 {
-		return s.interpretOp(obj, ops[0])
+		return s.interpretOpExpr(obj, ops[0])
 	}
 	// Multiple operators, need to take precedence into account
-	for _, op := range ops {
-		obj = s.interpretOp(obj, op)
+	if ops[0].Op.Precedence() <= ops[1].Op.Precedence() {
+		// The next operator is not higher than us so we can evaluate one more expression
+		return s.interpretOps(s.interpretOpExpr(obj, ops[0]), ops[1:])
 	}
-	return obj
+	// Next operator does have higher precedence so we do that first
+	nobj := s.interpretOps(s.interpretExpression(ops[0].Expr), ops[1:])
+	return s.interpretOp(obj, nobj, ops[0].Op)
 }
 
-func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
-	switch op.Op {
+func (s *scope) interpretOpExpr(obj pyObject, op OpExpression) pyObject {
+	return s.interpretOp(obj, s.interpretExpression(op.Expr), op.Op)
+}
+
+func (s *scope) interpretOp(obj, operand pyObject, op Operator) pyObject {
+	switch op {
 	case Equal:
-		return newPyBool(reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
+		return newPyBool(reflect.DeepEqual(obj, operand))
 	case NotEqual:
-		return newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
+		return newPyBool(!reflect.DeepEqual(obj, operand))
 	case Is:
-		return s.interpretIs(obj, op)
+		return s.interpretIs(obj, operand)
 	case IsNot:
-		return s.negate(s.interpretIs(obj, op))
+		return s.negate(s.interpretIs(obj, operand))
 	case In, NotIn:
 		// the implementation of in is defined by the right-hand side, not the left.
-		return s.interpretExpression(op.Expr).Operator(op.Op, obj)
+		return operand.Operator(op, obj)
 	default:
-		return obj.Operator(op.Op, s.interpretExpression(op.Expr))
+		return obj.Operator(op, operand)
 	}
 }
 
@@ -681,15 +688,14 @@ func (s *scope) interpretJoin(base string, list *List) pyObject {
 	return pyString(b.String())
 }
 
-func (s *scope) interpretIs(obj pyObject, op OpExpression) pyObject {
+func (s *scope) interpretIs(obj, operand pyObject) pyObject {
 	// Is only works None or boolean types.
-	expr := s.interpretExpression(op.Expr)
 	switch tobj := obj.(type) {
 	case pyNone:
-		_, ok := expr.(pyNone)
+		_, ok := operand.(pyNone)
 		return newPyBool(ok)
 	case pyBool:
-		b, ok := expr.(pyBool)
+		b, ok := operand.(pyBool)
 		return newPyBool(ok && b == tobj)
 	default:
 		return newPyBool(false)

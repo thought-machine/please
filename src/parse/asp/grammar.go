@@ -335,6 +335,21 @@ func (o Operator) String() string {
 	return "unknown"
 }
 
+// Precedence returns the precedence of this operator (higher number == more tightly binding)
+// The value has no particular meaning other than to compare
+func (o Operator) Precedence() int {
+	switch o {
+	case Multiply, Divide, Modulo:
+		return 3
+	case Add, Subtract:
+		return 2
+	case Union:
+		return 1
+	default:
+		return 0
+	}
+}
+
 var operators = map[string]Operator{
 	"+":      Add,
 	"-":      Subtract,
@@ -352,15 +367,6 @@ var operators = map[string]Operator{
 	">=":     GreaterThanOrEqual,
 	"<=":     LessThanOrEqual,
 	"|":      Union,
-}
-
-// Precedence of operators, from highest to lowest
-// When equal, operators are evaluated left-to-right.
-var precedence = [4][]Operator{
-	{Multiply, Divide, Modulo},
-	{Add, Subtract},
-	{Union},
-	{LessThan, GreaterThan, Is, IsNot, In, NotIn, Equal, NotEqual, GreaterThanOrEqual, LessThanOrEqual},
 }
 
 // A LogicalOperator defines a logical binary operator
