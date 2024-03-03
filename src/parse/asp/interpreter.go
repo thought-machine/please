@@ -253,7 +253,7 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 			expr.optimised = &optimisedExpression{Constant: constant} // Extract constant expression
 			expr.Val = nil
 			return false
-		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && len(expr.Val.Slices) == 0 {
+		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.Logical == nil && expr.If == nil && len(expr.Val.Slices) == 0 {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
 				expr.optimised = &optimisedExpression{Local: expr.Val.Ident.Name}
 				return false
@@ -1001,7 +1001,7 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	// but it's rare that people would write something of that nature in this language.
 	if expr.optimised != nil && expr.optimised.Constant != nil {
 		return expr.optimised.Constant
-	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
+	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.Logical != nil || expr.If != nil {
 		return nil
 	} else if expr.Val.True || expr.Val.False || expr.Val.None || expr.Val.IsInt || expr.Val.String != "" {
 		return s.interpretValueExpression(expr.Val)
