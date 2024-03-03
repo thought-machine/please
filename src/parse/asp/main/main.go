@@ -179,7 +179,11 @@ func cleanup(ast string) string {
 	r = regexp.MustCompile(`String: "\\"(.*)\\"",`)
 	ast = r.ReplaceAllString(ast, `String: "$1",`)
 	r = regexp.MustCompile(`: \(len=[0-9]+\) "`)
-	return r.ReplaceAllString(ast, `: "`)
+	ast = r.ReplaceAllString(ast, `: "`)
+	r = regexp.MustCompile(`(?m)^.*\(<nil>\),?\n`)
+	ast = r.ReplaceAllString(ast, "")
+	r = regexp.MustCompile(`(?m)^.*\) <nil>,?\n`)
+	return r.ReplaceAllString(ast, "")
 }
 
 func mustLoadBuildDefsDir(state *core.BuildState, dirname string) {
