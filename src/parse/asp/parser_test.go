@@ -247,8 +247,8 @@ func TestIfStatement(t *testing.T) {
 	ifs := statements[0].If
 	assert.NotNil(t, ifs)
 	assert.Equal(t, "condition_a", ifs.Condition.Val.Ident.Name)
-	assert.Equal(t, And, ifs.Condition.Op[0].Op)
-	assert.Equal(t, "condition_b", ifs.Condition.Op[0].Expr.Val.Ident.Name)
+	assert.Equal(t, And, ifs.Condition.Logical.Op)
+	assert.Equal(t, "condition_b", ifs.Condition.Logical.Expr.Val.Ident.Name)
 	assert.Equal(t, 1, len(ifs.Statements))
 	assert.Equal(t, "genrule", ifs.Statements[0].Ident.Name)
 
