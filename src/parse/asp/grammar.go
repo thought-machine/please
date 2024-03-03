@@ -101,7 +101,7 @@ type Expression struct {
 	UnaryOp   *UnaryOp
 	Val       *ValueExpression
 	Op        []OpExpression
-	Logical   []LogicalOpExpression
+	Logical   *LogicalOpExpression
 	If        *InlineIf
 	optimised *optimisedExpression
 }
@@ -129,7 +129,7 @@ type OpExpression struct {
 	Expr *Expression
 }
 
-// A LogicalOpExpression is a logical operator combined with its following expression
+// A LogicalOpExpression is a logical operator combined with its following expression.
 type LogicalOpExpression struct {
 	Op   LogicalOperator
 	Expr Expression
@@ -359,7 +359,7 @@ type LogicalOperator rune
 
 const (
 	And LogicalOperator = '&'
-	Or = '∨'
+	Or                  = '∨'
 )
 
 func (o LogicalOperator) String() string {

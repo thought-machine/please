@@ -606,36 +606,45 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 			obj = pyInt(-int(i))
 		}
 	}
-	// Quick short circuit if there's only one operator
-	if len(expr.Op) == 1 {
-
+	if len(expr.Op) > 0 {
+		obj = s.interpretOps(obj, expr.Op)
 	}
+	if expr.Logical != nil {
+		// Careful here to mimic lazy-evaluation semantics (import for `x = x or []` etc)
+		if obj.IsTruthy() == (expr.Logical.Op == And) {
+			obj = s.interpretExpression(&expr.Logical.Expr)
+		}
+	}
+	return obj
+}
 
-	for _, op := range expr.Op {
+func (s *scope) interpretOps(obj pyObject, ops []OpExpression) pyObject {
+	// Quick short circuit if there's only one operator
+	if len(ops) == 1 {
+		return s.interpretOp(obj, ops[0])
+	}
+	// Multiple operators, need to take precedence into account
+	for _, op := range ops {
+		obj = s.interpretOp(obj, op)
 	}
 	return obj
 }
 
 func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
 	switch op.Op {
-	case And, Or:
-		// Careful here to mimic lazy-evaluation semantics (import for `x = x or []` etc)
-		if obj.IsTruthy() == (op.Op == And) {
-			obj = s.interpretExpression(op.Expr)
-		}
 	case Equal:
-		obj = newPyBool(reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
+		return newPyBool(reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 	case NotEqual:
-		obj = newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
+		return newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 	case Is:
-		obj = s.interpretIs(obj, op)
+		return s.interpretIs(obj, op)
 	case IsNot:
-		obj = s.negate(s.interpretIs(obj, op))
+		return s.negate(s.interpretIs(obj, op))
 	case In, NotIn:
 		// the implementation of in is defined by the right-hand side, not the left.
-		obj = s.interpretExpression(op.Expr).Operator(op.Op, obj)
+		return s.interpretExpression(op.Expr).Operator(op.Op, obj)
 	default:
-		obj = obj.Operator(op.Op, s.interpretExpression(op.Expr))
+		return obj.Operator(op.Op, s.interpretExpression(op.Expr))
 	}
 }
 
