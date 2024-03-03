@@ -98,7 +98,6 @@ type Argument struct {
 type Expression struct {
 	Pos       Position
 	EndPos    Position
-	UnaryOp   *UnaryOp
 	Val       *ValueExpression
 	Op        []OpExpression
 	If        *InlineIf
@@ -161,12 +160,6 @@ type FString struct {
 type FStringVar struct {
 	Prefix string   // Preceding string bit
 	Var    []string // Variable name to interpolate, plus any accessors
-}
-
-// A UnaryOp represents a unary operation - in our case the only ones we support are negation and not.
-type UnaryOp struct {
-	Op   string
-	Expr ValueExpression
 }
 
 // An IdentStatement implements a statement that begins with an identifier (i.e. anything that
@@ -291,6 +284,8 @@ const (
 	Divide Operator = '÷'
 	// Modulo implements % (including string interpolation)
 	Modulo Operator = '%'
+	// Negate is the unary negation operator (not exactly the same as Subtract)
+	Negate Operator = '−'
 	// LessThan implements <
 	LessThan Operator = '<'
 	// GreaterThan implements >
@@ -311,6 +306,8 @@ const (
 	And Operator = '&'
 	// Or implements the or operator
 	Or Operator = '∨'
+	// Not implements the logical not operator (distinct from 'not in' or 'is not')
+	Not Operator = '!'
 	// Union implements the | or binary or operator, which is only used for dict unions.
 	Union Operator = '∪'
 	// Is implements type identity.
@@ -336,16 +333,20 @@ func (o Operator) String() string {
 // The value has no particular meaning other than to compare
 func (o Operator) Precedence() int {
 	switch o {
+	case Negate:
+		return 4
 	case Multiply, Divide, Modulo:
 		return 3
 	case Add, Subtract:
 		return 2
 	case Union:
 		return 1
-	case And:
+	case Not:
 		return -1
-	case Or:
+	case And:
 		return -2
+	case Or:
+		return -3
 	default:
 		return 0
 	}

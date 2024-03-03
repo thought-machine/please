@@ -375,15 +375,14 @@ func (p *parser) parseUnconditionalExpression() *Expression {
 }
 
 func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
-	if tok := p.l.Peek(); tok.Type == '-' || tok.Value == "not" {
+	if tok := p.l.Peek(); tok.Type == '-' {
 		p.l.Next()
-		e.UnaryOp = &UnaryOp{
-			Op:   tok.Value,
-			Expr: *p.parseValueExpression(),
-		}
-	} else {
-		e.Val = p.parseValueExpression()
+		e.Op = append(e.Op, OpExpression{Op: Negate})
+	} else if tok.Value == "not" {
+		p.l.Next()
+		e.Op = append(e.Op, OpExpression{Op: Not})
 	}
+	e.Val = p.parseValueExpression()
 	tok := p.l.Peek()
 	if tok.Value == "not" {
 		// Hack for "not in" which needs an extra token.
