@@ -253,7 +253,7 @@ func (i *interpreter) optimiseExpressions(stmts []*Statement) {
 			expr.optimised = &optimisedExpression{Constant: constant} // Extract constant expression
 			expr.Val = nil
 			return false
-		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.Logical == nil && expr.If == nil && len(expr.Val.Slices) == 0 {
+		} else if expr.Val != nil && expr.Val.Ident != nil && expr.Val.Call == nil && expr.Op == nil && expr.If == nil && len(expr.Val.Slices) == 0 {
 			if expr.Val.Property == nil && len(expr.Val.Ident.Action) == 0 {
 				expr.optimised = &optimisedExpression{Local: expr.Val.Ident.Name}
 				return false
@@ -609,49 +609,51 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 	if len(expr.Op) > 0 {
 		obj = s.interpretOps(obj, expr.Op)
 	}
-	if expr.Logical != nil {
-		// Careful here to mimic lazy-evaluation semantics (import for `x = x or []` etc)
-		if obj.IsTruthy() == (expr.Logical.Op == And) {
-			obj = s.interpretExpression(&expr.Logical.Expr)
-		}
-	}
 	return obj
 }
 
 func (s *scope) interpretOps(obj pyObject, ops []OpExpression) pyObject {
 	// Quick short circuit if there's only one operator
 	if len(ops) == 1 {
-		return s.interpretOpExpr(obj, ops[0])
+		return s.interpretOp(obj, ops[0])
 	}
 	// Multiple operators, need to take precedence into account
 	if ops[0].Op.Precedence() >= ops[1].Op.Precedence() {
 		// The next operator is not higher than us so we can evaluate one more expression
-		return s.interpretOps(s.interpretOpExpr(obj, ops[0]), ops[1:])
+		return s.interpretOps(s.interpretOp(obj, ops[0]), ops[1:])
 	}
-	// Next operator does have higher precedence so we do that first
+	// Next operator does have higher precedence so we do that first, unless we short-circuit
+	if ops[0].Op.Lazy() && obj.IsTruthy() != (ops[0].Op == And) {
+		return obj
+	}
 	nobj := s.interpretOps(s.interpretExpression(ops[0].Expr), ops[1:])
-	return s.interpretOp(obj, nobj, ops[0].Op)
+	return s.interpretOp(obj, OpExpression{
+		Op:   ops[0].Op,
+		Expr: &Expression{optimised: &optimisedExpression{Constant: nobj}},
+	})
 }
 
-func (s *scope) interpretOpExpr(obj pyObject, op OpExpression) pyObject {
-	return s.interpretOp(obj, s.interpretExpression(op.Expr), op.Op)
-}
-
-func (s *scope) interpretOp(obj, operand pyObject, op Operator) pyObject {
-	switch op {
+func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
+	switch op.Op {
+	case And, Or:
+		// Careful here to mimic lazy-evaluation semantics (import for `x = x or []` etc)
+		if obj.IsTruthy() == (op.Op == And) {
+			obj = s.interpretExpression(op.Expr)
+		}
+		return obj
 	case Equal:
-		return newPyBool(reflect.DeepEqual(obj, operand))
+		return newPyBool(reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 	case NotEqual:
-		return newPyBool(!reflect.DeepEqual(obj, operand))
+		return newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 	case Is:
-		return s.interpretIs(obj, operand)
+		return s.interpretIs(obj, op)
 	case IsNot:
-		return s.negate(s.interpretIs(obj, operand))
+		return s.negate(s.interpretIs(obj, op))
 	case In, NotIn:
 		// the implementation of in is defined by the right-hand side, not the left.
-		return operand.Operator(op, obj)
+		return s.interpretExpression(op.Expr).Operator(op.Op, obj)
 	default:
-		return obj.Operator(op, operand)
+		return obj.Operator(op.Op, s.interpretExpression(op.Expr))
 	}
 }
 
@@ -688,8 +690,9 @@ func (s *scope) interpretJoin(base string, list *List) pyObject {
 	return pyString(b.String())
 }
 
-func (s *scope) interpretIs(obj, operand pyObject) pyObject {
+func (s *scope) interpretIs(obj pyObject, op OpExpression) pyObject {
 	// Is only works None or boolean types.
+	operand := s.interpretExpression(op.Expr)
 	switch tobj := obj.(type) {
 	case pyNone:
 		_, ok := operand.(pyNone)
@@ -1001,7 +1004,7 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	// but it's rare that people would write something of that nature in this language.
 	if expr.optimised != nil && expr.optimised.Constant != nil {
 		return expr.optimised.Constant
-	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.Logical != nil || expr.If != nil {
+	} else if expr.Val == nil || len(expr.Val.Slices) != 0 || expr.Val.Property != nil || expr.Val.Call != nil || expr.Op != nil || expr.If != nil {
 		return nil
 	} else if expr.Val.True || expr.Val.False || expr.Val.None || expr.Val.IsInt || expr.Val.String != "" {
 		return s.interpretValueExpression(expr.Val)

@@ -385,46 +385,31 @@ func (p *parser) parseUnconditionalExpressionInPlace(e *Expression) {
 		e.Val = p.parseValueExpression()
 	}
 	tok := p.l.Peek()
-	if tok.Value == "and" || tok.Value == "or" {
+	if tok.Value == "not" {
+		// Hack for "not in" which needs an extra token.
 		p.l.Next()
-		lo := &LogicalOpExpression{Op: And}
-		if tok.Value == "or" {
-			lo.Op = Or
+		tok = p.l.Peek()
+		p.assert(tok.Value == "in", tok, "expected 'in', not %s", tok.Value)
+		tok.Value = "not in"
+		p.endPos = tok.EndPos()
+	}
+	if op, present := operators[tok.Value]; present {
+		p.l.Next()
+		o := OpExpression{Op: op}
+		if op == Is {
+			if tok := p.l.Peek(); tok.Value == "not" {
+				// Mild hack for "is not" which needs to become a single operator.
+				o.Op = IsNot
+				p.endPos = tok.EndPos()
+				p.l.Next()
+			}
 		}
-		p.parseUnconditionalExpressionInPlace(&lo.Expr)
-		e.Logical = lo
-	} else {
-		if tok.Value == "not" {
-			// Hack for "not in" which needs an extra token.
-			p.l.Next()
-			tok = p.l.Peek()
-			p.assert(tok.Value == "in", tok, "expected 'in', not %s", tok.Value)
-			tok.Value = "not in"
-			p.endPos = tok.EndPos()
-		}
-		if op, present := operators[tok.Value]; present {
-			p.l.Next()
-			o := OpExpression{Op: op}
-			if op == Is {
-				if tok := p.l.Peek(); tok.Value == "not" {
-					// Mild hack for "is not" which needs to become a single operator.
-					o.Op = IsNot
-					p.endPos = tok.EndPos()
-					p.l.Next()
-				}
-			}
-			o.Expr = p.parseUnconditionalExpression()
-			e.Op = append(e.Op, o)
-			// Hoist further operators of the child expression so we can do precedence properly
-			if len(o.Expr.Op) > 0 {
-				e.Op = append(e.Op, o.Expr.Op...)
-				o.Expr.Op = nil
-			}
-			// Similarly for logical operators
-			if e.Op[0].Expr.Logical != nil {
-				e.Logical = e.Op[0].Expr.Logical
-				e.Op[0].Expr.Logical = nil
-			}
+		o.Expr = p.parseUnconditionalExpression()
+		e.Op = append(e.Op, o)
+		// Hoist further operators of the child expression so we can do precedence properly
+		if len(o.Expr.Op) > 0 {
+			e.Op = append(e.Op, o.Expr.Op...)
+			o.Expr.Op = nil
 		}
 	}
 }

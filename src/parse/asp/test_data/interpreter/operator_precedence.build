@@ -8,3 +8,5 @@ g = 4 / 1 + 1
 h = 4 / (1 + 1)
 i = '' or 'b' + 'c'
 j = 'a' or 'b' + 'c'
+k = 0 and 0 or 1
+l = 1 or 0 and 0

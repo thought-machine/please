@@ -101,7 +101,6 @@ type Expression struct {
 	UnaryOp   *UnaryOp
 	Val       *ValueExpression
 	Op        []OpExpression
-	Logical   *LogicalOpExpression
 	If        *InlineIf
 	optimised *optimisedExpression
 }
@@ -127,12 +126,6 @@ type optimisedJoin struct {
 type OpExpression struct {
 	Op   Operator
 	Expr *Expression
-}
-
-// A LogicalOpExpression is a logical operator combined with its following expression.
-type LogicalOpExpression struct {
-	Op   LogicalOperator
-	Expr Expression
 }
 
 // A ValueExpression is the value part of an expression, i.e. without surrounding operators.
@@ -314,6 +307,10 @@ const (
 	In Operator = '∈'
 	// NotIn implements "not in" as a single operator.
 	NotIn Operator = '∉'
+	// And etc are logical operators - these are implemented type-independently
+	And Operator = '&'
+	// Or implements the or operator
+	Or = '∨'
 	// Union implements the | or binary or operator, which is only used for dict unions.
 	Union Operator = '∪'
 	// Is implements type identity.
@@ -345,9 +342,18 @@ func (o Operator) Precedence() int {
 		return 2
 	case Union:
 		return 1
+	case And:
+		return -1
+	case Or:
+		return -2
 	default:
 		return 0
 	}
+}
+
+// Lazy returns true if the operand of this operator should be lazily evaluated (e.g. and, or)
+func (o Operator) Lazy() bool {
+	return o == And || o == Or
 }
 
 var operators = map[string]Operator{
@@ -358,6 +364,8 @@ var operators = map[string]Operator{
 	"%":      Modulo,
 	"<":      LessThan,
 	">":      GreaterThan,
+	"and":    And,
+	"or":     Or,
 	"is":     Is,
 	"is not": IsNot,
 	"in":     In,
@@ -367,20 +375,4 @@ var operators = map[string]Operator{
 	">=":     GreaterThanOrEqual,
 	"<=":     LessThanOrEqual,
 	"|":      Union,
-}
-
-// A LogicalOperator defines a logical binary operator
-// These are separate from other operators because they short-circuit
-type LogicalOperator rune
-
-const (
-	And LogicalOperator = '&'
-	Or  LogicalOperator = '∨'
-)
-
-func (o LogicalOperator) String() string {
-	if o == And {
-		return "and"
-	}
-	return "or"
 }
