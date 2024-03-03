@@ -310,7 +310,7 @@ const (
 	// And etc are logical operators - these are implemented type-independently
 	And Operator = '&'
 	// Or implements the or operator
-	Or = '∨'
+	Or Operator = '∨'
 	// Union implements the | or binary or operator, which is only used for dict unions.
 	Union Operator = '∪'
 	// Is implements type identity.
