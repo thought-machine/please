@@ -326,6 +326,9 @@ func (o Operator) String() string {
 			return k
 		}
 	}
+	if o == Negate {
+		return "-" // Can't have both this and Subtract in the map
+	}
 	return "unknown"
 }
 
@@ -376,4 +379,5 @@ var operators = map[string]Operator{
 	">=":     GreaterThanOrEqual,
 	"<=":     LessThanOrEqual,
 	"|":      Union,
+	"not":    Not,
 }
