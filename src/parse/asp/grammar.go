@@ -284,41 +284,41 @@ const (
 	// Add etc are arithmetic operators - these are implemented on a per-type basis
 	Add Operator = '+'
 	// Subtract implements binary - (only works on integers)
-	Subtract = '-'
+	Subtract Operator = '-'
 	// Multiply implements multiplication between two types
-	Multiply = '×'
+	Multiply Operator = '×'
 	// Divide implements division, currently only between integers
-	Divide = '÷'
+	Divide Operator = '÷'
 	// Modulo implements % (including string interpolation)
-	Modulo = '%'
+	Modulo Operator = '%'
 	// LessThan implements <
-	LessThan = '<'
+	LessThan Operator = '<'
 	// GreaterThan implements >
-	GreaterThan = '>'
+	GreaterThan Operator = '>'
 	// LessThanOrEqual implements <=
-	LessThanOrEqual = '≤'
+	LessThanOrEqual Operator = '≤'
 	// GreaterThanOrEqual implements >=
-	GreaterThanOrEqual = '≥'
+	GreaterThanOrEqual Operator = '≥'
 	// Equal etc are comparison operators - also on a per-type basis but have slightly different rules.
-	Equal = '＝'
+	Equal Operator = '＝'
 	// NotEqual implements !=
-	NotEqual = '≠'
+	NotEqual Operator = '≠'
 	// In implements the in operator
-	In = '∈'
+	In Operator = '∈'
 	// NotIn implements "not in" as a single operator.
-	NotIn = '∉'
+	NotIn Operator = '∉'
 	// And etc are logical operators - these are implemented type-independently
 	And Operator = '&'
 	// Or implements the or operator
-	Or = '∨'
+	Or Operator = '∨'
 	// Union implements the | or binary or operator, which is only used for dict unions.
-	Union = '∪'
+	Union Operator = '∪'
 	// Is implements type identity.
-	Is = '≡'
+	Is Operator = '≡'
 	// IsNot is the inverse of Is.
-	IsNot = '≢'
+	IsNot Operator = '≢'
 	// Index is used in the parser, but not when parsing code.
-	Index = '['
+	Index Operator = '['
 )
 
 // String implements the fmt.Stringer interface. It is not especially efficient and is
@@ -330,6 +330,30 @@ func (o Operator) String() string {
 		}
 	}
 	return "unknown"
+}
+
+// Precedence returns the precedence of this operator (higher number == more tightly binding)
+// The value has no particular meaning other than to compare
+func (o Operator) Precedence() int {
+	switch o {
+	case Multiply, Divide, Modulo:
+		return 3
+	case Add, Subtract:
+		return 2
+	case Union:
+		return 1
+	case And:
+		return -1
+	case Or:
+		return -2
+	default:
+		return 0
+	}
+}
+
+// Lazy returns true if the operand of this operator should be lazily evaluated (e.g. and, or)
+func (o Operator) Lazy() bool {
+	return o == And || o == Or
 }
 
 var operators = map[string]Operator{

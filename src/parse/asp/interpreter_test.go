@@ -667,3 +667,20 @@ func TestLogConfigVariable(t *testing.T) {
 
 	assert.Equal(t, `//: {"baz": 6, "foo": bar}`, capturedOutput)
 }
+
+func TestOperatorPrecedence(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/operator_precedence.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, 15, s.Lookup("a"))
+	assert.EqualValues(t, 53, s.Lookup("b"))
+	assert.EqualValues(t, 32, s.Lookup("c"))
+	assert.EqualValues(t, False, s.Lookup("d"))
+	assert.EqualValues(t, False, s.Lookup("e"))
+	assert.EqualValues(t, True, s.Lookup("f"))
+	assert.EqualValues(t, 5, s.Lookup("g"))
+	assert.EqualValues(t, 2, s.Lookup("h"))
+	assert.EqualValues(t, "bc", s.Lookup("i"))
+	assert.EqualValues(t, "a", s.Lookup("j"))
+	assert.EqualValues(t, 1, s.Lookup("k"))
+	assert.EqualValues(t, 1, s.Lookup("l"))
+}
