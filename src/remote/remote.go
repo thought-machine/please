@@ -658,7 +658,7 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 		}
 	}
 	// We didn't actually upload the inputs before, so we must do so now.
-	command, digest, err := c.uploadAction(target, isTest, false, 0)
+	command, digest, err := c.uploadAction(target, isTest, false, run)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
