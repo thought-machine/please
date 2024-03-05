@@ -396,7 +396,10 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		if cache.shouldClean(name, isDir) {
 			if size, marked := cache.isMarked(path); marked {
 				totalSize += size
-				return filepath.SkipDir // Already handled
+				if !cache.Compress {
+					return filepath.SkipDir // Already handled
+				}
+				return nil // Need to keep walking if we are dealing with compressed files
 			}
 			size, err := findSize(path)
 			if err != nil {
@@ -412,7 +415,9 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 				Atime: atime.Get(info).Unix(),
 			})
 			totalSize += size
-			return filepath.SkipDir
+			if !cache.Compress {
+				return filepath.SkipDir
+			}
 		}
 		return nil // nothing particularly to do for other entries
 	}); err != nil {
