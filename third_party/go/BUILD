@@ -222,7 +222,7 @@ go_repo(
 
 go_repo(
     module = "github.com/google/go-cmp",
-    version = "v0.5.9",
+    version = "v0.6.0",
 )
 
 go_repo(
@@ -433,7 +433,7 @@ go_repo(
 go_repo(
     module = "github.com/golang/glog",
     patch = ["glog_disable.patch"],
-    version = "v1.1.0",
+    version = "v1.2.0",
 )
 
 go_repo(
