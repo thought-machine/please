@@ -4,6 +4,7 @@ Version 17.8.1
     * `plz query inputs` now outputs in sorted order, and doesn't output intermediate targets from subrepos (#3073)
     * Some fixes to operator precedence (#3088)
     * Test runs are correctly set for remote execution (#3090)
+    * Fix calculation of cache size when using compression (#3055)
 
 Version 17.8.0
 --------------
