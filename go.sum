@@ -268,6 +268,8 @@ github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1
 github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/XSXhF0NWZEnDohbsk=
 github.com/jstemmer/go-junit-report/v2 v2.0.0 h1:bMZNO9B16VFn07tKyi4YJFIbZtVmJaa5Xakv9dcwK58=
 github.com/jstemmer/go-junit-report/v2 v2.0.0/go.mod h1:mgHVr7VUo5Tn8OLVr1cKnLuEy0M92wdRntM99h7RkgQ=
+github.com/jstemmer/go-junit-report/v2 v2.1.0 h1:X3+hPYlSczH9IMIpSC9CQSZA0L+BipYafciZUWHEmsc=
+github.com/jstemmer/go-junit-report/v2 v2.1.0/go.mod h1:mgHVr7VUo5Tn8OLVr1cKnLuEy0M92wdRntM99h7RkgQ=
 github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a/go.mod h1:UJSiEoRfvx3hP73CvoARgeLjaIOjybY9vj8PUPPFGeU=
 github.com/juju/ansiterm v0.0.0-20210706145210-9283cdf370b5 h1:Q5klzs6BL5FkassBX65t+KkG0XjYcjxEm+GNcQAsuaw=
 github.com/juju/ansiterm v0.0.0-20210706145210-9283cdf370b5/go.mod h1:UJSiEoRfvx3hP73CvoARgeLjaIOjybY9vj8PUPPFGeU=

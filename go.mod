@@ -19,7 +19,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.2
-	github.com/jstemmer/go-junit-report/v2 v2.0.0
+	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/karrick/godirwalk v1.16.1
 	github.com/manifoldco/promptui v0.8.0
 	github.com/peterebden/go-cli-init/v5 v5.2.0
