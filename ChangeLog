@@ -1,3 +1,10 @@
+Version 17.8.1
+--------------
+    * Allow lists to be passed to subinclude() (#3080)
+    * `plz query inputs` now outputs in sorted order, and doesn't output intermediate targets from subrepos (#3073)
+    * Some fixes to operator precedence (#3088)
+    * Test runs are correctly set for remote execution (#3090)
+
 Version 17.8.0
 --------------
     * Add a --ignore_unknown flag to query whatinputs (#3057)
