@@ -346,12 +346,10 @@ func TestUnaryOp(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(statements))
 
-	assert.NotNil(t, statements[0].Ident.Action.Assign.UnaryOp)
-	assert.Equal(t, "-", statements[0].Ident.Action.Assign.UnaryOp.Op)
-	assert.Equal(t, "len", statements[0].Ident.Action.Assign.UnaryOp.Expr.Ident.Name)
-	assert.NotNil(t, statements[1].Ident.Action.Assign.UnaryOp)
-	assert.Equal(t, "not", statements[1].Ident.Action.Assign.UnaryOp.Op)
-	assert.Equal(t, "x", statements[1].Ident.Action.Assign.UnaryOp.Expr.Ident.Name)
+	assert.EqualValues(t, []OpExpression{{Op: Negate}}, statements[0].Ident.Action.Assign.Op)
+	assert.Equal(t, "len", statements[0].Ident.Action.Assign.Val.Ident.Name)
+	assert.EqualValues(t, []OpExpression{{Op: Not}}, statements[1].Ident.Action.Assign.Op)
+	assert.Equal(t, "x", statements[1].Ident.Action.Assign.Val.Ident.Name)
 
 	// Test for Endpos
 	assert.Equal(t, 1, f.Pos(statements[0].EndPos).Line)

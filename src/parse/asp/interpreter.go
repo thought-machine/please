@@ -596,15 +596,6 @@ func (s *scope) interpretExpression(expr *Expression) pyObject {
 	var obj pyObject
 	if expr.Val != nil {
 		obj = s.interpretValueExpression(expr.Val)
-	} else if expr.UnaryOp != nil {
-		obj = s.interpretValueExpression(&expr.UnaryOp.Expr)
-		if expr.UnaryOp.Op == "not" {
-			obj = s.negate(obj)
-		} else {
-			i, ok := obj.(pyInt)
-			s.Assert(ok, "Unary - can only be applied to an integer")
-			obj = pyInt(-int(i))
-		}
 	}
 	if len(expr.Op) > 0 {
 		obj = s.interpretOps(obj, expr.Op)
@@ -641,6 +632,8 @@ func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
 			obj = s.interpretExpression(op.Expr)
 		}
 		return obj
+	case Not:
+		return s.negate(obj)
 	case Equal:
 		return newPyBool(reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
 	case NotEqual:
@@ -652,6 +645,11 @@ func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
 	case In, NotIn:
 		// the implementation of in is defined by the right-hand side, not the left.
 		return s.interpretExpression(op.Expr).Operator(op.Op, obj)
+	case Negate:
+		// Negate is a unary operator so Expr will be nil
+		i, ok := obj.(pyInt)
+		s.Assert(ok, "Unary - can only be applied to an integer")
+		return pyInt(-int(i))
 	default:
 		return obj.Operator(op.Op, s.interpretExpression(op.Expr))
 	}
