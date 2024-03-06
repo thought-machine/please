@@ -102,7 +102,7 @@ go_repo(
 
 go_repo(
     module = "github.com/please-build/gcfg",
-    version = "v1.6.1-0.20220308170049-10ea9d657afb",
+    version = "v1.7.0",
 )
 
 go_repo(
