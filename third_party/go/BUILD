@@ -272,7 +272,7 @@ go_repo(
 
 go_repo(
     module = "github.com/golang/protobuf",
-    version = "v1.5.3",
+    version = "v1.5.4",
 )
 
 go_repo(
@@ -427,7 +427,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/protobuf",
-    version = "v1.30.0",
+    version = "v1.33.0",
 )
 
 go_repo(
