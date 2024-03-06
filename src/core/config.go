@@ -83,6 +83,7 @@ func readConfigFileOnly(fs iofs.FS, config *Configuration, filename string, quie
 	} else {
 		log.Warning("Error in config file %s: %s", filename, err)
 	}
+	log.Errorf("read config %s: %s", filename, config.BuildConfig)
 	return nil
 }
 
