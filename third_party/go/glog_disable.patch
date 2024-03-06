@@ -1,20 +1,20 @@
 diff --git a/glog.go b/glog.go
-index 54bd7af..fda9853 100644
+index 8c00e73..3b1d59c 100644
 --- a/glog.go
 +++ b/glog.go
-@@ -669,6 +669,7 @@ func (l *loggingT) printWithFileLine(s severity, file string, line int, alsoToSt
- 
- // output writes the data to the log files and releases the buffer.
- func (l *loggingT) output(s severity, buf *buffer, file string, line int, alsoToStderr bool) {
+@@ -209,6 +209,7 @@ func logf(depth int, severity logsink.Severity, verbose bool, stack stack, forma
+ // ctxlogf writes a log message for a log function call (or log function wrapper)
+ // at the given depth in the current goroutine's stack.
+ func ctxlogf(ctx context.Context, depth int, severity logsink.Severity, verbose bool, stack stack, format string, args ...any) {
 +	return
- 	l.mu.Lock()
- 	if l.traceLocation.isSet() {
- 		if l.traceLocation.match(file, line) {
-@@ -997,6 +998,7 @@ type Verbose bool
- // V is at least the value of -v, or of -vmodule for the source file containing the
+ 	now := timeNow()
+ 	_, file, line, ok := runtime.Caller(depth + 1)
+ 	if !ok {
+@@ -399,6 +400,7 @@ type Verbose bool
+ // V is at most the value of -v, or of -vmodule for the source file containing the
  // call, the V call will log.
  func V(level Level) Verbose {
 +	return Verbose(false)
- 	// This function tries hard to be cheap unless there's work to do.
- 	// The fast path is two atomic loads and compares.
+ 	return VDepth(1, level)
+ }
  

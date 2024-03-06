@@ -10,6 +10,7 @@ Target = //plugins:go
 importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 FeatureFlags = go_get
+modfile = //:go_mod
 
 [Plugin "cc"]
 target = //plugins:cc
@@ -89,4 +90,4 @@ accept = ISC
 accept = notice
 
 [remote]
-url = 
+url =

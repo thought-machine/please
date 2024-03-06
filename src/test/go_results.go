@@ -30,7 +30,10 @@ func parseGoTestResults(data []byte) (core.TestSuite, error) {
 	suite := core.TestSuite{
 		Package:    pkg.Name,
 		Duration:   pkg.Duration,
-		Properties: pkg.Properties,
+		Properties: make(map[string]string, len(pkg.Properties)),
+	}
+	for _, prop := range pkg.Properties {
+		suite.Properties[prop.Name] = prop.Value
 	}
 	for _, test := range pkg.Tests {
 		execution := core.TestExecution{
