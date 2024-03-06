@@ -352,6 +352,8 @@ github.com/please-build/buildtools v0.0.0-20240110130546-746673d48318 h1:k9AJiEm
 github.com/please-build/buildtools v0.0.0-20240110130546-746673d48318/go.mod h1:vEiPuY8tSDDAeN/vtAXZVM30f+osH2lwqqdLiRWeFc4=
 github.com/please-build/gcfg v1.6.1-0.20220308170049-10ea9d657afb h1:6HKarWPya5mPR1xHqTqRNAN+Xox2jndkqVKJRJqu2V8=
 github.com/please-build/gcfg v1.6.1-0.20220308170049-10ea9d657afb/go.mod h1:qwx/xbr5eBETgfBLP9eXDgXQ5VzLQM5dIjcseh3pkVk=
+github.com/please-build/gcfg v1.7.0 h1:xaluDUfhgqnxLECBdKhPSvuF/rqgVNOzNwH5sPmVGtE=
+github.com/please-build/gcfg v1.7.0/go.mod h1:qwx/xbr5eBETgfBLP9eXDgXQ5VzLQM5dIjcseh3pkVk=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
