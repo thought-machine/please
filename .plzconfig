@@ -5,9 +5,6 @@ preloadsubincludes = ///cc//build_defs:cc
 preloadsubincludes = ///python//build_defs:python
 preloadsubincludes = ///shell//build_defs:shell
 
-[buildconfig]
-XXXX =
-
 [Plugin "go"]
 Target = //plugins:go
 importpath = github.com/thought-machine/please

@@ -21,8 +21,6 @@ plz_e2e_test(
     expected_output = "query_somepath_test.txt",
 )
 
-log.debug('%s', CONFIG.XXXX)
-
 plz_e2e_test(
     name = "query_somepath_reverse_test",
     cmd = "plz query somepath //src/fs //src:please",
