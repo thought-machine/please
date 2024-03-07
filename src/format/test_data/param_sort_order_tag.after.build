@@ -18,8 +18,9 @@ filegroup(
 
 docker_mirror(
     name = "c",
-    tag = "1.0.0",
     digest = "sha256:5d37aaee1673c45dba5ed666ae167ed3e5010ec1b5a20ee782197b66092749a0",
     src_image = "registry.example/images/c",
+    # This should sort below "src_image" (docker_mirror is not a Please built-in):
+    tag = "1.0.0",
     visibility = ["PUBLIC"],
 )
