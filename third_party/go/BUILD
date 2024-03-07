@@ -77,7 +77,7 @@ go_repo(
 
 go_repo(
     module = "github.com/stretchr/testify",
-    version = "v1.8.1",
+    version = "v1.8.4",
 )
 
 go_repo(
@@ -397,7 +397,7 @@ go_repo(
 
 go_repo(
     module = "github.com/klauspost/cpuid/v2",
-    version = "v2.0.12",
+    version = "v2.2.7",
 )
 
 go_repo(
