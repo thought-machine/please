@@ -21,7 +21,6 @@ go_library(
         "///third_party/go/github.com_google_uuid//:uuid",
         "///third_party/go/github.com_grpc-ecosystem_go-grpc-middleware//retry",
         "///third_party/go/golang.org_x_sync//errgroup",
-        "///third_party/go/google.golang.org_genproto//googleapis/rpc/status",
         "///third_party/go/google.golang.org_grpc//:grpc",
         "///third_party/go/google.golang.org_grpc//codes",
         "///third_party/go/google.golang.org_grpc//credentials",
@@ -40,6 +39,7 @@ go_library(
         "//src/metrics",
         "//src/process",
         "//src/remote/fs/cache",
+        "///third_party/go/google.golang.org_genproto_googleapis_rpc//status",
     ],
 )
 
@@ -62,8 +62,6 @@ go_test(
         "///third_party/go/github.com_peterebden_go-sri//:go-sri",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
-        "///third_party/go/google.golang.org_genproto//googleapis/bytestream",
-        "///third_party/go/google.golang.org_genproto//googleapis/rpc/status",
         "///third_party/go/google.golang.org_grpc//:grpc",
         "///third_party/go/google.golang.org_grpc//codes",
         "///third_party/go/google.golang.org_grpc//status",
@@ -73,5 +71,7 @@ go_test(
         "//src/core",
         "//src/fs",
         "//src/cache",
+        "///third_party/go/google.golang.org_genproto_googleapis_bytestream//:bytestream",
+        "///third_party/go/google.golang.org_genproto_googleapis_rpc//status",
     ],
 )

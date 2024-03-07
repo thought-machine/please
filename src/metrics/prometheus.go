@@ -56,7 +56,7 @@ func Push(config *core.Configuration) {
 
 	if err := push.New(config.Metrics.PrometheusGatewayURL, "please").
 		Client(&http.Client{Timeout: time.Duration(config.Metrics.Timeout)}).
-		Gatherer(prometheus.DefaultGatherer).Format(expfmt.FmtText).
+		Gatherer(prometheus.DefaultGatherer).Format(expfmt.NewFormat(expfmt.TypeTextPlain)).
 		Push(); err != nil {
 		log.Warning("Error pushing Prometheus metrics: %s", err)
 	}
