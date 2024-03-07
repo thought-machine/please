@@ -2,7 +2,7 @@ module github.com/thought-machine/please
 
 require (
 	cloud.google.com/go/longrunning v0.5.5
-	github.com/Masterminds/semver/v3 v3.1.1
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
 	github.com/alessio/shellescape v1.4.2
 	github.com/bazelbuild/remote-apis v0.0.0-20210718193713-0ecef08215cf
@@ -22,7 +22,7 @@ require (
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/karrick/godirwalk v1.17.0
 	github.com/manifoldco/promptui v0.8.0
-	github.com/peterebden/go-cli-init/v5 v5.2.0
+	github.com/peterebden/go-cli-init/v5 v5.2.1
 	github.com/peterebden/go-deferred-regex v1.1.0
 	github.com/peterebden/go-sri v1.1.1
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
@@ -31,7 +31,7 @@ require (
 	github.com/please-build/gcfg v1.7.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/prometheus/common v0.48.0
-	github.com/shirou/gopsutil/v3 v3.21.8
+	github.com/shirou/gopsutil/v3 v3.24.2
 	github.com/sigstore/sigstore v1.8.2
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.2
 	github.com/sourcegraph/go-diff v0.6.1
@@ -61,7 +61,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	cloud.google.com/go/kms v1.15.7 // indirect
-	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -81,6 +80,7 @@ require (
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20230907030200-6d76a0f91e1e // indirect
+	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
@@ -89,12 +89,15 @@ require (
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect
+	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
-	github.com/tklauser/go-sysconf v0.3.9 // indirect
-	github.com/tklauser/numcpus v0.3.0 // indirect
+	github.com/tklauser/go-sysconf v0.3.12 // indirect
+	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.48.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.48.0 // indirect
@@ -109,7 +112,7 @@ require (
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240304161311-37d4d3c04a78 // indirect
-	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
+	gopkg.in/go-jose/go-jose.v2 v2.6.2 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

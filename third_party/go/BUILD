@@ -57,7 +57,7 @@ go_repo(
 
 go_repo(
     module = "github.com/shirou/gopsutil/v3",
-    version = "v3.21.8",
+    version = "v3.24.2",
 )
 
 go_repo(
@@ -72,7 +72,7 @@ go_repo(
 
 go_repo(
     module = "github.com/Masterminds/semver/v3",
-    version = "v3.1.1",
+    version = "v3.2.1",
 )
 
 go_repo(
@@ -82,7 +82,7 @@ go_repo(
 
 go_repo(
     module = "github.com/peterebden/go-cli-init/v5",
-    version = "v5.2.0",
+    version = "v5.2.1",
 )
 
 go_repo(
@@ -182,7 +182,7 @@ go_repo(
 
 go_repo(
     module = "github.com/tklauser/go-sysconf",
-    version = "v0.3.9",
+    version = "v0.3.12",
 )
 
 go_repo(
@@ -202,7 +202,7 @@ go_repo(
 
 go_repo(
     module = "github.com/tklauser/numcpus",
-    version = "v0.3.0",
+    version = "v0.6.1",
 )
 
 go_repo(
@@ -594,7 +594,7 @@ go_repo(
 
 go_repo(
     module = "gopkg.in/go-jose/go-jose.v2",
-    version = "v2.6.1",
+    version = "v2.6.2",
     licences = ["Apache-2.0"],
 )
 
@@ -680,4 +680,28 @@ go_repo(
     module = "golang.org/x/time",
     version = "v0.5.0",
     licences = ["BSD-3-Clause"],
+)
+
+go_repo(
+    module = "github.com/lufia/plan9stats",
+    version = "v0.0.0-20211012122336-39d0f177ccd0",
+    licences = ["BSD-3-Clause"],
+)
+
+go_repo(
+    module = "github.com/power-devops/perfstat",
+    version = "v0.0.0-20210106213030-5aafc221ea8c",
+    licences = ["MIT"],
+)
+
+go_repo(
+    module = "github.com/shoenig/go-m1cpu",
+    version = "v0.1.6",
+    licences = ["MPL-2.0"],
+)
+
+go_repo(
+    module = "github.com/yusufpapurcu/wmi",
+    version = "v1.2.4",
+    licences = ["MIT"],
 )
