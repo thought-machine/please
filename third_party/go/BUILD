@@ -107,7 +107,7 @@ go_repo(
 
 go_repo(
     module = "github.com/ProtonMail/go-crypto",
-    version = "v1.0.0",
+    version = "v0.0.0-20210920135941-2c5829bbf927",
 )
 
 go_repo(
