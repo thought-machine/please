@@ -21,7 +21,7 @@ go_stdlib(
 
 go_repo(
     module = "github.com/please-build/buildtools",
-    version = "v0.0.0-20240110130546-746673d48318",
+    version = "v0.0.0-20240111140234-77ffe55926d9",
 )
 
 go_repo(
@@ -36,7 +36,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/tools",
-    version = "v0.18.0",
+    version = "v0.19.0",
 )
 
 go_repo(
@@ -62,12 +62,12 @@ go_repo(
 
 go_repo(
     module = "github.com/chzyer/readline",
-    version = "v0.0.0-20180603132655-2972be24d48e",
+    version = "v1.5.1",
 )
 
 go_repo(
     module = "github.com/coreos/go-semver",
-    version = "v0.3.0",
+    version = "v0.3.1",
 )
 
 go_repo(
@@ -117,7 +117,7 @@ go_repo(
 
 go_repo(
     module = "github.com/prometheus/client_model",
-    version = "v0.5.0",
+    version = "v0.6.0",
 )
 
 go_repo(
@@ -142,22 +142,22 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/oauth2",
-    version = "v0.17.0",
+    version = "v0.18.0",
 )
 
 go_repo(
     module = "github.com/google/shlex",
-    version = "v0.0.0-20181106134648-c34317bd91bf",
+    version = "v0.0.0-20191202100458-e7afc7fbc510",
 )
 
 go_repo(
     module = "github.com/mostynb/zstdpool-syncpool",
-    version = "v0.0.7",
+    version = "v0.0.13",
 )
 
 go_repo(
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20240213162025-012b6fc9bca9",
+    version = "v0.0.0-20240304212257-790db918fca8",
 )
 
 go_repo(
@@ -167,7 +167,7 @@ go_repo(
 
 go_repo(
     module = "github.com/hashicorp/go-retryablehttp",
-    version = "v0.7.2",
+    version = "v0.7.5",
 )
 
 go_repo(
@@ -182,17 +182,12 @@ go_repo(
 
 go_repo(
     module = "github.com/tklauser/go-sysconf",
-    version = "v0.3.12",
+    version = "v0.3.13",
 )
 
 go_repo(
     module = "github.com/ulikunitz/xz",
-    version = "v0.5.10",
-)
-
-go_repo(
-    module = "github.com/mattn/go-isatty",
-    version = "v0.0.16",
+    version = "v0.5.11",
 )
 
 go_repo(
@@ -202,17 +197,12 @@ go_repo(
 
 go_repo(
     module = "github.com/tklauser/numcpus",
-    version = "v0.6.1",
+    version = "v0.7.0",
 )
 
 go_repo(
     module = "github.com/prometheus/client_golang",
     version = "v1.19.0",
-)
-
-go_repo(
-    module = "github.com/lunixbochs/vtclean",
-    version = "v1.0.0",
 )
 
 go_repo(
@@ -311,11 +301,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/mattn/go-colorable",
-    version = "v0.1.13",
-)
-
-go_repo(
     module = "github.com/peterebden/go-deferred-regex",
     version = "v1.1.0",
 )
@@ -333,16 +318,6 @@ go_repo(
 go_repo(
     module = "github.com/beorn7/perks",
     version = "v1.0.1",
-)
-
-go_repo(
-    module = "github.com/juju/ansiterm",
-    requirements = [
-        "github.com/lunixbochs/vtclean",
-        "github.com/mattn/go-colorable",
-        "github.com/mattn/go-isatty",
-    ],
-    version = "v0.0.0-20210706145210-9283cdf370b5",
 )
 
 go_repo(
@@ -377,7 +352,7 @@ go_repo(
 
 go_repo(
     module = "github.com/sourcegraph/jsonrpc2",
-    version = "v0.1.0",
+    version = "v0.2.0",
 )
 
 go_repo(
@@ -438,12 +413,12 @@ go_repo(
 
 go_repo(
     module = "github.com/sourcegraph/go-lsp",
-    version = "v0.0.0-20200429204803-219e11d77f5d",
+    version = "v0.0.0-20240223163137-f80c5dd31dfd",
 )
 
 go_repo(
     module = "github.com/pkg/xattr",
-    version = "v0.4.4",
+    version = "v0.4.9",
 )
 
 go_repo(
@@ -469,7 +444,7 @@ go_repo(
 
 go_repo(
     module = "github.com/prometheus/common",
-    version = "v0.48.0",
+    version = "v0.50.0",
 )
 
 go_repo(
@@ -479,7 +454,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/api",
-    version = "v0.167.0",
+    version = "v0.168.0",
 )
 
 go_repo(
@@ -499,12 +474,12 @@ go_repo(
 
 go_repo(
     module = "github.com/prometheus/procfs",
-    version = "v0.12.0",
+    version = "v0.13.0",
 )
 
 go_repo(
     module = "github.com/manifoldco/promptui",
-    version = "v0.8.0",
+    version = "v0.9.0",
 )
 
 go_repo(
@@ -519,7 +494,7 @@ go_repo(
 
 go_repo(
     module = "github.com/letsencrypt/boulder",
-    version = "v0.0.0-20230907030200-6d76a0f91e1e",
+    version = "v0.0.0-20240306190618-9b05c38eb38a",
 )
 
 go_repo(
@@ -544,12 +519,12 @@ go_repo(
 
 go_repo(
     module = "github.com/sourcegraph/go-diff",
-    version = "v0.6.1",
+    version = "v0.7.0",
 )
 
 go_repo(
     module = "golang.org/x/exp",
-    version = "v0.0.0-20240213143201-ec583247a57a",
+    version = "v0.0.0-20240222234643-814bf88cf225",
 )
 
 go_repo(
@@ -600,13 +575,13 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/genproto/googleapis/api",
-    version = "v0.0.0-20240304161311-37d4d3c04a78",
+    version = "v0.0.0-20240304212257-790db918fca8",
     licences = ["Apache-2.0"],
 )
 
 go_repo(
     module = "google.golang.org/genproto/googleapis/bytestream",
-    version = "v0.0.0-20240213162025-012b6fc9bca9",
+    version = "v0.0.0-20240304212257-790db918fca8",
     licences = ["Apache-2.0"],
 )
 
@@ -648,31 +623,31 @@ go_repo(
 
 go_repo(
     module = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
-    version = "v0.48.0",
+    version = "v0.49.0",
     licences = ["Apache-2.0"],
 )
 
 go_repo(
     module = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-    version = "v0.48.0",
+    version = "v0.49.0",
     licences = ["Apache-2.0"],
 )
 
 go_repo(
     module = "go.opentelemetry.io/otel",
-    version = "v1.23.0",
+    version = "v1.24.0",
     licences = ["Apache-2.0"],
 )
 
 go_repo(
     module = "go.opentelemetry.io/otel/metric",
-    version = "v1.23.0",
+    version = "v1.24.0",
     licences = ["Apache-2.0"],
 )
 
 go_repo(
     module = "go.opentelemetry.io/otel/trace",
-    version = "v1.23.0",
+    version = "v1.24.0",
     licences = ["Apache-2.0"],
 )
 
@@ -684,13 +659,13 @@ go_repo(
 
 go_repo(
     module = "github.com/lufia/plan9stats",
-    version = "v0.0.0-20211012122336-39d0f177ccd0",
+    version = "v0.0.0-20240226150601-1dcf7310316a",
     licences = ["BSD-3-Clause"],
 )
 
 go_repo(
     module = "github.com/power-devops/perfstat",
-    version = "v0.0.0-20210106213030-5aafc221ea8c",
+    version = "v0.0.0-20240221224432-82ca36839d55",
     licences = ["MIT"],
 )
 
