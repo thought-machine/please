@@ -28,7 +28,7 @@ require (
 	github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a
 	github.com/pkg/xattr v0.4.4
 	github.com/please-build/buildtools v0.0.0-20240110130546-746673d48318
-	github.com/please-build/gcfg v1.6.1-0.20220308170049-10ea9d657afb
+	github.com/please-build/gcfg v1.7.0
 	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/common v0.37.0
 	github.com/shirou/gopsutil/v3 v3.21.8

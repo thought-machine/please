@@ -1,3 +1,7 @@
+Version 17.8.2
+--------------
+    * Empty values in some .plzconfig sections now correctly generate keys again (#3095)
+
 Version 17.8.1
 --------------
     * Allow lists to be passed to subinclude() (#3080)
