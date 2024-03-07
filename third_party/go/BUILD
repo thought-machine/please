@@ -680,9 +680,3 @@ go_repo(
     version = "v1.2.4",
     licences = ["MIT"],
 )
-
-go_repo(
-    module = "github.com/cloudflare/circl",
-    version = "v1.3.7",
-    licences = ["BSD-3-Clause"],
-)
