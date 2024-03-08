@@ -569,7 +569,7 @@ go_repo(
 
 go_repo(
     module = "gopkg.in/go-jose/go-jose.v2",
-    version = "v2.6.2",
+    version = "v2.6.3",
     licences = ["Apache-2.0"],
 )
 
