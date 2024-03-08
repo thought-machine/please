@@ -28,13 +28,19 @@
     >
   </li>
   <li>
+    <span>
+      <code class="code">.plzconfig.*</code> read from <code class="code">--profile</code>
+      (e.g. <code class="code">--profile=remote</code>)</span>
+  </li>
+  <li>
     <span><code class="code">.plzconfig.local</code></span>
   </li>
 </ul>
 
 <p>
   Profile-specific config files can be defined and take precedence over the config file being
-  evaluated. This is achieved by having a sibling config file with the name ending with the
+  evaluated. Except <code class="code">.plzconfig.local</code> which always has highest precedence.
+  This is achieved by having a sibling config file with the name ending with the
   profile name (i.e. <code class="code" >.plzconfig.remote</code>, <code class="code"
   >.plzconfig_linux_amd64.remote</code>, etc.) and running the command with the
   <code class="code">--profile</code> flag set (ie. <code class="code">--profile=remote</code>).
