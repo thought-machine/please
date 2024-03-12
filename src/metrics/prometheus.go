@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -23,13 +24,12 @@ var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 // Push performs a single push of all registered metrics to the pushgateway (if configured).
 func Push(config *core.Configuration) {
 	if family, err := prometheus.DefaultGatherer.Gather(); err == nil {
+		var buf strings.Builder
 		for _, fam := range family {
-			for _, metric := range fam.Metric {
-				if metric.Counter != nil {
-					log.Debug("Metric recorded: %s: %0.0f", *fam.Name, *metric.Counter.Value)
-				} else if metric.Gauge != nil {
-					log.Debug("Metric recorded: %s: %0.0f", *fam.Name, *metric.Gauge.Value)
-				}
+			buf.Reset()
+			if _, err := expfmt.MetricFamilyToText(&buf, fam); err == nil {
+				s := strings.TrimSpace(buf.String())
+				log.Debug("Metric recorded: %s", s[strings.LastIndex(s, "\n")+1:])
 			}
 		}
 	}

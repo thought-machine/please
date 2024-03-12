@@ -31,6 +31,7 @@ go_library(
         "///third_party/go/google.golang.org_grpc//status",
         "///third_party/go/google.golang.org_protobuf//proto",
         "///third_party/go/google.golang.org_protobuf//types/known/durationpb",
+        "///third_party/go/github.com_grpc-ecosystem_go-grpc-prometheus//:go-grpc-prometheus",
         "//src/build",
         "//src/cli/logging",
         "//src/core",
