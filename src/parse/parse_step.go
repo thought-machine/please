@@ -127,10 +127,12 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 		return s, err
 	}
 
-	// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host repo
-	s, err = maybeParseSubrepoPackage(state, sl.PackageName, dependent.Subrepo, label, mode)
-	if err != nil || s != nil {
-		return s, err
+	if sl.Subrepo != dependent.Subrepo {
+		// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host repo
+		s, err = maybeParseSubrepoPackage(state, sl.PackageName, dependent.Subrepo, label, mode)
+		if err != nil || s != nil {
+			return s, err
+		}
 	}
 
 	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
