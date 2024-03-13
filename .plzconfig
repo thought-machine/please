@@ -11,6 +11,7 @@ importpath = github.com/thought-machine/please
 gotool = //third_party/go:toolchain|go
 FeatureFlags = go_get
 modfile = //:go_mod
+stdlib = //third_party/go:std
 
 [Plugin "cc"]
 target = //plugins:cc
