@@ -19,6 +19,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -608,6 +609,8 @@ func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 		grpc.WithStatsHandler(c.stats),
 		// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
+		grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithChainStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
 	}
 	if c.state.Config.Remote.TokenFile == "" {
 		return opts, nil
