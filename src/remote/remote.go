@@ -86,11 +86,6 @@ type Client struct {
 	// This map is of effective type `map[*core.BuildTarget]*pendingDownload`
 	downloads sync.Map
 
-	// Used to store directories output from actions.
-	//
-	// This map is of effective type `map[string]*pb.Directory`
-	directories sync.Map
-
 	// Server-sent cache properties
 	maxBlobBatchSize int64
 

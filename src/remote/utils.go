@@ -39,18 +39,6 @@ var downloadErrors = metrics.NewCounter(
 	"Number of times the an error has been seen during a tree digest download",
 )
 
-var directoriesRetrieved = metrics.NewCounter(
-	"remote",
-	"dirs_retrieved_total",
-	"Number of directories retrieved from cache",
-)
-
-var directoriesDownloaded = metrics.NewCounter(
-	"remote",
-	"dirs_downloaded_total",
-	"Number of directories downloaded from remote",
-)
-
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
 
@@ -195,18 +183,6 @@ func (c *Client) setOutputDirectoryOuts(target *core.BuildTarget, actionResultFS
 		target.AddOutput(e.Name())
 	}
 	return nil
-}
-
-// readDirectory reads a Directory proto, possibly using a local cache, otherwise going to the remote
-func (c *Client) readDirectory(dg *pb.Digest) (*pb.Directory, error) {
-	if dir, present := c.directories.Load(dg.Hash); present {
-		directoriesRetrieved.Inc()
-		return dir.(*pb.Directory), nil
-	}
-	dir := &pb.Directory{}
-	_, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir)
-	directoriesDownloaded.Inc()
-	return dir, err
 }
 
 // maybeGetOutDir will get the output directory based on the directory provided. If there's no matching directory, this
