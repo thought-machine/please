@@ -1,3 +1,10 @@
+Version 17.8.3
+--------------
+    * Don't re-parse subrepos unnecessarily (#3103)
+    * Added some gRPC client metrics (#3104)
+    * Add a check in parser on unary operator precedence (#3106)
+    * Various third-party library updates (#3097, #3098)
+
 Version 17.8.2
 --------------
     * Empty values in some .plzconfig sections now correctly generate keys again (#3095)
