@@ -683,4 +683,6 @@ func TestOperatorPrecedence(t *testing.T) {
 	assert.EqualValues(t, "a", s.Lookup("j"))
 	assert.EqualValues(t, 1, s.Lookup("k"))
 	assert.EqualValues(t, 1, s.Lookup("l"))
+	assert.EqualValues(t, False, s.Lookup("m"))
+	assert.EqualValues(t, True, s.Lookup("n"))
 }

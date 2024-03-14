@@ -616,6 +616,9 @@ func (s *scope) interpretOps(obj pyObject, ops []OpExpression) pyObject {
 	// Next operator does have higher precedence so we do that first, unless we short-circuit
 	if ops[0].Op.Lazy() && obj.IsTruthy() != (ops[0].Op == And) {
 		return obj
+	} else if ops[0].Expr == nil {
+		// Unary expression
+		return s.interpretOp(s.interpretOps(obj, ops[1:]), ops[0])
 	}
 	nobj := s.interpretOps(s.interpretExpression(ops[0].Expr), ops[1:])
 	return s.interpretOp(obj, OpExpression{
