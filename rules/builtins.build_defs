@@ -297,3 +297,142 @@ def is_semver(s:str) -> bool:
 
 def semver_check(version:str, constraint:str) -> bool:
     pass
+
+
+# Returns build label
+# https://github.com/thought-machine/please/blob/v17.3.1/src/core/build_label.go#L159
+# https://github.com/thought-machine/please/blob/6cc3d7689ad78c667618b5ca9d089630864cd140/src/core/build_input.go#L226
+def buildlabel(
+    label: str | list = "",
+    path: str = "",
+    target: str = "",
+    subtarget: str = "",
+    subrepo: str = "",
+    pkg: str = "",
+    package: str = "",
+    out: str = "",
+    name: str = "",
+    relative=False,
+    aslist=True,
+):
+    """Compose a build label
+
+    Args:
+        label (str|list): please label fallback into path if component cannot be guessed
+        path (str): classical UNIX path to package, last component can be '...'
+        target (str): target name, if empty will default to package name
+        subtarget (str): target named output
+        subrepo (str): subrepo name
+        pkg (str): alias path parameter
+        package (str): alias path parameter
+        out (str): alias subtarget parameter
+        name (str): alias target parameter
+        relative (bool): keep a relative path?
+        aslist (bool): return label in []
+    Return:
+        (str): build label
+    """
+    if isinstance(label, list):
+        res = map(
+            lambda l: buildlabel(
+                label=l,
+                path=path,
+                target=target,
+                subtarget=subtarget,
+                subrepo=subrepo,
+                pkg=pkg,
+                package=package,
+                out=out,
+                name=name,
+                relative=relative,
+                aslist=False,
+            ),
+            label,
+        )
+        return res[0] if (len(res) == 1) and not aslist else res
+
+    _res_alias = lambda als: reduce(lambda x, y: x if x else y, als)
+    _set_cnt = lambda l: reduce(lambda x, y: x + y, map(lambda x: 1 if x else 0, l), 0)
+    path = [path, pkg, package]
+    target = [target, name]
+    subtarget = [subtarget, out]
+    subrepo = [subrepo]
+
+    if _set_cnt(path) > 1:
+        return fail("can only set one of [path, pkg, package]")
+    if _set_cnt(target) > 1:
+        return fail("can only set one of [target, name]")
+    if _set_cnt(subtarget) > 1:
+        return fail("can only set one of [subtarget, out]")
+    if _set_cnt(subrepo) > 1:
+        return fail("can only set one of [subrepo]")
+
+    if label == "*":  # special for vis
+        return ["PUBLIC"] if aslist else "PUBLIC"
+
+    # split label
+    if label.startswith("///"):
+        label = "@" + label[3:]
+    if "|" in label:
+        label, lbl_subtarget = label.split("|")
+        subtarget += [lbl_subtarget]
+    if ":" in label:
+        label, lbl_target = label.split(":")
+        target += [lbl_target]
+    if "//" in label:
+        label, lbl_path = label.split("//")
+        path += [f"/{lbl_path}"]
+    if "@" in label:
+        label, lbl_subrepo = label.split("@")
+        subrepo += [f"/{lbl_subrepo}"]
+    path += [label]  # reminder as path
+
+    path = _res_alias(path)
+    target = _res_alias(target)
+    subtarget = _res_alias(subtarget)
+    subrepo = _res_alias(subrepo)
+
+    _prefix = lambda pre, s: pre + s.removeprefix(pre)
+    _prefix_if = lambda pre, s: _prefix(pre, s) if s else ""
+    _globalize_rel_path = lambda p, glf: (
+        p if p.startswith("/") else (glf() + _prefix("/", p))
+    )
+    _resolve_path_or_global = lambda p, glf: (
+        "/".join(reduce(_resolve_path, _globalize_rel_path(p, glf).split("/"), [""]))
+        if p
+        else glf()
+    )
+
+    def _resolve_path(acc, p):
+        if p == ".":
+            return acc
+        elif p == "..":
+            return (
+                acc[:-1] if len(acc) > 1 else acc
+            )  # len > 1 to avoid a please interpreter bug
+        else:
+            return acc + ([p] if p else [])
+
+    path = path.replace("//", "/")
+    subrepo = subrepo.replace("///", "/")
+
+    if not relative:
+        path = _resolve_path_or_global(path, get_base_path)
+        subrepo = _resolve_path_or_global(subrepo, subrepo_name)
+
+    path = path.removeprefix("/")
+    subrepo = subrepo.removeprefix("/")
+
+    subrepo = _prefix("///", subrepo)
+    path = _prefix("//", path)
+    target = _prefix_if(":", target)
+    subtarget = _prefix_if("|", subtarget)
+
+    label = _prefix("///", subrepo + path + target + subtarget)
+    return [label] if aslist else label
+
+
+# buildlabel aliases
+bl = buildlabel
+subdir = buildlabel
+vis = buildlabel
