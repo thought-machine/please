@@ -6,6 +6,7 @@ package remote
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	iofs "io/fs"
 	"os"
@@ -53,6 +54,8 @@ var remoteCacheReadDuration = metrics.NewHistogram(
 	"Time taken to read the remote cache, in milliseconds",
 	metrics.ExponentialBuckets(0.1, 2, 12), // 12 buckets, starting at 0.1ms and doubling in width.
 )
+
+var errMissingOutputFromFilegroup = errors.New("Missing output from filegroup")
 
 // A Client is the interface to the remote API.
 //
@@ -901,7 +904,14 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 
 // buildFilegroup "builds" a single filegroup target.
 func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	inputDir, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
+	if metadata, ar, err := c.buildFilegroupWithChildDirs(target, command, actionDigest, false); err == nil || (err != nil && !errors.Is(err, errMissingOutputFromFilegroup)) {
+		return metadata, ar, err
+	}
+	return c.buildFilegroupWithChildDirs(target, command, actionDigest, true)
+}
+
+func (c *Client) buildFilegroupWithChildDirs(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest, needChildDirs bool) (*core.BuildMetadata, *pb.ActionResult, error) {
+	inputDir, err := c.uploadInputDir(nil, target, false, needChildDirs) // We don't need to actually upload the inputs here, that is already done.
 	if err != nil {
 		return nil, nil, err
 	}
@@ -924,8 +934,8 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 					IsExecutable: f.IsExecutable,
 				})
 			} else {
-				// Of course, we should not get here (classic developer things...)
-				return fmt.Errorf("Missing output from filegroup: %s", out)
+				// This might happen with needChildDirs=false, it shouldn't happen otherwise.
+				return fmt.Errorf("%w: %s", errMissingOutputFromFilegroup, out)
 			}
 		}
 		return nil
