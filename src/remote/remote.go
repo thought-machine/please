@@ -904,7 +904,7 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 
 // buildFilegroup "builds" a single filegroup target.
 func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	if metadata, ar, err := c.buildFilegroupWithChildDirs(target, command, actionDigest, false); err == nil || (err != nil && !errors.Is(err, errMissingOutputFromFilegroup)) {
+	if metadata, ar, err := c.buildFilegroupWithChildDirs(target, command, actionDigest, false); err == nil || !errors.Is(err, errMissingOutputFromFilegroup) {
 		return metadata, ar, err
 	}
 	return c.buildFilegroupWithChildDirs(target, command, actionDigest, true)
