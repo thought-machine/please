@@ -263,6 +263,7 @@ func prepareOnly(state *core.BuildState, label core.BuildLabel, target *core.Bui
 	if state.RemoteClient != nil {
 		// Targets were built remotely so we can simply download the inputs and place them in the
 		// tmp/ folder and exit.
+		state.LogTestRunning(target, runNumber, core.TargetTesting, "Downloading inputs...")
 		if err := state.DownloadAllInputs(target, target.TestDir(runNumber), true); err != nil {
 			state.LogBuildError(label, core.TargetTestFailed, err, "Failed to download test inputs")
 			return

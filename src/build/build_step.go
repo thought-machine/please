@@ -127,6 +127,7 @@ func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 	if state.RemoteClient != nil {
 		// Targets were built remotely so we can simply download the inputs and place them in the
 		// tmp/ folder and exit.
+		state.LogBuildResult(target, core.TargetBuilding, "Downloading inputs...")
 		if err := state.DownloadAllInputs(target, target.TmpDir(), false); err != nil {
 			return err
 		}
