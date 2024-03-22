@@ -165,14 +165,15 @@ func findOriginalTask(state *core.BuildState, target core.BuildLabel, addToList 
 		// walk the directory tree, so we have to make sure the subrepo exists first.
 		dir := target.PackageName
 		prefix := ""
-		if target.Subrepo != "" && target.Subrepo != arch.String() {
+		if target.Subrepo != "" {
 			subrepoLabel := target.SubrepoLabel(state)
-			state.WaitForInitialTargetAndEnsureDownload(subrepoLabel, target)
-			// Targets now get activated during parsing, so can be built before we finish parsing their package.
-			state.WaitForPackage(subrepoLabel, target, core.ParseModeNormal)
-			subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
-			dir = subrepo.Dir(dir)
-			prefix = subrepo.Dir(prefix)
+			if state.WaitForInitialTargetAndEnsureDownload(subrepoLabel, target) != nil {
+				// Targets now get activated during parsing, so can be built before we finish parsing their package.
+				state.WaitForPackage(subrepoLabel, target, core.ParseModeNormal)
+				subrepo := state.Graph.SubrepoOrDie(target.Subrepo)
+				dir = subrepo.Dir(dir)
+				prefix = subrepo.Dir(prefix)
+			}
 		}
 		for filename := range FindAllBuildFiles(state.Config, dir, "") {
 			dirname, _ := filepath.Split(filename)

@@ -975,6 +975,10 @@ func (state *BuildState) WaitForTargetAndEnsureDownload(l, dependent BuildLabel,
 // WaitForInitialTargetAndEnsureDownload is like WaitForTargetAndEnsureDownload but is used for
 // targets in the initial set.
 func (state *BuildState) WaitForInitialTargetAndEnsureDownload(l, dependent BuildLabel) *BuildTarget {
+	// This may have been an architecture label from the CLI
+	if state.WaitForBuiltTarget(l, dependent, ParseModeNormal) == nil {
+		return nil
+	}
 	return state.waitForTargetAndEnsureDownload(l, dependent, ParseModeNormal)
 }
 
