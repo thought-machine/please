@@ -167,7 +167,6 @@ func newPyInt(i int) pyInt {
 	if i >= 0 && i < numInternedInts {
 		return internedInts[i]
 	}
-	log.Debug("pyInt %d", i)
 	return pyInt(i)
 }
 

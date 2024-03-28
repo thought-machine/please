@@ -441,7 +441,7 @@ func ord(s *scope, args []pyObject) pyObject {
 	c, isStr := args[0].(pyString)
 	s.Assert(isStr, "Argument c must be a string, not %s", args[0].Type())
 	s.Assert(objLen(c) == 1, "Argument c must be a string containing a single Unicode character")
-	return newPyInt([]rune(c)[0])
+	return newPyInt(int([]rune(c)[0]))
 }
 
 func isinstance(s *scope, args []pyObject) pyObject {
