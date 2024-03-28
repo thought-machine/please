@@ -652,7 +652,7 @@ func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
 		// Negate is a unary operator so Expr will be nil
 		i, ok := obj.(pyInt)
 		s.Assert(ok, "Unary - can only be applied to an integer")
-		return pyInt(-int(i))
+		return newPyInt(-int(i))
 	default:
 		return obj.Operator(op.Op, s.interpretExpression(op.Expr))
 	}
@@ -745,7 +745,7 @@ func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
 	} else if expr.FString != nil {
 		return s.interpretFString(expr.FString)
 	} else if expr.IsInt {
-		return pyInt(expr.Int)
+		return newPyInt(expr.Int)
 	} else if expr.True {
 		return True
 	} else if expr.False {
@@ -809,10 +809,10 @@ func (s *scope) interpretSlice(obj pyObject, sl *Slice) pyObject {
 	start := s.interpretSliceExpression(obj, sl.Start, 0)
 	switch t := obj.(type) {
 	case pyList:
-		end := s.interpretSliceExpression(obj, sl.End, pyInt(len(t)))
+		end := s.interpretSliceExpression(obj, sl.End, newPyInt(len(t)))
 		return t[start:end]
 	case pyString:
-		end := s.interpretSliceExpression(obj, sl.End, pyInt(len(t)))
+		end := s.interpretSliceExpression(obj, sl.End, newPyInt(len(t)))
 		return t[start:end]
 	}
 	s.Error("Unsliceable type %s", obj.Type())
