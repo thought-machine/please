@@ -417,15 +417,15 @@ func lenFunc(s *scope, args []pyObject) pyObject {
 func objLen(obj pyObject) pyInt {
 	switch t := obj.(type) {
 	case pyList:
-		return pyInt(len(t))
+		return newPyInt(len(t))
 	case pyFrozenList:
-		return pyInt(len(t.pyList))
+		return newPyInt(len(t.pyList))
 	case pyDict:
-		return pyInt(len(t))
+		return newPyInt(len(t))
 	case pyFrozenDict:
-		return pyInt(len(t.pyDict))
+		return newPyInt(len(t.pyDict))
 	case pyString:
-		return pyInt(len([]rune(t)))
+		return newPyInt(len([]rune(t)))
 	}
 	panic("object of type " + obj.Type() + " has no len()")
 }
@@ -441,7 +441,7 @@ func ord(s *scope, args []pyObject) pyObject {
 	c, isStr := args[0].(pyString)
 	s.Assert(isStr, "Argument c must be a string, not %s", args[0].Type())
 	s.Assert(objLen(c) == 1, "Argument c must be a string containing a single Unicode character")
-	return pyInt([]rune(c)[0])
+	return newPyInt([]rune(c)[0])
 }
 
 func isinstance(s *scope, args []pyObject) pyObject {
@@ -576,13 +576,13 @@ func strRemoveSuffix(s *scope, args []pyObject) pyObject {
 func strFind(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	needle := args[1].(pyString)
-	return pyInt(strings.Index(string(self), string(needle)))
+	return newPyInt(strings.Index(string(self), string(needle)))
 }
 
 func strRFind(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	needle := args[1].(pyString)
-	return pyInt(strings.LastIndex(string(self), string(needle)))
+	return newPyInt(strings.LastIndex(string(self), string(needle)))
 }
 
 func strFormat(s *scope, args []pyObject) pyObject {
@@ -599,7 +599,7 @@ func strFormat(s *scope, args []pyObject) pyObject {
 func strCount(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	needle := string(args[1].(pyString))
-	return pyInt(strings.Count(self, needle))
+	return newPyInt(strings.Count(self, needle))
 }
 
 func strUpper(s *scope, args []pyObject) pyObject {
@@ -619,7 +619,7 @@ func boolType(s *scope, args []pyObject) pyObject {
 func intType(s *scope, args []pyObject) pyObject {
 	i, err := strconv.Atoi(string(args[0].(pyString)))
 	s.Assert(err == nil, "%s", err)
-	return pyInt(i)
+	return newPyInt(i)
 }
 
 func strType(s *scope, args []pyObject) pyObject {
@@ -915,7 +915,7 @@ func enumerate(s *scope, args []pyObject) pyObject {
 	s.Assert(ok, "Argument to enumerate must be a list, not %s", args[0].Type())
 	ret := make(pyList, len(l))
 	for i, li := range l {
-		ret[i] = pyList{pyInt(i), li}
+		ret[i] = pyList{newPyInt(i), li}
 	}
 	return ret
 }
