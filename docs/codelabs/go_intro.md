@@ -379,7 +379,7 @@ To add third party dependencies to Please, the easiest way is to use `///go//too
 add them to `third_party/go/BUILD`. Let's add `github.com/stretchr/testify`:
 
 ```text
-$ plz run ///go//tools/please_go -- get github.com/stretchr/testify@v1.8.2
+$ plz run ///go//tools:please_go -- get github.com/stretchr/testify@v1.8.2
 go_repo(module="github.com/stretchr/objx", version="v0.5.0")
 go_repo(module="gopkg.in/yaml.v3", version="v3.0.1")
 go_repo(module="gopkg.in/check.v1", version="v0.0.0-20161208181325-20d25e280405")
