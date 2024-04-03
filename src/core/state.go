@@ -1055,6 +1055,8 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild boo
 			if forceBuild {
 				mode |= ParseModeForceBuild
 			}
+			// Queue the target up for parse. The parse step activates the target for us if it needs to be built, so we
+			// don't need to do this here.
 			state.addPendingParse(label, dependent, mode)
 			return nil
 		}

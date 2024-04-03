@@ -4,6 +4,19 @@ Want to contribute to please? Great! We're a small team, so we'd very much appre
 should help you get started. We're a friendly bunch, so we'd love for you to reach out! This guidance isn't meant to be 
 dogmatic, it simply aims to reduce friction when trying to engage with the please community. 
 
+## Read the contributor docs
+
+There are README files sprinkled throughout this repo that try to explain different parts: 
+
+- [src/core](src/core/README.md) contains the definitions for the core of Please including the build graph, state, 
+  targets and labels. It also contains all the logic for queuing up and adding targets to the graph. 
+- [src/parse](src/parse/README.md) defines the parse step, that parses and interprets the BUILD files, adding
+  their targets to the build graph. 
+- [src/build](src/build/README.md) similarly defines the build step. 
+- [src/test](src/test/README.md)  similarly defines the test step. 
+- [src/remote](src/remote/README.md) defines a remote execution client for build and testing using the remote execution 
+  API. 
+
 ## Check out our closed issues first
 
 Before you go any further, it is worth searching through our issues. While we aim to make please as hassle free to use,
