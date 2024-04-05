@@ -1,3 +1,10 @@
+Version 17.8.4
+--------------
+    * Fix a nil pointer when querying targets with the `--arch` flag (#3113)
+    * Improved output for downloading test outputs (#3112)
+    * Only download child dirs for filegroups where necessary (#3111)
+    * Minor parse time performance improvements (#3114)
+
 Version 17.8.3
 --------------
     * Don't re-parse subrepos unnecessarily (#3103)
