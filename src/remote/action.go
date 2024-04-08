@@ -193,7 +193,7 @@ func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTar
 	if target.IsRemoteFile {
 		return &pb.Directory{}, nil
 	}
-	b, err := c.uploadInputDir(ch, target, isTest, false)
+	b, err := c.uploadInputDir(ch, target, isTest)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTar
 
 // uploadInputDir uploads the inputs to the build rule. It returns an un-finalised directory builder representing the
 // directory structure of the input dir. The caller is expected to finalise this by calling Build().
-func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest, needChildDirs bool) (*dirBuilder, error) {
+func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildTarget, isTest bool) (*dirBuilder, error) {
 	b := newDirBuilder(c)
 	for input := range c.state.IterInputs(target, isTest) {
 		if l, ok := input.Label(); ok {
@@ -243,7 +243,7 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 					Name:   filepath.Base(d.Name),
 					Digest: d.Digest,
 				})
-				if needChildDirs && target.IsFilegroup {
+				if target.IsFilegroup {
 					if err := c.addChildDirs(b, filepath.Join(pkgName, d.Name), d.Digest); err != nil {
 						return b, err
 					}

@@ -1,3 +1,7 @@
+Version 17.8.5
+--------------
+    * Revert #3111
+
 Version 17.8.4
 --------------
     * Fix a nil pointer when querying targets with the `--arch` flag (#3113)
