@@ -120,6 +120,9 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 				}
 			}
 		}
+		if t.Subrepo != nil && t.Subrepo.Target != nil {
+			revdeps[t.Subrepo.Target.Label] = append(revdeps[t.Subrepo.Target.Label], t)
+		}
 	}
 	return revdeps
 }

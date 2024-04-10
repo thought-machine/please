@@ -104,5 +104,10 @@ func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen, 
 			}
 		}
 	}
+	if target1.Subrepo != nil && target1.Subrepo.Target != nil {
+		if path := somePath(graph, target1.Subrepo.Target, target2, seen, except); len(path) != 0 {
+			return append([]core.BuildLabel{target1.Label}, path...)
+		}
+	}
 	return nil
 }

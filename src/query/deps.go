@@ -52,6 +52,9 @@ func printTarget(out io.Writer, state *core.BuildState, target *core.BuildTarget
 	for _, dep := range target.Dependencies() {
 		printTarget(out, state, dep, indent, done, hidden, currentLevel, targetLevel)
 	}
+	if target.Subrepo != nil && target.Subrepo.Target != nil {
+		printTarget(out, state, target.Subrepo.Target, indent, done, hidden, currentLevel, targetLevel)
+	}
 }
 
 func printTargetDot(out io.Writer, state *core.BuildState, target *core.BuildTarget, parent *core.BuildTarget, done map[core.BuildLabel]bool, hidden bool, currentLevel int, targetLevel int) {
