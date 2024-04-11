@@ -205,6 +205,9 @@ func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*cor
 			}
 		}
 	}
+	if target.Subrepo != nil && target.Subrepo.Target != nil {
+		ret = append(ret, target.Subrepo.Target)
+	}
 	return ret
 }
 
