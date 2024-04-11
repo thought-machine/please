@@ -218,7 +218,6 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 	}
 
 	// If we get here, it falls to us to parse this.
-	log.Debug("Subinclude %s", path)
 	stmts := i.parseSubinclude(path)
 
 	mode := pkgScope.mode
@@ -258,7 +257,6 @@ func (i *interpreter) parseSubinclude(path string) []*Statement {
 		<-wait
 		return i.asts.Get(path)
 	}
-	log.Debug("Parsing %s", path)
 	stmts, err := i.parser.parse(nil, path)
 	if err != nil {
 		panic(err) // We're already inside another interpreter, which will handle this for us.
