@@ -50,12 +50,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/matttproud/golang_protobuf_extensions",
-    requirements = ["github.com/golang/protobuf"],
-    version = "v1.0.4",
-)
-
-go_repo(
     module = "github.com/shirou/gopsutil/v3",
     version = "v3.24.2",
 )
@@ -96,11 +90,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/jellydator/ttlcache/v2",
-    version = "v2.11.1",
-)
-
-go_repo(
     module = "github.com/please-build/gcfg",
     version = "v1.7.0",
 )
@@ -133,11 +122,6 @@ go_repo(
 go_repo(
     module = "github.com/thought-machine/go-flags",
     version = "v1.6.3",
-)
-
-go_repo(
-    module = "github.com/theupdateframework/go-tuf",
-    version = "v0.7.0",
 )
 
 go_repo(
@@ -176,11 +160,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/golang/snappy",
-    version = "v0.0.3",
-)
-
-go_repo(
     module = "github.com/tklauser/go-sysconf",
     version = "v0.3.13",
 )
@@ -208,11 +187,6 @@ go_repo(
 go_repo(
     module = "golang.org/x/term",
     version = "v0.18.0",
-)
-
-go_repo(
-    module = "github.com/google/go-cmp",
-    version = "v0.6.0",
 )
 
 go_repo(
@@ -256,11 +230,6 @@ go_repo(
 )
 
 go_repo(
-    module = "google.golang.org/grpc/cmd/protoc-gen-go-grpc",
-    version = "v1.1.0",
-)
-
-go_repo(
     module = "github.com/golang/protobuf",
     version = "v1.5.4",
 )
@@ -276,23 +245,8 @@ go_repo(
 )
 
 go_repo(
-    module = "golang.org/x/mod",
-    version = "v0.5.0",
-)
-
-go_repo(
     module = "github.com/googleapis/enterprise-certificate-proxy",
     version = "v0.3.2",
-)
-
-go_repo(
-    module = "github.com/peterebden/ar",
-    version = "v0.0.0-20181115090543-a0ae3a11a518",
-)
-
-go_repo(
-    module = "cloud.google.com/go",
-    version = "v0.65.0",
 )
 
 go_repo(
@@ -331,11 +285,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/shurcooL/sanitized_anchor_name",
-    version = "v1.0.0",
-)
-
-go_repo(
     module = "github.com/peterebden/tools",
     version = "v0.0.0-20190805132753-b2a0db951d2a",
 )
@@ -356,11 +305,6 @@ go_repo(
 )
 
 go_repo(
-    module = "golang.org/x/xerrors",
-    version = "5ec99f83aff198f5fbd629d6c8d8eb38a04218ca",
-)
-
-go_repo(
     module = "github.com/cespare/xxhash/v2",
     version = "v2.2.0",
 )
@@ -373,16 +317,6 @@ go_repo(
 go_repo(
     module = "github.com/klauspost/cpuid/v2",
     version = "v2.2.7",
-)
-
-go_repo(
-    module = "github.com/gogo/protobuf",
-    version = "v1.3.2",
-)
-
-go_repo(
-    module = "github.com/stretchr/objx",
-    version = "v0.3.0",
 )
 
 go_repo(
@@ -437,12 +371,6 @@ go_repo(
 )
 
 go_repo(
-    module = "gopkg.in/square/go-jose.v2",
-    requirements = ["golang.org/x/crypto"],
-    version = "v2.6.0",
-)
-
-go_repo(
     module = "github.com/prometheus/common",
     version = "v0.50.0",
 )
@@ -483,11 +411,6 @@ go_repo(
 )
 
 go_repo(
-    module = "sourcegraph.com/sqs/pbtypes",
-    version = "v0.0.0-20180604144634-d3ebe8f20ae4",
-)
-
-go_repo(
     module = "github.com/google/uuid",
     version = "v1.6.0",
 )
@@ -508,11 +431,6 @@ go_repo(
 )
 
 go_repo(
-    module = "go.starlark.net",
-    version = "v0.0.0-20210901212718-87f333178d59",
-)
-
-go_repo(
     module = "cloud.google.com/go/kms",
     version = "v1.15.7",
 )
@@ -530,29 +448,6 @@ go_repo(
 go_repo(
     module = "github.com/jstemmer/go-junit-report/v2",
     version = "v2.1.0",
-)
-
-go_repo(
-    module = "cloud.google.com/go/compute",
-    version = "v1.25.0",
-    licences = ["Apache-2.0"],
-)
-
-go_repo(
-    module = "github.com/StackExchange/wmi",
-    version = "v1.2.1",
-)
-
-go_repo(
-    module = "github.com/go-ole/go-ole",
-    version = "v1.3.0",
-    licences = ["MIT"],
-)
-
-go_repo(
-    module = "google.golang.org/appengine",
-    version = "v1.6.8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
@@ -655,30 +550,6 @@ go_repo(
     module = "golang.org/x/time",
     version = "v0.5.0",
     licences = ["BSD-3-Clause"],
-)
-
-go_repo(
-    module = "github.com/lufia/plan9stats",
-    version = "v0.0.0-20240226150601-1dcf7310316a",
-    licences = ["BSD-3-Clause"],
-)
-
-go_repo(
-    module = "github.com/power-devops/perfstat",
-    version = "v0.0.0-20240221224432-82ca36839d55",
-    licences = ["MIT"],
-)
-
-go_repo(
-    module = "github.com/shoenig/go-m1cpu",
-    version = "v0.1.6",
-    licences = ["MPL-2.0"],
-)
-
-go_repo(
-    module = "github.com/yusufpapurcu/wmi",
-    version = "v1.2.4",
-    licences = ["MIT"],
 )
 
 go_repo(
