@@ -19,6 +19,7 @@ type interpreter struct {
 	scope       *scope
 	parser      *Parser
 	subincludes *cmap.Map[string, pyDict]
+	asts        *cmap.Map[string, []*Statement]
 
 	configs      map[*core.BuildState]*pyConfig
 	configsMutex sync.RWMutex
@@ -38,15 +39,19 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	}
 	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
 	var subincludes *cmap.Map[string, pyDict]
+	var asts *cmap.Map[string, []*Statement]
 	if p.interpreter != nil {
 		subincludes = p.interpreter.subincludes
+		asts = p.interpreter.asts
 	} else {
 		subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
+		asts = cmap.New[string, []*Statement](cmap.SmallShardCount, cmap.XXHash)
 	}
 	i := &interpreter{
 		scope:       s,
 		parser:      p,
 		subincludes: subincludes,
+		asts:        asts,
 		configs:     map[*core.BuildState]*pyConfig{},
 		limiter:     make(semaphore, state.Config.Parse.NumThreads),
 	}
@@ -213,11 +218,9 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 	}
 
 	// If we get here, it falls to us to parse this.
-	stmts, err := i.parser.parse(nil, path)
-	if err != nil {
-		panic(err) // We're already inside another interpreter, which will handle this for us.
-	}
-	stmts = i.parser.optimise(stmts)
+	log.Debug("Subinclude %s", path)
+	stmts := i.parseSubinclude(path)
+
 	mode := pkgScope.mode
 	if preload {
 		mode |= core.ParseModeForPreload
@@ -229,7 +232,6 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 	s.config = i.scope.config.Copy()
 	s.Set("CONFIG", s.config)
 	s.subincludeLabel = &label
-	i.optimiseExpressions(stmts)
 
 	if !mode.IsPreload() {
 		if err := i.preloadSubincludes(s); err != nil {
@@ -243,6 +245,28 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 	}
 	i.subincludes.Set(key, locals)
 	return locals
+}
+
+// parseSubinclude parses a subinclude to an AST, caching it (globally)
+func (i *interpreter) parseSubinclude(path string) []*Statement {
+	stmts, wait, first := i.asts.GetOrWait(path)
+	if stmts != nil {
+		return stmts
+	} else if !first {
+		i.limiter.Release()
+		defer i.limiter.Acquire()
+		<-wait
+		return i.asts.Get(path)
+	}
+	log.Debug("Parsing %s", path)
+	stmts, err := i.parser.parse(nil, path)
+	if err != nil {
+		panic(err) // We're already inside another interpreter, which will handle this for us.
+	}
+	stmts = i.parser.optimise(stmts)
+	i.optimiseExpressions(stmts)
+	i.asts.Set(path, stmts)
+	return stmts
 }
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
