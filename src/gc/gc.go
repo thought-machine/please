@@ -173,6 +173,9 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 	for _, dep := range target.Dependencies() {
 		addTarget(graph, m, dep)
 	}
+	if target.Subrepo != nil && target.Subrepo.Target != nil {
+		addTarget(graph, m, target.Subrepo.Target)
+	}
 }
 
 // anyInclude returns true if any of the given labels include this one.
@@ -204,6 +207,9 @@ func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*cor
 				ret = append(ret, depTarget)
 			}
 		}
+	}
+	if target.Subrepo != nil && target.Subrepo.Target != nil {
+		ret = append(ret, target.Subrepo.Target)
 	}
 	return ret
 }

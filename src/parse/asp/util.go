@@ -11,6 +11,9 @@ func FindTarget(statements []*Statement, name string) (target *Statement) {
 	WalkAST(statements, func(stmt *Statement) bool {
 		if arg := FindArgument(stmt, "name"); arg != nil && arg.Value.Val != nil && arg.Value.Val.String != "" && strings.Trim(arg.Value.Val.String, `"`) == name {
 			target = stmt
+		} else if arg := FindArgument(stmt, "module"); arg != nil && arg.Value.Val != nil && arg.Value.Val.String != "" && strings.ReplaceAll(strings.Trim(arg.Value.Val.String, `"`), "/", "_") == name {
+			// This is very specific to go_repo but that's widely used enough we're just going to suck it up
+			target = stmt
 		}
 		return false // FindArgument is recursive so we never need to visit more deeply.
 	})
