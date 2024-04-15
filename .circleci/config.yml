@@ -341,7 +341,7 @@ workflows:
       - build-darwin-arm64:
           requires:
             - build-darwin
-      - release:
+      - release-gs:
           requires:
             - build-alpine
             - build-freebsd
@@ -355,9 +355,9 @@ workflows:
           filters:
             branches:
               only: master
-      - release-gs:
+      - release:
           requires:
-            - release
+            release-gs
           filters:
             branches:
               only: master
