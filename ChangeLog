@@ -1,3 +1,8 @@
+Version 17.8.6
+--------------
+    * Speed up parsing of subrepo-heavy repos (notably `go_repo`) (#3126)
+    * Query commands take subrepos into account (#3124)
+
 Version 17.8.5
 --------------
     * Revert #3111
