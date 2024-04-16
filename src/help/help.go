@@ -3,7 +3,6 @@ package help
 
 import (
 	"fmt"
-	"golang.org/x/exp/maps"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
@@ -11,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+
+	"golang.org/x/exp/maps"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
