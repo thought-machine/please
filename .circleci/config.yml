@@ -357,7 +357,7 @@ workflows:
               only: master
       - release:
           requires:
-            release-gs
+            - release-gs
           filters:
             branches:
               only: master
