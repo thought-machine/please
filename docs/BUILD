@@ -57,7 +57,7 @@ genrule(
 
 # Plugin versions to pull the docs from
 plugins = {
-    "python": "v1.5.2",
+    "python": "v1.6.0",
     "java": "v0.4.0",
     "go": "v1.17.2",
     "cc": "v0.4.0",

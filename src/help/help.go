@@ -11,6 +11,8 @@ import (
 	"strings"
 	"text/template"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -22,6 +24,14 @@ const topicsHelpMessage = `
 The following help topics are available:
 
 %s`
+
+const aliasHelpMessage = `${BOLD_BLUE}%s${RESET} is a command alias defined in the .plzconfig file.
+
+%s
+
+You can invoke it with ${BOLD_GREEN}plz %s${RESET}. It runs the following command:
+${BOLD_YELLOW}plz %s${RESET}
+`
 
 // maxSuggestionDistance is the maximum Levenshtein edit distance we'll suggest help topics at.
 const maxSuggestionDistance = 4
@@ -69,6 +79,13 @@ func help(topic string, config *core.Configuration) string {
 			}
 			return fmt.Sprintf(section.Preamble+"\n\n", topic) + message
 		}
+	}
+	if alias, present := config.Alias[topic]; present {
+		msg := fmt.Sprintf(aliasHelpMessage, topic, alias.Desc, topic, alias.Cmd)
+		if len(alias.Flag) > 0 {
+			msg += "\nIt takes the following flags:\n  ${BOLD_YELLOW}" + strings.Join(alias.Flag, "${RESET}\n  ${BOLD_YELLOW}") + "${RESET}"
+		}
+		return msg
 	}
 	// Check built-in build rules.
 	m := AllBuiltinFunctions(newState())
@@ -297,6 +314,7 @@ func allTopics(prefix string, config *core.Configuration) []string {
 			}
 		}
 	}
+	topics = append(topics, maps.Keys(config.Alias)...)
 
 	// Built-in rules
 	for t := range AllBuiltinFunctions(newState()) {
