@@ -686,3 +686,9 @@ go_repo(
     version = "v1.2.0",
     licences = ["Apache-2.0"],
 )
+
+go_repo(
+    module = "github.com/in-toto/attestation",
+    version = "v1.0.2",
+    licences = ["Apache-2.0"],
+)
