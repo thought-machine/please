@@ -940,7 +940,11 @@ func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, a
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
 	md, err := c.buildMetadata(target, ar, false, false)
-	return md, ar, err
+	if err != nil {
+		return nil, nil, err
+	}
+	c.locallyCacheResults(target, actionDigest, md)
+	return md, ar, nil
 }
 
 // buildTextFile "builds" uploads a text file to the CAS
@@ -974,7 +978,11 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
 	}
 	md, err := c.buildMetadata(target, ar, false, false)
-	return md, ar, err
+	if err != nil {
+		return nil, nil, err
+	}
+	c.locallyCacheResults(target, actionDigest, md)
+	return md, ar, nil
 }
 
 // logActionResult logs the state of an action while it's building or testing
