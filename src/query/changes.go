@@ -123,7 +123,7 @@ func toolPathHash(state *core.BuildState, tool core.BuildInput) (hash []byte) {
 			for _, path := range tool.LocalPaths(state.Graph) {
 				h.Write([]byte(path))
 			}
-			return h.Sum(nil)
+			hash = h.Sum(nil)
 		}
 	}()
 
