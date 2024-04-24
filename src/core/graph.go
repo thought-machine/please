@@ -157,10 +157,10 @@ func NewGraph() *BuildGraph {
 
 // DependentTargets returns the labels that 'from' should actually depend on when it declared a dependency on 'to'.
 // This is normally just 'to' but could be otherwise given require/provide shenanigans.
-func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
+func (graph *BuildGraph) DependentTargets(from, to BuildLabel, ffDefaultProvide bool) []BuildLabel {
 	fromTarget := graph.Target(from)
 	if toTarget := graph.Target(to); fromTarget != nil && toTarget != nil {
-		return toTarget.ProvideFor(fromTarget)
+		return toTarget.ProvideFor(fromTarget, ffDefaultProvide)
 	}
 	return []BuildLabel{to}
 }

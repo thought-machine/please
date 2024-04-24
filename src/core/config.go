@@ -688,6 +688,7 @@ type Configuration struct {
 	buildEnvStored *storedBuildEnv
 
 	FeatureFlags struct {
+		FFDefaultProvides bool `help:"Allows setting 'default' in the provides map to control what happens when none of the provided targets match"`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
 	Metrics struct {
 		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`

@@ -1034,7 +1034,7 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 			}
 		}
 	} else {
-		for _, l := range state.Graph.DependentTargets(dependent, label) {
+		for _, l := range state.Graph.DependentTargets(dependent, label, state.Config.FeatureFlags.FFDefaultProvides) {
 			// We use :all to indicate a dependency needed for parse.
 			if err := state.QueueTarget(l, dependent, dependent.IsAllTargets(), mode); err != nil {
 				return err
@@ -1088,7 +1088,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild boo
 	if dependent.IsAllTargets() || dependent == OriginalTarget {
 		return state.queueResolvedTarget(target, forceBuild, mode)
 	}
-	for _, l := range target.ProvideFor(state.Graph.TargetOrDie(dependent)) {
+	for _, l := range target.ProvideFor(state.Graph.TargetOrDie(dependent), state.Config.FeatureFlags.FFDefaultProvides) {
 		if l == label {
 			if err := state.queueResolvedTarget(target, forceBuild, mode); err != nil {
 				return err
@@ -1167,7 +1167,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
 			called.SetTrue()
 			return state.queueResolvedTarget(t, forceBuild, ParseModeNormal)
-		}); err != nil {
+		}, state.Config.FeatureFlags.FFDefaultProvides); err != nil {
 			state.asyncError(target.Label, err)
 			return
 		}

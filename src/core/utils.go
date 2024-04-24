@@ -153,7 +153,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 		done[dependency.Label] = true
 		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 			for _, dep := range dependency.BuildDependencies() {
-				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
+				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label, state.Config.FeatureFlags.FFDefaultProvides) {
 					if !done[dep2] && !dependency.IsTool(dep2) {
 						inner(graph.TargetOrDie(dep2))
 					}
@@ -161,7 +161,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 			}
 		} else {
 			for _, dep := range dependency.ExportedDependencies() {
-				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
+				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep, state.Config.FeatureFlags.FFDefaultProvides) {
 					if !done[dep2] {
 						inner(graph.TargetOrDie(dep2))
 					}
@@ -171,11 +171,11 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 	}
 	go func() {
 		for _, source := range target.AllSources() {
-			recursivelyProvideSource(graph, target, source, ch)
+			recursivelyProvideSource(graph, target, source, ch, state.Config.FeatureFlags.FFDefaultProvides)
 		}
 		if includeTools {
 			for _, tool := range target.AllTools() {
-				recursivelyProvideSource(graph, target, tool, ch)
+				recursivelyProvideSource(graph, target, tool, ch, state.Config.FeatureFlags.FFDefaultProvides)
 			}
 		}
 		if !sourcesOnly {
@@ -187,14 +187,14 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 }
 
 // recursivelyProvideFor recursively applies ProvideFor to a target.
-func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, dep BuildLabel) []BuildLabel {
+func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, dep BuildLabel, ffDefaultProvide bool) []BuildLabel {
 	depTarget := graph.TargetOrDie(dep)
-	ret := depTarget.ProvideFor(dependency)
+	ret := depTarget.ProvideFor(dependency, ffDefaultProvide)
 	if len(ret) == 1 && ret[0] == dep {
 		// Dependency doesn't have a require/provide directly on this guy, up to the top-level
 		// target. We have to check the dep first to keep things consistent with what targets
 		// have actually been built.
-		ret = depTarget.ProvideFor(target)
+		ret = depTarget.ProvideFor(target, ffDefaultProvide)
 		if len(ret) == 1 && ret[0] == dep {
 			return ret
 		}
@@ -204,16 +204,16 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 		if r == dep {
 			ret2 = append(ret2, r) // Providing itself, don't recurse
 		} else {
-			ret2 = append(ret2, recursivelyProvideFor(graph, target, dependency, r)...)
+			ret2 = append(ret2, recursivelyProvideFor(graph, target, dependency, r, ffDefaultProvide)...)
 		}
 	}
 	return ret2
 }
 
 // recursivelyProvideSource is similar to recursivelyProvideFor but operates on a BuildInput.
-func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput, ch chan BuildInput) {
+func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput, ch chan BuildInput, ffDefaultProvide bool) {
 	if label, ok := src.nonOutputLabel(); ok {
-		for _, p := range recursivelyProvideFor(graph, target, target, label) {
+		for _, p := range recursivelyProvideFor(graph, target, target, label, ffDefaultProvide) {
 			ch <- p
 		}
 		return
@@ -278,7 +278,7 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 }
 
 // IterInputPaths yields all the transitive input files for a rule (sources & data files), similar to above (again).
-func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
+func IterInputPaths(graph *BuildGraph, target *BuildTarget, ffDefaultProvide bool) <-chan string {
 	// Use a couple of maps to protect us from dep-graph loops and to stop parsing the same target
 	// multiple times. We also only want to push files to the channel that it has not already seen.
 	donePaths := map[string]bool{}
@@ -305,7 +305,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 					// Otherwise we should recurse for this build label (and gather its sources)
 				} else {
 					t := graph.TargetOrDie(label)
-					for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+					for _, d := range recursivelyProvideFor(graph, target, t, t.Label, ffDefaultProvide) {
 						inner(graph.TargetOrDie(d))
 					}
 				}
@@ -328,7 +328,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 					// Otherwise we should recurse for this build label (and gather its sources)
 				} else {
 					t := graph.TargetOrDie(label)
-					for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+					for _, d := range recursivelyProvideFor(graph, target, t, t.Label, ffDefaultProvide) {
 						inner(graph.TargetOrDie(d))
 					}
 				}
@@ -336,7 +336,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
 
 			// Finally recurse for all the deps of this rule.
 			for _, dep := range target.Dependencies() {
-				for _, d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
+				for _, d := range recursivelyProvideFor(graph, target, dep, dep.Label, ffDefaultProvide) {
 					inner(graph.TargetOrDie(d))
 				}
 			}

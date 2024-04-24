@@ -491,28 +491,28 @@ func (target *BuildTarget) StartTestSuite() {
 }
 
 // AllSourcePaths returns all the source paths for this target
-func (target *BuildTarget) AllSourcePaths(graph *BuildGraph) []string {
-	return target.allSourcePaths(graph, BuildInput.Paths)
+func (target *BuildTarget) AllSourcePaths(graph *BuildGraph, ffDefaultProvide bool) []string {
+	return target.allSourcePaths(graph, BuildInput.Paths, ffDefaultProvide)
 }
 
 // AllSourceFullPaths returns all the source paths for this target, with a leading
 // plz-out/gen etc if appropriate.
-func (target *BuildTarget) AllSourceFullPaths(graph *BuildGraph) []string {
-	return target.allSourcePaths(graph, BuildInput.FullPaths)
+func (target *BuildTarget) AllSourceFullPaths(graph *BuildGraph, ffDefaultProvide bool) []string {
+	return target.allSourcePaths(graph, BuildInput.FullPaths, ffDefaultProvide)
 }
 
 // AllSourceLocalPaths returns the local part of all the source paths for this target,
 // i.e. without this target's package in it.
-func (target *BuildTarget) AllSourceLocalPaths(graph *BuildGraph) []string {
-	return target.allSourcePaths(graph, BuildInput.LocalPaths)
+func (target *BuildTarget) AllSourceLocalPaths(graph *BuildGraph, ffDefaultProvide bool) []string {
+	return target.allSourcePaths(graph, BuildInput.LocalPaths, ffDefaultProvide)
 }
 
 type buildPathsFunc func(BuildInput, *BuildGraph) []string
 
-func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc) []string {
+func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc, ffDefaultProvide bool) []string {
 	ret := make([]string, 0, len(target.Sources))
 	for _, source := range target.AllSources() {
-		ret = append(ret, target.sourcePaths(graph, source, full)...)
+		ret = append(ret, target.sourcePaths(graph, source, full, ffDefaultProvide)...)
 	}
 	return ret
 }
@@ -533,7 +533,7 @@ func (target *BuildTarget) AllURLs(state *BuildState) []string {
 // TODO(peterebden,tatskaari): Work out if we really want to have this and how the suite of *Dependencies functions
 //
 //	below should behave (preferably nicely).
-func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error) error {
+func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(*BuildTarget) error, ffDefaultProvide bool) error {
 	var g errgroup.Group
 	target.mutex.RLock()
 	for i := range target.dependencies {
@@ -542,7 +542,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 			continue // already done
 		}
 		g.Go(func() error {
-			if err := target.resolveOneDependency(graph, dep); err != nil {
+			if err := target.resolveOneDependency(graph, dep, ffDefaultProvide); err != nil {
 				return err
 			}
 			for _, d := range dep.deps {
@@ -557,14 +557,15 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 	return g.Wait()
 }
 
-func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
+func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo, ffDefaultProvide bool) error {
 	t := graph.WaitForTarget(*dep.declared)
 	if t == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
 	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
 
-	labels := t.provideFor(target)
+	// TODO(jpoole): shouldn't this use the ProvideFor wrapper that handles resolving to self if there's no match?
+	labels := t.provideFor(target, ffDefaultProvide)
 
 	if len(labels) == 0 {
 		target.mutex.Lock()
@@ -595,7 +596,7 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo)
 // MustResolveDependencies is exposed only for testing purposes.
 // TODO(peterebden, tatskaari): See if we can get rid of this.
 func (target *BuildTarget) ResolveDependencies(graph *BuildGraph) error {
-	return target.resolveDependencies(graph, func(*BuildTarget) error { return nil })
+	return target.resolveDependencies(graph, func(*BuildTarget) error { return nil }, false)
 }
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
@@ -880,19 +881,19 @@ func (target *BuildTarget) GetRealOutput(output string) string {
 }
 
 // SourcePaths returns the source paths for a given set of sources.
-func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) []string {
+func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput, ffDefaultProvide bool) []string {
 	ret := make([]string, 0, len(sources))
 	for _, source := range sources {
-		ret = append(ret, target.sourcePaths(graph, source, BuildInput.Paths)...)
+		ret = append(ret, target.sourcePaths(graph, source, BuildInput.Paths, ffDefaultProvide)...)
 	}
 	return ret
 }
 
 // sourcePaths returns the source paths for a single source.
-func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
+func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc, ffDefaultProvide bool) []string {
 	if label, ok := source.nonOutputLabel(); ok {
 		ret := []string{}
-		for _, providedLabel := range graph.TargetOrDie(label).ProvideFor(target) {
+		for _, providedLabel := range graph.TargetOrDie(label).ProvideFor(target, ffDefaultProvide) {
 			ret = append(ret, f(providedLabel, graph)...)
 		}
 		return ret
@@ -1195,8 +1196,8 @@ func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
 }
 
 // ProvideFor returns the build label that we'd provide for the given target.
-func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
-	if p := target.provideFor(other); len(p) > 0 {
+func (target *BuildTarget) ProvideFor(other *BuildTarget, ffDefaultProvide bool) []BuildLabel {
+	if p := target.provideFor(other, ffDefaultProvide); len(p) > 0 {
 		return p
 	}
 	return []BuildLabel{target.Label}
@@ -1204,11 +1205,16 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 
 // provideFor is like ProvideFor but returns an empty slice if there is a direct dependency.
 // It's a small optimisation to save allocating extra slices.
-func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
+func (target *BuildTarget) provideFor(other *BuildTarget, ffDefaultProvide bool) []BuildLabel {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
+	var defaultValue []BuildLabel
+	if def, ok := target.Provides["default"]; ok && ffDefaultProvide {
+		defaultValue = []BuildLabel{def}
+	}
+
 	if target.Provides == nil || len(other.Requires) == 0 {
-		return nil
+		return defaultValue
 	}
 	// Never do this if the other target has a data or tool dependency on us.
 	for _, data := range other.Data {
@@ -1227,6 +1233,10 @@ func (target *BuildTarget) provideFor(other *BuildTarget) []BuildLabel {
 			}
 			ret = append(ret, label)
 		}
+	}
+
+	if len(ret) == 0 {
+		return defaultValue
 	}
 	return ret
 }

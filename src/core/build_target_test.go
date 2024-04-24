@@ -219,18 +219,41 @@ func TestProvideFor(t *testing.T) {
 	// target1 is provided directly since they have a simple dependency
 	target1 := makeTarget1("//src/core:target1", "PUBLIC")
 	target2 := makeTarget1("//src/core:target2", "PUBLIC", target1)
-	assert.Equal(t, []BuildLabel{target1.Label}, target1.ProvideFor(target2))
+	assert.Equal(t, []BuildLabel{target1.Label}, target1.ProvideFor(target2, true))
 	// Now have target2 provide target1. target3 will get target1 instead.
 	target2.Provides = map[string]BuildLabel{"whatevs": target1.Label}
 	target3 := makeTarget1("//src/core:target3", "PUBLIC", target2)
 	target3.Requires = append(target3.Requires, "whatevs")
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3, true))
 	// Now target4 has a data dependency on target2. It has the same requirement as target3 but
 	// it gets target2 instead of target1, because that's just how data deps work.
 	target4 := makeTarget1("//src/core:target4", "PUBLIC", target2)
 	target4.Data = append(target4.Data, target2.Label)
 	target4.Requires = append(target4.Requires, "whatevs")
-	assert.Equal(t, []BuildLabel{target2.Label}, target2.ProvideFor(target4))
+	assert.Equal(t, []BuildLabel{target2.Label}, target2.ProvideFor(target4, true))
+}
+
+func TestDefaultProvide(t *testing.T) {
+	goTarget := makeTarget1("//src/core:go", "PUBLIC")
+	defaultTarget := makeTarget1("//src/core:default", "PUBLIC")
+	providesGo := makeTarget1("//src/core:provider", "PUBLIC", goTarget, defaultTarget)
+
+	requireGo := makeTarget1("//src/core:req_go", "PUBLIC")
+	requirePython := makeTarget1("//src/core:req_python", "PUBLIC")
+	requireNothing := makeTarget1("//src/core:req_none", "PUBLIC")
+
+	requireGo.Requires = []string{"go"}
+	requirePython.Requires = []string{"python"}
+
+	providesGo.Provides = map[string]BuildLabel{
+		"go":      goTarget.Label,
+		"default": defaultTarget.Label,
+	}
+
+	assert.Equal(t, []BuildLabel{defaultTarget.Label}, providesGo.ProvideFor(requirePython, true))
+	assert.Equal(t, []BuildLabel{defaultTarget.Label}, providesGo.ProvideFor(requireNothing, true))
+	assert.Equal(t, []BuildLabel{providesGo.Label}, providesGo.ProvideFor(requirePython, false))
+	assert.Equal(t, []BuildLabel{goTarget.Label}, providesGo.ProvideFor(requireGo, true))
 }
 
 func TestAddProvide(t *testing.T) {
@@ -240,7 +263,7 @@ func TestAddProvide(t *testing.T) {
 	target2.AddDependency(target1.Label)
 	target2.AddProvide("go", ParseBuildLabel(":target1", "src/core"))
 	target3.Requires = append(target3.Requires, "go")
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3))
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.ProvideFor(target3, true))
 }
 
 func TestAddDatum(t *testing.T) {

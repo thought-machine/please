@@ -148,7 +148,7 @@ func makeJSONPackage(state *core.BuildState, pkg *core.Package) JSONPackage {
 
 func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget {
 	t := JSONTarget{
-		Sources: makeJSONInputField(state.Graph, target.AllSourcePaths(state.Graph), target.NamedSources),
+		Sources: makeJSONInputField(state.Graph, target.AllSourcePaths(state.Graph, state.Config.FeatureFlags.FFDefaultProvides), target.NamedSources),
 		Tools:   makeJSONInputField(state.Graph, buildInputsToStrings(state.Graph, target.AllTools()), target.AllNamedTools()),
 	}
 	for in := range core.IterSources(state, state.Graph, target, false) {

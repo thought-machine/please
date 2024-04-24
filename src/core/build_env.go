@@ -69,7 +69,7 @@ func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 // We read this as being slightly more POSIX-compliant than not having it set at all...
 func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) BuildEnv {
 	env := TargetEnvironment(state, target)
-	sources := target.AllSourcePaths(state.Graph)
+	sources := target.AllSourcePaths(state.Graph, state.Config.FeatureFlags.FFDefaultProvides)
 	outEnv := target.GetTmpOutputAll(target.Outputs())
 	abs := filepath.IsAbs(tmpDir)
 
@@ -92,7 +92,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	}
 	// Named source groups if the target declared any.
 	for name, srcs := range target.NamedSources {
-		paths := target.SourcePaths(state.Graph, srcs)
+		paths := target.SourcePaths(state.Graph, srcs, state.Config.FeatureFlags.FFDefaultProvides)
 		// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
 		env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
 	}

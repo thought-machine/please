@@ -39,7 +39,7 @@ func TestDependentTargets(t *testing.T) {
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)
 	graph.AddTarget(target3)
-	assert.Equal(t, []BuildLabel{target3.Label}, graph.DependentTargets(target2.Label, target1.Label))
+	assert.Equal(t, []BuildLabel{target3.Label}, graph.DependentTargets(target2.Label, target1.Label, true))
 }
 
 func TestSubrepo(t *testing.T) {

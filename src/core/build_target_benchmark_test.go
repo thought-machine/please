@@ -17,7 +17,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			result = target1.provideFor(target2)
+			result = target1.provideFor(target2, true)
 		}
 	})
 
@@ -26,7 +26,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	b.Run("NoMatch", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			result = target2.provideFor(target1)
+			result = target2.provideFor(target1, true)
 		}
 	})
 
@@ -35,7 +35,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	b.Run("OneMatch", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			result = target2.provideFor(target1)
+			result = target2.provideFor(target1, true)
 		}
 	})
 
@@ -43,7 +43,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	b.Run("TwoMatches", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			result = target2.provideFor(target1)
+			result = target2.provideFor(target1, true)
 		}
 	})
 
@@ -52,7 +52,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	b.Run("FourMatches", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			result = target2.provideFor(target1)
+			result = target2.provideFor(target1, true)
 		}
 	})
 
@@ -60,7 +60,7 @@ func BenchmarkProvideFor(b *testing.B) {
 	b.Run("IsData", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			result = target2.provideFor(target1)
+			result = target2.provideFor(target1, true)
 		}
 	})
 }
