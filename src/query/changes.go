@@ -117,14 +117,8 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 }
 
 func toolPathHash(state *core.BuildState, tool core.BuildInput) (hash []byte) {
-	defer func() {
-		if r := recover(); r != nil {
-			hash = toolNotFoundHashValue
-		}
-	}()
-
 	h := sha1.New()
-	for _, path := range tool.FullPaths(state.Graph) {
+	for _, path := range tool.LocalPaths(state.Graph) {
 		h.Write([]byte(path))
 	}
 	return h.Sum(nil)
