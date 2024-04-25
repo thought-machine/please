@@ -167,7 +167,7 @@ type BuildTarget struct {
 	// one rule but only compile the appropriate code for each library that consumes it).
 	Requires []string
 	// Dependent rules this rule provides for each language. Matches up to Requires as described above.
-	Provides map[string]BuildLabel
+	Provides map[string][]BuildLabel
 	// Stores the hash of this build rule before any post-build function is run.
 	RuleHash []byte `name:"exported_deps"` // bit of a hack to call this exported_deps...
 	// Tools that this rule will use, ie. other rules that it may use at build time which are not
@@ -565,9 +565,8 @@ func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo,
 	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
 
 	// TODO(jpoole): shouldn't this use the ProvideFor wrapper that handles resolving to self if there's no match?
-	labels := t.provideFor(target, ffDefaultProvide)
-
-	if len(labels) == 0 {
+	labels, ok := t.provideFor(target, ffDefaultProvide)
+	if !ok {
 		target.mutex.Lock()
 		defer target.mutex.Unlock()
 
@@ -1187,17 +1186,17 @@ func (target *BuildTarget) ShouldInclude(includes, excludes []string) bool {
 }
 
 // AddProvide adds a new provide entry to this target.
-func (target *BuildTarget) AddProvide(language string, label BuildLabel) {
+func (target *BuildTarget) AddProvide(language string, labels []BuildLabel) {
 	if target.Provides == nil {
-		target.Provides = map[string]BuildLabel{language: label}
+		target.Provides = map[string][]BuildLabel{language: labels}
 	} else {
-		target.Provides[language] = label
+		target.Provides[language] = labels
 	}
 }
 
 // ProvideFor returns the build label that we'd provide for the given target.
 func (target *BuildTarget) ProvideFor(other *BuildTarget, ffDefaultProvide bool) []BuildLabel {
-	if p := target.provideFor(other, ffDefaultProvide); len(p) > 0 {
+	if p, ok := target.provideFor(other, ffDefaultProvide); ok {
 		return p
 	}
 	return []BuildLabel{target.Label}
@@ -1205,40 +1204,41 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget, ffDefaultProvide bool)
 
 // provideFor is like ProvideFor but returns an empty slice if there is a direct dependency.
 // It's a small optimisation to save allocating extra slices.
-func (target *BuildTarget) provideFor(other *BuildTarget, ffDefaultProvide bool) []BuildLabel {
+func (target *BuildTarget) provideFor(other *BuildTarget, ffDefaultProvide bool) ([]BuildLabel, bool) {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
-	var defaultValue []BuildLabel
-	if def, ok := target.Provides["default"]; ok && ffDefaultProvide {
-		defaultValue = []BuildLabel{def}
-	}
 
 	if target.Provides == nil || len(other.Requires) == 0 {
-		return defaultValue
+		return nil, false
 	}
+
 	// Never do this if the other target has a data or tool dependency on us.
 	for _, data := range other.Data {
 		if label, ok := data.Label(); ok && label == target.Label {
-			return nil
+			return nil, false
 		}
 	}
 	if other.IsTool(target.Label) {
-		return nil
+		return nil, false
 	}
 	var ret []BuildLabel
+	found := false
 	for _, require := range other.Requires {
 		if label, present := target.Provides[require]; present {
 			if ret == nil {
 				ret = make([]BuildLabel, 0, len(other.Requires))
 			}
-			ret = append(ret, label)
+			ret = append(ret, label...)
+			found = true
 		}
 	}
 
-	if len(ret) == 0 {
-		return defaultValue
+	if len(ret) == 0 && ffDefaultProvide {
+		if defaultValue, ok := target.Provides["default"]; ok {
+			return defaultValue, true
+		}
 	}
-	return ret
+	return ret, found
 }
 
 // UnprefixedHashes returns the hashes for the target without any prefixes;

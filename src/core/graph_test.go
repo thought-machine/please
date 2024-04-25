@@ -34,7 +34,7 @@ func TestDependentTargets(t *testing.T) {
 	target3 := makeTarget3("//src/core:target3")
 	target2.AddDependency(target1.Label)
 	target1.AddDependency(target3.Label)
-	target1.AddProvide("go", ParseBuildLabel(":target3", "src/core"))
+	target1.AddProvide("go", []BuildLabel{ParseBuildLabel(":target3", "src/core")})
 	target2.Requires = append(target2.Requires, "go")
 	graph.AddTarget(target1)
 	graph.AddTarget(target2)

@@ -10,8 +10,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var toolNotFoundHashValue = []byte{1}
-
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
@@ -117,14 +115,8 @@ func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error
 }
 
 func toolPathHash(state *core.BuildState, tool core.BuildInput) (hash []byte) {
-	defer func() {
-		if r := recover(); r != nil {
-			hash = toolNotFoundHashValue
-		}
-	}()
-
 	h := sha1.New()
-	for _, path := range tool.FullPaths(state.Graph) {
+	for _, path := range tool.LocalPaths(state.Graph) {
 		h.Write([]byte(path))
 	}
 	return h.Sum(nil)
