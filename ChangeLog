@@ -1,6 +1,6 @@
 Version 17.8.7
 --------------
-    * Use local paths only for determining tool chages (#3139)
+    * Use local paths only for determining tool changes (#3139)
     * Use parser.open rather than os.Open avoiding a panic when using remotefs
       (#3030)
     * Plz help shows halp for aliases (#3130)
