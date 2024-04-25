@@ -10,8 +10,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-var toolNotFoundHashValue = []byte{1}
-
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
