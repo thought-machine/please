@@ -1,3 +1,10 @@
+Version 17.8.7
+--------------
+    * Use local paths only for determining tool changes (#3139)
+    * Use parser.open rather than os.Open avoiding a panic when using remotefs
+      (#3030)
+    * Plz help shows halp for aliases (#3130)
+
 Version 17.8.6
 --------------
     * Speed up parsing of subrepo-heavy repos (notably `go_repo`) (#3126)
