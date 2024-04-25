@@ -245,13 +245,13 @@ func TestDefaultProvide(t *testing.T) {
 	requireGo.Requires = []string{"go"}
 	requirePython.Requires = []string{"python"}
 
-	providesGo.Provides = map[string]BuildLabel{
-		"go":      goTarget.Label,
-		"default": defaultTarget.Label,
+	providesGo.Provides = map[string][]BuildLabel{
+		"go":      {goTarget.Label},
+		"default": {defaultTarget.Label},
 	}
 
-	assert.Equal(t, []BuildLabel{defaultTarget.Label}, providesGo.ProvideFor(requirePython, true))
 	assert.Equal(t, []BuildLabel{defaultTarget.Label}, providesGo.ProvideFor(requireNothing, true))
+	assert.Equal(t, []BuildLabel{defaultTarget.Label}, providesGo.ProvideFor(requirePython, true))
 	assert.Equal(t, []BuildLabel{providesGo.Label}, providesGo.ProvideFor(requirePython, false))
 	assert.Equal(t, []BuildLabel{goTarget.Label}, providesGo.ProvideFor(requireGo, true))
 }
@@ -265,8 +265,8 @@ func TestEmptyProvide(t *testing.T) {
 	requireWhatevs.Requires = append(requireWhatevs.Requires, "whatevs")
 	requireNonsense.Requires = append(requireNonsense.Requires, "nonsense")
 
-	assert.Equal(t, []BuildLabel{}, provideTarget.ProvideFor(requireWhatevs))
-	assert.Equal(t, []BuildLabel{provideTarget.Label}, provideTarget.ProvideFor(requireNonsense))
+	assert.Equal(t, []BuildLabel{}, provideTarget.ProvideFor(requireWhatevs, true))
+	assert.Equal(t, []BuildLabel{provideTarget.Label}, provideTarget.ProvideFor(requireNonsense, true))
 }
 
 func TestAddProvide(t *testing.T) {

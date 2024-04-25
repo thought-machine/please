@@ -1208,8 +1208,14 @@ func (target *BuildTarget) provideFor(other *BuildTarget, ffDefaultProvide bool)
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 
+	var defaultValue []BuildLabel
+	var hasDefault bool
+	if ffDefaultProvide {
+		defaultValue, hasDefault = target.Provides["default"]
+	}
+
 	if target.Provides == nil || len(other.Requires) == 0 {
-		return nil, false
+		return defaultValue, hasDefault
 	}
 
 	// Never do this if the other target has a data or tool dependency on us.
@@ -1221,6 +1227,7 @@ func (target *BuildTarget) provideFor(other *BuildTarget, ffDefaultProvide bool)
 	if other.IsTool(target.Label) {
 		return nil, false
 	}
+
 	var ret []BuildLabel
 	found := false
 	for _, require := range other.Requires {
@@ -1233,12 +1240,10 @@ func (target *BuildTarget) provideFor(other *BuildTarget, ffDefaultProvide bool)
 		}
 	}
 
-	if len(ret) == 0 && ffDefaultProvide {
-		if defaultValue, ok := target.Provides["default"]; ok {
-			return defaultValue, true
-		}
+	if found {
+		return ret, found
 	}
-	return ret, found
+	return defaultValue, hasDefault
 }
 
 // UnprefixedHashes returns the hashes for the target without any prefixes;
