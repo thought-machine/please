@@ -1,0 +1,55 @@
+text_file(
+    name = "foo",
+    content = "foo",
+    out = "foo.txt",
+)
+
+text_file(
+    name = "bar",
+    content = "bar",
+    out = "bar.txt",
+)
+
+filegroup(
+    name = "provides",
+    srcs = [":foo"],
+    provides = {
+        "bar": ":bar",
+        "baz": [],
+    },
+)
+
+# bar should get the provided bar text file above
+genrule(
+    name = "require_bar",
+    deps = [":provides"],
+    requires = ["bar"],
+    cmd = ["ls *.txt > $OUT"],
+    outs = ["bar.ls"],
+)
+
+# baz should get nothing, as baz is provided as an empty list
+genrule(
+    name = "require_baz",
+    deps = [":provides"],
+    requires = ["baz"],
+    cmd = ["ls *.txt > $OUT 2>/dev/null || exit 0"], # Handle bash complaining that *.txt matches nothing
+    outs = ["baz.ls"],
+)
+
+# foo doesn't match, so should get the srcs of the filegroup above i.e. the foo file
+genrule(
+    name = "require_foo",
+    deps = [":provides"],
+    requires = ["foo"],
+    cmd = ["ls *.txt > $OUT"],
+    outs = ["foo.ls"],
+)
+
+# This also doesn't match so should get the srcs just like foo above
+genrule(
+    name = "require_nothing",
+    deps = [":provides"],
+    cmd = ["ls *.txt > $OUT"],
+    outs = ["nothing.ls"],
+)

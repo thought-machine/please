@@ -472,7 +472,7 @@ func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarg
 			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
 			str = ":" + str
 		}
-		target.AddMaybeExportedDependency(checkLabel(s, s.parseLabelInPackage(str, s.pkg)), exported, false, internal)
+		target.AddMaybeExportedDependency(assertNotPseudoLabel(s, s.parseLabelInPackage(str, s.pkg)), exported, false, internal)
 	})
 }
 
@@ -501,9 +501,22 @@ func addProvides(s *scope, name string, obj pyObject, t *core.BuildTarget) {
 		d, ok := asDict(obj)
 		s.Assert(ok, "Argument %s must be a dict, not %s, %v", name, obj.Type(), obj)
 		for k, v := range d {
-			str, ok := v.(pyString)
-			s.Assert(ok, "%s values must be strings", name)
-			t.AddProvide(k, checkLabel(s, s.parseLabelInPackage(string(str), s.pkg)))
+			if str, ok := v.(pyString); ok {
+				t.AddProvide(k, []core.BuildLabel{assertNotPseudoLabel(s, s.parseLabelInPackage(string(str), s.pkg))})
+				continue
+			}
+			if list, ok := v.(pyList); ok {
+				ls := make([]core.BuildLabel, len(list))
+				for i, v := range list {
+					str, ok := v.(pyString)
+					s.Assert(ok, "%s values must be strings or lists of strings", name)
+
+					ls[i] = assertNotPseudoLabel(s, s.parseLabelInPackage(string(str), s.pkg))
+				}
+				t.AddProvide(k, ls)
+				continue
+			}
+			s.Error("%s values must be strings or lists of strings", name)
 		}
 	}
 }
@@ -548,7 +561,7 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 		}
 		label := s.parseAnnotatedLabelInPackage(src, pkg)
 		if l, ok := label.Label(); ok {
-			checkLabel(s, l)
+			assertNotPseudoLabel(s, l)
 		}
 		return label
 	}
@@ -565,9 +578,9 @@ func parseSource(s *scope, src string, systemAllowed, tool bool) core.BuildInput
 	return core.NewFileLabel(src, s.pkg)
 }
 
-// checkLabel checks that the given build label is not a pseudo-label.
+// assertNotPsudolabel checks that the given build label is not a pseudo-label.
 // These are disallowed in (nearly) all contexts.
-func checkLabel(s *scope, label core.BuildLabel) core.BuildLabel {
+func assertNotPseudoLabel(s *scope, label core.BuildLabel) core.BuildLabel {
 	s.NAssert(label.IsAllTargets(), ":all labels are not permitted here")
 	s.NAssert(label.IsAllSubpackages(), "... labels are not permitted here")
 	return label
