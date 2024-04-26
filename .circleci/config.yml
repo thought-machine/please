@@ -121,30 +121,31 @@ jobs:
        - save_cache:
            key: python-linux-alt-v2-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
-   build-darwin-arm64:
+   build-darwin-amd64:
      working_directory: ~/please
      macos:
        xcode: "13.4.1"
+     resource_class: macos.m1.medium.gen1
      steps:
        - checkout
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-darwin-arm64-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-amd64-v4-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
-           command: tar -xzf /tmp/workspace/darwin_amd64/please_*.tar.gz
+           command: tar -xzf /tmp/workspace/darwin_arm64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_arm64 -o plugin.go.cgoenabled:1 -o plugin.go.cctool:clang -o "plugin.go.cflags:-target arm64-apple-macos11" //package:release_files
+           command: ./please/please build -p --profile ci --arch darwin_amd64 -o plugin.go.cgoenabled:1 -o plugin.go.cctool:clang -o "plugin.go.cflags:-target amd64-apple-macos11" //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
-             - darwin_arm64/*
+             - darwin_amd64/*
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-darwin-arm64-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-amd64-v4-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
 
    build-freebsd:
@@ -202,16 +203,17 @@ jobs:
    build-darwin:
       macos:
         xcode: "13.4.1"
+      resource_class: macos.m1.medium.gen1
       environment:
         PLZ_ARGS: "-p --profile ci --exclude pip --exclude embed"
       steps:
        - checkout
        - restore_cache:
-           key: go-mod-darwin-v7-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-arm64-v7-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-go121-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-go121-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
-           key: python-darwin-v3-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -228,18 +230,18 @@ jobs:
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
-             - darwin_amd64/*
+             - darwin_arm64/*
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: go-mod-darwin-v7-{{ checksum "go.mod" }}
+           key: go-mod-darwin-arm64-v7-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-go121-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-go121-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: python-darwin-v3-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
 
    test-rex:
@@ -338,14 +340,14 @@ workflows:
       - build-linux-arm64:
           requires:
             - build-alpine
-      - build-darwin-arm64:
+      - build-darwin-amd64:
           requires:
             - build-darwin
       - release-gs:
           requires:
             - build-alpine
             - build-freebsd
-            - build-darwin-arm64
+            - build-darwin-amd64
             - build-linux-arm64
             - build-linux
             - build-linux-alt
