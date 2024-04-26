@@ -940,7 +940,7 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 		return fmt.Errorf("Bad output hash for rule %s, expected %s, but was: \n\t%s",
 			target.Label, target.Hashes[0], strings.Join(validHashes, "\n\t"))
 	}
-	return fmt.Errorf("Bad output hash for rule %s, expected on of: \n\t%s\nbut was \n\t%s",
+	return fmt.Errorf("Bad output hash for rule %s, expected one of: \n\t%s\nbut was \n\t%s",
 		target.Label, strings.Join(target.Hashes, "\n\t"), strings.Join(validHashes, "\n\t"))
 }
 
