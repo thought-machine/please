@@ -214,54 +214,56 @@ func printTestResults(state *core.BuildState, failedTargets map[core.BuildLabel]
 		}
 	}
 	// Print individual test results
-	targets := 0
+	targets := []*core.BuildTarget{}
 	aggregate := new(core.TestSuite)
 	for _, target := range state.Graph.AllTargets() {
 		if target.IsTest() && target.Test.Results != nil {
-			results := target.Test.Results
-			aggregate.TestCases = append(aggregate.TestCases, results.TestCases...)
-			aggregate.Duration += results.Duration
-			if len(results.TestCases) > 0 {
-				if results.Errors() > 0 {
-					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
-				} else if results.Failures() > 0 {
-					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
-				} else if detailed || len(failedTargets) == 0 {
-					// Succeeded or skipped
-					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
-				}
-				if state.ShowTestOutput || detailed {
-					// Determine max width of test name so we align them
-					width := 0
-					for _, result := range results.TestCases {
-						if len(result.Name) > width {
-							width = len(result.Name)
-						}
-					}
-					format := fmt.Sprintf("%%-%ds", width+1)
-					for _, result := range results.TestCases {
-						printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name), detailed))
-						if len(result.Executions) > 1 {
-							for run, execution := range result.Executions {
-								printf("        RUN %d: %s\n", run+1, formatTestExecution(execution, detailed))
-								if state.ShowTestOutput {
-									showExecutionOutput(execution)
-								}
-							}
-						} else if state.ShowTestOutput {
-							showExecutionOutput(result.Executions[0])
-						}
-					}
-				}
-				targets++
-			} else if results.TimedOut {
-				printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
-				targets++
+			targets = append(targets, target)
+		}
+	}
+	abbreviateOutput := len(targets) > 100
+	for _, target := range targets {
+		results := target.Test.Results
+		aggregate.TestCases = append(aggregate.TestCases, results.TestCases...)
+		aggregate.Duration += results.Duration
+		if len(results.TestCases) > 0 {
+			if results.Errors() > 0 {
+				printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
+			} else if results.Failures() > 0 {
+				printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
+			} else if detailed || (len(failedTargets) == 0 && !abbreviateOutput) {
+				// Succeeded or skipped
+				printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(results, true))
 			}
+			if state.ShowTestOutput || detailed {
+				// Determine max width of test name so we align them
+				width := 0
+				for _, result := range results.TestCases {
+					if len(result.Name) > width {
+						width = len(result.Name)
+					}
+				}
+				format := fmt.Sprintf("%%-%ds", width+1)
+				for _, result := range results.TestCases {
+					printf("    %s\n", formatTestCase(result, fmt.Sprintf(format, result.Name), detailed))
+					if len(result.Executions) > 1 {
+						for run, execution := range result.Executions {
+							printf("        RUN %d: %s\n", run+1, formatTestExecution(execution, detailed))
+							if state.ShowTestOutput {
+								showExecutionOutput(execution)
+							}
+						}
+					} else if state.ShowTestOutput {
+						showExecutionOutput(result.Executions[0])
+					}
+				}
+			}
+		} else if results.TimedOut {
+			printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
 		}
 	}
 	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}.${RESET}\n",
-		pluralise(targets, "test target", "test targets"), testResultMessage(aggregate, false)))
+		pluralise(len(targets), "test target", "test targets"), testResultMessage(aggregate, false)))
 	printf("${BOLD_WHITE}Total time: %s real, %s compute.${RESET}\n", duration, aggregate.Duration.Round(durationGranularity))
 }
 
