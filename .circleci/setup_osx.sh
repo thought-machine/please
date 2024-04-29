@@ -11,5 +11,5 @@ sudo ln -s /usr/local/go/bin/go /usr/local/bin/go
 # xz might also.
 if ! command -v xz &> /dev/null; then
     brew install xz
-    ln -s /opt/homebrew/bin/xz /usr/local/bin/xz
 fi
+sudo ln -s /opt/homebrew/bin/xz /usr/local/bin/xz
