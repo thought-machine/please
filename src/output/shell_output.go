@@ -432,11 +432,11 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			env = core.TestEnvironment(state, target, dir, 1)
 			shouldSandbox = target.Test.Sandbox
 			if len(state.TestArgs) > 0 {
-				env = append(env, "TESTS="+strings.Join(state.TestArgs, " "))
+				env["TESTS"] = strings.Join(state.TestArgs, " ")
 			}
 		}
 		cmd, _ = core.ReplaceSequences(state, target, cmd)
-		env = append(env, "CMD="+cmd)
+		env["CMD"] = cmd
 		fmt.Printf("  %s: %s\n", label, dir)
 		fmt.Printf("    Command: %s\n", cmd)
 		if !shell {
@@ -451,7 +451,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			log.Debug("Full command: %s", strings.Join(argv, " "))
 			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), false, argv[0], argv[1:]...)
 			cmd.Dir = dir
-			cmd.Env = append(cmd.Env, env...)
+			cmd.Env = append(cmd.Env, env.ToSlice()...)
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
