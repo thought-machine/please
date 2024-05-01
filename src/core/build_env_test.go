@@ -185,3 +185,18 @@ func TestExecEnvironmentDebugTestTarget(t *testing.T) {
 	assert.Contains(t, env, "OUT=out_file1")
 	assert.Contains(t, env, "TEST=out_file1")
 }
+
+func TestDeduplicateEnvVars(t *testing.T) {
+	state := NewDefaultBuildState()
+	state.NeedCoverage = true
+
+	target := NewBuildTarget(NewBuildLabel("pkg", "t"))
+	target.Test = new(TestFields)
+	target.AddOutput("out_file1")
+	target.AddDebugDatum(FileLabel{File: "data_file1", Package: "pkg"})
+	target.Env = map[string]string{"COVERAGE": "wibble"}
+
+	env := TestEnvironment(state, target, "/path/to/runtime/dir", 1)
+	assert.Contains(t, env, "COVERAGE=wibble")
+	assert.NotContains(t, env, "COVERAGE=true")
+}

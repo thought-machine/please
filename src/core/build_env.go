@@ -134,13 +134,31 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 // Sadly this can't be done as part of TargetEnv() target env as this requires the other
 // env vars are set so they can be substituted.
 func withUserProvidedEnv(target *BuildTarget, env BuildEnv) BuildEnv {
+	if len(target.Env) == 0 {
+		return env
+	}
+	m := make(map[string]string, len(env))
+	idxs := make(map[string]int, len(env))
+	for i, kv := range env {
+		k, v, _ := strings.Cut(kv, "=")
+		m[k] = v
+		idxs[k] = i
+	}
 	for k, v := range target.Env {
-		for _, kv := range env {
-			i := strings.Index(kv, "=")
-			key, value := kv[:i], kv[(i+1):]
-			v = strings.ReplaceAll(v, "$"+key, value)
+		if strings.Contains(v, "$") {
+			v = os.Expand(v, func(k string) string {
+				if v, present := m[k]; present {
+					return v
+				}
+				return "$" + k
+			})
 		}
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
+		kv := fmt.Sprintf("%s=%s", k, v)
+		if idx, present := idxs[k]; present {
+			env[idx] = kv
+		} else {
+			env = append(env, kv)
+		}
 	}
 	return env
 }
