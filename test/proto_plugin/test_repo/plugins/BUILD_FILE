@@ -1,6 +1,6 @@
 plugin_repo(
     name = "proto",
-    revision = "v0.2.1",
+    revision = "064ff35796b681b33a0667e85a5b1a1d54b64f64",
 )
 
 plugin_repo(

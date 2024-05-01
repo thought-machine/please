@@ -9,3 +9,9 @@ config_setting(
     values = {"cpu": "x86"},
     visibility = ["//test/config_rules/..."],
 )
+
+config_setting(
+    name = "arm64",
+    values = {"cpu": "arm64"},
+    visibility = ["//test/config_rules/..."],
+)
