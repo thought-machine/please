@@ -104,7 +104,9 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.OutputIsComplete = isTruthy(outputIsCompleteBuildRuleArgIdx)
 	target.Sandbox = isTruthy(sandboxBuildRuleArgIdx)
 	target.TestOnly = test || isTruthy(testOnlyBuildRuleArgIdx)
-	target.ShowProgress.Set(isTruthy(progressBuildRuleArgIdx))
+	if isTruthy(progressBuildRuleArgIdx) {
+		target.ShowProgress()
+	}
 	target.IsRemoteFile = isTruthy(urlsBuildRuleArgIdx)
 	target.IsTextFile = args[cmdBuildRuleArgIdx] == textFileCommand
 	target.Local = isTruthy(localBuildRuleArgIdx)

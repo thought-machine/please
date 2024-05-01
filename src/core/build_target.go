@@ -239,7 +239,7 @@ type BuildTarget struct {
 	AddedPostBuild bool `print:"false"`
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
-	ShowProgress atomic.Bool `name:"progress"`
+	showProgress atomic.Bool `name:"progress"`
 }
 
 // ExpectedBuildMetadataVersionTag is the version tag that the current Please version expects. If this doesn't match
@@ -1827,10 +1827,14 @@ func (target *BuildTarget) HasParent() bool {
 	return target.Label.HasParent()
 }
 
+// ShowProgress enables this target to display progress as it runs.
+func (target *BuildTarget) ShowProgress() {
+	target.showProgress.Store(true)
+}
+
 // ShouldShowProgress returns true if the target should display progress.
-// This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ShouldShowProgress() bool {
-	return target.ShowProgress.Load()
+	return target.showProgress.Load()
 }
 
 // ProgressDescription returns a description of what the target is doing as it runs.
