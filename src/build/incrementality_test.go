@@ -97,7 +97,7 @@ var KnownFields = map[string]bool{
 	"state":                  true,
 	"completedRuns":          true,
 	"BuildingDescription":    true,
-	"ShowProgress":           true,
+	"showProgress":           true,
 	"Progress":               true,
 	"FileSize":               true,
 	"PassUnsafeEnv":          true,
