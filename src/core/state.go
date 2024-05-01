@@ -294,11 +294,11 @@ type stateProgress struct {
 	// Targets that we were originally requested to build
 	originalTargets *TargetSet
 	// True if something about the build has failed.
-	failed atomicBool
+	failed atomic.Bool
 	// True if >= 1 target has failed to build
-	buildFailed atomicBool
+	buildFailed atomic.Bool
 	// True if >= 1 target has failed test cases
-	testFailed atomicBool
+	testFailed atomic.Bool
 	// Stream of results from the build
 	results chan *BuildResult
 	// Internal result stream, used to intermediate them for the cycle checker.
@@ -604,11 +604,11 @@ func (state *BuildState) logResult(result *BuildResult) {
 	result.Time = time.Now()
 	state.progress.internalResults <- result
 	if result.Status.IsFailure() {
-		state.progress.failed.SetTrue()
+		state.progress.failed.Store(true)
 		if result.Status == TargetBuildFailed {
-			state.progress.buildFailed.SetTrue()
+			state.progress.buildFailed.Store(true)
 		} else if result.Status == TargetTestFailed {
-			state.progress.testFailed.SetTrue()
+			state.progress.testFailed.Store(true)
 		}
 	}
 }
@@ -697,7 +697,7 @@ func (state *BuildState) checkForCycles() {
 
 // Failures returns anything that has failed about the current build.
 func (state *BuildState) Failures() (anything, build, test bool) {
-	return state.progress.failed.Value(), state.progress.buildFailed.Value(), state.progress.testFailed.Value()
+	return state.progress.failed.Load(), state.progress.buildFailed.Load(), state.progress.testFailed.Load()
 }
 
 // Results returns a channel on which the caller can listen for results.
@@ -1118,7 +1118,7 @@ func (state *BuildState) queueTargetData(target *BuildTarget) {
 // queueResolvedTarget is like queueTarget but once we have a resolved target.
 func (state *BuildState) queueResolvedTarget(target *BuildTarget, forceBuild bool, mode ParseMode) error {
 	if mode.IsForSubinclude() {
-		target.neededForSubinclude.SetTrue()
+		target.neededForSubinclude.Store(true)
 	}
 	if target.State() >= Active && !forceBuild {
 		return nil // Target is already tagged to be built and likely on the queue.
@@ -1163,9 +1163,9 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		}
 	}
 	for {
-		var called atomicBool
+		var called atomic.Bool
 		if err := target.resolveDependencies(state.Graph, func(t *BuildTarget) error {
-			called.SetTrue()
+			called.Store(true)
 			return state.queueResolvedTarget(t, forceBuild, ParseModeNormal)
 		}); err != nil {
 			state.asyncError(target.Label, err)
@@ -1184,7 +1184,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 				}
 			}
 		}
-		if !called.Value() {
+		if !called.Load() {
 			// We are now ready to go, we have nothing to wait for.
 			if building && target.SyncUpdateState(Active, Pending) {
 				// If we're going to run the target, we need its runtime data to be done. This has to

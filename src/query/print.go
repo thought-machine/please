@@ -168,6 +168,9 @@ func specialFields() specialFieldsMap {
 		"test": func(target *core.BuildTarget) interface{} {
 			return target.IsTest()
 		},
+		"progress": func(target *core.BuildTarget) interface{} {
+			return target.ShouldShowProgress()
+		},
 	}
 }
 
