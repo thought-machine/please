@@ -268,7 +268,7 @@ func toolsEnv(state *BuildState, allTools []BuildInput, namedTools map[string][]
 		env[prefix+"TOOL"] = toolPath(state, allTools[0], abs)
 	}
 	for name, tools := range namedTools {
-		env[prefix+"TOOLS_"+strings.ToUpper(name)] =  strings.Join(toolPaths(state, tools, abs), " ")
+		env[prefix+"TOOLS_"+strings.ToUpper(name)] = strings.Join(toolPaths(state, tools, abs), " ")
 	}
 	return env
 }
@@ -279,7 +279,7 @@ func dataEnv(state *BuildState, allData []BuildInput, namedData map[string][]Bui
 		prefix + "DATA": strings.Join(runtimeDataPaths(state.Graph, allData, !inTmpDir), " "),
 	}
 	for name, data := range namedData {
-		env[prefix+"DATA_"+strings.ToUpper(name)] =  strings.Join(runtimeDataPaths(state.Graph, data, !inTmpDir), " ")
+		env[prefix+"DATA_"+strings.ToUpper(name)] = strings.Join(runtimeDataPaths(state.Graph, data, !inTmpDir), " ")
 	}
 	return env
 }
@@ -333,8 +333,8 @@ func initStampEnv() {
 	wg.Wait()
 	stampEnv = BuildEnv{
 		"SCM_COMMIT_DATE": commitDate,
-		"SCM_REVISION": revision,
-		"SCM_DESCRIBE": describe,
+		"SCM_REVISION":    revision,
+		"SCM_DESCRIBE":    describe,
 	}
 }
 
@@ -395,7 +395,7 @@ func (env BuildEnv) Redacted() interface{} {
 func (env BuildEnv) ToSlice() []string {
 	ret := make([]string, 0, len(env))
 	for k, v := range env {
-		ret = append(ret, k + "=" + v)
+		ret = append(ret, k+"="+v)
 	}
 	sort.Strings(ret)
 	return ret

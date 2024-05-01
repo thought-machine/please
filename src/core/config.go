@@ -736,9 +736,9 @@ type Size struct {
 }
 
 type storedBuildEnv struct {
-	Env BuildEnv
+	Env  BuildEnv
 	Path []string
-	Once      sync.Once
+	Once sync.Once
 }
 
 // Hash returns a hash of the parts of this configuration that affect building targets in general.
