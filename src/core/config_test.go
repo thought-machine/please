@@ -261,12 +261,12 @@ func TestUnknownHashChecker(t *testing.T) {
 func TestBuildEnvSection(t *testing.T) {
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/buildenv.plzconfig"}, nil)
 	assert.NoError(t, err)
-	expected := []string{
-		"BAR_BAR=first",
-		"FOO_BAR=second",
-		"PATH=" + os.Getenv("TMP_DIR") + ":/usr/local/bin:/usr/bin:/bin",
+	expected := BuildEnv{
+		"BAR_BAR": "first",
+		"FOO_BAR": "second",
+		"PATH": os.Getenv("TMP_DIR") + ":/usr/local/bin:/usr/bin:/bin",
 	}
-	assert.ElementsMatch(t, expected, config.GetBuildEnv())
+	assert.EqualValues(t, expected, config.GetBuildEnv())
 }
 
 func TestPassEnv(t *testing.T) {
@@ -274,12 +274,12 @@ func TestPassEnv(t *testing.T) {
 	t.Setenv("BAR", "second")
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
-	expected := []string{
-		"BAR=second",
-		"FOO=first",
-		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
+	expected := BuildEnv{
+		"BAR": "second",
+		"FOO": "first",
+		"PATH": os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
 	}
-	assert.ElementsMatch(t, expected, config.GetBuildEnv())
+	assert.EqualValues(t, expected, config.GetBuildEnv())
 }
 
 func TestPassUnsafeEnv(t *testing.T) {
@@ -287,12 +287,12 @@ func TestPassUnsafeEnv(t *testing.T) {
 	t.Setenv("BAR", "second")
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
 	assert.NoError(t, err)
-	expected := []string{
-		"BAR=second",
-		"FOO=first",
-		"PATH=" + os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
+	expected := BuildEnv{
+		"BAR": "second",
+		"FOO": "first",
+		"PATH": os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
 	}
-	assert.ElementsMatch(t, expected, config.GetBuildEnv())
+	assert.EqualValues(t, expected, config.GetBuildEnv())
 }
 
 func TestPassUnsafeEnvExcludedFromHash(t *testing.T) {
