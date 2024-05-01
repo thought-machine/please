@@ -200,7 +200,7 @@ type BuildTarget struct {
 	state int32 `print:"false"`
 	// If true, the target is needed for a subinclude and therefore we will have to make sure its
 	// outputs are available locally when built.
-	neededForSubinclude atomicBool `print:"false"`
+	neededForSubinclude atomic.Bool `print:"false"`
 	// The number of completed runs
 	completedRuns uint16 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
@@ -239,7 +239,7 @@ type BuildTarget struct {
 	AddedPostBuild bool `print:"false"`
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
-	ShowProgress atomicBool `name:"progress"`
+	ShowProgress atomic.Bool `name:"progress"`
 }
 
 // ExpectedBuildMetadataVersionTag is the version tag that the current Please version expects. If this doesn't match
@@ -1830,7 +1830,7 @@ func (target *BuildTarget) HasParent() bool {
 // ShouldShowProgress returns true if the target should display progress.
 // This is provided as a function to satisfy the process package.
 func (target *BuildTarget) ShouldShowProgress() bool {
-	return target.ShowProgress.Value()
+	return target.ShowProgress.Load()
 }
 
 // ProgressDescription returns a description of what the target is doing as it runs.
