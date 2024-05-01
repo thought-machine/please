@@ -250,12 +250,12 @@ func addEnv(env []string, e core.BuildEnv) []string {
 
 func addOneEnv(env []string, k, v string) []string {
 	for i, existing := range env {
-		if strings.HasPrefix(existing, k + "=") {
+		if strings.HasPrefix(existing, k+"=") {
 			env[i] = k + "=" + v
 			return env
 		}
 	}
-	return append(env, k + "=" + v)
+	return append(env, k+"="+v)
 }
 
 // must dies if the given error is non-nil.

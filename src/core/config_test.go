@@ -264,7 +264,7 @@ func TestBuildEnvSection(t *testing.T) {
 	expected := BuildEnv{
 		"BAR_BAR": "first",
 		"FOO_BAR": "second",
-		"PATH": os.Getenv("TMP_DIR") + ":/usr/local/bin:/usr/bin:/bin",
+		"PATH":    os.Getenv("TMP_DIR") + ":/usr/local/bin:/usr/bin:/bin",
 	}
 	assert.EqualValues(t, expected, config.GetBuildEnv())
 }
@@ -275,8 +275,8 @@ func TestPassEnv(t *testing.T) {
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := BuildEnv{
-		"BAR": "second",
-		"FOO": "first",
+		"BAR":  "second",
+		"FOO":  "first",
 		"PATH": os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
 	}
 	assert.EqualValues(t, expected, config.GetBuildEnv())
@@ -288,8 +288,8 @@ func TestPassUnsafeEnv(t *testing.T) {
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/passunsafeenv.plzconfig"}, nil)
 	assert.NoError(t, err)
 	expected := BuildEnv{
-		"BAR": "second",
-		"FOO": "first",
+		"BAR":  "second",
+		"FOO":  "first",
 		"PATH": os.Getenv("TMP_DIR") + ":" + os.Getenv("PATH"),
 	}
 	assert.EqualValues(t, expected, config.GetBuildEnv())
