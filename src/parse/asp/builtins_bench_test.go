@@ -16,7 +16,7 @@ func BenchmarkStrFormat(b *testing.B) {
 	}
 	b.ReportAllocs()
 
-	for range b.N {
+	for i := 0; i < b.N; i++ {
 		strFormat(s, args)
 	}
 }
@@ -40,7 +40,7 @@ func BenchmarkStrFormatBig(b *testing.B) {
 	args := []pyObject{pyString(tfCmd)}
 	b.ReportAllocs()
 
-	for range b.N {
+	for i := 0; i < b.N; i++ {
 		strFormat(s, args)
 	}
 }
