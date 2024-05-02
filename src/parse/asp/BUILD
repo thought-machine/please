@@ -2,21 +2,7 @@ subinclude("//build_defs:benchmark")
 
 go_library(
     name = "asp",
-    srcs = [
-        "builtins.go",
-        "config.go",
-        "errors.go",
-        "exec.go",
-        "file_position.go",
-        "grammar.go",
-        "grammar_parse.go",
-        "interpreter.go",
-        "lexer.go",
-        "objects.go",
-        "parser.go",
-        "targets.go",
-        "util.go",
-    ],
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -33,18 +19,7 @@ go_library(
 
 go_test(
     name = "asp_test",
-    srcs = [
-        "builtins_test.go",
-        "config_test.go",
-        "file_position_test.go",
-        "interpreter_test.go",
-        "label_context_test.go",
-        "lexer_test.go",
-        "logging_test.go",
-        "parser_test.go",
-        "targets_test.go",
-        "util_test.go",
-    ],
+    srcs = glob(["*_test.go"], exclude=["*_bench_test.go"]),
     data = ["test_data"],
     deps = [
         ":asp",
@@ -54,5 +29,14 @@ go_test(
         "//rules",
         "//src/cli",
         "//src/core",
+    ],
+)
+
+go_benchmark(
+    name = "asp_benchmark",
+    srcs = glob(["*_bench_test.go"]),
+    data = ["test_data"],
+    deps = [
+        ":asp",
     ],
 )
