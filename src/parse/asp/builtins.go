@@ -587,13 +587,49 @@ func strRFind(s *scope, args []pyObject) pyObject {
 
 func strFormat(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
-	for k, v := range s.locals {
-		self = strings.ReplaceAll(self, "{"+k+"}", v.String())
+	var buf strings.Builder
+	buf.Grow(len(self)) // most reasonable guess available as to how big it might be
+
+	arg := 1 // what arg index are we up to for positional args
+	for {
+		start := strings.IndexByte(self, '{')
+		if start == -1 {
+			buf.WriteString(self)
+			break
+		}
+		end := strings.IndexByte(self[start:], '}')
+		if end == -1 {
+			// We may want to error here in some future revision
+			buf.WriteString(self)
+			break
+		}
+		buf.WriteString(self[:start])
+		end = start + end
+		if start > 0 && self[start-1] == '$' {
+			// Don't interpolate ${X} (but ${{X}} -> ${X})
+			if self[start+1] == '{' {
+				buf.WriteString(self[start+1 : end])
+			} else if start == end-1 {
+				// ${} interpolates as $ + positional arg
+				s.Assert(arg < len(args), "format string specifies at least %d positional arguments, but only %d were supplied", arg, len(args)-1)
+				buf.WriteString(args[arg].String())
+				arg++
+			} else {
+				buf.WriteString(self[start : end+1])
+			}
+		} else if key := self[start+1 : end]; key == "" {
+			s.Assert(arg < len(args), "format string specifies at least %d positional arguments, but only %d were supplied", arg, len(args)-1)
+			buf.WriteString(args[arg].String())
+			arg++
+		} else if val, present := s.locals[key]; present {
+			buf.WriteString(val.String())
+		} else {
+			// We may want to error here in some future revision
+			buf.WriteString(self[start : end+1])
+		}
+		self = self[end+1:]
 	}
-	for _, arg := range args[1:] {
-		self = strings.Replace(self, "{}", arg.String(), 1)
-	}
-	return pyString(strings.ReplaceAll(strings.ReplaceAll(self, "{{", "{"), "}}", "}"))
+	return pyString(buf.String())
 }
 
 func strCount(s *scope, args []pyObject) pyObject {
