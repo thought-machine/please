@@ -93,3 +93,13 @@ func TestStrFormat3(t *testing.T) {
 		pyString("{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl"),
 	}))
 }
+
+func TestStrFormat4(t *testing.T) {
+	s := &scope{
+		locals: map[string]pyObject{},
+	}
+
+	assert.EqualValues(t, `echo "tools/images/please_ubuntu@$please_ubuntu_digest" > $OUT`, strFormat(s, []pyObject{
+		pyString(`echo "{}@${}" > $OUT`), pyString("tools/images/please_ubuntu"), pyString("please_ubuntu_digest"),
+	}))
+}

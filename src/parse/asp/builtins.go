@@ -609,6 +609,11 @@ func strFormat(s *scope, args []pyObject) pyObject {
 			// Don't interpolate ${X} (but ${{X}} -> ${X})
 			if self[start+1] == '{' {
 				buf.WriteString(self[start+1 : end])
+			} else if start == end-1 {
+				// ${} interpolates as $ + positional arg
+				s.Assert(arg < len(args), "format string specifies at least %d positional arguments, but only %d were supplied", arg, len(args)-1)
+				buf.WriteString(args[arg].String())
+				arg++
 			} else {
 				buf.WriteString(self[start : end+1])
 			}
