@@ -736,8 +736,9 @@ type Size struct {
 }
 
 type storedBuildEnv struct {
-	Env, Path []string
-	Once      sync.Once
+	Env  BuildEnv
+	Path []string
+	Once sync.Once
 }
 
 // Hash returns a hash of the parts of this configuration that affect building targets in general.
@@ -762,13 +763,11 @@ func (config *Configuration) Hash() []byte {
 }
 
 // GetBuildEnv returns the build environment configured for this config object.
-func (config *Configuration) GetBuildEnv() []string {
+func (config *Configuration) GetBuildEnv() BuildEnv {
 	config.buildEnvStored.Once.Do(func() {
 		config.buildEnvStored.Env = config.getBuildEnv(true, true)
-		for _, e := range config.buildEnvStored.Env {
-			if strings.HasPrefix(e, "PATH=") {
-				config.buildEnvStored.Path = strings.Split(strings.TrimPrefix(e, "PATH="), ":")
-			}
+		if path, present := config.buildEnvStored.Env["PATH"]; present {
+			config.buildEnvStored.Path = strings.Split(path, ":")
 		}
 	})
 	return config.buildEnvStored.Env
@@ -807,47 +806,40 @@ func (config *Configuration) Path() []string {
 	return config.buildEnvStored.Path
 }
 
-func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) []string {
-	env := []string{}
+func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) BuildEnv {
+	env := BuildEnv{}
 
 	// from the BuildEnv config keyword
 	for k, v := range config.BuildEnv {
-		pair := strings.ReplaceAll(strings.ToUpper(k), "-", "_") + "=" + v
-		env = append(env, pair)
+		env[strings.ReplaceAll(strings.ToUpper(k), "-", "_")] = v
 	}
-	// from the user's environment based on the PassUnsafeEnv config keyword
-	if includeUnsafe {
-		for _, k := range config.Build.PassUnsafeEnv {
+
+	addEnv := func(vars []string) {
+		for _, k := range vars {
 			if v, isSet := os.LookupEnv(k); isSet {
 				if k == "PATH" {
 					// plz's install location always needs to be on the path.
 					v = config.Please.Location + ":" + v
 					includePath = false // skip this in a bit
 				}
-				env = append(env, k+"="+v)
+				env[k] = v
 			}
 		}
+	}
+
+	// from the user's environment based on the PassUnsafeEnv config keyword
+	if includeUnsafe {
+		addEnv(config.Build.PassUnsafeEnv)
 	}
 	// from the user's environment based on the PassEnv config keyword
-	for _, k := range config.Build.PassEnv {
-		if v, isSet := os.LookupEnv(k); isSet {
-			if k == "PATH" {
-				// plz's install location always needs to be on the path.
-				v = config.Please.Location + ":" + v
-				includePath = false // skip this in a bit
-			}
-			env = append(env, k+"="+v)
-		}
-	}
+	addEnv(config.Build.PassEnv)
 	if includePath {
 		// Use a restricted PATH; it'd be easier for the user if we pass it through
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env = append(env, "PATH="+strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":"))
+		env["PATH"] = strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")
 	}
-
-	sort.Strings(env)
 	return env
 }
 

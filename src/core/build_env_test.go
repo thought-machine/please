@@ -9,9 +9,9 @@ import (
 
 func TestReplaceEnvironment(t *testing.T) {
 	env := BuildEnv{
-		"TMP_DIR=/home/user/please/src/core",
-		"PKG=src/core",
-		"SRCS=core.go build_env.go",
+		"TMP_DIR": "/home/user/please/src/core",
+		"PKG":     "src/core",
+		"SRCS":    "core.go build_env.go",
 	}
 	assert.Equal(t,
 		"/home/user/please/src/core src/core core.go build_env.go",
@@ -21,36 +21,36 @@ func TestReplaceEnvironment(t *testing.T) {
 
 func TestReplace(t *testing.T) {
 	env := BuildEnv{
-		"TMP_DIR=/home/user/please/src/core",
-		"PKG=src/core",
-		"SRCS=core.go build_env.go",
+		"TMP_DIR": "/home/user/please/src/core",
+		"PKG":     "src/core",
+		"SRCS":    "core.go build_env.go",
 	}
 	env.Replace("PKG", "src/test")
 	assert.EqualValues(t, BuildEnv{
-		"TMP_DIR=/home/user/please/src/core",
-		"PKG=src/test",
-		"SRCS=core.go build_env.go",
+		"TMP_DIR": "/home/user/please/src/core",
+		"PKG":     "src/test",
+		"SRCS":    "core.go build_env.go",
 	}, env)
 }
 
 func TestRedact(t *testing.T) {
 	env := BuildEnv{
-		"WHATEVER=12345",
-		"GPG_PASSWORD=54321",
-		"ULTIMATE_MEGASECRET=42",
+		"WHATEVER":            "12345",
+		"GPG_PASSWORD":        "54321",
+		"ULTIMATE_MEGASECRET": "42",
 	}
 	expected := BuildEnv{
-		"WHATEVER=12345",
-		"GPG_PASSWORD=************",
-		"ULTIMATE_MEGASECRET=************",
+		"WHATEVER":            "12345",
+		"GPG_PASSWORD":        "************",
+		"ULTIMATE_MEGASECRET": "************",
 	}
 	assert.EqualValues(t, expected, env.Redacted())
 }
 
 func TestString(t *testing.T) {
 	env := BuildEnv{
-		"A=B",
-		"C=D",
+		"A": "B",
+		"C": "D",
 	}
 	assert.EqualValues(t, "A=B\nC=D", env.String())
 }
@@ -65,14 +65,14 @@ func TestExecEnvironment(t *testing.T) {
 
 	env := ExecEnvironment(NewDefaultBuildState(), target, "/path/to/runtime/dir")
 
-	assert.Contains(t, env, "DATA=pkg/data_file1")
-	assert.Contains(t, env, "TMP_DIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "TMPDIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
-	assert.Contains(t, env, "TERM=my-term")
-	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.NotContains(t, env, "TEST=out_file1")
+	assert.Equal(t, env["DATA"], "pkg/data_file1")
+	assert.Equal(t, env["TMP_DIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TMPDIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["HOME"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TERM"], "my-term")
+	assert.Equal(t, env["OUTS"], "out_file1")
+	assert.Equal(t, env["OUT"], "out_file1")
+	assert.NotContains(t, env, "TEST")
 }
 
 func TestExecEnvironmentTestTarget(t *testing.T) {
@@ -104,17 +104,17 @@ func TestExecEnvironmentTestTarget(t *testing.T) {
 
 	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir")
 
-	assert.Contains(t, env, "DATA=pkg/data_file1 pkg/data_file2")
-	assert.Contains(t, env, "DATA_FILE2=pkg/data_file2")
-	assert.Contains(t, env, "TOOLS=plz-out/bin/tool1 plz-out/bin/tool2")
-	assert.Contains(t, env, "TOOLS_TOOL2=plz-out/bin/tool2")
-	assert.Contains(t, env, "TMP_DIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "TMPDIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
-	assert.Contains(t, env, "TERM=my-term")
-	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.Contains(t, env, "TEST=out_file1")
+	assert.Equal(t, env["DATA"], "pkg/data_file1 pkg/data_file2")
+	assert.Equal(t, env["DATA_FILE2"], "pkg/data_file2")
+	assert.Equal(t, env["TOOLS"], "plz-out/bin/tool1 plz-out/bin/tool2")
+	assert.Equal(t, env["TOOLS_TOOL2"], "plz-out/bin/tool2")
+	assert.Equal(t, env["TMP_DIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TMPDIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["HOME"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TERM"], "my-term")
+	assert.Equal(t, env["OUTS"], "out_file1")
+	assert.Equal(t, env["OUT"], "out_file1")
+	assert.Equal(t, env["TEST"], "out_file1")
 }
 
 func TestExecEnvironmentDebugTarget(t *testing.T) {
@@ -138,17 +138,17 @@ func TestExecEnvironmentDebugTarget(t *testing.T) {
 
 	env := ExecEnvironment(state, target, "/path/to/runtime/dir")
 
-	assert.Contains(t, env, "DEBUG_DATA=pkg/data_file1")
-	assert.Contains(t, env, "DEBUG_TOOLS=plz-out/bin/tool1")
-	assert.Contains(t, env, "DEBUG_TOOLS_TOOL1=plz-out/bin/tool1")
-	assert.Contains(t, env, "DEBUG_TOOL=plz-out/bin/tool1")
-	assert.Contains(t, env, "TMP_DIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "TMPDIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
-	assert.Contains(t, env, "TERM=my-term")
-	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.NotContains(t, env, "TEST=out_file1")
+	assert.Equal(t, env["DEBUG_DATA"], "pkg/data_file1")
+	assert.Equal(t, env["DEBUG_TOOLS"], "plz-out/bin/tool1")
+	assert.Equal(t, env["DEBUG_TOOLS_TOOL1"], "plz-out/bin/tool1")
+	assert.Equal(t, env["DEBUG_TOOL"], "plz-out/bin/tool1")
+	assert.Equal(t, env["TMP_DIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TMPDIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["HOME"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TERM"], "my-term")
+	assert.Equal(t, env["OUTS"], "out_file1")
+	assert.Equal(t, env["OUT"], "out_file1")
+	assert.NotContains(t, env, "TEST")
 }
 
 func TestExecEnvironmentDebugTestTarget(t *testing.T) {
@@ -173,17 +173,17 @@ func TestExecEnvironmentDebugTestTarget(t *testing.T) {
 
 	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir")
 
-	assert.Contains(t, env, "DEBUG_DATA=pkg/data_file1")
-	assert.Contains(t, env, "DEBUG_TOOLS=plz-out/bin/tool1")
-	assert.Contains(t, env, "DEBUG_TOOLS_TOOL1=plz-out/bin/tool1")
-	assert.Contains(t, env, "DEBUG_TOOL=plz-out/bin/tool1")
-	assert.Contains(t, env, "TMP_DIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "TMPDIR=/path/to/runtime/dir")
-	assert.Contains(t, env, "HOME=/path/to/runtime/dir")
-	assert.Contains(t, env, "TERM=my-term")
-	assert.Contains(t, env, "OUTS=out_file1")
-	assert.Contains(t, env, "OUT=out_file1")
-	assert.Contains(t, env, "TEST=out_file1")
+	assert.Equal(t, env["DEBUG_DATA"], "pkg/data_file1")
+	assert.Equal(t, env["DEBUG_TOOLS"], "plz-out/bin/tool1")
+	assert.Equal(t, env["DEBUG_TOOLS_TOOL1"], "plz-out/bin/tool1")
+	assert.Equal(t, env["DEBUG_TOOL"], "plz-out/bin/tool1")
+	assert.Equal(t, env["TMP_DIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TMPDIR"], "/path/to/runtime/dir")
+	assert.Equal(t, env["HOME"], "/path/to/runtime/dir")
+	assert.Equal(t, env["TERM"], "my-term")
+	assert.Equal(t, env["OUTS"], "out_file1")
+	assert.Equal(t, env["OUT"], "out_file1")
+	assert.Equal(t, env["TEST"], "out_file1")
 }
 
 func TestDeduplicateEnvVars(t *testing.T) {
@@ -197,6 +197,5 @@ func TestDeduplicateEnvVars(t *testing.T) {
 	target.Env = map[string]string{"COVERAGE": "wibble"}
 
 	env := TestEnvironment(state, target, "/path/to/runtime/dir", 1)
-	assert.Contains(t, env, "COVERAGE=wibble")
-	assert.NotContains(t, env, "COVERAGE=true")
+	assert.Equal(t, env["COVERAGE"], "wibble")
 }

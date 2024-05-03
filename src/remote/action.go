@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -115,7 +116,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 			Arguments: []string{
 				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
-			EnvironmentVariables: c.buildEnv(target, []string{}, false),
+			EnvironmentVariables: c.buildEnv(target, map[string]string{}, false),
 			OutputPaths:          outs,
 		}, nil
 	}
@@ -133,7 +134,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 }
 
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
-func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp, isRuntime bool) []string {
+func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp, isRuntime bool) core.BuildEnv {
 	if target.IsFilegroup {
 		return core.GeneralBuildEnvironment(state) // filegroups don't need a full build environment
 	}
@@ -552,21 +553,15 @@ func reallyTranslateOS(os string) string {
 }
 
 // buildEnv translates the set of environment variables for this target to a proto.
-func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) []*pb.Command_EnvironmentVariable {
+func (c *Client) buildEnv(target *core.BuildTarget, env core.BuildEnv, sandbox bool) []*pb.Command_EnvironmentVariable {
 	if sandbox {
-		env = append(env, "SANDBOX=true")
+		env["SANDBOX"] = "true"
 	}
-	if target != nil {
-		if target.IsBinary {
-			env = append(env, "_BINARY=true")
-		}
+	if target != nil && target.IsBinary {
+		env["_BINARY"] = "true"
 	}
-	sort.Strings(env) // Proto says it must be sorted (not just consistently ordered :( )
-	vars := make([]*pb.Command_EnvironmentVariable, len(env))
-	for i, e := range env {
-		idx := strings.IndexByte(e, '=')
-		name := e[:idx]
-		v := e[idx+1:]
+	vars := make([]*pb.Command_EnvironmentVariable, 0, len(env))
+	for name, v := range env {
 		if name == "PATH" {
 			// Strip out anything prefixed with the local user's home directory; it can't be
 			// useful remotely but will affect determinism of the action.
@@ -579,11 +574,14 @@ func (c *Client) buildEnv(target *core.BuildTarget, env []string, sandbox bool) 
 			}
 			v = strings.Join(replaced, ":")
 		}
-		vars[i] = &pb.Command_EnvironmentVariable{
+		vars = append(vars, &pb.Command_EnvironmentVariable{
 			Name:  name,
 			Value: v,
-		}
+		})
 	}
+	slices.SortFunc(vars, func(a, b *pb.Command_EnvironmentVariable) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 	return vars
 }
 

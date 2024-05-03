@@ -228,32 +228,34 @@ func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, er
 // environ returns an appropriate environment for a command.
 func environ(state *core.BuildState, target *core.BuildTarget, setenv, tmpDir bool) []string {
 	env := os.Environ()
-	for _, e := range adRunEnviron {
-		env = addEnv(env, e)
-	}
+	env = addEnv(env, adRunEnviron)
 	if setenv || tmpDir {
-		for _, e := range core.RunEnvironment(state, target, tmpDir) {
-			env = addEnv(env, e)
-		}
+		env = addEnv(env, core.RunEnvironment(state, target, tmpDir))
 	}
 	return env
 }
 
 // adRunEnviron returns values that are appended to the environment for a command.
-var adRunEnviron = []string{
-	"PEX_NOCACHE=true",
+var adRunEnviron = core.BuildEnv{
+	"PEX_NOCACHE": "true",
 }
 
 // addEnv adds an env var to an existing set, with replacement.
-func addEnv(env []string, e string) []string {
-	name := e[:strings.IndexRune(e, '=')+1]
+func addEnv(env []string, e core.BuildEnv) []string {
+	for k, v := range e {
+		env = addOneEnv(env, k, v)
+	}
+	return env
+}
+
+func addOneEnv(env []string, k, v string) []string {
 	for i, existing := range env {
-		if strings.HasPrefix(existing, name) {
-			env[i] = e
+		if strings.HasPrefix(existing, k+"=") {
+			env[i] = k + "=" + v
 			return env
 		}
 	}
-	return append(env, e)
+	return append(env, k+"="+v)
 }
 
 // must dies if the given error is non-nil.

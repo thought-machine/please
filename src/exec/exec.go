@@ -110,7 +110,7 @@ func exec(state *core.BuildState, outputMode process.OutputMode, target *core.Bu
 			cmd += " " + strings.Join(additionalArgs, " ")
 		}
 
-		env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)), env...)
+		env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)).ToSlice(), env...)
 		out, _, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, outputMode == process.Default)
 		return out, err
 	}); err != nil {

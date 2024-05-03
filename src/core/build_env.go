@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 
@@ -15,50 +16,51 @@ import (
 )
 
 // A BuildEnv is a representation of the build environment that also knows how to log itself.
-type BuildEnv []string
+type BuildEnv map[string]string
 
 // GeneralBuildEnvironment creates the shell env vars used for a command, not based
 // on any specific target etc.
 func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 	env := BuildEnv{
 		// Need this for certain tools, for example sass
-		"LANG=" + state.Config.Build.Lang,
+		"LANG": state.Config.Build.Lang,
 		// Need to know these for certain rules.
-		"ARCH=" + state.Arch.Arch,
-		"OS=" + state.Arch.OS,
+		"ARCH": state.Arch.Arch,
+		"OS":   state.Arch.OS,
 		// These are slightly modified forms that are more convenient for some things.
-		"XARCH=" + state.Arch.XArch(),
-		"XOS=" + state.Arch.XOS(),
+		"XARCH": state.Arch.XArch(),
+		"XOS":   state.Arch.XOS(),
 	}
 
 	if state.Config.Cpp.PkgConfigPath != "" {
-		env = append(env, "PKG_CONFIG_PATH="+state.Config.Cpp.PkgConfigPath)
+		env["PKG_CONFIG_PATH"] = state.Config.Cpp.PkgConfigPath
 	}
 
-	return append(env, state.Config.GetBuildEnv()...)
+	env.Add(state.Config.GetBuildEnv())
+	return env
 }
 
 // TargetEnvironment returns the basic parts of the build environment.
 func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
-	env := append(GeneralBuildEnvironment(state),
-		"PKG="+target.Label.PackageName,
-		"PKG_DIR="+target.PackageDir(),
-		"NAME="+target.Label.Name,
-	)
+	env := GeneralBuildEnvironment(state)
+	env["PKG"] = target.Label.PackageName
+	env["PKG_DIR"] = target.PackageDir()
+	env["NAME"] = target.Label.Name
 	if state.Config.Remote.URL == "" || target.Local {
 		// Expose the requested build config, but it is not available for remote execution.
 		// TODO(peterebden): Investigate removing these env vars completely.
-		env = append(env, "BUILD_CONFIG="+state.Config.Build.Config, "CONFIG="+state.Config.Build.Config)
+		env["BUILD_CONFIG"] = state.Config.Build.Config
+		env["CONFIG"] = state.Config.Build.Config
 	}
 	if target.PassUnsafeEnv != nil {
 		for _, e := range *target.PassUnsafeEnv {
-			env = append(env, e+"="+os.Getenv(e))
+			env[e] = os.Getenv(e)
 		}
 	}
 
 	if target.PassEnv != nil {
 		for _, e := range *target.PassEnv {
-			env = append(env, e+"="+os.Getenv(e))
+			env[e] = os.Getenv(e)
 		}
 	}
 	return env
@@ -73,58 +75,56 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	outEnv := target.GetTmpOutputAll(target.Outputs())
 	abs := filepath.IsAbs(tmpDir)
 
-	env = append(env,
-		"TMP_DIR="+tmpDir,
-		"TMPDIR="+tmpDir,
-		"SRCS="+strings.Join(sources, " "),
-		"OUTS="+strings.Join(outEnv, " "),
-		"HOME="+tmpDir,
-		// Set a consistent hash seed for Python. Important for build determinism.
-		"PYTHONHASHSEED=42",
-	)
+	env["TMP_DIR"] = tmpDir
+	env["TMPDIR"] = tmpDir
+	env["SRCS"] = strings.Join(sources, " ")
+	env["OUTS"] = strings.Join(outEnv, " ")
+	env["HOME"] = tmpDir
+	// Set a consistent hash seed for Python. Important for build determinism.
+	env["PYTHONHASHSEED"] = "42"
+
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+resolveOut(outEnv[0], tmpDir, target.Sandbox))
+		env["OUT"] = resolveOut(outEnv[0], tmpDir, target.Sandbox)
 	}
 	// The SRC variable is only available on rules that have a single source file.
 	if len(sources) == 1 {
-		env = append(env, "SRC="+sources[0])
+		env["SRC"] = sources[0]
 	}
 	// Named source groups if the target declared any.
 	for name, srcs := range target.NamedSources {
 		paths := target.SourcePaths(state.Graph, srcs)
 		// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
-		env = append(env, "SRCS_"+strings.ToUpper(name)+"="+strings.Join(paths, " "))
+		env["SRCS_"+strings.ToUpper(name)] = strings.Join(paths, " ")
 	}
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
 		outs = target.GetTmpOutputAll(outs)
-		env = append(env, "OUTS_"+strings.ToUpper(name)+"="+strings.Join(outs, " "))
+		env["OUTS_"+strings.ToUpper(name)] = strings.Join(outs, " ")
 	}
 	// Tools
-	env = append(env, toolsEnv(state, target.AllTools(), target.namedTools, "", abs)...)
+	env.Add(toolsEnv(state, target.AllTools(), target.namedTools, "", abs))
 	// Secrets, again only if they declared any.
 	if len(target.Secrets) > 0 {
-		secrets := "SECRETS=" + fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
+		secrets := fs.ExpandHomePath(strings.Join(target.Secrets, ":"))
 		secrets = strings.ReplaceAll(secrets, ":", " ")
-		env = append(env, secrets)
+		env["SECRETS"] = secrets
 	}
 	// NamedSecrets, if they declared any.
 	for name, secrets := range target.NamedSecrets {
-		secrets := "SECRETS_" + strings.ToUpper(name) + "=" + fs.ExpandHomePath(strings.Join(secrets, ":"))
-		secrets = strings.ReplaceAll(secrets, ":", " ")
-		env = append(env, secrets)
+		secrets := fs.ExpandHomePath(strings.Join(secrets, ":"))
+		env["SECRETS_"+strings.ToUpper(name)] = strings.ReplaceAll(secrets, ":", " ")
 	}
 	if target.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
-		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
+		env["SANDBOX_DIRS"] = strings.Join(state.Config.Sandbox.Dir, ",")
 	}
 	if state.Config.Bazel.Compatibility {
 		// Obviously this is only a subset of the variables Bazel would expose, but there's
 		// no point populating ones that we literally have no clue what they should be.
 		// To be honest I don't terribly like these, I'm pretty sure that using $GENDIR in
 		// your genrule is not a good sign.
-		env = append(env, "GENDIR="+filepath.Join(RepoRoot, GenDir))
-		env = append(env, "BINDIR="+filepath.Join(RepoRoot, BinDir))
+		env["GENDIR"] = filepath.Join(RepoRoot, GenDir)
+		env["BINDIR"] = filepath.Join(RepoRoot, BinDir)
 	}
 
 	return withUserProvidedEnv(target, env)
@@ -134,31 +134,16 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 // Sadly this can't be done as part of TargetEnv() target env as this requires the other
 // env vars are set so they can be substituted.
 func withUserProvidedEnv(target *BuildTarget, env BuildEnv) BuildEnv {
-	if len(target.Env) == 0 {
-		return env
-	}
-	m := make(map[string]string, len(env))
-	idxs := make(map[string]int, len(env))
-	for i, kv := range env {
-		k, v, _ := strings.Cut(kv, "=")
-		m[k] = v
-		idxs[k] = i
-	}
 	for k, v := range target.Env {
 		if strings.Contains(v, "$") {
 			v = os.Expand(v, func(k string) string {
-				if v, present := m[k]; present {
+				if v, present := env[k]; present {
 					return v
 				}
 				return "$" + k
 			})
 		}
-		kv := fmt.Sprintf("%s=%s", k, v)
-		if idx, present := idxs[k]; present {
-			env[idx] = kv
-		} else {
-			env = append(env, kv)
-		}
+		env[k] = v
 	}
 	return env
 }
@@ -170,39 +155,35 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run
 	// Make this unintelligible to the consumer so it's at least hard for them to get cute with it.
 	hash := sha256.Sum256([]byte(fmt.Sprintf("%s%d", target.Label, run)))
 
-	env = append(env,
-		"TEST_DIR="+testDir,
-		"TMP_DIR="+testDir,
-		"TMPDIR="+testDir,
-		"HOME="+testDir,
-		"TEST_ARGS="+strings.Join(state.TestArgs, ","),
-		"RESULTS_FILE="+resultsFile,
-		// We shouldn't really have specific things like this here, but it really is just easier to set it.
-		"GTEST_OUTPUT=xml:"+resultsFile,
-		"PEX_NOCACHE=true",
-		"_TEST_ID="+base64.RawStdEncoding.EncodeToString(hash[:12]),
-	)
+	env["TEST_DIR"] = testDir
+	env["TMP_DIR"] = testDir
+	env["TMPDIR"] = testDir
+	env["HOME"] = testDir
+	env["TEST_ARGS"] = strings.Join(state.TestArgs, ",")
+	env["RESULTS_FILE"] = resultsFile
+	// We shouldn't really have specific things like this here, but it really is just easier to set it.
+	env["GTEST_OUTPUT"] = "xml:" + resultsFile
+	env["PEX_NOCACHE"] = "true"
+	env["_TEST_ID"] = base64.RawStdEncoding.EncodeToString(hash[:12])
 	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
-		env = append(env,
-			"COVERAGE=true",
-			"COVERAGE_FILE="+filepath.Join(testDir, CoverageFile),
-		)
+		env["COVERAGE"] = "true"
+		env["COVERAGE_FILE"] = filepath.Join(testDir, CoverageFile)
 	}
 	if len(target.Outputs()) > 0 {
-		env = append(env, "TEST="+resolveOut(target.Outputs()[0], testDir, target.Test.Sandbox))
+		env["TEST"] = resolveOut(target.Outputs()[0], testDir, target.Test.Sandbox)
 	}
 	// Bit of a hack for gcov which needs access to its .gcno files.
 	if target.HasLabel("cc") {
-		env = append(env, "GCNO_DIR="+filepath.Join(RepoRoot, GenDir, target.Label.PackageName))
+		env["GCNO_DIR"] = filepath.Join(RepoRoot, GenDir, target.Label.PackageName)
 	}
 	if state.DebugFailingTests {
-		env = append(env, "DEBUG_TEST_FAILURE=true")
+		env["DEBUG_TEST_FAILURE"] = "true"
 	}
 	if target.Test.Sandbox && len(state.Config.Sandbox.Dir) > 0 {
-		env = append(env, "SANDBOX_DIRS="+strings.Join(state.Config.Sandbox.Dir, ","))
+		env["SANDBOX_DIRS"] = strings.Join(state.Config.Sandbox.Dir, ",")
 	}
 	if len(state.TestArgs) > 0 {
-		env = append(env, "TESTS="+strings.Join(state.TestArgs, " "))
+		env["TESTS"] = strings.Join(state.TestArgs, " ")
 	}
 	return withUserProvidedEnv(target, env)
 }
@@ -212,10 +193,10 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 	env := RuntimeEnvironment(state, target, true, inTmpDir)
 
 	outEnv := target.Outputs()
-	env = append(env, "OUTS="+strings.Join(outEnv, " "))
+	env["OUTS"] = strings.Join(outEnv, " ")
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+resolveOut(outEnv[0], ".", false))
+		env["OUT"] = resolveOut(outEnv[0], ".", false)
 	}
 
 	return withUserProvidedEnv(target, env)
@@ -223,23 +204,22 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 
 // ExecEnvironment creates the environment variables for a `plz exec`.
 func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) BuildEnv {
-	env := append(RuntimeEnvironment(state, target, true, true),
-		"TMP_DIR="+execDir,
-		"TMPDIR="+execDir,
-		"HOME="+execDir,
-		// This is used by programs that use display terminals for correct handling
-		// of input and output in the terminal where the program is run.
-		"TERM="+os.Getenv("TERM"),
-	)
+	env := RuntimeEnvironment(state, target, true, true)
+	env["TMP_DIR"] = execDir
+	env["TMPDIR"] = execDir
+	env["HOME"] = execDir
+	// This is used by programs that use display terminals for correct handling
+	// of input and output in the terminal where the program is run.
+	env["TERM"] = os.Getenv("TERM")
 
 	outEnv := target.Outputs()
 	// OUTS/OUT environment variables being always set is for backwards-compatibility.
 	// Ideally, if the target is a test these variables shouldn't be set.
-	env = append(env, "OUTS="+strings.Join(outEnv, " "))
+	env["OUTS"] = strings.Join(outEnv, " ")
 	if len(outEnv) == 1 {
-		env = append(env, "OUT="+resolveOut(outEnv[0], ".", target.Sandbox))
+		env["OUT"] = resolveOut(outEnv[0], ".", target.Sandbox)
 		if target.IsTest() {
-			env = append(env, "TEST="+resolveOut(outEnv[0], ".", target.Test.Sandbox))
+			env["TEST"] = resolveOut(outEnv[0], ".", target.Test.Sandbox)
 		}
 	}
 
@@ -252,19 +232,19 @@ func RuntimeEnvironment(state *BuildState, target *BuildTarget, abs, inTmpDir bo
 	env := TargetEnvironment(state, target)
 
 	// Data
-	env = append(env, dataEnv(state, target.AllData(), target.NamedData, "", inTmpDir)...)
+	env.Add(dataEnv(state, target.AllData(), target.NamedData, "", inTmpDir))
 
 	if target.IsTest() {
 		// Test tools
-		env = append(env, toolsEnv(state, target.AllTestTools(), target.NamedTestTools(), "", abs)...)
+		env.Add(toolsEnv(state, target.AllTestTools(), target.NamedTestTools(), "", abs))
 	}
 
 	if target.Debug != nil {
 		prefix := "DEBUG_"
 		// Debug data
-		env = append(env, dataEnv(state, target.AllDebugData(), target.DebugNamedData(), prefix, inTmpDir)...)
+		env.Add(dataEnv(state, target.AllDebugData(), target.DebugNamedData(), prefix, inTmpDir))
 		// Debug tools
-		env = append(env, toolsEnv(state, target.AllDebugTools(), target.Debug.namedTools, prefix, abs)...)
+		env.Add(toolsEnv(state, target.AllDebugTools(), target.Debug.namedTools, prefix, abs))
 	}
 
 	return env
@@ -282,13 +262,13 @@ func resolveOut(out string, dir string, sandbox bool) string {
 // Creates tool-related env variables
 func toolsEnv(state *BuildState, allTools []BuildInput, namedTools map[string][]BuildInput, prefix string, abs bool) BuildEnv {
 	env := BuildEnv{
-		prefix + "TOOLS=" + strings.Join(toolPaths(state, allTools, abs), " "),
+		prefix + "TOOLS": strings.Join(toolPaths(state, allTools, abs), " "),
 	}
 	if len(allTools) == 1 {
-		env = append(env, prefix+"TOOL="+toolPath(state, allTools[0], abs))
+		env[prefix+"TOOL"] = toolPath(state, allTools[0], abs)
 	}
 	for name, tools := range namedTools {
-		env = append(env, prefix+"TOOLS_"+strings.ToUpper(name)+"="+strings.Join(toolPaths(state, tools, abs), " "))
+		env[prefix+"TOOLS_"+strings.ToUpper(name)] = strings.Join(toolPaths(state, tools, abs), " ")
 	}
 	return env
 }
@@ -296,10 +276,10 @@ func toolsEnv(state *BuildState, allTools []BuildInput, namedTools map[string][]
 // Creates data-related env variables
 func dataEnv(state *BuildState, allData []BuildInput, namedData map[string][]BuildInput, prefix string, inTmpDir bool) BuildEnv {
 	env := BuildEnv{
-		prefix + "DATA=" + strings.Join(runtimeDataPaths(state.Graph, allData, !inTmpDir), " "),
+		prefix + "DATA": strings.Join(runtimeDataPaths(state.Graph, allData, !inTmpDir), " "),
 	}
 	for name, data := range namedData {
-		env = append(env, prefix+"DATA_"+strings.ToUpper(name)+"="+strings.Join(runtimeDataPaths(state.Graph, data, !inTmpDir), " "))
+		env[prefix+"DATA_"+strings.ToUpper(name)] = strings.Join(runtimeDataPaths(state.Graph, data, !inTmpDir), " ")
 	}
 	return env
 }
@@ -323,11 +303,12 @@ func StampedBuildEnvironment(state *BuildState, target *BuildTarget, stamp []byt
 	encStamp := base64.RawURLEncoding.EncodeToString(stamp)
 	if shouldStamp {
 		stampEnvOnce.Do(initStampEnv)
-		env = append(env, stampEnv...)
-		env = append(env, "STAMP_FILE="+target.StampFileName())
-		env = append(env, "STAMP="+encStamp)
+		env.Add(stampEnv)
+		env["STAMP_FILE"] = target.StampFileName()
+		env["STAMP"] = encStamp
 	}
-	return append(env, "RULE_HASH="+encStamp)
+	env["RULE_HASH"] = encStamp
+	return env
 }
 
 // stampEnv is the generic (i.e. non-target-specific) environment variables we pass to a
@@ -351,9 +332,9 @@ func initStampEnv() {
 	}()
 	wg.Wait()
 	stampEnv = BuildEnv{
-		"SCM_COMMIT_DATE=" + commitDate,
-		"SCM_REVISION=" + revision,
-		"SCM_DESCRIBE=" + describe,
+		"SCM_COMMIT_DATE": commitDate,
+		"SCM_REVISION":    revision,
+		"SCM_DESCRIBE":    describe,
 	}
 }
 
@@ -385,38 +366,49 @@ func toolPaths(state *BuildState, tools []BuildInput, abs bool) []string {
 // ReplaceEnvironment is a function suitable for passing to os.Expand to replace environment
 // variables from this BuildEnv.
 func (env BuildEnv) ReplaceEnvironment(s string) string {
-	for _, e := range env {
-		if strings.HasPrefix(e, s+"=") {
-			return e[len(s)+1:]
-		}
+	if v, present := env[s]; present {
+		return v
 	}
 	return ""
 }
 
 // Replace replaces the value of the given variable in this BuildEnv.
 func (env BuildEnv) Replace(key, value string) {
-	key += "="
-	for i, e := range env {
-		if strings.HasPrefix(e, key) {
-			env[i] = key + value
-		}
+	if _, present := env[key]; present {
+		env[key] = value
 	}
 }
 
 // Redacted implements the interface for our logging implementation.
 func (env BuildEnv) Redacted() interface{} {
 	r := make(BuildEnv, len(env))
-	for i, e := range env {
-		r[i] = e
-		split := strings.SplitN(e, "=", 2)
-		if len(split) == 2 && (strings.Contains(split[0], "SECRET") || strings.Contains(split[0], "PASSWORD")) {
-			r[i] = split[0] + "=" + "************"
+	for k, v := range env {
+		if strings.Contains(k, "SECRET") || strings.Contains(k, "PASSWORD") {
+			v = "************"
 		}
+		r[k] = v
 	}
 	return r
 }
 
+// ToSlice converts this env into a list of env vars
+func (env BuildEnv) ToSlice() []string {
+	ret := make([]string, 0, len(env))
+	for k, v := range env {
+		ret = append(ret, k+"="+v)
+	}
+	sort.Strings(ret)
+	return ret
+}
+
 // String implements the fmt.Stringer interface
 func (env BuildEnv) String() string {
-	return strings.Join(env, "\n")
+	return strings.Join(env.ToSlice(), "\n")
+}
+
+// Add adds the given set of environment variables to this one, overwriting on duplicates.
+func (env BuildEnv) Add(that BuildEnv) {
+	for k, v := range that {
+		env[k] = v
+	}
 }
