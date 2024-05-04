@@ -92,7 +92,17 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	state.CloseResults()
 
 	prov := attestor.New()
-	prov.Attest(targets, preTargets, state, config, arch)
+	err := prov.Attest(targets, preTargets, state, config, arch)
+	if err != nil {
+		log.Errorf("%v", err)
+	}
+
+	provenanceJson, err := prov.MarshalJSON()
+	if err != nil {
+		log.Errorf("%v", err)
+	}
+
+	log.Infof("%s", provenanceJson)
 	
 	// TODO: Provenance implementation
 	// - Sign provenance

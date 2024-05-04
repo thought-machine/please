@@ -1,9 +1,11 @@
 package attestor
 
 import (
+	"encoding/hex"
 	"encoding/json"
 
 	prov "github.com/in-toto/attestation/go/predicates/provenance/v1"
+	attestation "github.com/in-toto/attestation/go/v1"
 	// v1 "github.com/in-toto/attestation/go/v1"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -18,11 +20,11 @@ const (
 	DefaultBuilderId = "https://please.build/please-build@v0.1"
 )
 
+
+
 type Provenance struct {
 	PbProvenance prov.Provenance
-	// products     map[string]string
-	// subjects     map[string]string
-	// export       bool
+	subjects []*attestation.ResourceDescriptor
 }
 
 func New() *Provenance {
@@ -57,7 +59,18 @@ func (p *Provenance) Attest(targets, preTargets []core.BuildLabel, state *core.B
 	}
 
 	// External Parameters
+	externalParam := make(map[string]interface{})
+	
+	targetNames := make([]interface{}, 0)
+	for _, v := range targets {
+		targetNames = append(targetNames, v.String())
+	}
+	externalParam["targets"] = targetNames
 
+	p.PbProvenance.BuildDefinition.ExternalParameters, err = structpb.NewStruct(externalParam)
+	if err != nil {
+		return err
+	}
 
 	// Resolved Dependencies
 
@@ -66,10 +79,40 @@ func (p *Provenance) Attest(targets, preTargets []core.BuildLabel, state *core.B
 
 
 	// Subjects
+	p.subjects, err = p.Subjects(targets, state)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func (p *Provenance) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&p.PbProvenance)
+}
+
+func (p *Provenance) Subjects(targets []core.BuildLabel, state *core.BuildState) ([]*attestation.ResourceDescriptor, error) {
+	subjects := []*attestation.ResourceDescriptor{}
+
+	for _, label := range targets {
+		p := state.SyncParsePackage(label)
+		outputs := p.Target(label.Name).FullOutputs()
+
+		for _, outputItem := range outputs {
+			hash, err := state.PathHasher.Hash(outputItem, false, false, false)
+			if err != nil {
+				return nil, err
+			}
+
+			subject := &attestation.ResourceDescriptor{}
+			subject.Name = outputItem
+			subject.Digest = map[string]string{
+				state.PathHasher.AlgoName(): hex.EncodeToString(hash),
+			}
+
+			subjects = append(subjects, subject)
+		}
+
+	}
+	return subjects, nil
 }
