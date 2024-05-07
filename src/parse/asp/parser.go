@@ -251,7 +251,7 @@ func (p *Parser) optimiseBuiltinCalls(stmts []*Statement) {
 			for _, arg := range stmt.FuncDef.Arguments {
 				if arg.Value != nil && arg.Value.Val.Dict != nil && arg.Value.Val.Dict.Comprehension == nil && len(arg.Value.Val.Dict.Items) == 0 {
 					arg.Value.optimised = &optimisedExpression{
-						Constant: pyDict{},
+						Constant: pyFrozenDict{},
 					}
 				}
 			}
