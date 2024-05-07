@@ -156,7 +156,9 @@ func (p *Parser) open(fs iofs.FS, filename string) (io.ReadSeekCloser, error) {
 // The 'filename' argument is only used in case of errors so doesn't necessarily have to correspond to a real file.
 func (p *Parser) ParseData(data []byte, filename string) ([]*Statement, error) {
 	r := &namedReader{r: bytes.NewReader(data), name: filename}
-	return p.parseAndHandleErrors(r)
+	stmts, err := p.parseAndHandleErrors(r)
+	p.optimiseBuiltinCalls(stmts)
+	return stmts, err
 }
 
 // parseAndHandleErrors handles errors nicely if the given input fails to parse.
@@ -239,6 +241,22 @@ func (p *Parser) optimise(statements []*Statement) []*Statement {
 		return true
 	})
 	return ret
+}
+
+// optimiseBuiltinCalls optimises some calls to builtin functions, where we can be more aggressive
+// than we would be elsewhere (e.g. we know we don't mutate dicts so we can allocate them once)
+func (p *Parser) optimiseBuiltinCalls(stmts []*Statement) {
+	for _, stmt := range stmts {
+		if stmt.FuncDef != nil {
+			for _, arg := range stmt.FuncDef.Arguments {
+				if arg.Value != nil && arg.Value.Val.Dict != nil && arg.Value.Val.Dict.Comprehension == nil && len(arg.Value.Val.Dict.Items) == 0 {
+					arg.Value.optimised = &optimisedExpression{
+						Constant: pyDict{},
+					}
+				}
+			}
+		}
+	}
 }
 
 // BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
