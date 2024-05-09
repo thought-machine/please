@@ -22,7 +22,7 @@ Duration: 4
 - Testing your code
 - Including third-party libraries
 
-### what if I get stuck?
+### What if I get stuck?
 
 The final result of running through this codelab can be found
 [here](https://github.com/thought-machine/please-codelabs/tree/main/getting_started_python) for reference. If you really
