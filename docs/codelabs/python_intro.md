@@ -15,7 +15,7 @@ Duration: 4
 - You must have Please installed: [Install please](https://please.build/quickstart.html)
 - Python must be installed: [Install Python](https://www.python.org/downloads/)
 
-### What You’ll Learn
+### What you'll learn
 - Configuring Please for Python using the Python plugin
 - Creating an executable Python binary
 - Authoring Python modules in your project

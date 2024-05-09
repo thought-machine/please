@@ -15,7 +15,7 @@ Duration: 4
 - You must have Please installed: [Install please](https://please.build/quickstart.html)
 - Go must be installed: [Install Go](https://golang.org/doc/install#install)
 
-### What You’ll Learn
+### What you'll learn
 - Configuring Please for Go using the Go plugin
 - Creating an executable Go binary
 - Adding Go packages to your project

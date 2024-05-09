@@ -20,7 +20,7 @@ Duration: 1
 This codelab uses Golang for the example service however the language used for this service isn't that important. Just 
 make sure you're able to build a binary in whatever your preferred language is.  
 
-### What You'll Learn
+### What you'll learn
 This codelab is quite long and tries to give an idea of what a complete build pipeline might look like for a docker and
 kubernetes based project. You'll learn:
 
