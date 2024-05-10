@@ -7,8 +7,8 @@
 </p>
 
 <p>
-  Not that caches are different from the output in
-  <code class="code">plz-out</code>. Even without caching, please will still
+  Note that caches are different from the output in
+  <code class="code">plz-out</code>. Even without caching, Please will still
   reuse built artifacts from <code class="code">plz-out</code> for incremental
   builds. Please has strict caching and incrementality behavior. With that said,
   you can still force a rebuild or a test rerun, use the
@@ -104,7 +104,7 @@
 
   <p>
     You can realize a centralised cache also by managing the remote access
-    part in external commands or scripts. Please will simply invoke the 
+    part in external commands or scripts. Please will simply invoke the
     configured command whenever it wants to store or retrieve artifacts.
     A good use case is AWS S3 access by simply using the aws-cli.
     Lite weight generic S3 support (Minio/GCS/Backblaze etc.) could be added
@@ -113,8 +113,8 @@
 
   <p>
     It's somewhat slower compared to the http cache because it must spawn
-    external commands. Benefit is that you don't need to run and maintain 
-    a proxy between Please and your storage provider. 
+    external commands. Benefit is that you don't need to run and maintain
+    a proxy between Please and your storage provider.
   </p>
 
   <p>
@@ -122,12 +122,12 @@
     <code class="code">RetrieveCommand</code> property in the
     <a class="copy-link" href="/config.html#cache"
       >cache section of the config</a
-    >. 
+    >.
     The configured command must be able to stream a tar file to stdout.
-    Please sets the environment variable <code class="code">CACHE_KEY</code> 
+    Please sets the environment variable <code class="code">CACHE_KEY</code>
     to the cache entries filename.
   </p>
-  
+
   <pre class="code-container">
     <!-- prettier-ignore -->
     <code data-lang="plz">
@@ -142,8 +142,8 @@
     <code class="code">StoreCommand</code> property.
     Keep it empty if you only want to have read-only access.
     The configured command must be able to read a tar file from stdin.
-    Use the environment variable <code class="code">CACHE_KEY</code> 
-    as a part of the filename so that Please can retrieve the 
+    Use the environment variable <code class="code">CACHE_KEY</code>
+    as a part of the filename so that Please can retrieve the
     artifact by using the same key later.
   </p>
 
@@ -164,7 +164,7 @@
   <p>
     Raising the verbosity to <code class="code">debug</code> level will
     help you to debug your script or command. Please logs each store/retrieve
-    operation to the custom cache and your scripts stderr will be shown as well.
+    operation to the custom cache and your script's stderr will be shown as well.
   </p>
 
 
