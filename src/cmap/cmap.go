@@ -66,8 +66,7 @@ func (m *Map[K, V]) Set(key K, val V) {
 	m.shards[m.hasher(key)&m.mask].Set(key, val, true)
 }
 
-// Get returns the value https://github.com/peterebden/please/pull/new/generic-cmap-4corresponding to the given key, or its zero value if
-// the key doesn't exist in the map.
+// Get returns the value corresponding to the given key, or its zero value if the key doesn't exist in the map.
 func (m *Map[K, V]) Get(key K) V {
 	v, _, _ := m.shards[m.hasher(key)&m.mask].Get(key)
 	return v

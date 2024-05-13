@@ -18,8 +18,8 @@ import (
 type interpreter struct {
 	scope       *scope
 	parser      *Parser
-	subincludes *cmap.Map[string, pyDict]
-	asts        *cmap.Map[string, []*Statement]
+	subincludes *cmap.ErrMap[string, pyDict]
+	asts        *cmap.ErrMap[string, []*Statement]
 
 	configs      map[*core.BuildState]*pyConfig
 	configsMutex sync.RWMutex
@@ -37,23 +37,19 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
-	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
-	var subincludes *cmap.Map[string, pyDict]
-	var asts *cmap.Map[string, []*Statement]
-	if p.interpreter != nil {
-		subincludes = p.interpreter.subincludes
-		asts = p.interpreter.asts
-	} else {
-		subincludes = cmap.New[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
-		asts = cmap.New[string, []*Statement](cmap.SmallShardCount, cmap.XXHash)
-	}
 	i := &interpreter{
-		scope:       s,
-		parser:      p,
-		subincludes: subincludes,
-		asts:        asts,
-		configs:     map[*core.BuildState]*pyConfig{},
-		limiter:     make(semaphore, state.Config.Parse.NumThreads),
+		scope:   s,
+		parser:  p,
+		configs: map[*core.BuildState]*pyConfig{},
+		limiter: make(semaphore, state.Config.Parse.NumThreads),
+	}
+	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
+	if p.interpreter != nil {
+		i.subincludes = p.interpreter.subincludes
+		i.asts = p.interpreter.asts
+	} else {
+		i.subincludes = cmap.NewErrMap[string, pyDict](cmap.SmallShardCount, cmap.XXHash, i.limiter)
+		i.asts = cmap.NewErrMap[string, []*Statement](cmap.SmallShardCount, cmap.XXHash, i.limiter)
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
@@ -207,64 +203,51 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 // Subinclude returns the global values corresponding to subincluding the given file.
 func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, preload bool) pyDict {
 	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
-	globals, wait, first := i.subincludes.GetOrWait(key)
-	if globals != nil {
-		return globals
-	} else if !first {
-		i.limiter.Release()
-		defer i.limiter.Acquire()
-		<-wait
-		return i.subincludes.Get(key)
-	}
-
-	// If we get here, it falls to us to parse this.
-	stmts := i.parseSubinclude(path)
-
-	mode := pkgScope.mode
-	if preload {
-		mode |= core.ParseModeForPreload
-	}
-	s := i.scope.NewScope(path, mode)
-
-	s.state = pkgScope.state
-	// Scope needs a local version of CONFIG
-	s.config = i.scope.config.Copy()
-	s.Set("CONFIG", s.config)
-	s.subincludeLabel = &label
-
-	if !mode.IsPreload() {
-		if err := i.preloadSubincludes(s); err != nil {
-			s.Error("failed: %v", err)
+	globals, err := i.subincludes.GetOrSet(key, func() (pyDict, error) {
+		stmts, err := i.parseSubinclude(path)
+		if err != nil {
+			return nil, err
 		}
-	}
-	s.interpretStatements(stmts)
-	locals := s.Freeze()
-	if s.config.overlay == nil {
-		delete(locals, "CONFIG") // Config doesn't have any local modifications
-	}
-	i.subincludes.Set(key, locals)
-	return locals
+
+		mode := pkgScope.mode
+		if preload {
+			mode |= core.ParseModeForPreload
+		}
+		s := i.scope.NewScope(path, mode)
+
+		s.state = pkgScope.state
+		// Scope needs a local version of CONFIG
+		s.config = i.scope.config.Copy()
+		s.Set("CONFIG", s.config)
+		s.subincludeLabel = &label
+
+		if !mode.IsPreload() {
+			if err := i.preloadSubincludes(s); err != nil {
+				return nil, err
+			}
+		}
+		s.interpretStatements(stmts)
+		locals := s.Freeze()
+		if s.config.overlay == nil {
+			delete(locals, "CONFIG") // Config doesn't have any local modifications
+		}
+		return locals, nil
+	})
+	pkgScope.Assert(err == nil, "failed to subinclude %s: %s", label, err)
+	return globals
 }
 
 // parseSubinclude parses a subinclude to an AST, caching it (globally)
-func (i *interpreter) parseSubinclude(path string) []*Statement {
-	stmts, wait, first := i.asts.GetOrWait(path)
-	if stmts != nil {
-		return stmts
-	} else if !first {
-		i.limiter.Release()
-		defer i.limiter.Acquire()
-		<-wait
-		return i.asts.Get(path)
-	}
-	stmts, err := i.parser.parse(nil, path)
-	if err != nil {
-		panic(err) // We're already inside another interpreter, which will handle this for us.
-	}
-	stmts = i.parser.optimise(stmts)
-	i.optimiseExpressions(stmts)
-	i.asts.Set(path, stmts)
-	return stmts
+func (i *interpreter) parseSubinclude(path string) ([]*Statement, error) {
+	return i.asts.GetOrSet(path, func() ([]*Statement, error) {
+		stmts, err := i.parser.parse(nil, path)
+		if err != nil {
+			return nil, err
+		}
+		stmts = i.parser.optimise(stmts)
+		i.optimiseExpressions(stmts)
+		return stmts, nil
+	})
 }
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
