@@ -16,6 +16,8 @@ type pyObject interface {
 	fmt.Stringer
 	// Returns the name of this object's type.
 	Type() string
+	// Returns a unique tag for this type
+	TypeTag() int32
 	// Returns true if this object evaluates to something truthy.
 	IsTruthy() bool
 	// Returns a property of this object with the given name.
@@ -65,6 +67,10 @@ func (b pyBool) Type() string {
 	return "bool"
 }
 
+func (b pyBool) TypeTag() int32 {
+	return pyBoolTag
+}
+
 func (b pyBool) IsTruthy() bool {
 	return b == True
 }
@@ -100,6 +106,10 @@ func (n pyNone) Type() string {
 	return "none"
 }
 
+func (n pyNone) TypeTag() int32 {
+	return pyNoneTag
+}
+
 func (n pyNone) IsTruthy() bool {
 	return false
 }
@@ -129,6 +139,10 @@ var continueIteration = pySentinel{}
 
 func (s pySentinel) Type() string {
 	return "sentinel"
+}
+
+func (s pySentinel) TypeTag() int32 {
+	return 0
 }
 
 func (s pySentinel) IsTruthy() bool {
@@ -190,6 +204,10 @@ func (i pyInt) Type() string {
 	return "int"
 }
 
+func (i pyInt) TypeTag() int32 {
+	return pyIntTag
+}
+
 func (i pyInt) IsTruthy() bool {
 	return i != 0
 }
@@ -244,6 +262,10 @@ type pyString string
 
 func (s pyString) Type() string {
 	return "str"
+}
+
+func (s pyString) TypeTag() int32 {
+	return pyStringTag
 }
 
 func (s pyString) IsTruthy() bool {
@@ -317,6 +339,10 @@ var emptyList pyObject = make(pyList, 0) // want this to explicitly have zero ca
 
 func (l pyList) Type() string {
 	return "list"
+}
+
+func (l pyList) TypeTag() int32 {
+	return pyListTag
 }
 
 func (l pyList) IsTruthy() bool {
@@ -435,6 +461,10 @@ type pyDict map[string]pyObject // Dicts can only be keyed by strings
 
 func (d pyDict) Type() string {
 	return "dict"
+}
+
+func (d pyDict) TypeTag() int32 {
+	return pyDictTag
 }
 
 func (d pyDict) IsTruthy() bool {
@@ -569,7 +599,7 @@ type pyFunc struct {
 	argIndices map[string]int
 	defaults   []*Expression
 	constants  []pyObject
-	types      [][]string
+	types      []int32
 	code       []*Statement
 	argPool    *sync.Pool
 	// If the function is implemented natively, this is the pointer to its real code.
@@ -595,7 +625,7 @@ func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 		args:       make([]string, len(def.Arguments)),
 		argIndices: make(map[string]int, len(def.Arguments)),
 		constants:  make([]pyObject, len(def.Arguments)),
-		types:      make([]int16, len(def.Arguments)),
+		types:      make([]int32, len(def.Arguments)),
 		code:       def.Statements,
 		kwargsonly: def.KeywordsOnly,
 		returnType: def.Return,
@@ -606,7 +636,9 @@ func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 	for i, arg := range def.Arguments {
 		f.args[i] = arg.Name
 		f.argIndices[arg.Name] = i
-		f.types[i] = arg.Type
+		for _, t := range arg.Type {
+			f.types[i] |= knownTypeNameToTag[t]
+		}
 		if arg.Value != nil {
 			if constant := parentScope.Constant(arg.Value); constant != nil {
 				f.constants[i] = constant
@@ -627,6 +659,10 @@ func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 
 func (f *pyFunc) Type() string {
 	return "function"
+}
+
+func (f *pyFunc) TypeTag() int32 {
+	return pyFuncTag
 }
 
 func (f *pyFunc) IsTruthy() bool {
@@ -791,7 +827,7 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	val := s.interpretExpression(expr)
 	if i >= len(f.types) && (f.varargs || f.kwargs) {
 		return val // function is varargs so we have no type signature for this
-	} else if f.types[i] == nil {
+	} else if f.types[i] == 0 {
 		return val // not varargs but we just don't have a type signature, so take it as it is
 	} else if val == None {
 		if f.constants[i] == nil && (f.defaults == nil || f.defaults[i] == nil) {
@@ -799,20 +835,23 @@ func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 		}
 		return f.defaultArg(s, i, f.args[i])
 	}
-	actual := val.Type()
-	for _, t := range f.types[i] {
-		if t == actual {
-			return val
-		}
+	if (val.TypeTag() & f.types[i]) != 0 {
+		return val
 	}
 	// Using integers in place of booleans seems common in Bazel BUILD files :(
-	if s.state.Config.Bazel.Compatibility && f.types[i][0] == "bool" && actual == "int" {
+	if s.state.Config.Bazel.Compatibility && (f.types[i]&pyBoolTag != 0) && val.TypeTag() == pyBoolTag {
 		return val
 	}
 	defer func() {
 		panic(AddStackFrame(s.filename, expr.Pos, recover()))
 	}()
-	return s.Error("Invalid type for argument %s to %s; expected %s, was %s", f.args[i], f.name, strings.Join(f.types[i], " or "), actual)
+	types := []string{}
+	for _, name := range knownTypeNames {
+		if f.types[i]&knownTypeNameToTag[name] != 0 {
+			types = append(types, name)
+		}
+	}
+	return s.Error("Invalid type for argument %s to %s; expected %s, was %s", f.args[i], f.name, strings.Join(types, " or "), val.Type())
 }
 
 type pyConfigBase struct {
@@ -853,6 +892,10 @@ func (c *pyConfig) String() string {
 
 func (c *pyConfig) Type() string {
 	return "config"
+}
+
+func (c *pyConfig) TypeTag() int32 {
+	return pyConfigTag
 }
 
 func (c *pyConfig) IsTruthy() bool {
@@ -972,6 +1015,10 @@ func (r *pyRange) Type() string {
 	return "range"
 }
 
+func (r *pyRange) TypeTag() int32 {
+	return 0
+}
+
 func (r *pyRange) IsTruthy() bool {
 	return true
 }
@@ -1009,12 +1056,30 @@ func (r *pyRange) toList(extraCapacity int) pyList {
 
 // Known types, used for type signatures on function arguments
 // This doesn't have to be totally exhaustive, it's only the ones that can be declared in syntax.
-var knownTypeNames = []string{"bool", "str", "int", "list", "dict", "function", "config", "none"}
+var (
+	knownTypes         = []pyObject{False, pyString(""), pyInt(0), pyList{}, pyDict{}, &pyFunc{}, &pyConfig{}, None}
+	knownTypeNames     = make([]string, len(knownTypes))
+	knownTypeTagToName = make(map[int]string, len(knownTypes))
+	knownTypeNameToTag = make(map[string]int32, len(knownTypes))
+)
 
-var knownTypeValues = make(map[string]int{}, len(knownTypeNames))
+const (
+	pyNoneTag = 1 << iota
+	pyBoolTag
+	pyIntTag
+	pyStringTag
+	pyListTag
+	pyDictTag
+	pyFuncTag
+	pyConfigTag
+)
 
 func init() {
-	for i, x := range knownTypeNames {
-		knownTypeValues[x] = i
+	for i, t := range knownTypes {
+		name := t.Type()
+		tag := t.TypeTag()
+		knownTypeTagToName[int(tag)] = name
+		knownTypeNameToTag[name] = tag
+		knownTypeNames[i] = name
 	}
 }
