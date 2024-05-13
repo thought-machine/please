@@ -1,7 +1,7 @@
 package fs
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,7 +59,7 @@ func TestSortPaths2(t *testing.T) {
 
 func shuffle(s []string) []string {
 	for i := len(s); i > 0; i-- {
-		j := rand.Intn(i)
+		j := rand.IntN(i)
 		s[i-1], s[j] = s[j], s[i-1]
 	}
 	return s

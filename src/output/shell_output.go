@@ -6,7 +6,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"sort"
@@ -31,8 +31,7 @@ func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTest
 	initPrintf(state.Config)
 
 	if len(state.Config.Please.Motd) != 0 {
-		r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
-		printf("%s\n", state.Config.Please.Motd[r.Intn(len(state.Config.Please.Motd))])
+		printf("%s\n", state.Config.Please.Motd[rand.IntN(len(state.Config.Please.Motd))])
 	}
 
 	var tw *traceWriter

@@ -1,7 +1,7 @@
 package core
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"sync"
 	"testing"
@@ -84,17 +84,17 @@ func createTargets(n int) []*BuildTarget {
 	targets := make([]*BuildTarget, n)
 	seen := map[BuildLabel]bool{}
 
-	r := rand.New(rand.NewSource(42)) // Make sure it does the same thing every time.
+	r := rand.New(rand.NewChaCha8([32]byte{})) // Make sure it does the same thing every time.
 
 	components := []string{
 		"src", "main", "cmd", "tools", "utils", "common", "query", "process", "update",
 		"run", "build", "assets", "frontend", "backend", "worker",
 	}
-	component := func() string { return components[r.Intn(len(components))] }
+	component := func() string { return components[r.IntN(len(components))] }
 	label := func() BuildLabel {
 		for i := 0; i < 1000; i++ {
 			parts := []string{}
-			for j := 0; j < rand.Intn(7); j++ {
+			for j := 0; j < r.IntN(7); j++ {
 				parts = append(parts, component())
 			}
 			l := BuildLabel{
