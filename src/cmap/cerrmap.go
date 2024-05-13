@@ -1,10 +1,17 @@
 package cmap
 
+// A Limiter is the interface that we use to release/acquire workers while waiting.
+type Limiter interface {
+	Acquire()
+	Release()
+}
+
 // NewErrMap returns a map that extends Map with an error type, which callers can also wait on
 // and receive if something goes wrong.
-func NewErrMap[K comparable, V any](shardCount uint64, hasher func(K) uint64) *ErrMap[K, V] {
+func NewErrMap[K comparable, V any](shardCount uint64, hasher func(K) uint64, limiter Limiter) *ErrMap[K, V] {
 	return &ErrMap[K, V]{
 		m: New[K, errV[V]](shardCount, hasher),
+		l: limiter,
 	}
 }
 
@@ -16,6 +23,7 @@ type errV[V any] struct {
 // An ErrMap extends Map with returned errors as a first-class concept
 type ErrMap[K comparable, V any] struct {
 	m *Map[K, errV[V]]
+	l Limiter
 }
 
 // Add adds the new item to the map.
@@ -49,12 +57,24 @@ func (m *ErrMap[K, V]) Get(key K) (V, error) {
 	return v.Val, v.Err
 }
 
-// GetOrWait returns the value or, if the key isn't present, a channel that it can be waited
-// on for. The caller will need to call Get again after the channel closes.
-// If the channel is non-nil, then val will exist in the map; otherwise it will have its zero value.
-// The third return value is true if this is the first call that is awaiting this key.
-// It's always false if the key exists.
-func (m *ErrMap[K, V]) GetOrWait(key K) (val V, wait <-chan struct{}, first bool, err error) {
+// GetOrSet returns the value if set, or an error if one has been set.
+// If nothing has been set for the key, it runs the given function to generate the value and then sets it.
+func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 	v, wait, first := m.m.GetOrWait(key)
-	return v.Val, wait, first, v.Err
+	if v.Err != nil {
+		return v.Val, v.Err
+	} else if first {
+		val, err := f()
+		m.m.Set(key, errV[V]{Val: val, Err: err})
+		return val, err
+	} else if wait != nil {
+		if m.l != nil {
+			// Release the limiter for the duration we're waiting
+			m.l.Release()
+			defer m.l.Acquire()
+		}
+		<-wait
+		return m.Get(key)
+	}
+	return v.Val, v.Err
 }

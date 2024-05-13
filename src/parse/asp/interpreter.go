@@ -48,8 +48,8 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		i.subincludes = p.interpreter.subincludes
 		i.asts = p.interpreter.asts
 	} else {
-		i.subincludes = cmap.NewErrMap[string, pyDict](cmap.SmallShardCount, cmap.XXHash)
-		i.asts = cmap.NewErrMap[string, []*Statement](cmap.SmallShardCount, cmap.XXHash)
+		i.subincludes = cmap.NewErrMap[string, pyDict](cmap.SmallShardCount, cmap.XXHash, i.limiter)
+		i.asts = cmap.NewErrMap[string, []*Statement](cmap.SmallShardCount, cmap.XXHash, i.limiter)
 	}
 	s.interpreter = i
 	s.LoadSingletons(state)
@@ -203,76 +203,51 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 // Subinclude returns the global values corresponding to subincluding the given file.
 func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, preload bool) pyDict {
 	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
-	globals, wait, first, err := i.subincludes.GetOrWait(key)
-	if err != nil {
-		pkgScope.Error("failed to subinclude %s: %s", label, err)
-	} else if globals != nil {
-		return globals
-	} else if !first {
-		i.limiter.Release()
-		defer i.limiter.Acquire()
-		<-wait
-		locals, err := i.subincludes.Get(key)
-		pkgScope.Assert(err == nil, "failed to subinclude %s: %s", label, err)
-		return locals
-	}
-
-	// If we get here, it falls to us to parse this.
-	stmts, err := i.parseSubinclude(path)
-	if err != nil {
-		i.subincludes.SetError(key, err)
-		pkgScope.Error("failed to subinclude %s: %s", label, err)
-	}
-
-	mode := pkgScope.mode
-	if preload {
-		mode |= core.ParseModeForPreload
-	}
-	s := i.scope.NewScope(path, mode)
-
-	s.state = pkgScope.state
-	// Scope needs a local version of CONFIG
-	s.config = i.scope.config.Copy()
-	s.Set("CONFIG", s.config)
-	s.subincludeLabel = &label
-
-	if !mode.IsPreload() {
-		if err := i.preloadSubincludes(s); err != nil {
-			i.subincludes.SetError(key, err)
-			s.Error("failed: %v", err)
+	globals, err := i.subincludes.GetOrSet(key, func() (pyDict, error) {
+		stmts, err := i.parseSubinclude(path)
+		if err != nil {
+			return nil, err
 		}
-	}
-	s.interpretStatements(stmts)
-	locals := s.Freeze()
-	if s.config.overlay == nil {
-		delete(locals, "CONFIG") // Config doesn't have any local modifications
-	}
-	i.subincludes.Set(key, locals)
-	return locals
+
+		mode := pkgScope.mode
+		if preload {
+			mode |= core.ParseModeForPreload
+		}
+		s := i.scope.NewScope(path, mode)
+
+		s.state = pkgScope.state
+		// Scope needs a local version of CONFIG
+		s.config = i.scope.config.Copy()
+		s.Set("CONFIG", s.config)
+		s.subincludeLabel = &label
+
+		if !mode.IsPreload() {
+			if err := i.preloadSubincludes(s); err != nil {
+				return nil, err
+			}
+		}
+		s.interpretStatements(stmts)
+		locals := s.Freeze()
+		if s.config.overlay == nil {
+			delete(locals, "CONFIG") // Config doesn't have any local modifications
+		}
+		return locals, nil
+	})
+	pkgScope.Assert(err == nil, "failed to subinclude %s: %s", label, err)
+	return globals
 }
 
 // parseSubinclude parses a subinclude to an AST, caching it (globally)
 func (i *interpreter) parseSubinclude(path string) ([]*Statement, error) {
-	stmts, wait, first, err := i.asts.GetOrWait(path)
-	if err != nil {
-		return nil, err
-	} else if stmts != nil {
+	return i.asts.GetOrSet(path, func() ([]*Statement, error) {
+		stmts, err := i.parser.parse(nil, path)
+		if err != nil {
+			return nil, err
+		}
+		stmts = i.parser.optimise(stmts)
+		i.optimiseExpressions(stmts)
 		return stmts, nil
-	} else if !first {
-		i.limiter.Release()
-		defer i.limiter.Acquire()
-		<-wait
-		return i.asts.Get(path)
-	}
-	stmts, err = i.parser.parse(nil, path)
-	if err != nil {
-		i.asts.SetError(path, err)
-		return nil, err
-	}
-	stmts = i.parser.optimise(stmts)
-	i.optimiseExpressions(stmts)
-	i.asts.Set(path, stmts)
-	return stmts, nil
+	})
 }
 
 // optimiseExpressions implements a peephole optimiser for expressions by precalculating constants
