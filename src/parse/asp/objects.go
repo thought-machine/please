@@ -595,7 +595,7 @@ func newPyFunc(parentScope *scope, def *FuncDef) pyObject {
 		args:       make([]string, len(def.Arguments)),
 		argIndices: make(map[string]int, len(def.Arguments)),
 		constants:  make([]pyObject, len(def.Arguments)),
-		types:      make([][]string, len(def.Arguments)),
+		types:      make([]int16, len(def.Arguments)),
 		code:       def.Statements,
 		kwargsonly: def.KeywordsOnly,
 		returnType: def.Return,
@@ -1005,4 +1005,16 @@ func (r *pyRange) toList(extraCapacity int) pyList {
 		ret = append(ret, i)
 	}
 	return ret
+}
+
+// Known types, used for type signatures on function arguments
+// This doesn't have to be totally exhaustive, it's only the ones that can be declared in syntax.
+var knownTypeNames = []string{"bool", "str", "int", "list", "dict", "function", "config", "none"}
+
+var knownTypeValues = make(map[string]int{}, len(knownTypeNames))
+
+func init() {
+	for i, x := range knownTypeNames {
+		knownTypeValues[x] = i
+	}
 }

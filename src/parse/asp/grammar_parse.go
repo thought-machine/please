@@ -233,7 +233,7 @@ func (p *parser) parseFuncDef() *FuncDef {
 		p.next('-')
 		p.next('>')
 
-		tok := p.oneofval("bool", "str", "int", "list", "dict", "function", "config")
+		tok := p.oneofval("bool", "str", "int", "list", "dict", "function", "config", "none")
 		fd.Return = tok.Value
 	}
 
