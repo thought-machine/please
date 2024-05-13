@@ -15,14 +15,14 @@ Duration: 4
 - You must have Please installed: [Install please](https://please.build/quickstart.html)
 - Python must be installed: [Install Python](https://www.python.org/downloads/)
 
-### What You’ll Learn
+### What you'll learn
 - Configuring Please for Python using the Python plugin
 - Creating an executable Python binary
 - Authoring Python modules in your project
 - Testing your code
 - Including third-party libraries
 
-### what if I get stuck?
+### What if I get stuck?
 
 The final result of running through this codelab can be found
 [here](https://github.com/thought-machine/please-codelabs/tree/main/getting_started_python) for reference. If you really

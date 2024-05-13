@@ -14,7 +14,7 @@ Duration: 1
 ### Prerequisites
 - You must have Please installed: [Install Please](https://please.build/quickstart.html)
 
-### What You'll Learn
+### What you'll learn
 In this codelab, we'll be setting up Please to compile third party go modules. You'll learn how to: 
 - Use go_module() to download and compile third party go modules
 - Download and compile the library and binary parts of a module separately 

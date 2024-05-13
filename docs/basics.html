@@ -162,7 +162,7 @@
 
     go_binary(
         name = 'my_binary',
-        main = 'main.go',
+        srcs = ['main.go'],
         deps = [':my_library'],
     )
 
@@ -191,7 +191,7 @@
 
     c_binary(
         name = 'my_binary',
-        main = 'main.c',
+        srcs = ['main.c'],
         deps = [':my_library'],
     )
 
@@ -220,7 +220,7 @@
 
     cc_binary(
         name = 'my_binary',
-        main = 'main.cpp',
+        srcs = ['main.cpp'],
         deps = [':my_library'],
     )
 
@@ -234,8 +234,8 @@
     </div>
   </div>
   <p>
-    The code above defines a 3 targets: a library called <code class="code">my_library</code>, a binary called
-    <code class="code">my_binary</code>, and a test target called <code class="code">my_test</code>. There are some
+    The code above defines 3 targets: a library called <code class="code">my_library</code>, a binary called
+    <code class="code">my_binary</code>, and a test target called <code class="code">my_library_test</code>. There are some
     differences between languages but this is the typical pattern that Please build rules follow:
   </p>
   <ul class="bulleted-list">
@@ -247,17 +247,17 @@
     </li>
     <li>
       <span>
-        The <code class="code">my_binary</code> rules creates a runnable "binary target" that depends on
+        The <code class="code">my_binary</code> rules create a runnable "binary target" that depends on
         <code class="code">my_library</code>. These must have some kind of entry point, e.g.
         <code class="code">python_binary</code> requires that a python file be passed via
-        <code class="code">main</code>, however other languages may require a main method or similar. The binary targets
+        <code class="code">main</code>, however other languages may require a source file with a main method or similar. The binary targets
         can be run via <code class="code">plz run</code>.
       </span>
     </li>
     <li>
       <span>
         The <code class="code">my_library_test</code> defines a test on
-        <code class="code">my_library</code>. Tests are can be ran via <code class="code">plz test</code> or
+        <code class="code">my_library</code>. Tests can be run via <code class="code">plz test</code> or
         <code class="code">plz cover</code>, and their results are aggregated.
       </span>
     </li>

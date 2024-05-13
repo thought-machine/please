@@ -16,7 +16,7 @@ Duration: 2
 - You must have Please installed: [Install please](https://please.build/quickstart.html)
 - You should have a basic understanding of using Please to build and test code
 
-### What You’ll Learn 
+### What you'll learn
 This codelab isn't exhaustive however it should give you an idea of the sort of things the Please CLI is capable of:
 - Finding the dependencies of a target
 - Including and excluding targets

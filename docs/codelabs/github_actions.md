@@ -15,7 +15,7 @@ Duration: 2
 - A repository on [GitHub](https://github.com)
 - A project with Please initialized in that repository
 
-### What You’ll Learn
+### What you'll learn
 - How to setup [GitHub Actions](https://github.com/features/actions)
 - How to use Please in a GitHub Actions build
 - How to use the [setup-please](https://github.com/sagikazarmark/setup-please-action) action for better integration

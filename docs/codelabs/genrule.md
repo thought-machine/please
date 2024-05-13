@@ -15,7 +15,7 @@ Duration: 1
 - You must have Please installed: [Install Please](https://please.build/quickstart.html)
 - You should be comfortable using the existing build rules.
 
-### What You'll Learn
+### What you'll learn
 We'll be working through a contrived example writing a build definition for
 [wc](https://www.gnu.org/software/coreutils/manual/html_node/wc-invocation.html#wc-invocation) from core utils.
 In doing so you'll:
