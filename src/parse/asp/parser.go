@@ -156,9 +156,7 @@ func (p *Parser) open(fs iofs.FS, filename string) (io.ReadSeekCloser, error) {
 // The 'filename' argument is only used in case of errors so doesn't necessarily have to correspond to a real file.
 func (p *Parser) ParseData(data []byte, filename string) ([]*Statement, error) {
 	r := &namedReader{r: bytes.NewReader(data), name: filename}
-	stmts, err := p.parseAndHandleErrors(r)
-	p.optimiseBuiltinCalls(stmts)
-	return stmts, err
+	return p.parseAndHandleErrors(r)
 }
 
 // parseAndHandleErrors handles errors nicely if the given input fails to parse.
