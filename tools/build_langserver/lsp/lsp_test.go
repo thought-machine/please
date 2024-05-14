@@ -632,7 +632,7 @@ func (h *Handler) WaitForPackage(pkg string) {
 	// this can only be described as 'grotty', but it is test code
 	h.state.Graph.WaitForTarget(core.BuildLabel{PackageName: pkg})
 	if h.state.Graph.Package(pkg, "") == nil {
-		log.Fatal("package %s doesn't exist", pkg)
+		log.Fatalf("package %s doesn't exist", pkg)
 	}
 }
 
