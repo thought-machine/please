@@ -6,3 +6,7 @@ preloadsubincludes = ///go//build_defs:go
 
 [Plugin "go"]
 target = //plugins:go
+
+[remote]
+url =
+numexecutors = 0
