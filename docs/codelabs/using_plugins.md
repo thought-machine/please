@@ -46,7 +46,7 @@ For a comprehensive list of available plugins, visit [https://github.com/please-
 The plugin ecosystem was designed with extensibility in mind, so if there is a language that you'd like to build with Please and no plugin, consider writing one! The existing plugins should serve as helpful templates, and if you get stuck, feel free to reach out to the Please team on Github or the Please community on [Gitter](https://gitter.im/please-build/Lobby). There will also be a codelab coming soon that will cover the basics of writing a new plugin.
 
 ## How to install a plugin
-Duration: 3
+Duration: 4
 
 The easy way to install a plugin in your project is to use `plz init`. We'll use the Go plugin in this example:
 
