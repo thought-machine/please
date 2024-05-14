@@ -629,12 +629,10 @@ func (h *Handler) CurrentContent(doc string) string {
 
 // WaitForPackage blocks until the given package has been parsed.
 func (h *Handler) WaitForPackage(pkg string) {
-	for result := range h.state.Results() {
-		if result.Status == core.PackageParsed && result.Label.PackageName == pkg {
-			return
-		} else if h.state.Graph.Package(pkg, "") != nil {
-			return
-		}
+	// this can only be described as 'grotty', but it is test code
+	h.state.Graph.WaitForTarget(core.BuildLabel{PackageName: pkg})
+	if h.state.Graph.Package(pkg, "") == nil {
+		log.Fatal("package %s doesn't exist", pkg)
 	}
 }
 
