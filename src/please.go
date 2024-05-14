@@ -1302,7 +1302,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
 	if len(targets) == 0 {
-		if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !plz.ReadingStdin(targets) {
+		if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
 		}
