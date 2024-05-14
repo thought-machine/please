@@ -776,8 +776,8 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"query.revdeps": func() int {
-		labels := plz.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
-		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
+		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			labels := plz.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
 			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
 		})
 	},
@@ -1202,7 +1202,7 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(state, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-	plz.Run(targets, opts.BuildFlags.PreTargets, state)
+	plz.Start(plz.TargetsToChannel(targets), opts.BuildFlags.PreTargets, state)()
 	wg.Wait()
 }
 
@@ -1301,8 +1301,8 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 	if !isQuery {
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
-	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !plz.ReadingStdin(targets) {
-		if len(targets) == 0 {
+	if len(targets) == 0 {
+		if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !plz.ReadingStdin(targets) {
 			// Assume they want us to read from stdin since nothing else was given.
 			targets = []core.BuildLabel{core.BuildLabelStdin}
 		}

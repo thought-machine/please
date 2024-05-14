@@ -25,7 +25,16 @@ var log = logging.Log
 // afterwards to find success / failure.
 // To get detailed results as it runs, use state.Results. You should call that *before*
 // starting this (otherwise a sufficiently fast build may bypass you completely).
-func Run(targets, preTargets []core.BuildLabel, state *core.BuildState) {
+// For more flexibility, use Start (which this is a thin wrapper over).
+func Run(targets []core.BuildLabel, state *core.BuildState) {
+	Start(TargetsToChannel(targets), nil, state)()
+}
+
+// Start starts a build running.
+// The given state object controls most of its parameters. Targets to build are fed in on the
+// given channel. The caller must close that channel once all targets have been supplied.
+// The returned function should be called to wait for the build to finish.
+func Start(targets <-chan core.BuildLabel, preTargets []core.BuildLabel, state *core.BuildState) func() {
 	build.Init(state)
 	if state.Config.Remote.URL != "" {
 		state.RemoteClient = remote.New(state)
@@ -79,21 +88,23 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState) {
 		}
 		wg.Done()
 	}()
-	// Wait until they've all exited, which they'll do once they have no tasks left.
-	wg.Wait()
-	if state.Cache != nil {
-		state.Cache.Shutdown()
+	return func() {
+		// Wait until they've all exited, which they'll do once they have no tasks left.
+		wg.Wait()
+		if state.Cache != nil {
+			state.Cache.Shutdown()
+		}
+		if state.RemoteClient != nil {
+			_, _, in, out := state.RemoteClient.DataRate()
+			log.Info("Total remote RPC data in: %d out: %d", in, out)
+		}
+		state.CloseResults()
+		metrics.Push(state.Config)
 	}
-	if state.RemoteClient != nil {
-		_, _, in, out := state.RemoteClient.DataRate()
-		log.Info("Total remote RPC data in: %d out: %d", in, out)
-	}
-	state.CloseResults()
-	metrics.Push(state.Config)
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
-func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildLabel, arch cli.Arch) {
+func findOriginalTasks(state *core.BuildState, preTargets []core.BuildLabel, targets <-chan core.BuildLabel, arch cli.Arch) {
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
@@ -104,7 +115,9 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
 	}
 	if len(preTargets) > 0 {
-		findOriginalTaskSet(state, preTargets, false, arch)
+		for _, target := range preTargets {
+			findOriginalTask(state, target, false, arch)
+		}
 		for _, target := range preTargets {
 			if target.IsAllTargets() {
 				log.Debug("Waiting for pre-target %s...", target)
@@ -114,19 +127,15 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 		}
 		for _, target := range state.ExpandLabels(preTargets) {
 			log.Debug("Waiting for pre-target %s...", target)
-			state.WaitForInitialTargetAndEnsureDownload(target, targets[0])
+			state.WaitForInitialTargetAndEnsureDownload(target, core.OriginalTarget)
 			log.Debug("Pre-target %s built, continuing...", target)
 		}
 	}
-	findOriginalTaskSet(state, targets, true, arch)
+	for target := range targets {
+		findOriginalTask(state, target, true, arch)
+	}
 	log.Debug("Original target scan complete")
 	state.TaskDone() // initial target adding counts as one.
-}
-
-func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
-	for _, target := range ReadStdinLabels(targets) {
-		findOriginalTask(state, target, addToList, arch)
-	}
 }
 
 func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.BuildLabel {
@@ -246,9 +255,27 @@ func ReadStdinLabels(labels []core.BuildLabel) []core.BuildLabel {
 func ReadAndParseStdinLabels() []core.BuildLabel {
 	ret := []core.BuildLabel{}
 	for s := range flags.ReadStdin() {
-		ret = append(ret, core.ParseBuildLabels([]string{s})...)
+		ret = append(ret, core.MustParseMaybeRelativeBuildLabel(s))
 	}
 	return ret
+}
+
+// TargetsToChannel converts a slice of targets to a channel.
+func TargetsToChannel(in []core.BuildLabel) <-chan core.BuildLabel {
+	ch := make(chan core.BuildLabel)
+	go func() {
+		for _, t := range in {
+			if t == core.BuildLabelStdin {
+				for s := range flags.ReadStdin() {
+					ch <- core.MustParseMaybeRelativeBuildLabel(s)
+				}
+			} else {
+				ch <- t
+			}
+		}
+		close(ch)
+	}()
+	return ch
 }
 
 // A limiter allows only a certain number of concurrent tasks
