@@ -102,6 +102,7 @@ func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements 
 				stmt.FuncDef.IsBuiltin = true
 			}
 		}
+		i.parser.optimiseBuiltinCalls(stmts)
 		return i.loadBuiltinStatements(s, stmts, err)
 	}
 	stmts, err := i.parser.parse(nil, filename)
