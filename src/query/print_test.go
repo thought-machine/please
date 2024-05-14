@@ -13,7 +13,7 @@ import (
 	"github.com/thought-machine/please/src/parse"
 )
 
-var order = parse.InitParser(core.NewDefaultBuildState()).Parser.BuildRuleArgOrder()
+var order = parse.BuildRuleArgOrder(core.NewDefaultBuildState())
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
 	target := &core.BuildTarget{}
