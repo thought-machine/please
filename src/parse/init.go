@@ -78,11 +78,6 @@ func (p *aspParser) RunPostBuildFunction(state *core.BuildState, target *core.Bu
 	})
 }
 
-// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
-func (p *aspParser) BuildRuleArgOrder() map[string]int {
-	return p.parser.BuildRuleArgOrder()
-}
-
 // RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
 func (p *aspParser) RegisterPreload(label core.BuildLabel) error {
 	return p.parser.RegisterPreload(label)
@@ -117,4 +112,21 @@ func createBazelSubrepo(state *core.BuildState) {
 			log.Fatalf("%s", err)
 		}
 	}
+}
+
+// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
+func BuildRuleArgOrder(state *core.BuildState) map[string]int {
+	p := asp.NewParser(state)
+	b, _ := rules.ReadAsset("builtins.build_defs")
+	stmts, _ := p.ParseData(b, "builtins.build_defs")
+	m := map[string]int{}
+	for _, stmt := range stmts {
+		if stmt.FuncDef != nil && stmt.FuncDef.Name == "build_rule" {
+			for i, arg := range stmt.FuncDef.Arguments {
+				m[arg.Name] = i
+			}
+			return m
+		}
+	}
+	return m
 }

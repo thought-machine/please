@@ -92,8 +92,6 @@ type Parser interface {
 	RunPreBuildFunction(state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
 	RunPostBuildFunction(state *BuildState, target *BuildTarget, output string) error
-	// BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
-	BuildRuleArgOrder() map[string]int
 	RegisterPreload(label BuildLabel) error
 }
 

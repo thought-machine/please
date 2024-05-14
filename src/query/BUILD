@@ -1,22 +1,6 @@
 go_library(
     name = "query",
-    srcs = [
-        "alltargets.go",
-        "changes.go",
-        "completions.go",
-        "config.go",
-        "deps.go",
-        "filter.go",
-        "graph.go",
-        "inputs.go",
-        "outputs.go",
-        "print.go",
-        "query_step.go",
-        "reverse_deps.go",
-        "somepath.go",
-        "whatinputs.go",
-        "whatoutputs.go",
-    ],
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -25,21 +9,14 @@ go_library(
         "//src/build",
         "//src/cli/logging",
         "//src/core",
+        "//src/parse",
         "//src/fs",
     ],
 )
 
 go_test(
     name = "query_test",
-    srcs = [
-        "changes_test.go",
-        "completions_test.go",
-        "graph_test.go",
-        "print_test.go",
-        "reverse_deps_test.go",
-        "whatinputs_test.go",
-        "whatoutputs_test.go",
-    ],
+    srcs = glob(["*_test.go"]),
     data = ["completions_test_repo"],
     deps = [
         ":query",
