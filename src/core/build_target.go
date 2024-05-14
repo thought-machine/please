@@ -537,6 +537,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 	var g errgroup.Group
 	target.mutex.RLock()
 	for i := range target.dependencies {
+		i := i
 		dep := &target.dependencies[i] // avoid using a loop variable here as it mutates each iteration
 		if len(dep.deps) > 0 {
 			continue // already done
