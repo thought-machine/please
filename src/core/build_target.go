@@ -108,7 +108,8 @@ type BuildTarget struct {
 	// Dependencies of this target.
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases. Also contains info about exporting etc.
-	dependencies []depInfo `name:"deps"`
+	declaredDeps []BuildLabel `name:"deps"`
+	dependencies []depInfo
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
@@ -287,7 +288,6 @@ type PostBuildFunction interface {
 }
 
 type depInfo struct {
-	declared *BuildLabel    // the originally declared dependency
 	deps     []*BuildTarget // list of actual deps
 	resolved bool           // has the graph resolved it
 	exported bool           // is it an exported dependency
@@ -542,7 +542,7 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 			continue // already done
 		}
 		g.Go(func() error {
-			if err := target.resolveOneDependency(graph, dep); err != nil {
+			if err := target.resolveOneDependency(graph, dep, target.declaredDeps[i]); err != nil {
 				return err
 			}
 			for _, d := range dep.deps {
@@ -557,12 +557,11 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 	return g.Wait()
 }
 
-func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(*dep.declared)
+func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo, declared BuildLabel) error {
+	t := graph.WaitForTarget(declared)
 	if t == nil {
-		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
+		return fmt.Errorf("Couldn't find dependency %s", declared)
 	}
-	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
 
 	labels, ok := t.provideFor(target)
 	if !ok {
@@ -599,14 +598,7 @@ func (target *BuildTarget) ResolveDependencies(graph *BuildGraph) error {
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
-	target.mutex.RLock()
-	defer target.mutex.RUnlock()
-	ret := make(BuildLabels, len(target.dependencies))
-	for i, dep := range target.dependencies {
-		ret[i] = *dep.declared
-	}
-	sort.Sort(ret)
-	return ret
+	return target.declaredDeps
 }
 
 // DeclaredDependenciesStrict returns the original declaration of this target's dependencies.
@@ -614,9 +606,9 @@ func (target *BuildTarget) DeclaredDependenciesStrict() []BuildLabel {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
-	for _, dep := range target.dependencies {
-		if !dep.exported && !dep.source && !target.IsTool(*dep.declared) {
-			ret = append(ret, *dep.declared)
+	for i, dep := range target.dependencies {
+		if declared := target.declaredDeps[i]; !dep.exported && !dep.source && !target.IsTool(declared) {
+			ret = append(ret, declared)
 		}
 	}
 	sort.Sort(ret)
@@ -676,9 +668,9 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
-	for _, info := range target.dependencies {
+	for i, info := range target.dependencies {
 		if info.exported {
-			ret = append(ret, *info.declared)
+			ret = append(ret, target.declaredDeps[i])
 		}
 	}
 	return ret
@@ -907,8 +899,8 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 // CheckDependencyVisibility checks that all declared dependencies of this target are visible to it.
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
-	for _, d := range target.dependencies {
-		dep := state.Graph.TargetOrDie(*d.declared)
+	for _, d := range target.declaredDeps {
+		dep := state.Graph.TargetOrDie(d)
 		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
 		} else if dep.TestOnly && !(target.IsTest() || target.TestOnly) {
@@ -1055,7 +1047,8 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 	defer target.mutex.Unlock()
 	info := target.dependencyInfo(label)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: &label})
+		target.declaredDeps = append(target.declaredDeps, label)
+		target.dependencies = append(target.dependencies, depInfo{})
 		info = &target.dependencies[len(target.dependencies)-1]
 	}
 	if dep != nil {
@@ -1066,8 +1059,8 @@ func (target *BuildTarget) resolveDependency(label BuildLabel, dep *BuildTarget)
 
 // dependencyInfo returns the information about a declared dependency, or nil if the target doesn't have it.
 func (target *BuildTarget) dependencyInfo(label BuildLabel) *depInfo {
-	for i, info := range target.dependencies {
-		if *info.declared == label {
+	for i, dep := range target.declaredDeps {
+		if dep == label {
 			return &target.dependencies[i]
 		}
 	}
@@ -1644,7 +1637,8 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 	}
 	info := target.dependencyInfo(dep)
 	if info == nil {
-		target.dependencies = append(target.dependencies, depInfo{declared: &dep, exported: exported, source: source, internal: internal})
+		target.declaredDeps = append(target.declaredDeps, dep)
+		target.dependencies = append(target.dependencies, depInfo{exported: exported, source: source, internal: internal})
 	} else {
 		info.exported = info.exported || exported
 		info.source = info.source && source

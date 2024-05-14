@@ -415,7 +415,7 @@ func TestDependencies(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
 	target3 := makeTarget1("//src/core:target3", "", target1, target2)
-	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependencies())
+	assert.Equal(t, 0, len(target1.DeclaredDependencies()))
 	assert.Equal(t, []*BuildTarget{}, target1.Dependencies())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
@@ -446,7 +446,7 @@ func TestDeclaredDependenciesStrict(t *testing.T) {
 func TestAddDependency(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "")
-	assert.Equal(t, []BuildLabel{}, target2.DeclaredDependencies())
+	assert.Equal(t, 0, len(target2.DeclaredDependencies()))
 	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
 	target2.AddDependency(target1.Label)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
