@@ -17,6 +17,7 @@ var KnownFields = map[string]bool{
 	// These fields are explicitly hashed.
 	"Label":                       true,
 	"dependencies":                true,
+	"declaredDeps":                true,
 	"Hashes":                      true,
 	"Sources":                     true,
 	"NamedSources":                true,

@@ -109,7 +109,7 @@ type BuildTarget struct {
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases. Also contains info about exporting etc.
 	declaredDeps []BuildLabel `name:"deps"`
-	dependencies []depInfo
+	dependencies []depInfo    `print:"false"`
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
