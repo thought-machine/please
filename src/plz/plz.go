@@ -25,25 +25,25 @@ var log = logging.Log
 // afterwards to find success / failure.
 // To get detailed results as it runs, use state.Results. You should call that *before*
 // starting this (otherwise a sufficiently fast build may bypass you completely).
-func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *core.Configuration, arch cli.Arch) {
+func Run(targets, preTargets []core.BuildLabel, state *core.BuildState) {
 	build.Init(state)
 	if state.Config.Remote.URL != "" {
 		state.RemoteClient = remote.New(state)
 	}
-	if config.Display.SystemStats {
+	if state.Config.Display.SystemStats {
 		go state.UpdateResources()
 	}
 
 	parse.InitParser(state)
 
 	// Start looking for the initial targets to kick the build off
-	go findOriginalTasks(state, preTargets, targets, arch)
+	go findOriginalTasks(state, preTargets, targets, state.TargetArch)
 
 	parses, actions := state.TaskQueues()
 
-	localLimiter := make(limiter, config.Please.NumThreads)
-	remoteLimiter := make(limiter, config.NumRemoteExecutors())
-	anyRemote := config.NumRemoteExecutors() > 0
+	localLimiter := make(limiter, state.Config.Please.NumThreads)
+	remoteLimiter := make(limiter, state.Config.NumRemoteExecutors())
+	anyRemote := state.Config.NumRemoteExecutors() > 0
 
 	// Start up all the build workers
 	var wg sync.WaitGroup
@@ -89,13 +89,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		log.Info("Total remote RPC data in: %d out: %d", in, out)
 	}
 	state.CloseResults()
-	metrics.Push(config)
-}
-
-// RunHost is a convenience function that uses the host architecture, the given state's
-// configuration and no pre targets. It is otherwise identical to Run.
-func RunHost(targets []core.BuildLabel, state *core.BuildState) {
-	Run(targets, nil, state, state.Config, cli.HostArch())
+	metrics.Push(state.Config)
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.

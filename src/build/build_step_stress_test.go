@@ -47,7 +47,7 @@ func TestBuildLotsOfTargets(t *testing.T) {
 		}
 	}()
 
-	plz.RunHost(nil, state)
+	plz.Run(nil, nil, state)
 }
 
 func addTarget(state *core.BuildState, i int) *core.BuildTarget {

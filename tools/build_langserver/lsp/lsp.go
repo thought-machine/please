@@ -201,7 +201,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 	// This is a lot easier than trying to do clever partial parses later on, although
 	// eventually we may want that if we start dealing with truly large repos.
 	go func() {
-		plz.RunHost(core.WholeGraph, h.state)
+		plz.Run(core.WholeGraph, nil, h.state)
 		log.Debug("initial parse complete")
 		h.buildPackageTree()
 		log.Debug("built completion package tree")

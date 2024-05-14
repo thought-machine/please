@@ -140,7 +140,7 @@ func getSubrepoOrDie(name string, target core.BuildLabel) *core.Subrepo {
 	// This is sufficient to get everything we need. The parsing of the build def files happens in getPluginBuildDefs.
 	state.ParsePackageOnly = true
 
-	plz.Run([]core.BuildLabel{target}, nil, state, state.Config, state.TargetArch)
+	plz.Run([]core.BuildLabel{target}, nil, state)
 	return state.Graph.SubrepoOrDie(name)
 }
 
