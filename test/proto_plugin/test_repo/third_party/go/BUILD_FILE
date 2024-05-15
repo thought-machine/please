@@ -1,5 +1,9 @@
 subinclude("///go//build_defs:go")
 
+go_stdlib(
+    name = "std",
+)
+
 go_repo(
     name = "go-spew",
     install = ["spew"],
