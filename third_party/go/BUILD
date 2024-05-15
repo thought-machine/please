@@ -11,7 +11,7 @@ go_toolchain(
         "f6c8a87aa03b92c4b0bf3d558e28ea03006eb29db78917daec5cfb6ec1046265",  # linux-amd64
         "6a63fef0e050146f275bf02a0896badfe77c11b6f05499bb647e7bd613a45a10",  # linux-arm64
     ],
-    install_std = True,
+    install_std = False,
     version = "1.22.0",
 )
 
