@@ -12,6 +12,7 @@ ProtocTool = ///proto//third_party/proto:protoc
 [Plugin "go"]
 Target = //plugins:go
 ImportPath = github.com/thought-machine/please/test/proto_plugin
+stdlib = //third_party/go:std
 
 [Plugin "go_proto"]
 Target = //plugins:go-proto
