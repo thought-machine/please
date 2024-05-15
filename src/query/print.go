@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/parse"
 )
 
 // Print produces a Python call which would (hopefully) regenerate the same build rule if run.
 // This is of course not ideal since they were almost certainly created as a java_library
 // or some similar wrapper rule, but we've lost that information by now.
 func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []string, omitHidden, outputJSON bool) {
+	order := parse.BuildRuleArgOrder(state)
 	graph := state.Graph
 	ts := map[string]map[string]interface{}{}
 	for _, target := range targets {
@@ -28,7 +30,7 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 		t := graph.TargetOrDie(target)
 
 		if outputJSON {
-			ts[target.String()] = targetToValueMap(state.Parser.BuildRuleArgOrder(), fields, t)
+			ts[target.String()] = targetToValueMap(order, fields, t)
 			continue
 		}
 
@@ -46,9 +48,9 @@ func Print(state *core.BuildState, targets []core.BuildLabel, fields, labels []s
 			fmt.Fprintf(os.Stdout, "# %s:\n", target)
 		}
 		if len(fields) > 0 {
-			newPrinter(os.Stdout, t, 0, state.Parser.BuildRuleArgOrder()).PrintFields(fields)
+			newPrinter(os.Stdout, t, 0, order).PrintFields(fields)
 		} else {
-			newPrinter(os.Stdout, t, 0, state.Parser.BuildRuleArgOrder()).PrintTarget()
+			newPrinter(os.Stdout, t, 0, order).PrintTarget()
 		}
 	}
 

@@ -141,8 +141,3 @@ func (fake *fakeParser) RunPostBuildFunction(state *core.BuildState, target *cor
 	}
 	return nil
 }
-
-// BuildRuleArgOrder stub
-func (fake *fakeParser) BuildRuleArgOrder() map[string]int {
-	return map[string]int{}
-}
