@@ -537,13 +537,13 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 	var g errgroup.Group
 	target.mutex.RLock()
 	for i := range target.dependencies {
-		i := i
+		declared := target.declaredDeps[i]
 		dep := &target.dependencies[i] // avoid using a loop variable here as it mutates each iteration
 		if len(dep.deps) > 0 {
 			continue // already done
 		}
 		g.Go(func() error {
-			if err := target.resolveOneDependency(graph, dep, target.declaredDeps[i]); err != nil {
+			if err := target.resolveOneDependency(graph, dep, declared); err != nil {
 				return err
 			}
 			for _, d := range dep.deps {
@@ -599,6 +599,8 @@ func (target *BuildTarget) ResolveDependencies(graph *BuildGraph) error {
 
 // DeclaredDependencies returns all the targets this target declared any kind of dependency on (including sources and tools).
 func (target *BuildTarget) DeclaredDependencies() []BuildLabel {
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
 	return target.declaredDeps
 }
 
