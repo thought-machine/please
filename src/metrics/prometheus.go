@@ -28,8 +28,11 @@ func Push(config *core.Configuration) {
 		for _, fam := range family {
 			buf.Reset()
 			if _, err := expfmt.MetricFamilyToText(&buf, fam); err == nil {
-				s := strings.TrimSpace(buf.String())
-				log.Debug("Metric recorded: %s", s[strings.LastIndex(s, "\n")+1:])
+				for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+					if !strings.HasPrefix(line, "#") {
+						log.Debug("Metric recorded: %s", line)
+					}
+				}
 			}
 		}
 	}
