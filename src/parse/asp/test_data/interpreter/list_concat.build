@@ -1,0 +1,22 @@
+fruit = [
+    "apple",
+    "banana",
+]
+
+fruit_and_veg = fruit + [
+    "edamame",
+    "fennel",
+]
+
+fruit_veg_and_canned_food = fruit_and_veg + [
+    "tuna",
+    "baked beans",
+]
+
+fruit_veg_canned_food_and_sweets = fruit_veg_and_canned_food + [
+    "haribo",
+]
+
+fruit_veg_canned_food_and_drinks = fruit_veg_and_canned_food + [
+    "matcha latte",
+]
