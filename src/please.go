@@ -718,8 +718,8 @@ var buildFunctions = map[string]func() int{
 		}
 
 		fmt.Println()
-		fmt.Println("Pleasings are a collection of auxiliary build rules that support other languages and technologies not present in the core please distribution.")
-		fmt.Println("For more information visit https://github.com/thought-machine/pleasings")
+		fmt.Println("There are auxiliary build rules available via plugins for various languages and technologies.")
+		fmt.Println("For a list of available plugins visit https://github.com/please-build/please-rules. Or to get up and running quickly, try `plz init plugin [go|java|python]`")
 		fmt.Println()
 
 		return 0

@@ -2,7 +2,10 @@ subinclude("//build_defs:benchmark")
 
 go_library(
     name = "asp",
-    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -19,7 +22,10 @@ go_library(
 
 go_test(
     name = "asp_test",
-    srcs = glob(["*_test.go"], exclude=["*_bench_test.go"]),
+    srcs = glob(
+        ["*_test.go"],
+        exclude = ["*_bench_test.go"],
+    ),
     data = ["test_data"],
     deps = [
         ":asp",
