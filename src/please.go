@@ -719,7 +719,7 @@ var buildFunctions = map[string]func() int{
 
 		fmt.Println()
 		fmt.Println("There are auxiliary build rules available via plugins for various languages and technologies.")
-		fmt.Println("For a list of available plugins visit https://github.com/please-build/please-rules. Or to get up and running quickly, try `plz init plugin [go|java|python]`")
+		fmt.Println("For a list of available plugins visit https://github.com/please-build/please-rules. Or to get up and running quickly, try `plz init plugin [go|java|python|cc]`")
 		fmt.Println()
 
 		return 0
