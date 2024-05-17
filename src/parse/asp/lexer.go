@@ -309,6 +309,8 @@ func (l *lex) consumeString(quote byte, pos Position, multiline, raw, fString bo
 		if escaped {
 			if next == 'n' {
 				value = append(value, '\n')
+			} else if next == 't' {
+				value = append(value, '\t')
 			} else if next == '\n' && multiline {
 				l.line++
 				l.col = 0
