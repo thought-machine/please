@@ -91,13 +91,14 @@ then builds it like any other Please project. So
 in the subrepo called *third_party/go/github.com_stretchr_testify*, and retrieve
 for me the build target `//assert:assert`.
 
+You can `plz query print` these targets just like you would any other target:
+
 ```bash
 plz query print ///third_party/go/github.com_stretchr_testify//assert:assert
 ```
 
-these targets just like any other target, which will show you the underlying
-build rule for that target. Or, if you prefer, you could have a look in the
-plz-out directory at the generated build rule:
+This will show you the underlying build rule for that target. Or, if you prefer,
+you could have a look in the plz-out directory at the generated build rule:
 
 ```bash
 $ cat plz-out/subrepos/third_party/go/github.com_stretchr_testify/assert/BUILD
