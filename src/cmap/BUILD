@@ -1,6 +1,9 @@
 go_library(
     name = "cmap",
-    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = ["///third_party/go/github.com_cespare_xxhash_v2//:v2"],
