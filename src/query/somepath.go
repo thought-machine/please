@@ -9,11 +9,12 @@ import (
 
 // SomePath finds and returns a path between two targets, or between one and a set of targets.
 // Useful for a "why on earth do I depend on this thing" type query.
-func SomePath(graph *core.BuildGraph, from, to, except []core.BuildLabel, showHidden bool) error {
+func SomePath(graph *core.BuildGraph, from, to, except []core.BuildLabel, showHidden, ffDefaultProvide bool) error {
 	s := somepath{
-		graph:  graph,
-		except: make(map[core.BuildLabel]struct{}, len(except)),
-		memo:   map[core.BuildLabel]map[core.BuildLabel]struct{}{},
+		graph:            graph,
+		except:           make(map[core.BuildLabel]struct{}, len(except)),
+		memo:             map[core.BuildLabel]map[core.BuildLabel]struct{}{},
+		ffDefaultProvide: ffDefaultProvide,
 	}
 	for _, ex := range except {
 		s.except[ex] = struct{}{}
@@ -58,9 +59,10 @@ func expandAllTargets(graph *core.BuildGraph, labels []core.BuildLabel) []core.B
 }
 
 type somepath struct {
-	graph  *core.BuildGraph
-	memo   map[core.BuildLabel]map[core.BuildLabel]struct{}
-	except map[core.BuildLabel]struct{}
+	graph            *core.BuildGraph
+	memo             map[core.BuildLabel]map[core.BuildLabel]struct{}
+	except           map[core.BuildLabel]struct{}
+	ffDefaultProvide bool
 }
 
 func (s *somepath) SomePath(target1, target2 core.BuildLabel) []core.BuildLabel {
@@ -77,10 +79,10 @@ func (s *somepath) somePath(target1, target2 core.BuildLabel) []core.BuildLabel 
 		m = map[core.BuildLabel]struct{}{}
 		s.memo[target2] = m
 	}
-	return somePath(s.graph, s.graph.TargetOrDie(target1), s.graph.TargetOrDie(target2), m, s.except)
+	return somePath(s.graph, s.graph.TargetOrDie(target1), s.graph.TargetOrDie(target2), m, s.except, s.ffDefaultProvide)
 }
 
-func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen, except map[core.BuildLabel]struct{}) []core.BuildLabel {
+func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen, except map[core.BuildLabel]struct{}, ffDefaultProvide bool) []core.BuildLabel {
 	if target1.Label == target2.Label {
 		return []core.BuildLabel{target1.Label}
 	} else if target1.Parent(graph) == target2 {
@@ -97,15 +99,15 @@ func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen, 
 			if _, present := except[t.Label]; present {
 				continue
 			}
-			for _, l := range t.ProvideFor(target1) {
-				if path := somePath(graph, graph.TargetOrDie(l), target2, seen, except); len(path) != 0 {
+			for _, l := range t.ProvideFor(target1, ffDefaultProvide) {
+				if path := somePath(graph, graph.TargetOrDie(l), target2, seen, except, ffDefaultProvide); len(path) != 0 {
 					return append([]core.BuildLabel{target1.Label}, path...)
 				}
 			}
 		}
 	}
 	if target1.Subrepo != nil && target1.Subrepo.Target != nil {
-		if path := somePath(graph, target1.Subrepo.Target, target2, seen, except); len(path) != 0 {
+		if path := somePath(graph, target1.Subrepo.Target, target2, seen, except, ffDefaultProvide); len(path) != 0 {
 			return append([]core.BuildLabel{target1.Label}, path...)
 		}
 	}

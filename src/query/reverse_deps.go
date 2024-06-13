@@ -81,7 +81,7 @@ type revdeps struct {
 }
 
 // newRevdeps creates a new reverse dependency searcher. revdeps is non-reusable.
-func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth int) *revdeps {
+func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth int, ffDefaultProvide bool) *revdeps {
 	// Initialise a map of labels to the packages that subinclude them upfront so we can include those targets as
 	// dependencies efficiently later
 	subincludes := make(map[core.BuildLabel][]*core.Package)
@@ -94,7 +94,7 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 	}
 
 	return &revdeps{
-		revdeps:           buildRevdeps(graph),
+		revdeps:           buildRevdeps(graph, ffDefaultProvide),
 		subincludes:       subincludes,
 		followSubincludes: followSubincludes,
 		os: &openSet{
@@ -107,7 +107,7 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 }
 
 // buildRevdeps builds the reverse dependency map from a build graph.
-func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarget {
+func buildRevdeps(graph *core.BuildGraph, ffDefaultProvide bool) map[core.BuildLabel][]*core.BuildTarget {
 	targets := graph.AllTargets()
 	revdeps := make(map[core.BuildLabel][]*core.BuildTarget, len(targets))
 	for _, t := range targets {
@@ -115,7 +115,7 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 			if t2 := graph.Target(d); t2 == nil {
 				revdeps[d] = append(revdeps[d], t2)
 			} else {
-				for _, p := range t2.ProvideFor(t) {
+				for _, p := range t2.ProvideFor(t, ffDefaultProvide) {
 					revdeps[p] = append(revdeps[p], t)
 				}
 			}
@@ -129,7 +129,7 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 
 // FindRevdeps will return a set of build targets that are reverse dependencies of the provided labels.
 func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden, followSubincludes bool, depth int) map[*core.BuildTarget]struct{} {
-	r := newRevdeps(state.Graph, hidden, followSubincludes, depth)
+	r := newRevdeps(state.Graph, hidden, followSubincludes, depth, state.Config.FeatureFlags.FFDefaultProvides)
 	// Initialise the open set with the original targets
 	for _, label := range targets {
 		target := state.Graph.TargetOrDie(label)

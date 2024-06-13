@@ -53,3 +53,29 @@ genrule(
     cmd = ["ls *.txt > $OUT"],
     outs = ["nothing.ls"],
 )
+
+
+filegroup(
+    name = "default_provide",
+    provides = {
+        "foo": ":foo",
+        "default": ":bar",
+    }
+)
+
+genrule(
+    name = "default_foo",
+    deps = [":default_provide"],
+    requires = ["foo"],
+    cmd = ["ls *.txt > $OUT"],
+    outs = ["default_foo.ls"],
+)
+
+
+genrule(
+    name = "default_bar",
+    deps = [":default_provide"],
+    requires = ["bar"],
+    cmd = ["ls *.txt > $OUT 2>/dev/null || exit 0"],
+    outs = ["default_bar.ls"],
+)
