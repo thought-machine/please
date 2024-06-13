@@ -346,7 +346,6 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	c.setOutputsFromMetadata(target, metadata)
 
 	if c.state.ShouldDownload(target) {
-		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading")
 		if err := c.Download(target); err != nil {
 			return metadata, err
 		}
@@ -360,6 +359,7 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 
 // downloadData downloads all the runtime data for a target, recursively.
 func (c *Client) downloadData(target *core.BuildTarget) error {
+	c.state.LogBuildResult(target, core.TargetBuilding, "Downloading...")
 	var g errgroup.Group
 	for _, datum := range target.AllData() {
 		if l, ok := datum.Label(); ok {
@@ -433,6 +433,7 @@ func (c *Client) Download(target *core.BuildTarget) error {
 	if target.Local {
 		return nil // No download needed since this target was built locally
 	}
+	c.state.LogBuildResult(target, core.TargetBuilding, "Acquiring target lock...")
 	return c.download(target, func() error {
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
 		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
@@ -460,6 +461,7 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
 		}
+		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading...")
 		return c.reallyDownload(target, buildAction, ar)
 	})
 }
