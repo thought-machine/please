@@ -7,6 +7,7 @@ import (
 
 	"github.com/peterebden/go-cli-init/v5/flags"
 
+	"github.com/thought-machine/please/src/attestor"
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
@@ -89,6 +90,25 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		log.Info("Total remote RPC data in: %d out: %d", in, out)
 	}
 	state.CloseResults()
+
+	prov := attestor.New()
+	err := prov.Attest(targets, preTargets, state, config, arch)
+	if err != nil {
+		log.Errorf("%v", err)
+	}
+
+	provenanceJson, err := prov.MarshalJSON()
+	if err != nil {
+		log.Errorf("%v", err)
+	}
+
+	log.Infof("%s", provenanceJson)
+	
+	// TODO: Provenance implementation
+	// - Sign provenance
+	// - Get config for output location
+	// - Write to output file
+
 	metrics.Push(config)
 }
 
