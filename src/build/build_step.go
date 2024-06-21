@@ -79,22 +79,6 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 		successfulLocalTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
 	}
 
-	// Check if the target had a post build step and make sure to handle any dependencies added within it.
-	if target.PostBuildFunction != nil {
-		// Use declared dependencies and get the targets from their labels, because addDep creates a depInfo struct with the deps field unpopulated.
-		for _, label := range target.DeclaredDependencies() {
-			depTarget := state.Graph.Target(label)
-			depTarget.WaitForBuild()
-			if depTarget.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
-				// Give up and set the original target as dependency failed
-				target.SetState(core.DependencyFailed)
-				state.LogBuildResult(target, core.TargetBuilt, "Dependency failed")
-				target.FinishBuild()
-				return
-			}
-		}
-	}
-	
 	// Mark the target as having finished building.
 	target.FinishBuild()
 	if target.IsTest() && state.NeedTests && state.IsOriginalTarget(target) {
@@ -358,6 +342,16 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		outs := target.Outputs()
 		if err := runPostBuildFunction(state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
+		}
+
+		// Wait for any new dependencies added by post-build commands before continuing.
+		for _, dep := range target.Dependencies() {
+			dep.WaitForBuild()
+			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
+				// Give up and set the original target as dependency failed
+				target.SetState(core.DependencyFailed)
+				return fmt.Errorf("error in post-rule dependency for %s: %s", target.Label, dep.Label)
+			}
 		}
 
 		if runRemotely && len(outs) != len(target.Outputs()) {
