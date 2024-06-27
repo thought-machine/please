@@ -430,10 +430,10 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 	}
 
 	// TODO(jpoole): remove these two after REAPI 2.1
-	for _, o := range ar.OutputFileSymlinks {
+	for _, o := range ar.OutputFileSymlinks { //nolint:staticcheck
 		ret[o.Path] = true
 	}
-	for _, o := range ar.OutputDirectorySymlinks {
+	for _, o := range ar.OutputDirectorySymlinks { //nolint:staticcheck
 		ret[o.Path] = true
 	}
 	return ret

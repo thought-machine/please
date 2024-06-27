@@ -138,7 +138,7 @@ func (c *Client) outputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.
 		Root: &pb.Directory{
 			Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
 			Directories: make([]*pb.DirectoryNode, 0, len(ar.OutputDirectories)),
-			Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)),
+			Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)), //nolint:staticcheck
 		},
 	}
 	// N.B. At this point the various things we stick into this Directory proto can be in
@@ -165,7 +165,7 @@ func (c *Client) outputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.
 			Digest: c.digestMessage(tree.Root),
 		})
 	}
-	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) {
+	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) { //nolint:staticcheck
 		o.Root.Symlinks[i] = &pb.SymlinkNode{
 			Name:   target.GetRealOutput(s.Path),
 			Target: s.Target,
@@ -627,7 +627,7 @@ func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 // The special-casing is important to make remote_file hash properly (also so you can
 // calculate it manually by sha256sum'ing the file).
 func (c *Client) outputHash(ar *pb.ActionResult) string {
-	if len(ar.OutputFiles) == 1 && len(ar.OutputDirectories) == 0 && len(ar.OutputFileSymlinks) == 0 && len(ar.OutputDirectorySymlinks) == 0 {
+	if len(ar.OutputFiles) == 1 && len(ar.OutputDirectories) == 0 && len(ar.OutputFileSymlinks) == 0 && len(ar.OutputDirectorySymlinks) == 0 { //nolint:staticcheck
 		return ar.OutputFiles[0].Digest.Hash
 	}
 	return c.digestMessage(ar).Hash
