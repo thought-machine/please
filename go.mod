@@ -5,7 +5,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
 	github.com/alessio/shellescape v1.4.2
-	github.com/bazelbuild/remote-apis v0.0.0-20210718193713-0ecef08215cf
+	github.com/bazelbuild/remote-apis v0.0.0-20240409135018-1f36c310b28d
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20221114180157-e62cf9b8696a
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/coreos/go-semver v0.3.1

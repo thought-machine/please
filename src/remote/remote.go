@@ -614,7 +614,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		metadata.Cached = true
 		return metadata, ar
 	}
-	c.logActionResult(target, run, "Checking remote...")
+	c.logActionResult(target, run, "Checking remote...", "")
 	// Now see if it is cached on the remote server
 	start := time.Now()
 	if ar, err := c.client.GetActionResult(context.Background(), &pb.GetActionResultRequest{
@@ -686,25 +686,29 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 // The action & sources must have already been uploaded.
 func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, needStdout, isTest, skipCacheLookup bool, run int) (*core.BuildMetadata, *pb.ActionResult, error) {
 	executing := false
-	c.logActionResult(target, run, "Submitting job...")
+	c.logActionResult(target, run, "Submitting job...", "")
 	updateProgress := func(metadata *pb.ExecuteOperationMetadata) {
 		if c.state.Config.Remote.DisplayURL != "" {
 			log.Debug("Remote progress for %s: %s%s", target.Label, metadata.Stage, c.actionURL(metadata.ActionDigest, true))
 		}
+		worker := ""
+		if metadata.PartialExecutionMetadata != nil {
+			worker = metadata.PartialExecutionMetadata.Worker
+		}
 		switch metadata.Stage {
 		case pb.ExecutionStage_CACHE_CHECK:
-			c.logActionResult(target, run, "Checking cache...")
+			c.logActionResult(target, run, "Checking cache...", worker)
 		case pb.ExecutionStage_QUEUED:
-			c.logActionResult(target, run, "Queued")
+			c.logActionResult(target, run, "Queued", worker)
 		case pb.ExecutionStage_EXECUTING:
 			executing = true
 			if target.State() <= core.Built {
-				c.logActionResult(target, run, "Building...")
+				c.logActionResult(target, run, "Building...", worker)
 			} else {
-				c.logActionResult(target, run, "Testing...")
+				c.logActionResult(target, run, "Testing...", worker)
 			}
 		case pb.ExecutionStage_COMPLETED:
-			c.logActionResult(target, run, "Completed")
+			c.logActionResult(target, run, "Completed", worker)
 		}
 	}
 
@@ -758,7 +762,7 @@ func (c *Client) reallyExecute(target *core.BuildTarget, command *pb.Command, di
 			return nil, nil, err
 		}
 		if response.CachedResult {
-			c.logActionResult(target, run, "Cached")
+			c.logActionResult(target, run, "Cached", "")
 		}
 		for k, v := range response.ServerLogs {
 			log.Debug("Server log available: %s: hash key %s", k, v.Digest.Hash)
@@ -988,7 +992,10 @@ func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget,
 }
 
 // logActionResult logs the state of an action while it's building or testing
-func (c *Client) logActionResult(target *core.BuildTarget, run int, message string) {
+func (c *Client) logActionResult(target *core.BuildTarget, run int, message, worker string) {
+	if worker != "" {
+		message += " (on " + worker + ")"
+	}
 	if target.State() <= core.Built {
 		c.state.LogBuildResult(target, core.TargetBuilding, message)
 	} else {

@@ -504,7 +504,7 @@ go_repo(
 
 go_repo(
     module = "github.com/bazelbuild/remote-apis",
-    version = "v0.0.0-20210718193713-0ecef08215cf",
+    version = "v0.0.0-20240409135018-1f36c310b28d",
 )
 
 go_repo(
