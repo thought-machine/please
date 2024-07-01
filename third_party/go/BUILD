@@ -167,7 +167,7 @@ go_repo(
 
 go_repo(
     module = "github.com/hashicorp/go-retryablehttp",
-    version = "v0.7.5",
+    version = "v0.7.7",
 )
 
 go_repo(
@@ -327,7 +327,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sys",
-    version = "v0.18.0",
+    version = "v0.20.0",
 )
 
 go_repo(
