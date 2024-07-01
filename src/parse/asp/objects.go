@@ -3,6 +3,7 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -359,11 +360,11 @@ func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 		l2, ok := operand.(pyList)
 		if !ok {
 			if l2, ok := operand.(pyFrozenList); ok {
-				return append(l, l2.pyList...)
+				return slices.Clip(append(l, l2.pyList...))
 			}
 			panic("Cannot add list and " + operand.Type())
 		}
-		return append(l, l2...)
+		return slices.Clip(append(l, l2...))
 	case In, NotIn:
 		for _, item := range l {
 			if item == operand {
@@ -429,7 +430,7 @@ func (l pyList) Freeze() pyObject {
 
 // Repeat returns a copy of this list, repeated n times
 func (l pyList) Repeat(n pyInt) pyList {
-	var ret pyList
+	ret := make(pyList, 0, int(n)*len(l))
 	for i := 0; i < int(n); i++ {
 		ret = append(ret, l...)
 	}

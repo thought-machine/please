@@ -686,3 +686,17 @@ func TestOperatorPrecedence(t *testing.T) {
 	assert.EqualValues(t, False, s.Lookup("m"))
 	assert.EqualValues(t, True, s.Lookup("n"))
 }
+
+func TestListConcatenation(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/list_concat.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, pyList{
+		pyString("apple"),
+		pyString("banana"),
+		pyString("edamame"),
+		pyString("fennel"),
+		pyString("tuna"),
+		pyString("baked beans"),
+		pyString("haribo"),
+	}, s.Lookup("fruit_veg_canned_food_and_sweets"))
+}
