@@ -677,6 +677,15 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, info := range target.dependencies {
+
+		logString := ""
+		for i, dep := range info.deps {
+			logString += dep.Label.Name
+			if i+1 < len(info.deps) {
+				logString += ", "
+			}
+		}
+		log.Info("Exported deps call for target %s: %s , exported: %t", target.Label, logString, info.exported)
 		if info.exported {
 			ret = append(ret, *info.declared)
 		}
@@ -1651,6 +1660,15 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 		info.internal = info.internal && internal
 		info.data = false // It's not *only* data any more.
 	}
+}
+
+// RegisterDependencyTarget registers a build target to be used for a dependency label on the given target.
+func (target *BuildTarget) RegisterDependencyTarget(dep BuildLabel, deptarget *BuildTarget) {
+	info := target.dependencyInfo(dep)
+	if info == nil {
+		log.Fatalf("Target %s doesn't contain dependency %s.\n", target.Label, dep)
+	}
+	info.deps = append(info.deps, deptarget)
 }
 
 // IsTool returns true if the given build label is a tool used by this target.
