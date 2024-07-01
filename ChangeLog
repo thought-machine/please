@@ -1,3 +1,15 @@
+Version 17.9.0
+--------------
+    * Allow values in `provides` to be a list (#3140)
+    * Don't show passed test output for large numbers of tests (#3131)
+    * Deduplicate env vars passed to build actions (#3143, #3144)
+    * More efficient `str.format()` implementation in BUILD language (#3146)
+    * Fix hang on preloading subincludes with syntax errors (#3151)
+    * Some low-level performance improvements to BUILD file parsing (#3147, #3152)
+    * Support \t escapes in strings (#3170)
+    * Remove mention of pleasings from plz init message (#3173)
+    * Report remote worker name in interactive output (#3178)
+
 Version 17.8.7
 --------------
     * Use local paths only for determining tool changes (#3139)
