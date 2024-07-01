@@ -8,7 +8,6 @@ Version 17.9.0
     * Some low-level performance improvements to BUILD file parsing (#3147, #3152)
     * Support \t escapes in strings (#3170)
     * Remove mention of pleasings from plz init message (#3173)
-    * Log aquiring target lock (#3177)
     * Report remote worker name in interactive output (#3178)
 
 Version 17.8.7
