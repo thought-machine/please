@@ -360,7 +360,7 @@ func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 		l2, ok := operand.(pyList)
 		if !ok {
 			if l2, ok := operand.(pyFrozenList); ok {
-				return append(l, l2.pyList...)
+				return slices.Clip(append(l, l2.pyList...))
 			}
 			panic("Cannot add list and " + operand.Type())
 		}
