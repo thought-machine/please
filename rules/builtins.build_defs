@@ -13,7 +13,7 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str=''
                test_outputs:list=None, system_srcs:list=None, stamp:bool=False, tag:str='', optional_outs:list=None, progress:bool=False,
                size:str=None, _urls:list=None, internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[],
                exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}, _file_content:str=None,
-               _subrepo:bool=False):
+               _subrepo:bool=False, no_test_coverage:bool=False):
     pass
 
 def chr(i:int) -> str:

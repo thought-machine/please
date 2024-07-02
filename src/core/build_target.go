@@ -81,6 +81,10 @@ type TestFields struct {
 	// True if the target is a test and has no output file.
 	// Default is false, meaning all tests must produce test.results as output.
 	NoOutput bool `name:"no_test_output"`
+	// True if the target is a test and won't produce coverage.
+	// Default is false, where tests are expected to, but we don't error if it's not there;
+	// this is mostly relevant for remote execution.
+	NoCoverage bool `name:"no_test_coverage"`
 }
 
 type DebugFields struct {
@@ -1807,7 +1811,7 @@ func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
 	if target.Test == nil {
 		return false
 	}
-	return state.NeedCoverage && !target.Test.NoOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+	return state.NeedCoverage && !target.Test.NoOutput && !target.Test.NoCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.

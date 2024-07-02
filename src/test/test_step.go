@@ -75,7 +75,7 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 
 	cachedTestResults := func() *core.TestSuite {
 		log.Debug("Not re-running test %s; got cached results.", label)
-		coverage := parseCoverageFile(target, target.CoverageFile(), run)
+		coverage := parseCoverageFile(state, target, target.CoverageFile(), run)
 		results, err := parseTestResultsFile(target.TestResultsFile())
 		results.Package = strings.ReplaceAll(target.Label.PackageName, "/", ".")
 		results.Name = target.Label.Name
@@ -390,7 +390,7 @@ func doTestResults(state *core.BuildState, target *core.BuildTarget, runRemotely
 		metadata = &core.BuildMetadata{Stdout: stdout}
 	}
 
-	coverage := parseCoverageFile(target, filepath.Join(target.TestDir(run), core.CoverageFile), run)
+	coverage := parseCoverageFile(state, target, filepath.Join(target.TestDir(run), core.CoverageFile), run)
 
 	var data [][]byte
 	// If this test is meant to produce an output file and the test ran successfully
@@ -504,7 +504,10 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 }
 
 // Parses the coverage output for a single target.
-func parseCoverageFile(target *core.BuildTarget, coverageFile string, run int) *core.TestCoverage {
+func parseCoverageFile(state *core.BuildState, target *core.BuildTarget, coverageFile string, run int) *core.TestCoverage {
+	if !target.NeedCoverage(state) {
+		return core.NewTestCoverage()
+	}
 	coverage, err := parseTestCoverageFile(target, coverageFile, run)
 	if err != nil {
 		log.Errorf("Failed to parse coverage file for %s: %s", target.Label, err)
