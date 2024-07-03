@@ -114,6 +114,8 @@ func TestDiffGraphsStillChecksTargetsInSubrepos(t *testing.T) {
 
 	// t3 should now count as changed - it has a different source file - and that should propagate to t4
 	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, true))
+	// If includeSubrepos=false, t4 should still count as changed, although we won't see t3.
+	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, false))
 }
 
 func TestChangesIncludesDataDirs(t *testing.T) {
