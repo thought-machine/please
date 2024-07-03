@@ -165,7 +165,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run
 	env["GTEST_OUTPUT"] = "xml:" + resultsFile
 	env["PEX_NOCACHE"] = "true"
 	env["_TEST_ID"] = base64.RawStdEncoding.EncodeToString(hash[:12])
-	if state.NeedCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage) {
+	if target.NeedCoverage(state) {
 		env["COVERAGE"] = "true"
 		env["COVERAGE_FILE"] = filepath.Join(testDir, CoverageFile)
 	}
