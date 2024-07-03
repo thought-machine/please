@@ -450,8 +450,8 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestResultsFile, c.actionURL(actionDigest, true))
 		}
 		if c.state.Config.Remote.OptionalOutputsRequired {
-			if !target.Test.NoCoverage && !outs[core.TestCoverageFile] {
-				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestCoverageFile, c.actionURL(actionDigest, true))
+			if !target.Test.NoCoverage && !outs[core.CoverageFile] {
+				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.CoverageFile, c.actionURL(actionDigest, true))
 			}
 			for _, out := range target.Test.Outputs {
 				if !outs[out] {
