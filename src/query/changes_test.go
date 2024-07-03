@@ -78,7 +78,7 @@ func TestDiffGraphsIncludeTransitive(t *testing.T) {
 	assert.EqualValues(t, core.BuildLabels{t1.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, nil, -1, false))
 }
 
-func TestDiffGraphsVsSubrepos(t *testing.T) {
+func TestDiffGraphsStopsAtSubrepos(t *testing.T) {
 	s1 := core.NewDefaultBuildState()
 	s2 := core.NewDefaultBuildState()
 	t1 := addTarget(s1, "//:modfile", nil, "go.mod")
@@ -95,6 +95,25 @@ func TestDiffGraphsVsSubrepos(t *testing.T) {
 
 	// t3 should not be changed here - its subrepo has but we should see that the targets generated in it are still identical
 	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, false))
+}
+
+func TestDiffGraphsStillChecksTargetsInSubrepos(t *testing.T) {
+	s1 := core.NewDefaultBuildState()
+	s2 := core.NewDefaultBuildState()
+	t1 := addTarget(s1, "//:modfile", nil, "go.mod")
+	t2 := addTarget(s1, "//third_party/go:mod", t1)
+	t3 := addTarget(s1, "///third_party/go/mod//:mod", nil)
+	t3.Subrepo = core.NewSubrepo(s1, "go_mod", "third_party/go", t2, cli.Arch{}, false)
+	t4 := addTarget(s1, "//src/core:core", t3)
+
+	t1 = addTarget(s2, "//:modfile", nil, "go.mod")
+	t2 = addTarget(s2, "//third_party/go:mod", t1)
+	t3 = addTarget(s2, "///third_party/go/mod//:mod", nil, "test.go")
+	t3.Subrepo = core.NewSubrepo(s2, "go_mod", "third_party/go", t2, cli.Arch{}, false)
+	t4 = addTarget(s2, "//src/core:core", t3)
+
+	// t3 should now count as changed - it has a different source file - and that should propagate to t4
+	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, true))
 }
 
 func TestChangesIncludesDataDirs(t *testing.T) {
