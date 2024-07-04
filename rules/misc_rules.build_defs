@@ -183,7 +183,7 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
                              be made available.
       flaky (bool | int): If true the test will be marked as flaky and automatically retried.
       no_test_output (bool): If true the test is not expected to write any output results, it will
-                             pass if the command exits with 0 and fail otherwise.
+                             pass if the command exits with 0 and fail otherwise. Implies no_test_coverage as well.
       no_test_coverage (bool): If true, the test is not expected to produce any coverage output under
                                `plz cover`. By default this is false, but coverage is optional, so
                                Please will not fail if no coverage file is output; this is mostly relevant
