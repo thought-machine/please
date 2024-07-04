@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestDiffGraphs(t *testing.T) {
@@ -80,13 +80,13 @@ func TestDiffGraphsIncludeTransitive(t *testing.T) {
 
 func TestDiffGraphsStopsAtSubrepos(t *testing.T) {
 	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
 	t1 := addTarget(s1, "//:modfile", nil, "go.mod")
 	t2 := addTarget(s1, "//third_party/go:mod", t1)
 	t3 := addTarget(s1, "///third_party/go/mod//:mod", nil)
 	t3.Subrepo = core.NewSubrepo(s1, "go_mod", "third_party/go", t2, cli.Arch{}, false)
 	addTarget(s1, "//src/core:core", t3)
 
+	s2 := core.NewDefaultBuildState()
 	t1 = addTarget(s2, "//:modfile", nil, "go.mod")
 	t2 = addTarget(s2, "//third_party/go:mod", t1)
 	t3 = addTarget(s2, "///third_party/go/mod//:mod", nil)
@@ -99,18 +99,18 @@ func TestDiffGraphsStopsAtSubrepos(t *testing.T) {
 
 func TestDiffGraphsStillChecksTargetsInSubrepos(t *testing.T) {
 	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
 	t1 := addTarget(s1, "//:modfile", nil, "go.mod")
 	t2 := addTarget(s1, "//third_party/go:mod", t1)
 	t3 := addTarget(s1, "///third_party/go/mod//:mod", nil)
 	t3.Subrepo = core.NewSubrepo(s1, "go_mod", "third_party/go", t2, cli.Arch{}, false)
-	t4 := addTarget(s1, "//src/core:core", t3)
+	addTarget(s1, "//src/core:core", t3)
 
+	s2 := core.NewDefaultBuildState()
 	t1 = addTarget(s2, "//:modfile", nil, "go.mod")
 	t2 = addTarget(s2, "//third_party/go:mod", t1)
 	t3 = addTarget(s2, "///third_party/go/mod//:mod", nil, "test.go")
 	t3.Subrepo = core.NewSubrepo(s2, "go_mod", "third_party/go", t2, cli.Arch{}, false)
-	t4 = addTarget(s2, "//src/core:core", t3)
+	t4 := addTarget(s2, "//src/core:core", t3)
 
 	// t3 should now count as changed - it has a different source file - and that should propagate to t4
 	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, true))

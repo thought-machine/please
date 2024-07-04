@@ -120,6 +120,9 @@ func buildRevdeps(graph *core.BuildGraph, includeSubrepos bool) map[core.BuildLa
 				}
 			}
 		}
+		// Targets in a subrepo don't express an explicit dependency on their subrepo's target.
+		// However this is often useful for query commands where you expect to see this kind of
+		// relationship. Hence, if requested, we add the extra 'dependency' here.
 		if includeSubrepos && t.Subrepo != nil && t.Subrepo.Target != nil {
 			revdeps[t.Subrepo.Target.Label] = append(revdeps[t.Subrepo.Target.Label], t)
 		}
