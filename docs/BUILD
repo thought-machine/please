@@ -35,23 +35,32 @@ genrule(
 )
 
 genrule(
-    name = "lexicon_html",
-    srcs = deps + [
+    name = "lexicon_content",
+    srcs = [
         "lexicon.html",
         "lexicon_entry.html",
-        "template.html",
         ":rules",
+    ],
+    outs = ["lexicon_content.html"],
+    cmd = [
+        '"$TOOL" -i docs/lexicon.html -i docs/lexicon_entry.html docs/rules.json > "$OUT"',
+    ],
+    tools = ["//docs/tools/lexicon_templater"],
+)
+
+genrule(
+    name = "lexicon_html",
+    srcs = deps + [
+        ":lexicon_content",
+        "template.html",
     ],
     outs = ["lexicon.html"],
     cmd = [
-        '"$TOOLS_LEX" -i docs/lexicon.html -i docs/lexicon_entry.html docs/rules.json > "$OUT"',
-        '"$TOOLS_TMPL" --template docs/template.html --in lexicon.html > tmp.html',
+        'mv docs/lexicon_content.html "$OUT"',
+        '"$TOOL" --template docs/template.html --in lexicon.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
-    tools = {
-        "lex": ["//docs/tools/lexicon_templater"],
-        "tmpl": ["//docs/tools/templater"],
-    },
+    tools = ["//docs/tools/templater"],
     visibility = ["//docs/test/..."],
 )
 
@@ -80,43 +89,62 @@ filegroup(
 )
 
 genrule(
-    name = "plugins_html",
+    name = "plugins_content",
     srcs = deps + [
         "lexicon.html",
         "lexicon_entry.html",
         "template.html",
         "plugins.html",
     ],
+    outs = ["plugins_content.html"],
+    cmd = [
+        '"$TOOL" --plugin docs/plugins.html --lex docs/lexicon_entry.html docs/*_plugin.json > "$OUT"',
+    ],
+    tools = ["//docs/tools/plugin_templater"],
+    deps = [":plugins"],
+)
+
+genrule(
+    name = "plugins_html",
+    srcs = deps + [
+        ":plugins_content",
+        "template.html",
+    ],
     outs = ["plugins.html"],
     cmd = [
-        '"$TOOLS_PLUGIN" --plugin docs/plugins.html --lex docs/lexicon_entry.html docs/*_plugin.json > "$OUT"',
-        '"$TOOLS_TMPL" --template docs/template.html --in plugins.html > tmp.html',
+        'mv docs/plugins_content.html "$OUT"',
+        '"$TOOL" --template docs/template.html --in plugins.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
-    tools = {
-        "plugin": ["//docs/tools/plugin_templater"],
-        "tmpl": ["//docs/tools/templater"],
-    },
+    tools = ["//docs/tools/templater"],
     visibility = ["//docs/test/..."],
-    deps = [":plugins"],
+)
+
+genrule(
+    name = "config_content",
+    srcs = [
+        "config.html",
+    ],
+    outs = ["config_content.html"],
+    cmd = [
+        '"$TOOL" > "$OUT"',
+    ],
+    tools = ["//docs/tools/config_templater"],
 )
 
 genrule(
     name = "config_html",
     srcs = [
-        "config.html",
+        ":config_content",
         "template.html",
     ],
     outs = ["config.html"],
     cmd = [
-        '"$TOOLS_CONFIG" > config.html',
-        '"$TOOLS_TMPL" --template docs/template.html --in config.html > tmp.html',
+        'mv docs/config_content.html "$OUT"',
+        '"$TOOL" --template docs/template.html --in config.html > tmp.html',
         'mv tmp.html "$OUT"',
     ],
-    tools = {
-        "config": ["//docs/tools/config_templater"],
-        "tmpl": ["//docs/tools/templater"],
-    },
+    tools = ["//docs/tools/templater"],
 )
 
 genrule(
