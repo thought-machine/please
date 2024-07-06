@@ -533,9 +533,9 @@ go_repo(
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "cloud.google.com/go/compute",
     version = "v1.25.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
@@ -544,145 +544,151 @@ go_repo(
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/go-ole/go-ole",
     version = "v1.3.0",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/appengine",
     version = "v1.6.8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/rpc",
     version = "v0.0.0-20240304212257-790db918fca8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/secure-systems-lab/go-securesystemslib",
     version = "v0.8.0",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "gopkg.in/go-jose/go-jose.v2",
     version = "v2.6.3",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/api",
     version = "v0.0.0-20240304212257-790db918fca8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/bytestream",
     version = "v0.0.0-20240304212257-790db918fca8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/sigstore/sigstore/pkg/signature/kms/gcp",
     version = "v1.8.2",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/felixge/httpsnoop",
     version = "v1.0.4",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/go-logr/logr",
     version = "v1.4.1",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/go-logr/stdr",
     version = "v1.2.2",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/google/s2a-go",
     version = "v0.1.7",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/jellydator/ttlcache/v3",
     version = "v3.2.0",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
     version = "v0.49.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
     version = "v0.49.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel",
     version = "v1.24.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/metric",
     version = "v1.24.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/trace",
     version = "v1.24.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["BSD-3-Clause"],
     module = "golang.org/x/time",
     version = "v0.5.0",
-    licences = ["BSD-3-Clause"],
 )
 
 go_repo(
+    licences = ["BSD-3-Clause"],
     module = "github.com/lufia/plan9stats",
     version = "v0.0.0-20240226150601-1dcf7310316a",
-    licences = ["BSD-3-Clause"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/power-devops/perfstat",
     version = "v0.0.0-20240221224432-82ca36839d55",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["MPL-2.0"],
     module = "github.com/shoenig/go-m1cpu",
     version = "v0.1.6",
-    licences = ["MPL-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/yusufpapurcu/wmi",
     version = "v1.2.4",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/grpc-ecosystem/go-grpc-prometheus",
     version = "v1.2.0",
-    licences = ["Apache-2.0"],
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/k3a/html2text",
+    version = "v1.2.1",
 )
