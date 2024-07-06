@@ -202,6 +202,8 @@ filegroup(
         "plz-recording.json",
         ":fusejs_list_json",
         "//third_party/js:asciinema",
+        "//third_party/js:fuse_js",
+        "search.js",
         "favicon",
         ":codelabs_html",
     ],
