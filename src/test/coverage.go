@@ -68,7 +68,7 @@ func collectCoverageFiles(state *core.BuildState, includeAllFiles bool) map[stri
 func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageFiles map[string]bool, includeAllFiles, deps bool, doneTargets map[*core.BuildTarget]bool) {
 	if !doneTargets[target] {
 		doneTargets[target] = true
-		for _, path := range target.AllSourcePaths(state.Graph) {
+		for _, path := range target.AllSourcePaths(state.Graph, state.Config.FeatureFlags.FFDefaultProvides) {
 			if hasCoverageExtension(state, path) {
 				coverageFiles[path] = !target.IsTest() && !target.TestOnly // Skip test source files from actual coverage display
 			}

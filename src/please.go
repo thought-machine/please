@@ -785,7 +785,7 @@ var buildFunctions = map[string]func() int{
 		a := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target1})
 		b := plz.ReadStdinLabels([]core.BuildLabel{opts.Query.SomePath.Args.Target2})
 		return runQuery(true, append(a, b...), func(state *core.BuildState) {
-			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Except, opts.Query.SomePath.Hidden); err != nil {
+			if err := query.SomePath(state.Graph, a, b, opts.Query.SomePath.Except, opts.Query.SomePath.Hidden, state.Config.FeatureFlags.FFDefaultProvides); err != nil {
 				fmt.Printf("%s\n", err)
 				os.Exit(1)
 			}
@@ -803,7 +803,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.input": func() int {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
-			query.TargetInputs(state.Graph, state.ExpandOriginalLabels())
+			query.TargetInputs(state.Graph, state.ExpandOriginalLabels(), state.Config.FeatureFlags.FFDefaultProvides)
 		})
 	},
 	"query.output": func() int {

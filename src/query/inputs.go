@@ -10,10 +10,10 @@ import (
 )
 
 // TargetInputs prints all inputs for a single target.
-func TargetInputs(graph *core.BuildGraph, labels []core.BuildLabel) {
+func TargetInputs(graph *core.BuildGraph, labels []core.BuildLabel, ffDefaultProvide bool) {
 	inputPaths := map[string]bool{}
 	for _, label := range labels {
-		for sourcePath := range core.IterInputPaths(graph, graph.TargetOrDie(label)) {
+		for sourcePath := range core.IterInputPaths(graph, graph.TargetOrDie(label), ffDefaultProvide) {
 			inputPaths[sourcePath] = true
 		}
 	}
