@@ -162,6 +162,29 @@ genrule(
     },
 )
 
+genrule(
+    name = "fusejs_list_json",
+    srcs = glob(
+        [
+            "*.html",
+        ],
+        exclude = [
+            "template.html",
+            "lexicon*.html",
+            "config.html",
+            "error.html",
+            "plugins.html",
+        ],
+    ) + [
+        ":lexicon_content",
+        ":plugins_content",
+        ":config_content",
+    ],
+    outs = ["fusejs_list.json"],
+    cmd = '"$TOOL" --file_paths="$SRCS" --file_prefix="docs/" > "$OUT"',
+    tools = ["//docs/tools/fusejs_list_builder"],
+)
+
 filegroup(
     name = "docs",
     srcs = glob(["images/*.png"]) + deps + [
@@ -177,6 +200,7 @@ filegroup(
         "error.html",
         "images/thoughtmachine.png",
         "plz-recording.json",
+        ":fusejs_list_json",
         "//third_party/js:asciinema",
         "favicon",
         ":codelabs_html",
