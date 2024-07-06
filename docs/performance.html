@@ -1,4 +1,4 @@
-<h1 class="title-1">Performance</h1>
+<h1 id="performance" class="title-1">Performance</h1>
 Please does away with upfront analysis phases, and instead opts to analyse the build graph on the fly. Performance
 is integral to this approach, so we need some way to track it. Plotted here are some graphs of benchmarks we run against
 each commit. These are used to identify any regressions to performance we may introduce, and to verify any optimisation
@@ -6,7 +6,7 @@ efforts have been successful.
 
 <p class="red">This page is a work in progress and will be improved over time as we implement more benchmarks.</p>
 
-<h2 class="title-2">Overall parse performance</h2>
+<h2 id="parse-performance" class="title-2">Overall parse performance</h2>
 <p>This benchmark aims to provide a good indicator of the overall parse performance of Please. This
     benchmark covers parsing and executing BUILD files, adding targets to the graph, and resolving
     dependencies. The test measures the time to analyse a large (~300,000 targets) synthetic graph.
@@ -16,7 +16,7 @@ efforts have been successful.
     minimum and maximum times.</p>
 <div id="parse_chart" style="width: 100%; height: 400px"></div>
 
-<h2 class="title-2">Peak memory usage</h2>
+<h2 id="peak-memory-usage" class="title-2">Peak memory usage</h2>
 <p>Comparing memory utilisation in Please with Bazel is difficult because the runtimes have very different memory
     models. Bazel runs on the JVM so has a predetermined maximum heap size that is configurable through JVM options, and
     The JVM doesn't generally return memory back to the OS once it has been allocated. This means that tweaking this
@@ -32,7 +32,7 @@ efforts have been successful.
     eventually be returned to the OS over time.
 <div id="mem_chart" style="width: 100%; height: 400px"></div>
 
-<h2 class="title-2">Provide for performance</h2>
+<h2 id="provide-for-performance" class="title-2">Provide for performance</h2>
 <p>At the core of resolving dependencies for targets is the <code class="code">provideFor()</code> method. This method
     resolves named dependencies, handling the require/provide semantics where necessary. It is called every time a target
     depends on another, so is critical to the performance of Please.</p>
