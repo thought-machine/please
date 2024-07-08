@@ -90,12 +90,13 @@ var ignoreConfigFields = map[string]struct{}{
 
 // IDs in the html that are for other purposes other than documenting config.
 var nonConfigIds = map[string]struct{}{
-	"config-file-reference": {},
-	"menu-list":             {},
-	"nav-graphic":           {},
-	"side-images":           {},
-	"menu-button":           {},
-	"main-content":          {},
+	"menu-list":    {},
+	"nav-graphic":  {},
+	"side-images":  {},
+	"menu-button":  {},
+	"main-content": {},
+
+	"config-file-reference": {}, // the top heading for the overall page
 }
 
 func TestConfigDocumented(t *testing.T) {
