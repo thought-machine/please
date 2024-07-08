@@ -2,11 +2,12 @@ package test
 
 import (
 	"fmt"
-	"github.com/thought-machine/please/src/core"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/thought-machine/please/src/core"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -94,6 +95,8 @@ var nonConfigIds = map[string]struct{}{
 	"side-images":  {},
 	"menu-button":  {},
 	"main-content": {},
+
+	"config-file-reference": {}, // the top heading for the overall page
 }
 
 func TestConfigDocumented(t *testing.T) {
