@@ -677,7 +677,6 @@ func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
 	for _, info := range target.dependencies {
-
 		logString := ""
 		for i, dep := range info.deps {
 			logString += dep.Label.Name
