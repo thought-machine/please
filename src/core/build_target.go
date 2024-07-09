@@ -410,12 +410,16 @@ func (target *BuildTarget) BuildLockFile() string {
 // OutDir returns the output directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
-	if target.IsSubrepo {
-		return filepath.Join(SubrepoDir, target.Label.Subrepo, target.Label.PackageName)
-	} else if target.IsBinary {
-		return filepath.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
+	subrepoNamespace := target.Label.Subrepo // Use the subrepo name unless the package root has been provided for us
+	if target.Subrepo != nil && target.Subrepo.PackageRoot != "" {
+		subrepoNamespace = target.Subrepo.PackageRoot
 	}
-	return filepath.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
+	if target.IsSubrepo {
+		return filepath.Join(SubrepoDir, subrepoNamespace, target.Label.PackageName)
+	} else if target.IsBinary {
+		return filepath.Join(BinDir, subrepoNamespace, target.Label.PackageName)
+	}
+	return filepath.Join(GenDir, subrepoNamespace, target.Label.PackageName)
 }
 
 // ExecDir returns the exec directory for this target, e.g.
