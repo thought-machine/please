@@ -1,4 +1,4 @@
-def codelab(name : str, codelab_md: str):
+def codelab(name:str, codelab_md:str):
     return genrule(
         name = name,
         srcs = [codelab_md],
@@ -9,10 +9,14 @@ def codelab(name : str, codelab_md: str):
         visibility = ["//docs/..."],
     )
 
-def html_template(name : str, src : str, output : str = ''):
-    cmd = '"$TOOL" --template "$SRCS_TEMPLATE" --in "$SRCS_IN"'
+def html_template(
+        name:str,
+        src:str,
+        title:str,
+        output:str=""):
+    cmd = f'"$TOOL" --template "$SRCS_TEMPLATE" --in "$SRCS_IN" --title "{title}"'
     if output:
-        cmd = f'{cmd} -f {output}'
+        cmd = f"{cmd} -f {output}"
     return genrule(
         name = name,
         srcs = {
@@ -25,7 +29,7 @@ def html_template(name : str, src : str, output : str = ''):
         visibility = ["//docs/..."],
     )
 
-def plugin_rules(name : str, revision : str):
+def plugin_rules(name:str, revision:str):
     remote = remote_file(
         name = f"{name}_remote",
         url = f"https://github.com/please-build/{name}-rules/archive/refs/tags/{revision}.tar.gz",

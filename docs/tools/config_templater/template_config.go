@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"reflect"
 	"strings"
 	"text/template"
 
+	"github.com/peterebden/go-cli-init/v5/flags"
 	"github.com/thought-machine/please/src/core"
 )
 
@@ -20,8 +22,14 @@ func must(err error) {
 	}
 }
 
+var opts struct {
+	Template string `long:"template" description:"The golang template to use"`
+}
+
 func main() {
-	tmpl, err := template.New("config.html").ParseFiles("docs/config.html")
+	flags.ParseFlagsOrDie("Config templater", &opts, nil)
+
+	tmpl, err := template.New(path.Base(opts.Template)).ParseFiles(opts.Template)
 	must(err)
 
 	configHelpText := map[string]string{}

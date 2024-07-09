@@ -1,27 +1,99 @@
 subinclude("//docs/build_defs")
 
-deps = []
+html_template(
+    name = "acknowledgements_html",
+    src = "acknowledgements.html",
+    title = "Acknowledgements",
+)
 
-for src in glob(
-    [
-        "*.html",
-        "milestones/*.html",
-    ],
-    exclude = [
-        "template.html",
-        "lexicon*.html",
-        "language.html",
-        "config.html",
-        "error.html",
-        "plugins.html",
-    ],
-):
-    deps += [html_template(name = src.replace(".", "_").replace("/", "_"), src = src)]
+html_template(
+    name = "basics_html",
+    src = "basics.html",
+    title = "Please basics",
+)
+
+html_template(
+    name = "build_rules_html",
+    src = "build_rules.html",
+    title = "Writing additional build rules",
+)
+
+html_template(
+    name = "cache_html",
+    src = "cache.html",
+    title = "Please caching system",
+)
 
 html_template(
     name = "codelabs_html",
     src = "//docs/codelabs:templated_index",
     output = "codelabs.html",
+    title = "Codelabs",
+)
+
+html_template(
+    name = "commands_html",
+    src = "commands.html",
+    title = "Please commands",
+)
+
+genrule(
+    name = "config_content",
+    srcs = [
+        "config.html",
+    ],
+    outs = ["config_content.html"],
+    cmd = '"$TOOL" --template "$SRC" > "$OUT"',
+    tools = ["//docs/tools/config_templater"],
+)
+
+html_template(
+    name = "config_html",
+    src = ":config_content",
+    output = "config.html",
+    title = "Please config file reference",
+)
+
+html_template(
+    name = "cross_compiling_html",
+    src = "cross_compiling.html",
+    title = "Cross-compiling",
+)
+
+html_template(
+    name = "dependencies_html",
+    src = "dependencies.html",
+    title = "Third-party dependencies",
+)
+
+html_template(
+    name = "faq_html",
+    src = "faq.html",
+    title = "Please FAQ",
+)
+
+html_template(
+    name = "index_html",
+    src = "index.html",
+    title = "Please",
+)
+
+genrule(
+    name = "language_content",
+    srcs = {
+        "html": "language.html",
+        "grammar": "grammar.txt",
+    },
+    outs = ["language_content.html"],
+    cmd = '"$TOOL" --in "$SRCS_HTML" --grammar "$SRCS_GRAMMAR" > "$OUT"',
+    tools = ["//docs/tools/grammar_templater"],
+)
+
+html_template(
+    name = "language_html",
+    src = ":language_content",
+    output = "language.html",
+    title = "The Please BUILD language",
 )
 
 genrule(
@@ -36,32 +108,34 @@ genrule(
 
 genrule(
     name = "lexicon_content",
-    srcs = [
-        "lexicon.html",
-        "lexicon_entry.html",
-        ":rules",
-    ],
+    srcs = {
+        "lexicon": "lexicon.html",
+        "lexicon_entry": "lexicon_entry.html",
+        "rules": ":rules",
+    },
     outs = ["lexicon_content.html"],
-    cmd = [
-        '"$TOOL" -i docs/lexicon.html -i docs/lexicon_entry.html docs/rules.json > "$OUT"',
-    ],
+    cmd = '"$TOOL" -i "$SRCS_LEXICON" -i "$SRCS_LEXICON_ENTRY" "$SRCS_RULES" > "$OUT"',
     tools = ["//docs/tools/lexicon_templater"],
+    visibility = [":lexicon_html"],
 )
 
-genrule(
+html_template(
     name = "lexicon_html",
-    srcs = deps + [
-        ":lexicon_content",
-        "template.html",
-    ],
-    outs = ["lexicon.html"],
-    cmd = [
-        'mv docs/lexicon_content.html "$OUT"',
-        '"$TOOL" --template docs/template.html --in lexicon.html > tmp.html',
-        'mv tmp.html "$OUT"',
-    ],
-    tools = ["//docs/tools/templater"],
-    visibility = ["//docs/test/..."],
+    src = ":lexicon_content",
+    output = "lexicon.html",
+    title = "Please Lexicon",
+)
+
+html_template(
+    name = "performance_html",
+    src = "performance.html",
+    title = "Performance report",
+)
+
+html_template(
+    name = "pleasings_html",
+    src = "pleasings.html",
+    title = "Extra rules (aka. Pleasings)",
 )
 
 # Plugin versions to pull the docs from
@@ -90,96 +164,119 @@ filegroup(
 
 genrule(
     name = "plugins_content",
-    srcs = deps + [
-        "lexicon.html",
-        "lexicon_entry.html",
-        "template.html",
-        "plugins.html",
-    ],
+    srcs = {
+        "lexicon_entry": "lexicon_entry.html",
+        "plugins": "plugins.html",
+        "plugin_data": plugin_targets,
+    },
     outs = ["plugins_content.html"],
     cmd = [
-        '"$TOOL" --plugin docs/plugins.html --lex docs/lexicon_entry.html docs/*_plugin.json > "$OUT"',
+        '"$TOOL" --plugin $SRCS_PLUGINS --lex $SRCS_LEXICON_ENTRY $SRCS_PLUGIN_DATA > "$OUT"',
     ],
     tools = ["//docs/tools/plugin_templater"],
-    deps = [":plugins"],
+    visibility = [":plugins_html"],
 )
 
-genrule(
+html_template(
     name = "plugins_html",
-    srcs = deps + [
-        ":plugins_content",
-        "template.html",
-    ],
-    outs = ["plugins.html"],
-    cmd = [
-        'mv docs/plugins_content.html "$OUT"',
-        '"$TOOL" --template docs/template.html --in plugins.html > tmp.html',
-        'mv tmp.html "$OUT"',
-    ],
-    tools = ["//docs/tools/templater"],
-    visibility = ["//docs/test/..."],
+    src = ":plugins_content",
+    output = "plugins.html",
+    title = "Please plugins",
 )
 
-genrule(
-    name = "config_content",
-    srcs = [
-        "config.html",
-    ],
-    outs = ["config_content.html"],
-    cmd = [
-        '"$TOOL" > "$OUT"',
-    ],
-    tools = ["//docs/tools/config_templater"],
+html_template(
+    name = "post_build_html",
+    src = "post_build.html",
+    title = "Pre- and post-build functions",
 )
 
-genrule(
-    name = "config_html",
-    srcs = [
-        ":config_content",
-        "template.html",
-    ],
-    outs = ["config.html"],
-    cmd = [
-        'mv docs/config_content.html "$OUT"',
-        '"$TOOL" --template docs/template.html --in config.html > tmp.html',
-        'mv tmp.html "$OUT"',
-    ],
-    tools = ["//docs/tools/templater"],
+html_template(
+    name = "quickstart_html",
+    src = "quickstart.html",
+    title = "Please quickstart",
 )
 
-genrule(
-    name = "language_html",
-    srcs = {
-        "template": ["template.html"],
-        "html": ["language.html"],
-        "grammar": ["grammar.txt"],
-    },
-    outs = ["language.html"],
-    cmd = '"$TOOLS_TEMPLATE" --template $SRCS_TEMPLATE --in $SRCS_HTML | "$TOOLS_GRAMMAR" > "$OUT"',
-    tools = {
-        "grammar": ["//docs/tools/grammar_templater"],
-        "template": ["//docs/tools/templater"],
-    },
+html_template(
+    name = "quickstart_dropoff_html",
+    src = "quickstart_dropoff.html",
+    title = "What's next?",
 )
+
+html_template(
+    name = "remote_builds_html",
+    src = "remote_builds.html",
+    title = "Remote build execution",
+)
+
+html_template(
+    name = "require_provide_html",
+    src = "require_provide.html",
+    title = "Require & Provide",
+)
+
+html_template(
+    name = "tests_html",
+    src = "tests.html",
+    title = "Testing with Please",
+)
+
+for src in glob(["milestones/*.html"]):
+    version = src.removeprefix("milestones/").removesuffix(".html")
+    html_template(
+        name = src.replace(".", "_").replace("/", "_"),
+        src = src,
+        title = f"Please v{version}",
+    )
 
 filegroup(
     name = "docs",
-    srcs = glob(["images/*.png"]) + deps + [
-        ":language_html",
-        ":plugins_html",
-        ":lexicon_html",
+    srcs = glob(["images/*.png"]) + [
+        # Pages
+        ":acknowledgements_html",
+        ":basics_html",
+        ":build_rules_html",
+        ":cache_html",
+        ":codelabs_html",
+        ":commands_html",
         ":config_html",
+        ":cross_compiling_html",
+        ":dependencies_html",
+        ":faq_html",
+        ":index_html",
+        ":language_html",
+        ":lexicon_html",
+        ":performance_html",
+        ":pleasings_html",
+        ":plugins_html",
+        ":post_build_html",
+        ":quickstart_html",
+        ":quickstart_dropoff_html",
+        ":remote_builds_html",
+        ":require_provide_html",
+        ":tests_html",
+        "error.html",
+
+        # Milestone pages
+        ":milestones_15_9_1_html",
+        ":milestones_16_0_0_html",
+        ":milestones_17_0_0_html",
+
+        # CSS
         "tachyons-4.12.0.min.css",
         "fonts.css",
         "styles.css",
+
+        # JS
         "action.js",
         "tabs.js",
-        "error.html",
+
+        # Images
         "images/thoughtmachine.png",
+        "favicon",
+
+        # Media
         "plz-recording.json",
         "//third_party/js:asciinema",
-        "favicon",
-        ":codelabs_html",
     ],
     visibility = ["//docs/..."],
     deps = ["//docs/codelabs"],
