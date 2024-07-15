@@ -842,14 +842,14 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 
 func waitOnChan[T any](ch chan T, message string) T {
 	start := time.Now()
+	t := time.NewTimer(10 * time.Second)
+	defer t.Stop()
 	for {
 		select {
 		case v := <-ch:
 			return v
-		case <-time.After(time.Second * 10):
-			{
-				log.Debugf("%v (after %v)", message, time.Since(start))
-			}
+		case <-t.C:
+			log.Debugf("%v (after %v)", message, time.Since(start))
 		}
 	}
 }
