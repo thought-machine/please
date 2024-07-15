@@ -835,12 +835,12 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 		return p
 	}
 	if ch, inserted := state.progress.pendingPackages.AddOrGet(label.packageKey(), make(chan struct{})); !inserted {
-		waitOnChan(ch, fmt.Sprintf("Still waiting for SyncParsePackage(%v)", label))
+		waitOnChan(ch, "Still waiting for SyncParsePackage(%v)", label)
 	}
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
-func waitOnChan[T any](ch chan T, message string) T {
+func waitOnChan[T any](ch chan T, message string, args ...any) T {
 	start := time.Now()
 	t := time.NewTimer(10 * time.Second)
 	defer t.Stop()
@@ -849,7 +849,7 @@ func waitOnChan[T any](ch chan T, message string) T {
 		case v := <-ch:
 			return v
 		case <-t.C:
-			log.Debugf("%v (after %v)", message, time.Since(start))
+			log.Debugf("%v (after %v)", fmt.Sprintf(message, args...), time.Since(start))
 		}
 	}
 }
@@ -864,13 +864,13 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 
 	// If something has promised to parse it, wait for them to do so
 	if ch := state.progress.pendingPackages.Get(key); ch != nil {
-		waitOnChan(ch, fmt.Sprintf("Still waiting for pending package in WaitForPackage(%v, %v, %v)", l, dependent, mode))
+		waitOnChan(ch, "Still waiting for pending package in WaitForPackage(%v, %v, %v)", l, dependent, mode)
 		return state.Graph.PackageByLabel(l)
 	}
 
 	// If something has already queued the package to be parsed, wait for them
 	if ch := state.progress.packageWaits.Get(key); ch != nil {
-		waitOnChan(ch, fmt.Sprintf("Still waiting for package wait in WaitForPackage(%v, %v, %v)", l, dependent, mode))
+		waitOnChan(ch, "Still waiting for package wait in WaitForPackage(%v, %v, %v)", l, dependent, mode)
 		return state.Graph.PackageByLabel(l)
 	}
 
@@ -891,7 +891,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	// okay, we need to register and wait for this guy.
 	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, make(chan struct{})); !inserted {
 		// Something's already registered for this, get on the train
-		waitOnChan(ch, fmt.Sprintf("Still waiting on WaitForBuiltTarget(%v, %v, %v)", l, dependent, mode))
+		waitOnChan(ch, "Still waiting on WaitForBuiltTarget(%v, %v, %v)", l, dependent, mode)
 		return state.Graph.Target(l)
 	}
 	if err := state.queueTarget(l, dependent, mode.IsForSubinclude(), mode); err != nil {
