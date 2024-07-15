@@ -840,18 +840,17 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
-func waitOnChan[T any](ch chan T, message string, args ...any) T {
+func waitOnChan[T any](ch chan T, message string, args ...any) {
 	start := time.Now()
 	t := time.NewTimer(10 * time.Second)
 	defer t.Stop()
-	for {
-		select {
-		case v := <-ch:
-			return v
-		case <-t.C:
-			log.Debugf("%v (after %v)", fmt.Sprintf(message, args...), time.Since(start))
-		}
+	select {
+	case <-ch:
+		return
+	case <-t.C:
+		log.Debugf("%v (after %v)", fmt.Sprintf(message, args...), time.Since(start))
 	}
+	<-ch
 }
 
 // WaitForPackage is similar to WaitForBuiltTarget however it waits for the package to be parsed, queuing it for parse
