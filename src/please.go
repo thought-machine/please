@@ -171,7 +171,11 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Port int               `short:"p" long:"port" description:"Debugging server port"`
+		Port  int `short:"p" long:"port" description:"Debugging server port"`
+		Share struct {
+			Network bool `long:"share_network" description:"Share network namespace"`
+			Mount   bool `long:"share_mount" description:"Share mount namespace"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Env  map[string]string `short:"e" long:"env" description:"Environment variables to set for the debugged process"`
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
@@ -544,7 +548,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args, exec.ConvertEnv(opts.Debug.Env))
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args, exec.ConvertEnv(opts.Debug.Env), opts.Debug.Share.Network, opts.Debug.Share.Mount)
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target.BuildLabel}, true, false, false)
