@@ -10,6 +10,7 @@ Version 17.9.0
     * Remove mention of pleasings from plz init message (#3173)
     * Report remote worker name in interactive output (#3178)
     * New `no_test_coverage` option to explicitly opt tests out of producing coverage (#3188)
+    * Add sandbox flags to `plz debug` matching `plz exec`'s behaviour
 
 Version 17.8.7
 --------------
