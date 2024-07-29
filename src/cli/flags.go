@@ -212,10 +212,15 @@ func (f *Filepath) Complete(match string) []flags.Completion {
 type Filepaths []Filepath
 
 // AsStrings returns this slice of filepaths as a slice of strings.
+// It understands the - character to mean reading input from stdin.
 func (f Filepaths) AsStrings() []string {
-	ret := make([]string, len(f))
-	for i, fp := range f {
-		ret[i] = string(fp)
+	ret := make([]string, 0, len(f))
+	for _, fp := range f {
+		if fp == "-" {
+			ret = append(ret, cli.ReadAllStdin()...)
+		} else {
+			ret = append(ret, string(fp))
+		}
 	}
 	return ret
 }
