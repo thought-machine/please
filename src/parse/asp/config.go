@@ -136,9 +136,6 @@ func getConfigKey(aspKey, configKey string) string {
 
 // pluginConfig loads the plugin's config into a pyDict. It will load con
 func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDict {
-	log.Debug("pluginState %s", pluginState.CurrentSubrepo)
-	log.Debug("pkgState %s", pkgState.CurrentSubrepo)
-
 	pluginName := strings.ToLower(pluginState.RepoConfig.PluginDefinition.Name)
 	var extraVals map[string][]string
 	var ret pyDict
