@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -18,70 +19,57 @@ func Deps(state *core.BuildState, labels []core.BuildLabel, hidden bool, targetL
 		fmt.Fprintf(out, "  edge [fontname=\"Helvetica,Arial,sans-serif\"]\n")
 		fmt.Fprintf(out, "  rankdir=\"LR\"\n")
 	}
-	done := map[core.BuildLabel]bool{}
+	done := map[*core.BuildTarget]bool{}
 	for _, label := range labels {
-		if formatdot {
-			fmt.Fprintf(out, "  subgraph \"%s\" {\n", label)
-			printTargetDot(out, state, state.Graph.TargetOrDie(label), nil, done, hidden, 0, targetLevel)
-			fmt.Fprintf(out, "  }\n")
-		} else {
-			printTarget(out, state, state.Graph.TargetOrDie(label), "", done, hidden, 0, targetLevel)
-		}
+		deps(out, state, state.Graph.TargetOrDie(label), done, targetLevel, 0, hidden, formatdot)
 	}
 	if formatdot {
 		fmt.Fprintf(out, "}\n")
 	}
 }
 
-func printTarget(out io.Writer, state *core.BuildState, target *core.BuildTarget, indent string, done map[core.BuildLabel]bool, hidden bool, currentLevel int, targetLevel int) {
-	levelLimitReached := targetLevel != -1 && currentLevel == targetLevel
-	if done[target.Label] || levelLimitReached {
+// deps looks at all the deps of the given target & recurses into them, printing as appropriate.
+func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done map[*core.BuildTarget]bool, targetLevel, currentLevel int, hidden, formatdot bool) {
+	if done[target] || currentLevel == targetLevel {
 		return
 	}
-
-	if state.ShouldInclude(target) && (hidden || !target.HasParent()) {
-		fmt.Fprintf(out, "%s%s\n", indent, target)
-		indent += "  "
-		currentLevel++
-	}
-	done[target.Label] = true
-
+	done[target] = true
 	for _, dep := range target.Dependencies() {
-		printTarget(out, state, dep, indent, done, hidden, currentLevel, targetLevel)
-	}
-	if target.Subrepo != nil && target.Subrepo.Target != nil {
-		printTarget(out, state, target.Subrepo.Target, indent, done, hidden, currentLevel, targetLevel)
+		if !state.ShouldInclude(dep) || done[dep] {
+			continue // target is filtered out
+		} else if hidden || !dep.HasParent() {
+			// dep is to be printed
+			if formatdot {
+				printTargetDot(out, dep, target)
+			} else {
+				printTarget(out, dep, currentLevel)
+			}
+			deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
+		} else {
+			// If we didn't print it, we still need to recurse; we don't increase the depth though.
+			deps(out, state, dep, done, targetLevel, currentLevel, hidden, formatdot)
+		}
 	}
 }
 
-func printTargetDot(out io.Writer, state *core.BuildState, target *core.BuildTarget, parent *core.BuildTarget, done map[core.BuildLabel]bool, hidden bool, currentLevel int, targetLevel int) {
-	levelLimitReached := targetLevel != -1 && currentLevel == targetLevel
+func printTarget(out io.Writer, target *core.BuildTarget, currentLevel int) {
+	indent := strings.Repeat("  ", currentLevel)
+	fmt.Fprintf(out, "%s%s\n", indent, target.Label)
+}
 
-	if state.ShouldInclude(target) && (hidden || !target.HasParent()) {
-		if !done[target.Label] {
-			shape := "ellipse"
-			if target.IsFilegroup {
-				shape = "folder"
-			} else if target.IsRemoteFile {
-				shape = "octagon"
-			} else if target.IsTextFile {
-				shape = "note"
-			} else if target.IsBinary {
-				shape = "component"
-			}
-			fmt.Fprintf(out, "   node [shape=%s] \"%s\";\n", shape, target)
-		}
-		if parent != nil {
-			fmt.Fprintf(out, "   \"%s\" -> \"%s\";\n", parent, target)
-		}
-		currentLevel++
+func printTargetDot(out io.Writer, target, parent *core.BuildTarget) {
+	fmt.Fprintf(out, "  subgraph \"%s\" {\n", target)
+	shape := "ellipse"
+	if target.IsFilegroup {
+		shape = "folder"
+	} else if target.IsRemoteFile {
+		shape = "octagon"
+	} else if target.IsTextFile {
+		shape = "note"
+	} else if target.IsBinary {
+		shape = "component"
 	}
-	if done[target.Label] || levelLimitReached {
-		return
-	}
-	done[target.Label] = true
-
-	for _, dep := range target.Dependencies() {
-		printTargetDot(out, state, dep, target, done, hidden, currentLevel, targetLevel)
-	}
+	fmt.Fprintf(out, "   node [shape=%s] \"%s\";\n", shape, target)
+	fmt.Fprintf(out, "   \"%s\" -> \"%s\";\n", parent, target)
+	fmt.Fprintf(out, "  }\n")
 }
