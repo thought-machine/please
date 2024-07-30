@@ -30,14 +30,16 @@ func Deps(state *core.BuildState, labels []core.BuildLabel, hidden bool, targetL
 
 // deps looks at all the deps of the given target & recurses into them, printing as appropriate.
 func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done map[*core.BuildTarget]bool, targetLevel, currentLevel int, hidden, formatdot bool) {
-	if done[target] || currentLevel == targetLevel {
+	if currentLevel == targetLevel {
 		return
 	}
-	done[target] = true
-	for _, dep := range target.Dependencies() {
+	for _, l := range target.DeclaredDependencies() {
+		dep := state.Graph.TargetOrDie(l)
 		if !state.ShouldInclude(dep) || done[dep] {
 			continue // target is filtered out
-		} else if hidden || !dep.HasParent() {
+		}
+		done[dep] = true
+		if hidden || !dep.HasParent() {
 			// dep is to be printed
 			if formatdot {
 				printTargetDot(out, dep, target)
@@ -45,9 +47,11 @@ func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done 
 				printTarget(out, dep, currentLevel)
 			}
 			deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
-		} else {
-			// If we didn't print it, we still need to recurse; we don't increase the depth though.
+		} else if dep.Label.Parent() == target.Label {
+			// This is a hidden dependency of the current target, recurse without increasing depth
 			deps(out, state, dep, done, targetLevel, currentLevel, hidden, formatdot)
+		} else {
+			deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
 		}
 	}
 }
