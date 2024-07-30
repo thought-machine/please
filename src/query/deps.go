@@ -3,15 +3,13 @@ package query
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/thought-machine/please/src/core"
 )
 
 // Deps prints all transitive dependencies of a set of targets.
-func Deps(state *core.BuildState, labels []core.BuildLabel, hidden bool, targetLevel int, formatdot bool) {
-	out := os.Stdout
+func Deps(out io.Writer, state *core.BuildState, labels []core.BuildLabel, hidden bool, targetLevel int, formatdot bool) {
 	if formatdot {
 		fmt.Fprintf(out, "digraph deps {\n")
 		fmt.Fprintf(out, "  fontname=\"Helvetica,Arial,sans-serif\"\n")

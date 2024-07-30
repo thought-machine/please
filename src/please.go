@@ -776,7 +776,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level, opts.Query.Deps.DOT)
+			query.Deps(os.Stdout, state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level, opts.Query.Deps.DOT)
 		})
 	},
 	"query.revdeps": func() int {
