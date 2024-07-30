@@ -45,7 +45,7 @@ func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done 
 				printTarget(out, dep, currentLevel)
 			}
 			deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
-		} else if dep.Label.Parent() == target.Label {
+		} else if dep.Label.Parent() == target.Label.Parent() {
 			// This is a hidden dependency of the current target, recurse without increasing depth
 			deps(out, state, dep, done, targetLevel, currentLevel, hidden, formatdot)
 		} else {
