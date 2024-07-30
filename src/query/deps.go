@@ -10,10 +10,7 @@ import (
 
 // Deps prints all transitive dependencies of a set of targets.
 func Deps(state *core.BuildState, labels []core.BuildLabel, hidden bool, targetLevel int, formatdot bool) {
-	deps(os.Stdout, state, labels, hidden, targetLevel, formatdot)
-}
-
-func deps(out io.Writer, state *core.BuildState, labels []core.BuildLabel, hidden bool, targetLevel int, formatdot bool) {
+	out := os.Stdout
 	if formatdot {
 		fmt.Fprintf(out, "digraph deps {\n")
 		fmt.Fprintf(out, "  fontname=\"Helvetica,Arial,sans-serif\"\n")
