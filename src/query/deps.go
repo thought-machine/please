@@ -38,7 +38,7 @@ func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done 
 		}
 		done[dep] = true
 		if hidden || !dep.HasParent() {
-			// dep is to be printed
+			// dep is to be printed; either we're printing hidden deps or it has no parent (i.e. is not hidden)
 			if formatdot {
 				printTargetDot(out, dep, target)
 			} else {
