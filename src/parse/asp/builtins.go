@@ -1125,6 +1125,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	dep := s.parseLabelInPackage(string(args[1].(pyString)), s.pkg)
 	exported := args[2].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false)
+	target.RegisterDependencyTarget(dep, s.state.Graph.Target(dep))
 	// Queue this dependency if it'll be needed.
 	if target.State() > core.Inactive {
 		err := s.state.QueueTarget(dep, target.Label, false, core.ParseModeNormal)

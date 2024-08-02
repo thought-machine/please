@@ -78,6 +78,7 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 	} else {
 		successfulLocalTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
 	}
+
 	// Mark the target as having finished building.
 	target.FinishBuild()
 	if target.IsTest() && state.NeedTests && state.IsOriginalTarget(target) {
@@ -341,6 +342,16 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		outs := target.Outputs()
 		if err := runPostBuildFunction(state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
+		}
+
+		// Wait for any new dependencies added by post-build commands before continuing.
+		for _, dep := range target.Dependencies() {
+			dep.WaitForBuild()
+			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
+				// Give up and set the original target as dependency failed
+				target.SetState(core.DependencyFailed)
+				return fmt.Errorf("error in post-rule dependency for %s: %s", target.Label, dep.Label)
+			}
 		}
 
 		if runRemotely && len(outs) != len(target.Outputs()) {
