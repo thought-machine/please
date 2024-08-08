@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
+	"github.com/please-build/buildtools/build"
 	"github.com/please-build/gcfg/ast"
 
 	"github.com/thought-machine/please/src/core"
@@ -23,6 +23,70 @@ const pluginRepoTemplate = `plugin_repo(
   owner = "please-build",
 )
 `
+
+var pluginInitFns = map[string]func() (map[string]string, error){
+	"go": initGo,
+}
+
+// Mapping of the built in config from Please v16 to the new plugins introduced in v17
+type v16Mapping = map[string]string
+
+var pluginVersion16Map = map[string]v16Mapping{
+	"go": {
+		"gotool":           "GoTool",
+		"importpath":       "ImportPath",
+		"cgocctool":        "CCTool",
+		"cgoenabled":       "CGoEnabled",
+		"pleasegotool":     "PleaseGoTool",
+		"delvetool":        "DelveTool",
+		"defaultstatic":    "DefaultStatic",
+		"gotestrootcompat": "TestRootCompat",
+		"cflags":           "CFlags",
+		"ldflags":          "LdFlags",
+	},
+	"python": {
+		"piptool":             "PipTool",
+		"pipflags":            "PipFlags",
+		"pextool":             "PexTool",
+		"defaultinterpreter":  "DefaultInterpreter",
+		"testrunner":          "TestRunner",
+		"debugger":            "Debugger",
+		"moduledir":           "ModuleDir",
+		"defaultpiprepo":      "DefaultPipRepo",
+		"wheelrepo":           "WheelRepo",
+		"wheelnamescheme":     "WheelNameScheme",
+		"interpreteroptions":  "InterpreterOptions",
+		"disablevendorflags":  "DisableVendorFlags",
+		"usepypi":             "UsePypi",
+		"testrunnerbootstrap": "TestrunnerDeps",
+	},
+	"cc": {
+		"cctool":             "CCTool",
+		"cpptool":            "CPPTool",
+		"ldtool":             "LDTool",
+		"artool":             "ARTool",
+		"defaultoptcflags":   "DefaultOptCFlags",
+		"defaultdbgcflags":   "DefaultDbgCFlags",
+		"defaultoptcppflags": "DefaultOptCppFlags",
+		"defaultdbgcppflags": "DefaultDbgCppFlags",
+		"defaultldflags":     "DefaultLdFlags",
+		"pkgconfigpath":      "PkgConfigPath",
+		"testmain":           "TestMain",
+		"dsymtool":           "DsymTool",
+	},
+	"java": {
+		"javactool":          "JavacTool",
+		"javacworker":        "JavacWorker",
+		"junitrunner":        "JunitRunner",
+		"defaulttestpackage": "DefaultTestPackage",
+		"releaselevel":       "ReleaseLevel",
+		"targetlevel":        "TargetLevel",
+		"javacflags":         "JavacFlags",
+		"javactestflags":     "JavacTestFlags",
+		"defaultmavenrepo":   "MavenRepo",
+		"toolchain":          "Toolchain",
+	},
+}
 
 func info(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
@@ -49,122 +113,37 @@ func InitPlugins(plugins []string, version string) error {
 	file := ast.Read(configFile)
 
 	for _, p := range plugins {
-		file, err = initPlugin(p, version, file)
+		config, err := initPlugin(p, version)
 		if err != nil {
 			return fmt.Errorf("Could not initialise plugin %s. Got error: %s", p, err)
 		}
+		file = writeFieldsToConfig(p, file, config)
 	}
 
-	ast.Write(file, configPath)
-	return nil
+	return ast.Write(file, configPath)
 }
 
-func initPlugin(plugin, version string, file ast.File) (ast.File, error) {
-	if err := createTarget("plugins/BUILD", plugin, version); err != nil {
-		return file, err
+// initPlugin initialises the plugin, performing any plugin specific operations, returning the plugin config
+func initPlugin(plugin, version string) (map[string]string, error) {
+	if err := createPluginTarget("plugins/BUILD", plugin, version); err != nil {
+		return nil, err
 	}
 
-	return injectPluginConfig(plugin, file), nil
-}
-
-func injectPluginConfig(plugin string, file ast.File) ast.File {
-	switch plugin {
-	case "python":
-		return writePythonConfigFields(file)
-	case "java":
-		return writeJavaConfigFields(file)
-	case "cc":
-		return writeCCConfigFields(file)
-	case "go":
-		return writeGoConfigFields(file)
-	default:
-		return writeFieldsToConfig(plugin, file, nil)
+	if fn, ok := pluginInitFns[plugin]; ok {
+		return fn()
 	}
+	return nil, nil
 }
 
-func writePythonConfigFields(file ast.File) ast.File {
-	configMap := map[string]string{
-		"piptool":             "PipTool",
-		"pipflags":            "PipFlags",
-		"pextool":             "PexTool",
-		"defaultinterpreter":  "DefaultInterpreter",
-		"testrunner":          "TestRunner",
-		"debugger":            "Debugger",
-		"moduledir":           "ModuleDir",
-		"defaultpiprepo":      "DefaultPipRepo",
-		"wheelrepo":           "WheelRepo",
-		"wheelnamescheme":     "WheelNameScheme",
-		"interpreteroptions":  "InterpreterOptions",
-		"disablevendorflags":  "DisableVendorFlags",
-		"usepypi":             "UsePypi",
-		"testrunnerbootstrap": "TestrunnerDeps",
-	}
-
-	return writeFieldsToConfig("python", file, configMap)
-}
-
-func writeCCConfigFields(file ast.File) ast.File {
-	configMap := map[string]string{
-		"cctool":             "CCTool",
-		"cpptool":            "CPPTool",
-		"ldtool":             "LDTool",
-		"artool":             "ARTool",
-		"defaultoptcflags":   "DefaultOptCFlags",
-		"defaultdbgcflags":   "DefaultDbgCFlags",
-		"defaultoptcppflags": "DefaultOptCppFlags",
-		"defaultdbgcppflags": "DefaultDbgCppFlags",
-		"defaultldflags":     "DefaultLdFlags",
-		"pkgconfigpath":      "PkgConfigPath",
-		"testmain":           "TestMain",
-		"dsymtool":           "DsymTool",
-	}
-
-	return writeFieldsToConfig("cc", file, configMap)
-}
-
-func writeJavaConfigFields(file ast.File) ast.File {
-	configMap := map[string]string{
-		"javactool":          "JavacTool",
-		"javacworker":        "JavacWorker",
-		"junitrunner":        "JunitRunner",
-		"defaulttestpackage": "DefaultTestPackage",
-		"releaselevel":       "ReleaseLevel",
-		"targetlevel":        "TargetLevel",
-		"javacflags":         "JavacFlags",
-		"javactestflags":     "JavacTestFlags",
-		"defaultmavenrepo":   "MavenRepo",
-		"toolchain":          "Toolchain",
-	}
-
-	return writeFieldsToConfig("java", file, configMap)
-}
-
-func writeGoConfigFields(file ast.File) ast.File {
-	configMap := map[string]string{
-		"gotool":           "GoTool",
-		"importpath":       "ImportPath",
-		"cgocctool":        "CCTool",
-		"cgoenabled":       "CGoEnabled",
-		"pleasegotool":     "PleaseGoTool",
-		"delvetool":        "DelveTool",
-		"defaultstatic":    "DefaultStatic",
-		"gotestrootcompat": "TestRootCompat",
-		"cflags":           "CFlags",
-		"ldflags":          "LdFlags",
-	}
-
-	return writeFieldsToConfig("go", file, configMap)
-}
-
-func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]string) ast.File {
+func writeFieldsToConfig(plugin string, plzConfig ast.File, pluginConfig map[string]string) ast.File {
 	section := "Plugin"
 
 	pluginName := strings.ReplaceAll(plugin, "-", "_")
 
 	// Check for existing plugin section
-	if s := file.MaybeGetSection(section, pluginName); s != nil {
+	if s := plzConfig.MaybeGetSection(section, pluginName); s != nil {
 		info("Plugin config section already exists, so init did nothing.")
-		return file
+		return plzConfig
 	}
 
 	// Inject the preloadsubincludes
@@ -172,54 +151,64 @@ func writeFieldsToConfig(plugin string, file ast.File, configMap map[string]stri
 	// if we build the plugin target, which we do below. Refactor this to build the target
 	// earlier and use the build_defs dir specified in the plugin config
 	subincludeStr := "///" + pluginName + "//build_defs:" + pluginName
-	file = ast.InjectField(file, "preloadsubincludes", subincludeStr, "parse", "", true)
+	plzConfig = ast.InjectField(plzConfig, "preloadsubincludes", subincludeStr, "parse", "", true)
 
 	// Write plugin target value
-	file = ast.InjectField(file, "Target", "//plugins:"+pluginName, section, pluginName, false)
+	plzConfig = ast.InjectField(plzConfig, "Target", "//plugins:"+pluginName, section, pluginName, false)
+
+	for k, v := range pluginConfig {
+		plzConfig = ast.InjectField(plzConfig, k, v, section, pluginName, false)
+	}
 
 	// Migrate any existing language fields to their plugin equivalents
-	if configMap != nil {
-		for _, s := range file.Sections {
+	if configMap, ok := pluginVersion16Map[plugin]; ok {
+		for _, s := range plzConfig.Sections {
 			if s.Key == pluginName {
 				for _, field := range s.Fields {
 					if plugVal, ok := configMap[strings.ToLower(field.Name)]; ok {
-						file = ast.InjectField(file, plugVal, field.Value, section, pluginName, true)
+						plzConfig = ast.InjectField(plzConfig, plugVal, field.Value, section, pluginName, true)
 					}
 				}
 			}
 		}
 	}
 
-	return file
+	return plzConfig
 }
 
 // targetExistsInFile checks to see if the plugin target already exists
 // in plugins/BUILD
-func targetExistsInFile(location, target string) bool {
+func targetExistsInFile(location, target string) (bool, error) {
 	if !fs.FileExists(location) {
-		return false
+		return false, nil
 	}
 
 	b, err := os.ReadFile(location)
 	if err != nil {
-		panic(err)
+		return false, err
 	}
 
-	//TODO: Might want to pull in the state object here one day so we can query the build
-	// graph instead of using regexp
-
-	str := "plugin_repo\\(.+name = \"" + target + "\""
-	exists, err := regexp.Match("(?s)"+str, b)
+	f, err := build.Parse(location, b)
 	if err != nil {
-		panic(err)
+		return false, err
 	}
-	return exists
+
+	for _, rule := range f.Rules("plugin_repo") {
+		if rule.Name() == target {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
-// createTarget writes the plugin target to plugins/BUILD
-func createTarget(location, plugin, version string) error {
+// createPluginTarget writes the plugin target to plugins/BUILD
+func createPluginTarget(location, plugin, version string) error {
 	pluginTarget := strings.ReplaceAll(plugin, "-", "_")
-	if targetExistsInFile(location, pluginTarget) {
+	exists, err := targetExistsInFile(location, pluginTarget)
+	if err != nil {
+		return err
+	}
+	if exists {
 		return nil
 	}
 

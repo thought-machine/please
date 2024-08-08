@@ -1,4 +1,4 @@
-GO_CI_LINT_VERSION = "1.54.2"
+GO_CI_LINT_VERSION = "1.58.2"
 
 remote_file(
     name = "golangci-lint",
@@ -6,11 +6,10 @@ remote_file(
     exported_files = ["golangci-lint-%s-${OS}-${ARCH}/golangci-lint" % GO_CI_LINT_VERSION],
     extract = True,
     hashes = [
-        "925c4097eae9e035b0b052a66d0a149f861e2ab611a4e677c7ffd2d4e05b9b89",  # darwin-amd64
-        "7b33fb1be2f26b7e3d1f3c10ce9b2b5ce6d13bb1d8468a4b2ba794f05b4445e1",  # darwin-arm64
-        "01301af199161c5ea33a0350581e1bed43289a56b2fbed7539f99fca2f898278",  # freebsd-amd64
-        "17c9ca05253efe833d47f38caf670aad2202b5e6515879a99873fabd4c7452b3",  # linux-amd64
-        "a9f14b33473c65fcfbf411ec054b53a87dbb849f4e09ee438f1ee76dbf3f3d4e",  # linux-arm64
+        "9d8c372fabff0917a0502c86381e9de291bef274b5ccc8e6b849fccb257cfefd",  # darwin-amd64
+        "99ba8037946fb3e3976a0004c93eb0df9f6efc50500f506665f1091ddf5aaba5",  # darwin-arm64
+        "6236a423ea74cc0de61862da007a063f6187ad929bdb3fb54eb12cd689006a99",  # linux-amd64
+        "549a714657e80942166ecb4327bfb21487af872945b50b155339b0b5cc3fa2f2",  # linux-arm64
     ],
     url = "https://github.com/golangci/golangci-lint/releases/download/v%s/golangci-lint-%s-%s-%s.tar.gz" % (
         GO_CI_LINT_VERSION,
@@ -18,13 +17,4 @@ remote_file(
         CONFIG.OS,
         CONFIG.ARCH,
     ),
-)
-
-GO_DEPS_VERSION = "v1.4.1"
-
-# TODO(jpoole): this should support other platforms than just linux_amd64
-remote_file(
-    name = "go-deps",
-    binary = True,
-    url = f"https://github.com/Tatskaari/go-deps/releases/download/{GO_DEPS_VERSION}/go_deps_{GO_DEPS_VERSION}_{CONFIG.OS}_{CONFIG.ARCH}",
 )
