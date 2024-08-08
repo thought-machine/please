@@ -863,7 +863,7 @@ func (config *Configuration) TagsToFields() map[string]reflect.StructField {
 func applyPluginOverride(config *Configuration, pluginName, configKey, value string) error {
 	plugin, ok := config.Plugin[pluginName]
 	if !ok {
-		return fmt.Errorf("no plugin with ID %v", plugin)
+		return fmt.Errorf("no plugin with ID %s", pluginName)
 	}
 
 	plugin.ExtraValues[strings.ToLower(configKey)] = []string{value}
