@@ -75,6 +75,15 @@ plugin_e2e_test(
     plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin python --version v1.2.0",
 )
 
+plugin_e2e_test(
+    name = "init_go_test",
+    expect_output_contains = {
+        "go.conf": "//third_party/go:toolchain|go\n//third_party/go:std",
+    },
+    # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin go && plz query config plugin.go.gotool > go.conf && plz query config plugin.go.stdlib >> go.conf",
+)
+
 # Test that the target is created in plugins/BUILD
 plugin_e2e_test(
     name = "init_create_target_test",

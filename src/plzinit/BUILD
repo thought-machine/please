@@ -4,11 +4,13 @@ go_library(
         "go.go",
         "init.go",
         "pleasings.go",
+        "plugin_go.go",
         "plugins.go",
     ],
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/github.com_please-build_buildtools//build",
         "///third_party/go/github.com_please-build_gcfg//ast",
         "//src/assets",
         "//src/cli",
