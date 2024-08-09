@@ -1,10 +1,12 @@
 package main
 
 import (
-	"io"
 	"os"
+	"path"
 	"regexp"
 	"text/template"
+
+	"github.com/peterebden/go-cli-init/v5/flags"
 )
 
 func must(err error) {
@@ -13,12 +15,16 @@ func must(err error) {
 	}
 }
 
+var opts struct {
+	In       string `long:"in" description:"The file to template"`
+	Grammar string `long:"grammar" description:"The grammar definition"`
+}
+
 func main() {
-	b, err := io.ReadAll(os.Stdin)
+	flags.ParseFlagsOrDie("Config templater", &opts, nil)
+	tmpl, err := template.New(path.Base(opts.In)).ParseFiles(opts.In)
 	must(err)
-	tmpl, err := template.New("language.html").Parse(string(b))
-	must(err)
-	b, err = os.ReadFile("docs/grammar.txt")
+	b, err := os.ReadFile(opts.Grammar)
 	must(err)
 	s := regexp.MustCompile(`("[^ ]+")`).ReplaceAllStringFunc(string(b), func(s string) string {
 		return `<span class="grammar-string">` + s + `</span>`
