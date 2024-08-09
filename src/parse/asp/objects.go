@@ -948,11 +948,11 @@ func (c *pyConfig) Copy() *pyConfig {
 // both internal maps.
 func (c *pyConfig) Keys() []string {
 	ret := make([]string, 0)
-	for k, _ := range c.base.dict {
+	for k := range c.base.dict {
 		ret = append(ret, k)
 	}
 	if c.overlay != nil {
-		for k, _ := range c.overlay {
+		for k := range c.overlay {
 			ret = append(ret, k)
 		}
 	}
