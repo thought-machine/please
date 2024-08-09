@@ -204,6 +204,8 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 		return
 	}
 
+	log.Debugf("Loading configuration for plugin %s", pluginName)
+
 	if s.config.overlay == nil {
 		s.config.overlay = pyDict{}
 	}
