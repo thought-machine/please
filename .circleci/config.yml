@@ -140,7 +140,7 @@ jobs:
            command: tar -xzf /tmp/workspace/darwin_arm64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_amd64 -o plugin.go.cgoenabled:1 -o plugin.go.cctool:clang -o "plugin.go.cflags:-target x86_64-apple-macos13" //package:release_files
+           command: ./please/please build -p --profile ci --arch darwin_amd64 -o plugin.go.cgoenabled:true -o plugin.go.cctool:clang -o "plugin.go.cflags:-target x86_64-apple-macos13" //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
