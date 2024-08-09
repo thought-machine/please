@@ -1,0 +1,13 @@
+g = CONFIG.get("ARCAT_TOOL") == "/////_please:arcat"
+
+keys = CONFIG.keys()
+k1 = "ARCAT_TOOL" in keys
+keys_sorted = sorted(keys)
+k2 = keys == keys_sorted
+
+v = "/////_please:arcat" in CONFIG.values()
+
+i = False
+for key, val in CONFIG.items():
+    if key == "ARCAT_TOOL" and val == "/////_please:arcat":
+        i = True

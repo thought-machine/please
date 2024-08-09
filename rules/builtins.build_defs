@@ -138,9 +138,23 @@ def setdefault(self:config, key:str, default=None) -> config:
         return self[key]
     self[key] = default
     return default
-def config_get(self:config, key:str, default=None) -> config:
+def keys(self:dict) -> list:
+    pass
+def values(self:dict) -> list:
+    pass
+def items(self:dict) -> list:
+    pass
+def copy(self:dict) -> dict:
     pass
 
+def config_get(self:config, key:str, default=None) -> config:
+    pass
+def config_keys(self:config) -> list:
+    pass
+def config_items(self:config) -> list:
+    pass
+def config_values(self:config) -> list:
+    pass
 
 def get_base_path(label:str=None, subinclude_context:bool=None) -> str:
     pass
@@ -169,17 +183,6 @@ def tag(name:str, tag:str):
         tag("_name#foo", "bar") -> "_name#foo_bar"
     """
     pass
-
-
-def keys(self:dict) -> list:
-    pass
-def values(self:dict) -> list:
-    pass
-def items(self:dict) -> list:
-    pass
-def copy(self:dict) -> dict:
-    pass
-
 
 def git_branch(short:bool=True) -> str:
     fail('Disabled in config')

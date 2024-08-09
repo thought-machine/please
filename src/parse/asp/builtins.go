@@ -110,6 +110,9 @@ func registerBuiltins(s *scope) {
 	s.interpreter.configMethods = map[string]*pyFunc{
 		"get":        setNativeCode(s, "config_get", configGet),
 		"setdefault": s.Lookup("setdefault").(*pyFunc),
+		"keys":       setNativeCode(s, "config_keys", configKeys),
+		"items":      setNativeCode(s, "config_items", configItems),
+		"values":     setNativeCode(s, "config_values", configValues),
 	}
 	if s.state.Config.Parse.GitFunctions {
 		setNativeCode(s, "git_branch", execGitBranch)
@@ -720,6 +723,38 @@ func fromStringList(l []string) pyList {
 func configGet(s *scope, args []pyObject) pyObject {
 	self := args[0].(*pyConfig)
 	return self.Get(string(args[1].(pyString)), args[2])
+}
+
+func configKeys(s *scope, args []pyObject) pyObject {
+	self := args[0].(*pyConfig)
+	keys := self.Keys()
+	ret := make(pyList, len(keys))
+	for i, k := range keys {
+		ret[i] = pyString(k)
+	}
+	return ret
+}
+
+func configValues(s *scope, args []pyObject) pyObject {
+	self := args[0].(*pyConfig)
+	keys := self.Keys()
+	ret := make(pyList, len(keys))
+	for i, k := range self.Keys() {
+		// Safe to use MustGet here, since we know the key exists:
+		ret[i] = self.MustGet(k)
+	}
+	return ret
+}
+
+func configItems(s *scope, args []pyObject) pyObject {
+	self := args[0].(*pyConfig)
+	keys := self.Keys()
+	ret := make(pyList, len(keys))
+	for i, k := range self.Keys() {
+		// Safe to use MustGet here, since we know the key exists:
+		ret[i] = pyList{pyString(k), self.MustGet(k)}
+	}
+	return ret
 }
 
 func dictGet(s *scope, args []pyObject) pyObject {

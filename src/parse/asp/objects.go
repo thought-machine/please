@@ -944,6 +944,24 @@ func (c *pyConfig) Copy() *pyConfig {
 	return &pyConfig{base: c.base}
 }
 
+// Keys returns the keys of this config object in order, similarly to a dict but it includes keys in
+// both internal maps.
+func (c *pyConfig) Keys() []string {
+	ret := make([]string, 0)
+	for k, _ := range c.base.dict {
+		ret = append(ret, k)
+	}
+	if c.overlay != nil {
+		for k, _ := range c.overlay {
+			ret = append(ret, k)
+		}
+	}
+	sort.Strings(ret)
+	// Remove duplicate keys that appear in both the base and overlay dicts
+	ret = slices.Compact(ret)
+	return ret
+}
+
 // Get implements the get() method, similarly to a dict but looks up in both internal maps.
 func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 	if c.overlay != nil {
