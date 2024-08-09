@@ -120,6 +120,14 @@ func TestInterpreterBuiltins(t *testing.T) {
 	assert.NotNil(t, s.pkg.Target("lib"))
 }
 
+func TestInterpreterConfig(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/config.build")
+	require.NoError(t, err)
+	for _, v := range []string{"g", "k1", "k2", "v", "i"} {
+		assert.EqualValues(t, True, s.Lookup(v))
+	}
+}
+
 func TestInterpreterParentheses(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/parentheses.build")
 	require.NoError(t, err)
