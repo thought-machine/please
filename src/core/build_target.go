@@ -1666,8 +1666,9 @@ func (target *BuildTarget) RegisterDependencyTarget(dep BuildLabel, deptarget *B
 	info := target.dependencyInfo(dep)
 	if info == nil {
 		log.Fatalf("Target %s doesn't contain dependency %s.\n", target.Label, dep)
+	} else {
+		info.deps = append(info.deps, deptarget)
 	}
-	info.deps = append(info.deps, deptarget)
 }
 
 // IsTool returns true if the given build label is a tool used by this target.
