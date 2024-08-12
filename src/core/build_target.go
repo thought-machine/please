@@ -562,29 +562,29 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 }
 
 func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(*dep.declared)
-	if t == nil {
+	depTarget := graph.WaitForTarget(*dep.declared)
+	if depTarget == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
-	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
+	dep.declared = &depTarget.Label // saves memory by not storing the label twice once resolved
 
-	labels, ok := t.provideFor(target)
+	providesLabels, ok := depTarget.provideFor(target)
 	if !ok {
 		target.mutex.Lock()
 		defer target.mutex.Unlock()
 
 		// Small optimisation to avoid re-looking-up the same target again.
-		dep.deps = []*BuildTarget{t}
+		dep.deps = []*BuildTarget{depTarget}
 		return nil
 	}
 
-	deps := make([]*BuildTarget, 0, len(labels))
-	for _, l := range labels {
-		t := graph.WaitForTarget(l)
-		if t == nil {
-			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
+	deps := make([]*BuildTarget, 0, len(providesLabels))
+	for _, l := range providesLabels {
+		providesTarget := graph.WaitForTarget(l)
+		if providesTarget == nil {
+			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, depTarget)
 		}
-		deps = append(deps, t)
+		deps = append(deps, providesTarget)
 	}
 
 	target.mutex.Lock()
