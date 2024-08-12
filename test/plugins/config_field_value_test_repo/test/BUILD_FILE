@@ -1,0 +1,7 @@
+subinclude("///config_field_value//build_defs:defs")
+
+text_file(
+    name = "config_field_value_test",
+    out = "config_field_value_test",
+    content = "\n".join([f"{k}='{v}'" for k, v in CONFIG.CONFIG_FIELD_VALUE.items()]),
+)

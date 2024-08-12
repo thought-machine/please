@@ -1,0 +1,2 @@
+# This file only exists so that config_field_value_test_repo has a target to
+# build, which will cause this plugin to be loaded.
