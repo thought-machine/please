@@ -229,9 +229,9 @@ func toPyObject(key, val, toType string, optional bool) pyObject {
 		return pyString(val)
 	case "bool":
 		switch strings.ToLower(val) {
-		case "true", "yes", "on":
+		case "true", "yes", "on", "1":
 			return pyBool(true)
-		case "false", "no", "off":
+		case "false", "no", "off", "0":
 			return pyBool(false)
 		default:
 			log.Fatalf("%s: invalid bool value: %v", key, val)
