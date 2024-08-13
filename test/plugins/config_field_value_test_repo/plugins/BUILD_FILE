@@ -1,0 +1,4 @@
+plugin_repo(
+    name = "config_field_value",
+    revision = "v0.0.1",
+)
