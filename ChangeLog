@@ -1,3 +1,16 @@
+Version 17.10.0
+---------------
+    * Make `1`/`0` synonyms for `true`/`false` in boolean plugin config fields (#3220)
+    * Return `None` for empty optional plugin config fields (#3219)
+    * Correctly report name of missing dependency when it can't be resolved (#3216)
+    * Output debug message when plugin config is loaded (#3214)
+    * Implement `keys`, `values` and `items` methods for `config` builtin type (#3213)
+    * Report plugin name in error message when failing to override plugin config field value (#3211)
+    * Add Go toolchain and standard library targets when initialising Go plugin (#3212)
+    * Don't print input targets in `plz query deps` output (#3204)
+    * Implement filename auto-completion and support for reading from stdin for the `plz query`
+      subcommands `whatinputs`, `whatoutputs`, `rules` and `changes` (#3202)
+
 Version 17.9.0
 --------------
     * Allow values in `provides` to be a list (#3140)
