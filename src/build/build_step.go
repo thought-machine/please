@@ -78,7 +78,6 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 	} else {
 		successfulLocalTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
 	}
-
 	// Mark the target as having finished building.
 	target.FinishBuild()
 	if target.IsTest() && state.NeedTests && state.IsOriginalTarget(target) {
