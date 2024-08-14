@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 )
