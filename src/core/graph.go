@@ -5,7 +5,6 @@
 package core
 
 import (
-	"reflect"
 	"sort"
 
 	"github.com/thought-machine/please/src/cmap"
@@ -105,7 +104,7 @@ func (graph *BuildGraph) AddSubrepo(subrepo *Subrepo) {
 func (graph *BuildGraph) MaybeAddSubrepo(subrepo *Subrepo) *Subrepo {
 	if !graph.subrepos.Add(subrepo.Name, subrepo) {
 		old := graph.subrepos.Get(subrepo.Name)
-		if !reflect.DeepEqual(old, subrepo) {
+		if !old.Equal(subrepo) {
 			log.Fatalf("Found multiple definitions for subrepo '%s' (%+v s %+v)", old.Name, old, subrepo)
 		}
 		return old
