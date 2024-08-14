@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/fs"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/thought-machine/please/src/cli"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // A Subrepo stores information about a registered subrepository, typically one
