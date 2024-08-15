@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -66,6 +69,11 @@ func (s *Subrepo) FS() iofs.FS {
 // IsRemoteSubrepo returns true when the subrepo sources are remote i.e. not downloaded to plz-out
 func (s *Subrepo) IsRemoteSubrepo() bool {
 	return s.Root != "" && s.Target != nil && !s.Target.Local && s.State.RemoteClient != nil
+}
+
+// Equal returns true if this subrepo is equivalent to another, or false if it is not.
+func (s *Subrepo) Equal(other *Subrepo) bool {
+	return cmp.Equal(s, other, cmpopts.IgnoreFields(Subrepo{}, "fs", "fsSync"))
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
