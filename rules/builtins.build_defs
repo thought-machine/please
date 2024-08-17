@@ -266,8 +266,12 @@ def add_entry_point(target:str, name:str, out:str):
 def get_entry_points(target:str) -> dict:
     pass
 def add_licence(target:str, licence:str):
+    """Deprecated in favour of set_licence"""
+def set_licence(target:str, licence: str):
     pass
 def get_licences(target:str):
+    """Deprecated in favour of get_licence"""
+def get_licence(target:str):
     pass
 def get_command(target:str, config:str=''):
     pass

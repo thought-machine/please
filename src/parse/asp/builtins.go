@@ -73,7 +73,9 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_entry_point", addEntryPoint)
 	setNativeCode(s, "get_entry_points", getEntryPoints)
 	setNativeCode(s, "add_licence", addLicence)
+	setNativeCode(s, "set_licence", setLicence)
 	setNativeCode(s, "get_licences", getLicences)
+	setNativeCode(s, "get_licence", getLicence)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
@@ -1325,9 +1327,21 @@ func addLicence(s *scope, args []pyObject) pyObject {
 	return None
 }
 
+// setLicence sets the target's licence to the given string. Note that it must be a valid SPDX identifier.
+func setLicence(s *scope, args []pyObject) pyObject {
+	target := getTargetPost(s, string(args[0].(pyString)))
+	target.Licence += string(args[1].(pyString))
+	return None
+}
+
 // getLicences returns the licences for a single target.
 func getLicences(s *scope, args []pyObject) pyObject {
 	return pyList{pyString(getTargetPost(s, string(args[0].(pyString))).Licence)}
+}
+
+// getLicence returns the licence for a single target.
+func getLicences(s *scope, args []pyObject) pyObject {
+	return pyString(getTargetPost(s, string(args[0].(pyString))).Licence)
 }
 
 // getCommand gets the command of a target, optionally for a configuration.
