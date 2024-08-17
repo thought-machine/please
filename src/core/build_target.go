@@ -152,8 +152,8 @@ type BuildTarget struct {
 	// Acceptable hashes of the outputs of this rule. If the output doesn't match any of these
 	// it's an error at build time. Can be used to validate third-party deps.
 	Hashes []string
-	// Licences that this target is subject to.
-	Licences []string
+	// SPDX licence expression that this target is subject to.
+	Licence string
 	// Any secrets that this rule requires.
 	// Secrets are similar to sources but are always absolute system paths and affect the hash
 	// differently; they are not used to determine the hash for retrieving a file from cache, but
@@ -1762,17 +1762,6 @@ func (target *BuildTarget) insert(sl []string, s string) []string {
 		}
 	}
 	return append(sl, s)
-}
-
-// AddLicence adds a licence to the target if it's not already there.
-func (target *BuildTarget) AddLicence(licence string) {
-	licence = strings.TrimSpace(licence)
-	for _, l := range target.Licences {
-		if l == licence {
-			return
-		}
-	}
-	target.Licences = append(target.Licences, licence)
 }
 
 // AddHash adds a new acceptable hash to the target.

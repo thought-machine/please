@@ -686,3 +686,10 @@ go_repo(
     module = "github.com/grpc-ecosystem/go-grpc-prometheus",
     version = "v1.2.0",
 )
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/github/go-spdx",
+    version = "v2.3.1",
+)
+
