@@ -1893,7 +1893,7 @@ func (target *BuildTarget) CheckLicences(config *Configuration) (string, error) 
 	if target.Licence == "" || (len(config.Licences.Accept) == 0 && len(config.Licences.Reject) == 0) {
 		return "", nil
 	}
-	accepted, err := spdxexp.ExpressionSatisfies(target.Licence, config.Licences.Accept)
+	accepted, err := spdxexp.ExpressionSatisfies(target.Licence, config.AcceptedLicences())
 	if err != nil {
 		return "", fmt.Errorf("Target %s has invalid licence '%s': %s", target, target.Licence, err)
 	} else if accepted == "" {

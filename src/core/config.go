@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/google/shlex"
+	"github.com/peterebden/go-spdx/v2/spdxexp"
 	"github.com/please-build/gcfg"
 	gcfgtypes "github.com/please-build/gcfg/types"
 	"github.com/thought-machine/go-flags"
@@ -684,10 +686,6 @@ type Configuration struct {
 	Bazel        struct {
 		Compatibility bool `help:"Activates limited Bazel compatibility mode. When this is active several rule arguments are available under different names (e.g. compiler_flags -> copts etc), the WORKSPACE file is interpreted, Makefile-style replacements like $< and $@ are made in genrule commands, etc.\nNote that Skylark is not generally supported and many aspects of compatibility are fairly superficial; it's unlikely this will work for complex setups of either tool." var:"BAZEL_COMPATIBILITY"`
 	} `help:"Bazel is an open-sourced version of Google's internal build tool. Please draws a lot of inspiration from the original tool although the two have now diverged in various ways.\nNonetheless, if you've used Bazel, you will likely find Please familiar."`
-
-	// buildEnvStored is a cached form of BuildEnv.
-	buildEnvStored *storedBuildEnv
-
 	FeatureFlags struct {
 		SPDXLicencesOnly bool `help:"Licences on build targets can only be strings containing SPDX expressions, not lists."`
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
@@ -696,6 +694,13 @@ type Configuration struct {
 		Timeout              cli.Duration `help:"timeout for pushing to the gateway. Defaults to 2 seconds." `
 		PushHostInfo         bool         `help:"Whether to push host info"`
 	} `help:"Settings for collecting metrics."`
+
+	// buildEnvStored is a cached form of BuildEnv.
+	buildEnvStored *storedBuildEnv
+
+	// acceptedLicences is a slightly processed form of Licences.Accept
+	acceptedLicences     []string
+	acceptedLicencesOnce sync.Once
 }
 
 // An Alias represents aliases in the config.
@@ -843,6 +848,24 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) B
 		env["PATH"] = strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")
 	}
 	return env
+}
+
+// AcceptedLicences returns the set of licences accepted in this repository
+func (config *Configuration) AcceptedLicences() []string {
+	config.acceptedLicencesOnce.Do(func() {
+		config.acceptedLicences = make([]string, len(config.Licences.Accept))
+		for i, licence := range config.Licences.Accept {
+			config.acceptedLicences[i] = strings.ReplaceAll(strings.ReplaceAll(licence, " ", "-"), ",", "-")
+		}
+		if ok, invalid := spdxexp.ValidateLicenses(config.acceptedLicences); !ok {
+			log.Warning("The following accepted licences are not valid licence names: %s", strings.Join(invalid, ", "))
+			// We now have to remove these, otherwise the SPDX parser gets upset later on
+			for _, licence := range invalid {
+				config.acceptedLicences = slices.DeleteFunc(config.acceptedLicences, func(l string) bool { return l == licence })
+			}
+		}
+	})
+	return config.acceptedLicences
 }
 
 // TagsToFields returns a map of string represent the properties of CONFIG object to the config Structfield
