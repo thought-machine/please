@@ -1315,13 +1315,16 @@ func getEntryPoints(s *scope, args []pyObject) pyObject {
 // addLicence adds a licence to a target.
 func addLicence(s *scope, args []pyObject) pyObject {
 	target := getTargetPost(s, string(args[0].(pyString)))
-	target.AddLicence(string(args[1].(pyString)))
+	if target.Licence != "" {
+		target.Licence += " OR "
+	}
+	target.Licence += string(args[1].(pyString))
 	return None
 }
 
 // getLicences returns the licences for a single target.
 func getLicences(s *scope, args []pyObject) pyObject {
-	return fromStringList(getTargetPost(s, string(args[0].(pyString))).Licences)
+	return pyList{pyString(getTargetPost(s, string(args[0].(pyString))).Licence)}
 }
 
 // getCommand gets the command of a target, optionally for a configuration.

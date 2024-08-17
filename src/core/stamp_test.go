@@ -14,14 +14,14 @@ func TestStampFile(t *testing.T) {
 	t3 := NewBuildTarget(ParseBuildLabel("//third_party/go:errors", ""))
 	t1.AddLabel("go")
 	t3.AddLabel("go_get:github.com/pkg/errors")
-	t3.AddLicence("bsd-2-clause")
+	t3.Licence = "bsd-2-clause"
 	t1.AddDependency(t2.Label)
 	t1.resolveDependency(t2.Label, t2)
 	t1.AddDependency(t3.Label)
 	t1.resolveDependency(t3.Label, t3)
 	t2.AddDependency(t3.Label)
 	t2.resolveDependency(t3.Label, t3)
-	expected := []byte(`{
+	const expected = `{
   "targets": {
     "//src/core:core": {
       "labels": [
@@ -33,12 +33,14 @@ func TestStampFile(t *testing.T) {
       "labels": [
         "go_get:github.com/pkg/errors"
       ],
+      "licence": "bsd-2-clause",
       "licences": [
         "bsd-2-clause"
       ],
-      "accepted_licence": "bsd-2-clause"
+      "accepted_licence": "BSD-2-Clause"
     }
   }
-}`)
-	assert.Equal(t, expected, StampFile(config, t1))
+}`
+
+	assert.Equal(t, expected, string(StampFile(config, t1)))
 }

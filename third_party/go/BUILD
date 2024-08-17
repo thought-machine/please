@@ -689,7 +689,12 @@ go_repo(
 
 go_repo(
     licences = ["MIT"],
-    module = "github.com/github/go-spdx",
-    version = "v2.3.1",
+    module = "github.com/peterebden/go-spdx/v2",
+    version = "v2.4.3",
 )
 
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/github/go-spdx/v2",
+    version = "v2.3.1",
+)

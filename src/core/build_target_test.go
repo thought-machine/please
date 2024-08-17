@@ -954,19 +954,24 @@ func TestIsTool(t *testing.T) {
 
 func TestCheckLicences(t *testing.T) {
 	config := DefaultConfiguration()
-	config.Licences.Accept = []string{"BSD"}
+	config.Licences.Accept = []string{"BSD", "Apache-2.0"}
 	config.Licences.Reject = []string{"GPL"}
 
 	target := makeTarget1("//src/core/test_data/project", "PUBLIC")
-	target.Licences = []string{"BSD", "GPL"}
+	target.Licence = "BSD OR GPL"
 	accepted, err := target.CheckLicences(config)
 	assert.NoError(t, err)
 	assert.Equal(t, "BSD", accepted)
 
-	target.Licences = []string{"MIT", "GPL"}
+	target.Licence = "MIT OR GPL"
 	accepted, err = target.CheckLicences(config)
 	assert.Error(t, err)
 	assert.Equal(t, "", accepted)
+
+	target.Licence = "BSD AND Apache-2.0 OR GPL"
+	accepted, err = target.CheckLicences(config)
+	assert.NoError(t, err)
+	assert.Equal(t, "BSD AND Apache-2.0", accepted)
 }
 
 func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {

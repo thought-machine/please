@@ -189,6 +189,12 @@ github.com/peterebden/go-cli-init/v5 v5.2.1 h1:o+7EjS/PiYDvFUQRQVXJRjinmUzDjqcea
 github.com/peterebden/go-cli-init/v5 v5.2.1/go.mod h1:0eBDoCJjj3BWyEtidFcP0TlD14cRtOtLCrTG/OVPB74=
 github.com/peterebden/go-deferred-regex v1.1.0 h1:XNpUuRDU7iU59Toy+OJp9LUvsun5i3kEbe3c73oyCZg=
 github.com/peterebden/go-deferred-regex v1.1.0/go.mod h1:EhIu4zsN+60671cx29rzxPSIEnDd2vOia4RFSOaYpRI=
+github.com/peterebden/go-spdx/v2 v2.4.1 h1:ah4SjMgKyFXqR5qkBGwKbtevTV3UK3+17OiPNw18GVM=
+github.com/peterebden/go-spdx/v2 v2.4.1/go.mod h1:6KrhEd9kpULcLYV6rGkV47Rolvt2IFcaRCyewNnLkLA=
+github.com/peterebden/go-spdx/v2 v2.4.2 h1:u+lPJXPPK1cJpCtDQBlUgu/cXgOg/dYUWKHUyHxakYI=
+github.com/peterebden/go-spdx/v2 v2.4.2/go.mod h1:6KrhEd9kpULcLYV6rGkV47Rolvt2IFcaRCyewNnLkLA=
+github.com/peterebden/go-spdx/v2 v2.4.3 h1:iiOEYy8+qvyTA3IBqVgLGpwTl5MAmU0Ej39w+8xr5gQ=
+github.com/peterebden/go-spdx/v2 v2.4.3/go.mod h1:6KrhEd9kpULcLYV6rGkV47Rolvt2IFcaRCyewNnLkLA=
 github.com/peterebden/go-sri v1.1.1 h1:KK8yZ5/NX8YzWUY9QvhrP220QsvEKANLLAgvw35AkyU=
 github.com/peterebden/go-sri v1.1.1/go.mod h1:KIRxtog35NfDWec5LV/iBqqfOEPcMpePZLc7EPE6goQ=
 github.com/peterebden/tools v0.0.0-20190805132753-b2a0db951d2a h1:R4xz7BkSIQOS5CFmaadk2gwwOzy/u2Jvnimf1NHD2LY=

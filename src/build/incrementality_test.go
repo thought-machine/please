@@ -41,7 +41,7 @@ var KnownFields = map[string]bool{
 	"PostBuildHash":               true,
 	"outputs":                     true,
 	"namedOutputs":                true,
-	"Licences":                    true,
+	"Licence":                     true,
 	"Sandbox":                     true,
 	"Tools":                       true,
 	"namedTools":                  true,

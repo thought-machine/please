@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/peterebden/go-spdx/v2/spdxexp"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/fs"
@@ -1887,27 +1888,18 @@ func (target *BuildTarget) PackageDir() string {
 }
 
 // CheckLicences checks the target's licences against the accepted/rejected list.
-// It returns the licence that was accepted and an error if it did not match.
+// It returns the licence expression that was accepted and an error if it did not match.
 func (target *BuildTarget) CheckLicences(config *Configuration) (string, error) {
-	if len(target.Licences) == 0 {
+	if target.Licence == "" || len(config.Licences.Accept) == 0 {
 		return "", nil
 	}
-	for _, licence := range target.Licences {
-		for _, reject := range config.Licences.Reject {
-			if strings.EqualFold(reject, licence) {
-				return "", fmt.Errorf("Target %s is licensed %s, which is explicitly rejected for this repository", target.Label, licence)
-			}
-		}
-		for _, accept := range config.Licences.Accept {
-			if strings.EqualFold(accept, licence) {
-				return licence, nil // Note licences are assumed to be an 'or', ie. any one of them can be accepted.
-			}
-		}
+	accepted, err := spdxexp.ExpressionSatisfies(target.Licence, config.Licences.Accept)
+	if err != nil {
+		return "", fmt.Errorf("Target %s has invalid licence %s: %s", target, target.Licence, err)
+	} else if accepted == "" {
+		return "", fmt.Errorf("The licences for %s are not accepted in this repository: %s", target, target.Licence)
 	}
-	if len(config.Licences.Accept) > 0 {
-		return "", fmt.Errorf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", "))
-	}
-	return "", nil
+	return accepted, nil
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

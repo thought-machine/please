@@ -22,11 +22,15 @@ func StampFile(config *Configuration, target *BuildTarget) []byte {
 
 func populateStampInfo(config *Configuration, target *BuildTarget, info *stampInfo) {
 	accepted, _ := target.CheckLicences(config)
-	info.Targets[target.Label] = targetInfo{
-		Licences:        target.Licences,
+	ti := targetInfo{
+		Licence:         target.Licence,
 		AcceptedLicence: accepted,
 		Labels:          target.Labels,
 	}
+	if target.Licence != "" {
+		ti.Licences = []string{target.Licence}
+	}
+	info.Targets[target.Label] = ti
 	for _, dep := range target.Dependencies() {
 		if _, present := info.Targets[dep.Label]; !present {
 			populateStampInfo(config, dep, info)
@@ -40,6 +44,7 @@ type stampInfo struct {
 
 type targetInfo struct {
 	Labels          []string `json:"labels,omitempty"`
-	Licences        []string `json:"licences,omitempty"`
+	Licence         string   `json:"licence,omitempty"`
+	Licences        []string `json:"licences,omitempty"` // Deprecated in favour of Licence
 	AcceptedLicence string   `json:"accepted_licence,omitempty"`
 }
