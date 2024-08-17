@@ -1319,6 +1319,7 @@ func getEntryPoints(s *scope, args []pyObject) pyObject {
 
 // addLicence adds a licence to a target.
 func addLicence(s *scope, args []pyObject) pyObject {
+	s.Assert(!s.state.Config.FeatureFlags.SPDXLicencesOnly, "The add_licence builtin has been replaced with set_licence")
 	target := getTargetPost(s, string(args[0].(pyString)))
 	if target.Licence != "" {
 		target.Licence += " OR "
@@ -1336,11 +1337,12 @@ func setLicence(s *scope, args []pyObject) pyObject {
 
 // getLicences returns the licences for a single target.
 func getLicences(s *scope, args []pyObject) pyObject {
+	s.Assert(!s.state.Config.FeatureFlags.SPDXLicencesOnly, "The get_licences builtin has been replaced with get_licence")
 	return pyList{pyString(getTargetPost(s, string(args[0].(pyString))).Licence)}
 }
 
 // getLicence returns the licence for a single target.
-func getLicences(s *scope, args []pyObject) pyObject {
+func getLicence(s *scope, args []pyObject) pyObject {
 	return pyString(getTargetPost(s, string(args[0].(pyString))).Licence)
 }
 
