@@ -1890,12 +1890,12 @@ func (target *BuildTarget) PackageDir() string {
 // CheckLicences checks the target's licences against the accepted/rejected list.
 // It returns the licence expression that was accepted and an error if it did not match.
 func (target *BuildTarget) CheckLicences(config *Configuration) (string, error) {
-	if target.Licence == "" || len(config.Licences.Accept) == 0 {
+	if target.Licence == "" || (len(config.Licences.Accept) == 0 && len(config.Licences.Reject) == 0) {
 		return "", nil
 	}
 	accepted, err := spdxexp.ExpressionSatisfies(target.Licence, config.Licences.Accept)
 	if err != nil {
-		return "", fmt.Errorf("Target %s has invalid licence %s: %s", target, target.Licence, err)
+		return "", fmt.Errorf("Target %s has invalid licence '%s': %s", target, target.Licence, err)
 	} else if accepted == "" {
 		return "", fmt.Errorf("The licences for %s are not accepted in this repository: %s", target, target.Licence)
 	}

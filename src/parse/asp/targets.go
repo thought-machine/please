@@ -276,7 +276,8 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addStrings(s, "requires", args[requiresBuildRuleArgIdx], t.AddRequire)
 	if arg := args[licencesBuildRuleArgIdx]; arg != None {
 		if expr, ok := arg.(pyString); ok {
-			t.Licence = string(expr)
+			// TODO(v18): Remove the replace here once all licences are expected to be SPDX expressions
+			t.Licence = strings.ReplaceAll(string(expr), " ", "-")
 		} else {
 			// TODO(v18): Remove all this once strings are the only option.
 			s.Assert(!s.state.Config.FeatureFlags.SPDXLicencesOnly, "The licences argument must be a string")
@@ -286,13 +287,13 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 				// minor optimisation: avoid allocating a slice etc for the overwhelmingly common case of a single licence
 				str, ok := l[0].(pyString)
 				s.Assert(ok, "Items in the licences argument must be strings (was %s)", str.Type())
-				t.Licence = string(str)
+				t.Licence = strings.ReplaceAll(string(str), " ", "-")
 			} else {
 				l2 := make([]string, len(l))
 				for i, x := range l {
 					str, ok := x.(pyString)
 					s.Assert(ok, "Items in the licences argument must be strings (was %s)", str.Type())
-					l2[i] = string(str)
+					l2[i] = strings.ReplaceAll(string(str), " ", "-")
 				}
 				// Passing a list to Please is implicitly a series of alternative licences
 				t.Licence = strings.Join(l2, " OR ")

@@ -1318,7 +1318,7 @@ func addLicence(s *scope, args []pyObject) pyObject {
 	if target.Licence != "" {
 		target.Licence += " OR "
 	}
-	target.Licence += string(args[1].(pyString))
+	target.Licence += strings.TrimSpace(strings.ReplaceAll(string(args[1].(pyString)), " ", "-"))
 	return None
 }
 
