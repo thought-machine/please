@@ -370,7 +370,10 @@ func defaultPathIfExists(conf *string, dir, file string) {
 // DefaultConfiguration returns the default configuration object with no overrides.
 // N.B. Slice fields are not populated by this (since it interferes with reading them)
 func DefaultConfiguration() *Configuration {
-	config := Configuration{buildEnvStored: &storedBuildEnv{}}
+	config := Configuration{
+		buildEnvStored:   &storedBuildEnv{},
+		acceptedLicences: &storedAcceptedLicences{},
+	}
 	config.Please.SelfUpdate = true
 	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
@@ -699,8 +702,7 @@ type Configuration struct {
 	buildEnvStored *storedBuildEnv
 
 	// acceptedLicences is a slightly processed form of Licences.Accept
-	acceptedLicences     []string
-	acceptedLicencesOnce sync.Once
+	acceptedLicences *storedAcceptedLicences
 }
 
 // An Alias represents aliases in the config.
@@ -746,6 +748,11 @@ type storedBuildEnv struct {
 	Env  BuildEnv
 	Path []string
 	Once sync.Once
+}
+
+type storedAcceptedLicences struct {
+	Licences []string
+	Once     sync.Once
 }
 
 // Hash returns a hash of the parts of this configuration that affect building targets in general.
@@ -852,20 +859,21 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) B
 
 // AcceptedLicences returns the set of licences accepted in this repository
 func (config *Configuration) AcceptedLicences() []string {
-	config.acceptedLicencesOnce.Do(func() {
-		config.acceptedLicences = make([]string, len(config.Licences.Accept))
+	config.acceptedLicences.Once.Do(func() {
+		l := make([]string, len(config.Licences.Accept))
 		for i, licence := range config.Licences.Accept {
-			config.acceptedLicences[i] = strings.ReplaceAll(strings.ReplaceAll(licence, " ", "-"), ",", "-")
+			l[i] = strings.ReplaceAll(strings.ReplaceAll(licence, " ", "-"), ",", "-")
 		}
-		if ok, invalid := spdxexp.ValidateLicenses(config.acceptedLicences); !ok {
+		if ok, invalid := spdxexp.ValidateLicenses(l); !ok {
 			log.Warning("The following accepted licences are not valid licence names: %s", strings.Join(invalid, ", "))
 			// We now have to remove these, otherwise the SPDX parser gets upset later on
 			for _, licence := range invalid {
-				config.acceptedLicences = slices.DeleteFunc(config.acceptedLicences, func(l string) bool { return l == licence })
+				l = slices.DeleteFunc(l, func(l string) bool { return l == licence })
 			}
 		}
+		config.acceptedLicences.Licences = l
 	})
-	return config.acceptedLicences
+	return config.acceptedLicences.Licences
 }
 
 // TagsToFields returns a map of string represent the properties of CONFIG object to the config Structfield
