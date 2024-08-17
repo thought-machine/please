@@ -15,6 +15,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
+	"github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -23,6 +24,8 @@ import (
 
 // A nativeFunc is a function that implements a builtin function natively.
 type nativeFunc func(*scope, []pyObject) pyObject
+
+var normaliseLicence = deferredregex.DeferredRegex{Re: `[ (),]`}
 
 // registerBuiltins sets up the "special" builtins that map to native code.
 func registerBuiltins(s *scope) {
@@ -1318,7 +1321,7 @@ func addLicence(s *scope, args []pyObject) pyObject {
 	if target.Licence != "" {
 		target.Licence += " OR "
 	}
-	target.Licence += strings.TrimSpace(strings.ReplaceAll(string(args[1].(pyString)), " ", "-"))
+	target.Licence += normaliseLicence.ReplaceAllString(strings.TrimSpace(string(args[1].(pyString))), "-")
 	return None
 }
 
