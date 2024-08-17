@@ -14,16 +14,16 @@ package(
 python_wheel(
     name = "six",
     outs = ["six.py"],
-    hashes = ["8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"],
-    version = "1.14.0",
+    hashes = ["8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"],
+    version = "1.16.0",
 )
 
 python_wheel(
     name = "requests",
     hashes = [
-        "43999036bfa82904b6af1d99e4882b560e5e2c68e5c4b0aa03b655f3d7d73fee",
+        "70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6",
     ],
-    version = "2.23.0",
+    version = "2.32.3",
     deps = [
         ":certifi",
         ":chardet",
@@ -52,8 +52,8 @@ python_wheel(
 
 python_wheel(
     name = "urllib3",
-    hashes = ["2f3db8b19923a873b3e5256dc9c2dedfa883e33d87c690d9c7913e1f40673cdc"],
-    version = "1.25.8",
+    hashes = ["a448b2f64d686155468037e1ace9f2d2199776e17f0a46610480d311f73e3472"],
+    version = "2.2.2",
 )
 
 python_wheel(
