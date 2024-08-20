@@ -411,18 +411,18 @@ var opts struct {
 			EchoFiles     bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			IgnoreUnknown bool `long:"ignore_unknown" description:"Ignore any files that are not inputs to existing build targets"`
 			Args          struct {
-				Files cli.Filepaths `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to query as sources to targets" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"whatinputs" description:"Prints out target(s) with provided file(s) as inputs"`
 		WhatOutputs struct {
 			EchoFiles bool `long:"echo_files" description:"Echo the file for which the printed output is responsible."`
 			Args      struct {
-				Files cli.Filepaths `positional-arg-name:"files" required:"true" description:"Files to query targets responsible for"`
+				Files cli.StdinStrings `positional-arg-name:"files" required:"true" description:"Files to query targets responsible for"`
 			} `positional-args:"true"`
 		} `command:"whatoutputs" description:"Prints out target(s) responsible for outputting provided file(s)"`
 		Rules struct {
 			Args struct {
-				Files cli.Filepaths `positional-arg-name:"files" description:"Files to parse for build rules." hidden:"true"`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to parse for build rules." hidden:"true"`
 			} `positional-args:"true"`
 		} `command:"rules" description:"Prints built-in rules to stdout as JSON"`
 		Changes struct {
@@ -433,7 +433,7 @@ var opts struct {
 			Inexact          bool   `long:"inexact" description:"Calculate changes more quickly and without doing any SCM checkouts, but may miss some targets."`
 			In               string `long:"in" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc). Implies --inexact."`
 			Args             struct {
-				Files cli.Filepaths `positional-arg-name:"files" description:"Files to calculate changes for. Overrides flags relating to SCM operations."`
+				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to calculate changes for. Overrides flags relating to SCM operations."`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the set of changed targets in regard to a set of modified files or SCM commits."`
 		Filter struct {
@@ -868,7 +868,7 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"query.whatinputs": func() int {
-		files := opts.Query.WhatInputs.Args.Files.AsStrings()
+		files := opts.Query.WhatInputs.Args.Files.Get()
 		// Make all these relative to the repo root; many things do not work if they're absolute.
 		for i, file := range files {
 			if filepath.IsAbs(file) {
@@ -893,11 +893,11 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.whatoutputs": func() int {
 		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
-			query.WhatOutputs(state.Graph, opts.Query.WhatOutputs.Args.Files.AsStrings(), opts.Query.WhatOutputs.EchoFiles)
+			query.WhatOutputs(state.Graph, opts.Query.WhatOutputs.Args.Files.Get(), opts.Query.WhatOutputs.EchoFiles)
 		})
 	},
 	"query.rules": func() int {
-		help.PrintRuleArgs(opts.Query.Rules.Args.Files.AsStrings())
+		help.PrintRuleArgs(opts.Query.Rules.Args.Files)
 		return 0
 	},
 	"query.changes": func() int {
@@ -930,7 +930,7 @@ var buildFunctions = map[string]func() int{
 			})
 		}
 		if len(opts.Query.Changes.Args.Files) > 0 {
-			return runInexact(opts.Query.Changes.Args.Files.AsStrings())
+			return runInexact(opts.Query.Changes.Args.Files.Get())
 		}
 		scm := scm.MustNew(core.RepoRoot)
 		if opts.Query.Changes.In != "" {
