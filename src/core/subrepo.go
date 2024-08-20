@@ -8,9 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -73,7 +70,8 @@ func (s *Subrepo) IsRemoteSubrepo() bool {
 
 // Equal returns true if this subrepo is equivalent to another, or false if it is not.
 func (s *Subrepo) Equal(other *Subrepo) bool {
-	return cmp.Equal(s, other, cmpopts.IgnoreFields(Subrepo{}, "fs", "fsSync"))
+	return s.Name == other.Name && s.Root == other.Root && s.PackageRoot == other.PackageRoot &&
+		s.Target == other.Target && s.State == other.State && s.Arch == other.Arch && s.IsCrossCompile == other.IsCrossCompile
 }
 
 // SubrepoForArch creates a new subrepo for the given architecture.
