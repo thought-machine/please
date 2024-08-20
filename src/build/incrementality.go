@@ -172,10 +172,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 			h.Write([]byte(out))
 		}
 	}
-	for _, licence := range target.Licences {
-		h.Write([]byte(licence))
-	}
-
+	h.Write([]byte(target.Licence))
 	for _, output := range target.OptionalOutputs {
 		h.Write([]byte(output))
 	}

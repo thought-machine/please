@@ -13,6 +13,7 @@ go_library(
         "///third_party/go/github.com_coreos_go-semver//semver",
         "///third_party/go/github.com_google_shlex//:shlex",
         "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
+        "///third_party/go/github.com_peterebden_go-spdx_v2//spdxexp",
         "///third_party/go/github.com_pkg_xattr//:xattr",
         "///third_party/go/github.com_please-build_gcfg//:gcfg",
         "///third_party/go/github.com_please-build_gcfg//types",

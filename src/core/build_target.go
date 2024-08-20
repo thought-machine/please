@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/peterebden/go-spdx/v2/spdxexp"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/fs"
@@ -152,8 +153,8 @@ type BuildTarget struct {
 	// Acceptable hashes of the outputs of this rule. If the output doesn't match any of these
 	// it's an error at build time. Can be used to validate third-party deps.
 	Hashes []string
-	// Licences that this target is subject to.
-	Licences []string
+	// SPDX licence expression that this target is subject to.
+	Licence string
 	// Any secrets that this rule requires.
 	// Secrets are similar to sources but are always absolute system paths and affect the hash
 	// differently; they are not used to determine the hash for retrieving a file from cache, but
@@ -1764,17 +1765,6 @@ func (target *BuildTarget) insert(sl []string, s string) []string {
 	return append(sl, s)
 }
 
-// AddLicence adds a licence to the target if it's not already there.
-func (target *BuildTarget) AddLicence(licence string) {
-	licence = strings.TrimSpace(licence)
-	for _, l := range target.Licences {
-		if l == licence {
-			return
-		}
-	}
-	target.Licences = append(target.Licences, licence)
-}
-
 // AddHash adds a new acceptable hash to the target.
 func (target *BuildTarget) AddHash(hash string) {
 	target.Hashes = append(target.Hashes, hash)
@@ -1898,27 +1888,18 @@ func (target *BuildTarget) PackageDir() string {
 }
 
 // CheckLicences checks the target's licences against the accepted/rejected list.
-// It returns the licence that was accepted and an error if it did not match.
+// It returns the licence expression that was accepted and an error if it did not match.
 func (target *BuildTarget) CheckLicences(config *Configuration) (string, error) {
-	if len(target.Licences) == 0 {
+	if target.Licence == "" || (len(config.Licences.Accept) == 0 && len(config.Licences.Reject) == 0) {
 		return "", nil
 	}
-	for _, licence := range target.Licences {
-		for _, reject := range config.Licences.Reject {
-			if strings.EqualFold(reject, licence) {
-				return "", fmt.Errorf("Target %s is licensed %s, which is explicitly rejected for this repository", target.Label, licence)
-			}
-		}
-		for _, accept := range config.Licences.Accept {
-			if strings.EqualFold(accept, licence) {
-				return licence, nil // Note licences are assumed to be an 'or', ie. any one of them can be accepted.
-			}
-		}
+	accepted, err := spdxexp.ExpressionSatisfies(target.Licence, config.AcceptedLicences())
+	if err != nil {
+		return "", fmt.Errorf("Target %s has invalid licence '%s': %s", target, target.Licence, err)
+	} else if accepted == "" {
+		return "", fmt.Errorf("The licences for %s are not accepted in this repository: %s", target, target.Licence)
 	}
-	if len(config.Licences.Accept) > 0 {
-		return "", fmt.Errorf("None of the licences for %s are accepted in this repository: %s", target.Label, strings.Join(target.Licences, ", "))
-	}
-	return "", nil
+	return accepted, nil
 }
 
 // BuildTargets makes a slice of build targets sortable by their labels.

@@ -290,13 +290,9 @@ func TestLicenceEnforcement(t *testing.T) {
 
 	// A license (non case sensitive) that is not in the list of accepted licenses will panic.
 	assert.Panics(t, func() {
-		target.Licences = append(target.Licences, "Bsd")
+		target.Licence = "Bsd"
 		checkLicences(state, target)
 	}, "A target with a non-accepted licence will panic")
-
-	// Accepting bsd should resolve the panic
-	state.Config.Licences.Accept = append(state.Config.Licences.Accept, "BSD")
-	checkLicences(state, target)
 
 	// Now construct a new "bad" target.
 	state, target = newState("//pkg:bad")
@@ -304,8 +300,8 @@ func TestLicenceEnforcement(t *testing.T) {
 	state.Config.Licences.Accept = append(state.Config.Licences.Accept, "mit")
 
 	// Adding an explicitly rejected licence should panic no matter what.
-	target.Licences = append(target.Licences, "GPL")
 	assert.Panics(t, func() {
+		target.Licence = "GPL"
 		checkLicences(state, target)
 	}, "Trying to add GPL should panic (case insensitive)")
 }

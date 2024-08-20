@@ -273,8 +273,33 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true)
 	addStrings(s, "labels", args[labelsBuildRuleArgIdx], t.AddLabel)
 	addStrings(s, "hashes", args[hashesBuildRuleArgIdx], t.AddHash)
-	addStrings(s, "licences", args[licencesBuildRuleArgIdx], t.AddLicence)
 	addStrings(s, "requires", args[requiresBuildRuleArgIdx], t.AddRequire)
+	if arg := args[licencesBuildRuleArgIdx]; arg != None {
+		if expr, ok := arg.(pyString); ok {
+			// TODO(v18): Remove the replace here once all licences are expected to be SPDX expressions
+			t.Licence = strings.ReplaceAll(string(expr), " ", "-")
+		} else {
+			// TODO(v18): Remove all this once strings are the only option.
+			s.Assert(!s.state.Config.FeatureFlags.SPDXLicencesOnly, "The licences argument must be a string")
+			l, ok := asList(arg)
+			s.Assert(ok, "The licences argument must be a string or list (was %s)", arg.Type())
+			if len(l) == 1 {
+				// minor optimisation: avoid allocating a slice etc for the overwhelmingly common case of a single licence
+				str, ok := l[0].(pyString)
+				s.Assert(ok, "Items in the licences argument must be strings (was %s)", str.Type())
+				t.Licence = strings.ReplaceAll(string(str), " ", "-")
+			} else {
+				l2 := make([]string, len(l))
+				for i, x := range l {
+					str, ok := x.(pyString)
+					s.Assert(ok, "Items in the licences argument must be strings (was %s)", str.Type())
+					l2[i] = strings.ReplaceAll(string(str), " ", "-")
+				}
+				// Passing a list to Please is implicitly a series of alternative licences
+				t.Licence = strings.Join(l2, " OR ")
+			}
+		}
+	}
 	if vis, ok := asList(args[visibilityBuildRuleArgIdx]); ok && len(vis) != 0 {
 		if v, ok := vis[0].(pyString); ok && v == "PUBLIC" {
 			t.Visibility = core.WholeGraph

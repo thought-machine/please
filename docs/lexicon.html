@@ -951,6 +951,9 @@
       Adds a new licence to a target. The assumption (as usual) is that if
       multiple are added, they are options, so any one can be accepted.
     </p>
+    <p>
+      Deprecated in favour of <code>set_licence</code>.
+    </p>
 
     <div class="overflow-x-auto">
       <table class="table">
@@ -981,6 +984,45 @@
   </section>
 
   <section class="mt4">
+    <h3 class="title-3" id="set_licence">
+      set_licence
+    </h3>
+
+    <code class="code-signature">set_licence(target, licence)</code>
+
+    <p>
+      Sets the target's licence to the given SPDX expression. Note that no normalisation is done on it.
+    </p>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>target</td>
+            <td></td>
+            <td>str</td>
+            <td>Label of the target to add the licence to.</td>
+          </tr>
+          <tr>
+            <td>licence</td>
+            <td></td>
+            <td>str</td>
+            <td>SPDX expression defining licensing of the target</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mt4">
     <h3 class="title-3" id="get_licences">
       get_licences
     </h3>
@@ -989,6 +1031,9 @@
 
     <p>
       Returns all the licences that are currently known to apply to a target.
+    </p>
+    <p>
+      Deprecated in favour of get_licence.
     </p>
 
     <div class="overflow-x-auto">
@@ -1007,6 +1052,39 @@
             <td></td>
             <td>str</td>
             <td>Label of the target to get licences for.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mt4">
+    <h3 class="title-3" id="get_licence">
+      get_licence
+    </h3>
+
+    <code class="code-signature">get_licence(target)</code>
+
+    <p>
+      Returns the licence expression of the given target.
+    </p>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Argument</th>
+            <th>Default</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>target</td>
+            <td></td>
+            <td>str</td>
+            <td>Label of the target to get the licence expression for.</td>
           </tr>
         </tbody>
       </table>

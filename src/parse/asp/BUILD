@@ -12,6 +12,7 @@ go_library(
         "///third_party/go/github.com_Masterminds_semver_v3//:v3",
         "///third_party/go/github.com_manifoldco_promptui//:promptui",
         "///third_party/go/github.com_please-build_gcfg//types",
+        "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
         "//src/cli",
         "//src/cli/logging",
         "//src/cmap",

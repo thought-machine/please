@@ -15,6 +15,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
+	"github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -23,6 +24,8 @@ import (
 
 // A nativeFunc is a function that implements a builtin function natively.
 type nativeFunc func(*scope, []pyObject) pyObject
+
+var normaliseLicence = deferredregex.DeferredRegex{Re: `[ (),]`}
 
 // registerBuiltins sets up the "special" builtins that map to native code.
 func registerBuiltins(s *scope) {
@@ -70,7 +73,9 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "add_entry_point", addEntryPoint)
 	setNativeCode(s, "get_entry_points", getEntryPoints)
 	setNativeCode(s, "add_licence", addLicence)
+	setNativeCode(s, "set_licence", setLicence)
 	setNativeCode(s, "get_licences", getLicences)
+	setNativeCode(s, "get_licence", getLicence)
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
@@ -1314,14 +1319,31 @@ func getEntryPoints(s *scope, args []pyObject) pyObject {
 
 // addLicence adds a licence to a target.
 func addLicence(s *scope, args []pyObject) pyObject {
+	s.Assert(!s.state.Config.FeatureFlags.SPDXLicencesOnly, "The add_licence builtin has been replaced with set_licence")
 	target := getTargetPost(s, string(args[0].(pyString)))
-	target.AddLicence(string(args[1].(pyString)))
+	if target.Licence != "" {
+		target.Licence += " OR "
+	}
+	target.Licence += normaliseLicence.ReplaceAllString(strings.TrimSpace(string(args[1].(pyString))), "-")
+	return None
+}
+
+// setLicence sets the target's licence to the given string. Note that it must be a valid SPDX identifier.
+func setLicence(s *scope, args []pyObject) pyObject {
+	target := getTargetPost(s, string(args[0].(pyString)))
+	target.Licence += string(args[1].(pyString))
 	return None
 }
 
 // getLicences returns the licences for a single target.
 func getLicences(s *scope, args []pyObject) pyObject {
-	return fromStringList(getTargetPost(s, string(args[0].(pyString))).Licences)
+	s.Assert(!s.state.Config.FeatureFlags.SPDXLicencesOnly, "The get_licences builtin has been replaced with get_licence")
+	return pyList{pyString(getTargetPost(s, string(args[0].(pyString))).Licence)}
+}
+
+// getLicence returns the licence for a single target.
+func getLicence(s *scope, args []pyObject) pyObject {
+	return pyString(getTargetPost(s, string(args[0].(pyString))).Licence)
 }
 
 // getCommand gets the command of a target, optionally for a configuration.
