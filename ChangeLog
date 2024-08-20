@@ -1,3 +1,7 @@
+Version 17.10.2
+---------------
+    * Revert change to filename auto-completion from 17.10.0 (#3229)
+
 Version 17.10.1
 ---------------
     * Improve internal comparison of subrepo structures, resolving a "found multiple definitions for
