@@ -1,3 +1,7 @@
+Version 17.10.3
+---------------
+    * Further improve internal comparison of subrepo structures
+
 Version 17.10.2
 ---------------
     * Revert change to filename auto-completion from 17.10.0 (#3229)
