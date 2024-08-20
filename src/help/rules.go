@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/thought-machine/please/rules"
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -21,7 +22,7 @@ var log = logging.Log
 //
 //	a) all builtin rules if no files are passed, or
 //	b) all rules in the given files.
-func PrintRuleArgs(files []string) {
+func PrintRuleArgs(files cli.StdinStrings) {
 	var funcMap map[string]*asp.Statement
 	if len(files) > 0 {
 		log.Debugf("Got some files")
@@ -118,7 +119,7 @@ func getFunctionsFromState(state *core.BuildState) map[string]*asp.Statement {
 	return AllBuiltinFunctions(state)
 }
 
-func getFunctionsFromFiles(files []string) map[string]*asp.Statement {
+func getFunctionsFromFiles(files cli.StdinStrings) map[string]*asp.Statement {
 	state := newState()
 	p := asp.NewParser(state)
 	return parseFilesForFunctions(p, files)
