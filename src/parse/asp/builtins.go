@@ -1343,12 +1343,18 @@ func getCommand(s *scope, args []pyObject) pyObject {
 
 // valueAsJSON returns a JSON-formatted string representation of a plz value.
 func valueAsJSON(s *scope, args []pyObject) pyObject {
-	js, err := json.Marshal(args[0])
+	var bs []byte
+	var err error
+	if args[1].(pyBool) {
+		bs, err = json.MarshalIndent(args[0], "", "  ")
+	} else {
+		bs, err = json.Marshal(args[0])
+	}
 	if err != nil {
 		s.Error("Could not marshal object as JSON")
 		return None
 	}
-	return pyString(js)
+	return pyString(bs)
 }
 
 // setCommand sets the command of a target, optionally for a configuration.
