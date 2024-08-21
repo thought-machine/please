@@ -283,8 +283,11 @@ def licenses(licences):
     package(default_licences = licences)
 
 
-def json(value) -> str:
-    """Returns a JSON-formatted representation of a plz value"""
+def json(value, pretty=False) -> str:
+    """Returns a JSON-formatted representation of a plz value.
+    
+    If pretty is true, the JSON will be pretty-printed with 2 spaces of indentation per level.
+    """
     pass
 
 
