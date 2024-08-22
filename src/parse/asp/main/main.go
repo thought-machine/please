@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -191,17 +192,20 @@ func cleanup(ast string) string {
 }
 
 func mustLoadBuildDefsDir(state *core.BuildState, dirname string) {
-	dir, err := os.ReadDir(dirname)
-	if err != nil {
-		log.Fatalf("%s", err)
-	}
-	for _, fi := range dir {
-		if strings.HasSuffix(fi.Name(), ".build_defs") {
-			t := core.NewBuildTarget(core.NewBuildLabel(dirname, strings.TrimSuffix(fi.Name(), ".build_defs")))
-			t.AddOutput(fi.Name())
+	err := filepath.WalkDir(dirname, func(path string, de iofs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !de.IsDir() && filepath.Ext(path) == ".build_defs" {
+			t := core.NewBuildTarget(core.NewBuildLabel(filepath.Dir(path), strings.TrimSuffix(de.Name(), ".build_defs")))
+			t.AddOutput(de.Name())
 			t.SetState(core.Built)
 			state.Graph.AddTarget(t)
 		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("%s", err)
 	}
 }
 

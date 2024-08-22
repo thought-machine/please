@@ -2,6 +2,7 @@ package help
 
 import (
 	"encoding/json"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -74,15 +75,17 @@ func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
 		}
 	}
 	for _, dir := range state.Config.Parse.BuildDefsDir {
-		if files, err := os.ReadDir(dir); err == nil {
-			for _, file := range files {
-				if !file.IsDir() {
-					if stmts, err := p.ParseFileOnly(filepath.Join(dir, file.Name())); err == nil {
-						addAllFunctions(m, stmts, false)
-					}
+		filepath.WalkDir(dir, func(path string, de iofs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !de.IsDir() {
+				if stmts, err := p.ParseFileOnly(path); err == nil {
+					addAllFunctions(m, stmts, false)
 				}
 			}
-		}
+			return nil
+		})
 	}
 	return m
 }

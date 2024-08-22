@@ -5,7 +5,6 @@ import (
 	"fmt"
 	iofs "io/fs"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -254,27 +253,32 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
 		fs := subrepo.FS()
-		dirEntries, err := iofs.ReadDir(fs, dir)
-		if err != nil {
-			log.Warningf("Failed to read %s: %s", dir, err)
-		}
-		for _, entry := range dirEntries {
-			if entry.IsDir() {
-				continue
+		err := iofs.WalkDir(fs, dir, func(path string, de iofs.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
 
-			path := filepath.Join(dir, entry.Name())
+			if de.IsDir() {
+				return nil
+			}
+
 			bs, err := iofs.ReadFile(fs, path)
 			if err != nil {
 				log.Warningf("Failed to read %s: %s", path, err)
+				return nil
 			}
 
 			stmts, err := p.ParseData(bs, path)
 			if err != nil {
 				log.Warningf("Failed to parse %s: %s", path, err)
+				return nil
 			}
 
 			addAllFunctions(ret, stmts, false)
+			return nil
+		})
+		if err != nil {
+			log.Warningf("Failed to read %s: %s", dir, err)
 		}
 	}
 
