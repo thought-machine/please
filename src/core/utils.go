@@ -374,7 +374,7 @@ func PrepareSourcePair(pair SourcePair) error {
 
 // PrepareRuntimeDir prepares a directory with a target's runtime data for a command to be run on.
 func PrepareRuntimeDir(state *BuildState, target *BuildTarget, dir string) error {
-	if err := fs.ForceRemove(state.ProcessExecutor, dir); err != nil {
+	if err := fs.RemoveAll(dir); err != nil {
 		return err
 	}
 

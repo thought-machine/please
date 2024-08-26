@@ -10,6 +10,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // clean checks for any stale versions in the download directory and wipes them out if OK.

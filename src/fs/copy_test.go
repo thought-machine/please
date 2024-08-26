@@ -38,7 +38,7 @@ func TestLink(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			dir, err := os.MkdirTemp("", "testlink")
 			require.NoError(t, err)
-			defer fs.RemoveAll(dir)
+			defer os.RemoveAll(dir)
 
 			src := filepath.Join(dir, "src")
 			if tt.srcExists {

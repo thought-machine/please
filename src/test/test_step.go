@@ -290,7 +290,7 @@ func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage
 	if target.Test.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
-			if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
+			if err := fs.RemoveAll(target.TestDir(run)); err != nil {
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
