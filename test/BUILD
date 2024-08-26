@@ -471,12 +471,13 @@ gentest(
     test_cmd = " && ".join([
         "mkdir subdir",
         "touch subdir/file.txt",
+        "chmod -w subdir/file.txt",
         "chmod -w subdir",
     ]),
-)    
+)
 
 plz_e2e_test(
     name = "rm_ro_test",
-    cmd = "plz test //test:rm_ro_test_case",
+    cmd = "plz test --rerun //test:rm_ro_test_case",
     expect_output_doesnt_contain = "ERROR",
 )

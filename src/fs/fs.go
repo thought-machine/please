@@ -2,6 +2,7 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -189,17 +190,22 @@ func copyFile(from, to string) (err error) {
 // RemoveAll will try and remove the path with `os.RemoveAll`; if that fails with a permission error,
 // it will attempt to adjust permissions to make things writable, then remove them.
 func RemoveAll(path string) error {
-	if err := os.RemoveAll(path); err == nil || err != os.ErrPermission {
-		return nil
+	if err := os.RemoveAll(path); err == nil || !errors.Is(err.(*os.PathError).Err, os.ErrPermission) {
+		return err
 	} else if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		const writable = 0o220
 		if err != nil {
 			return err
-		} else if d.IsDir() {
-
+		} else if d.IsDir() && d.Type()&writable != writable {
+			if info, err := d.Info(); err != nil {
+				return fmt.Errorf("could not read info for %s: %w", path, err)
+			} else if err := os.Chmod(path, info.Mode()|writable); err != nil {
+				return fmt.Errorf("could not make %s writable: %w", path, err)
+			}
 		}
 		return nil
 	}); err != nil {
-		return fmt.Errorf("failed to remove directory %s (could not make writable: %w", path, err)
+		return fmt.Errorf("failed to remove directory %s: %w", path, err)
 	}
 	return os.RemoveAll(path)
 }
