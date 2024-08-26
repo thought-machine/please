@@ -97,7 +97,7 @@ func deleteDir(dir string, async bool) error {
 	}
 	if async {
 		// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
-		// Hence why we're using rm rather than fork() + os.RemoveAll.
+		// Hence why we're using rm rather than fork() + fs.RemoveAll.
 		_, err = syscall.ForkExec(rm, []string{rm, "-rf", newDir}, nil)
 		return err
 	}

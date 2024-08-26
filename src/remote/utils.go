@@ -570,7 +570,7 @@ func (c *Client) targetPlatformProperties(target *core.BuildTarget) *pb.Platform
 func removeOutputs(target *core.BuildTarget) error {
 	outDir := target.OutDir()
 	for _, out := range target.Outputs() {
-		if err := os.RemoveAll(filepath.Join(outDir, out)); err != nil {
+		if err := fs.RemoveAll(filepath.Join(outDir, out)); err != nil {
 			return fmt.Errorf("Failed to remove output for %s: %s", target, err)
 		}
 	}

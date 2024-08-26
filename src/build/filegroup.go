@@ -83,7 +83,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		return false, nil
 	}
 	// Must actually build the file.
-	if err := os.RemoveAll(to); err != nil {
+	if err := fs.RemoveAll(to); err != nil {
 		return true, err
 	} else if err := fs.EnsureDir(to); err != nil {
 		return true, err

@@ -743,7 +743,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 			log.Debug("Checking %s vs. %s, hashes match", tmpOutput, realOutput)
 			return false, nil
 		}
-		if err := os.RemoveAll(realOutput); err != nil {
+		if err := fs.RemoveAll(realOutput); err != nil {
 			return true, err
 		}
 	}
@@ -773,7 +773,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 func RemoveOutputs(target *core.BuildTarget) error {
 	for _, output := range target.Outputs() {
 		out := filepath.Join(target.OutDir(), output)
-		if err := os.RemoveAll(out); err != nil {
+		if err := fs.RemoveAll(out); err != nil {
 			return err
 		} else if err := fs.EnsureDir(out); err != nil {
 			return err
