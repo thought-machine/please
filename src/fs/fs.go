@@ -190,7 +190,7 @@ func copyFile(from, to string) (err error) {
 // RemoveAll will try and remove the path with `os.RemoveAll`; if that fails with a permission error,
 // it will attempt to adjust permissions to make things writable, then remove them.
 func RemoveAll(path string) error {
-	if err := os.RemoveAll(path); err == nil || !errors.Is(err.(*os.PathError).Err, os.ErrPermission) {
+	if err := os.RemoveAll(path); err == nil || !errors.Is(err, os.ErrPermission) {
 		return err
 	} else if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 		const writable = 0o220
