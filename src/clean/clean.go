@@ -68,7 +68,7 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget) {
 func clean(path string) {
 	if core.PathExists(path) {
 		log.Info("Cleaning path %s", path)
-		if err := deleteDir(path, false); err != nil {
+		if err := fs.RemoveAll(path); err != nil {
 			log.Fatalf("Failed to clean path %s: %s", path, err)
 		}
 	}
@@ -81,10 +81,6 @@ func clean(path string) {
 // Conversely there is obviously no guarantee about at what point it will actually cease to
 // be on disk any more.
 func AsyncDeleteDir(dir string) error {
-	return deleteDir(dir, true)
-}
-
-func deleteDir(dir string, async bool) error {
 	rm, err := exec.LookPath("rm")
 	if err != nil {
 		return err
@@ -95,16 +91,9 @@ func deleteDir(dir string, async bool) error {
 	if err != nil {
 		return err
 	}
-	if async {
-		// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
-		// Hence why we're using rm rather than fork() + fs.RemoveAll.
-		_, err = syscall.ForkExec(rm, []string{rm, "-rf", newDir}, nil)
-		return err
-	}
-	out, err := exec.Command(rm, "-rf", newDir).CombinedOutput()
-	if err != nil {
-		log.Error("Failed to remove directory: %s", string(out))
-	}
+	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
+	// Hence why we're using rm rather than fork() + fs.RemoveAll.
+	_, err = syscall.ForkExec(rm, []string{rm, "-rf", newDir}, nil)
 	return err
 }
 
