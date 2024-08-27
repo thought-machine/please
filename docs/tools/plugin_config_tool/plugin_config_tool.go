@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -72,16 +73,18 @@ func getRules(buildDefsDirs []string) *rules.Rules {
 
 	var defs []string
 	for _, dir := range buildDefsDirs {
-		entries, err := os.ReadDir(dir)
+		err := filepath.WalkDir(dir, func(path string, de fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !de.IsDir() && filepath.Ext(path) == ".build_defs" {
+				defs = append(defs, path)
+			}
+			return nil
+		})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
-		}
-
-		for _, e := range entries {
-			if filepath.Ext(e.Name()) == ".build_defs" {
-				defs = append(defs, filepath.Join("build_defs", e.Name()))
-			}
 		}
 	}
 
