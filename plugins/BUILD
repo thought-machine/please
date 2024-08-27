@@ -19,6 +19,5 @@ plugin_repo(
 plugin_repo(
     name = "python",
     plugin = "python-rules",
-    owner = "peterebden",
-    revision = "f3781f0",
+    revision = "v1.7.3",
 )
