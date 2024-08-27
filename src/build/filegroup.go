@@ -83,7 +83,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 		return false, nil
 	}
 	// Must actually build the file.
-	if err := os.RemoveAll(to); err != nil {
+	if err := fs.RemoveAll(to); err != nil {
 		return true, err
 	} else if err := fs.EnsureDir(to); err != nil {
 		return true, err
@@ -103,7 +103,7 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 // We don't force this to be done in bash to avoid errors with maximum command lengths,
 // and it's actually quite fiddly to get just so there.
 func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, error) {
-	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
+	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return true, err
 	}
 	changed := false

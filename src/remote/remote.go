@@ -535,7 +535,7 @@ func (c *Client) DownloadInputs(target *core.BuildTarget, targetDir string, isTe
 		return fmt.Errorf("could not calculate digest for directory proto: %w", err)
 	}
 
-	if err := os.RemoveAll(targetDir); err != nil {
+	if err := fs.RemoveAll(targetDir); err != nil {
 		return fmt.Errorf("could not delete target directory %q: %w", targetDir, err)
 	}
 
@@ -548,7 +548,7 @@ func (c *Client) DownloadInputs(target *core.BuildTarget, targetDir string, isTe
 
 // moveTmpFilesToOutDir moves files from the target tmp dir to the out dir, handling output directories as well
 func moveTmpFilesToOutDir(target *core.BuildTarget) error {
-	defer os.RemoveAll(target.TmpDir())
+	defer fs.RemoveAll(target.TmpDir())
 
 	// Copy the contents of the output_dirs to the target output dir
 	for _, outDir := range target.OutputDirectories {
@@ -558,7 +558,7 @@ func moveTmpFilesToOutDir(target *core.BuildTarget) error {
 		}
 
 		// Remove the dir so it doesn't get picked up as an output in the next step
-		if err := os.RemoveAll(dir); err != nil {
+		if err := fs.RemoveAll(dir); err != nil {
 			return err
 		}
 	}

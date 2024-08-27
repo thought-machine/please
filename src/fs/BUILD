@@ -1,17 +1,6 @@
 go_library(
     name = "fs",
-    srcs = [
-        "attr.go",
-        "copy.go",
-        "executable.go",
-        "fs.go",
-        "glob.go",
-        "hash.go",
-        "home.go",
-        "iofs.go",
-        "sort.go",
-        "walk.go",
-    ],
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -19,22 +8,12 @@ go_library(
         "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
         "///third_party/go/github.com_pkg_xattr//:xattr",
         "//src/cli/logging",
-        "//src/process",
     ],
 )
 
 go_test(
     name = "fs_test",
-    srcs = [
-        "copy_test.go",
-        "fs_test.go",
-        "glob_integration_test.go",
-        "glob_test.go",
-        "hash_benchmark_test.go",
-        "hash_test.go",
-        "home_test.go",
-        "sort_test.go",
-    ],
+    srcs = glob(["*_test.go"], exclude=["glob_integration_test.go", "*_benchmark_test.go"]),
     data = ["test_data"],
     deps = [
         ":fs",

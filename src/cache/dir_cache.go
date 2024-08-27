@@ -36,7 +36,7 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []strin
 	cacheDir := cache.getPath(target, key, "")
 	tmpDir := cache.getFullPath(target, key, "", "=")
 	cache.markDir(cacheDir, 0)
-	if err := os.RemoveAll(cacheDir); err != nil {
+	if err := fs.RemoveAll(cacheDir); err != nil {
 		log.Warning("Failed to remove existing cache directory %s: %s", cacheDir, err)
 		return
 	}
@@ -64,7 +64,7 @@ func (cache *dirCache) storeCompressed(target *core.BuildTarget, filename string
 	log.Debug("Storing %s: %s in dir cache...", target.Label, filename)
 	if err := cache.storeCompressed2(target, filename, files); err != nil {
 		log.Warning("Failed to store files in cache: %s", err)
-		os.RemoveAll(filename) // Just a best-effort removal at this point
+		fs.RemoveAll(filename) // Just a best-effort removal at this point
 		return 0
 	}
 	// It's too hard to tell from a tar.Writer how big the resulting tarball is. Easier to just re-stat it here.
@@ -153,7 +153,7 @@ func (cache *dirCache) ensureStoreReady(filename string) error {
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, core.DirPermissions); err != nil {
 		return err
-	} else if err := os.RemoveAll(filename); err != nil {
+	} else if err := fs.RemoveAll(filename); err != nil {
 		return err
 	}
 	return nil
@@ -285,7 +285,7 @@ func (cache *dirCache) ensureRetrieveReady(target *core.BuildTarget, out string)
 	}
 	// It seems to be quite important that we unlink the existing file first to avoid ETXTBSY errors
 	// in cases where we're running an existing binary (as Please does during bootstrap, for example).
-	if err := os.RemoveAll(fullOut); err != nil {
+	if err := fs.RemoveAll(fullOut); err != nil {
 		return "", err
 	}
 	return fullOut, nil
@@ -293,7 +293,7 @@ func (cache *dirCache) ensureRetrieveReady(target *core.BuildTarget, out string)
 
 func (cache *dirCache) Clean(target *core.BuildTarget) {
 	// Remove for all possible keys, so can't get getPath here
-	if err := os.RemoveAll(filepath.Join(cache.Dir, target.Label.PackageName, target.Label.Name)); err != nil {
+	if err := fs.RemoveAll(filepath.Join(cache.Dir, target.Label.PackageName, target.Label.Name)); err != nil {
 		log.Warning("Failed to remove artifacts for %s from dir cache: %s", target.Label, err)
 	}
 }
@@ -448,7 +448,7 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 			log.Errorf("Couldn't rename %s: %s", entry.Path, err)
 			continue
 		}
-		if err := os.RemoveAll(newPath); err != nil {
+		if err := fs.RemoveAll(newPath); err != nil {
 			log.Errorf("Couldn't remove %s: %s", newPath, err)
 			continue
 		}

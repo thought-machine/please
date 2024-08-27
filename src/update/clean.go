@@ -10,6 +10,7 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // clean checks for any stale versions in the download directory and wipes them out if OK.
@@ -40,7 +41,7 @@ func clean(config *core.Configuration, manualUpdate bool) {
 	sort.Sort(versions)
 	for _, version := range versions[:numToClean] {
 		log.Notice("Cleaning old version %s...", version)
-		if err := os.RemoveAll(filepath.Join(config.Please.Location, version.String())); err != nil {
+		if err := fs.RemoveAll(filepath.Join(config.Please.Location, version.String())); err != nil {
 			log.Error("Couldn't remove %s: %s", version, err)
 		}
 	}

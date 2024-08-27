@@ -76,7 +76,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	// If the destination exists and the user passed --force, remove it to force a redownload.
 	newDir := filepath.Join(config.Please.Location, config.Please.Version.VersionString())
 	if forceUpdate && core.PathExists(newDir) {
-		if err := os.RemoveAll(newDir); err != nil {
+		if err := fs.RemoveAll(newDir); err != nil {
 			log.Fatalf("Failed to remove existing directory: %s", err)
 		}
 	}
@@ -317,7 +317,7 @@ func linkNewFile(config *core.Configuration, file string) {
 	newDir := filepath.Join(config.Please.Location, config.Please.Version.VersionString())
 	globalFile := filepath.Join(config.Please.Location, file)
 	downloadedFile := filepath.Join(newDir, file)
-	if err := os.RemoveAll(globalFile); err != nil {
+	if err := fs.RemoveAll(globalFile); err != nil {
 		log.Fatalf("Failed to remove existing file %s: %s", globalFile, err)
 	}
 	if err := os.Symlink(downloadedFile, globalFile); err != nil {
@@ -335,7 +335,7 @@ func fileMode(filename string) os.FileMode {
 
 func cleanDir(newDir string) {
 	log.Notice("Attempting to clean directory %s", newDir)
-	if err := os.RemoveAll(newDir); err != nil {
+	if err := fs.RemoveAll(newDir); err != nil {
 		log.Errorf("Failed to clean %s: %s", newDir, err)
 	}
 }

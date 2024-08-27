@@ -513,7 +513,7 @@ var buildFunctions = map[string]func() int{
 			opts.BuildFlags.Config = "cover"
 		}
 		targets, args := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
-		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
+		fs.RemoveAll(string(opts.Cover.CoverageResultsFile))
 		success, state := doTest(targets, args, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension, state.Config.Cover.ExcludeGlob)
@@ -1091,8 +1091,8 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 }
 
 func doTest(targets []core.BuildLabel, args []string, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
-	os.RemoveAll(string(surefireDir))
-	os.RemoveAll(string(resultsFile))
+	fs.RemoveAll(string(surefireDir))
+	fs.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	opts.Test.StateArgs = args
 	success, state := runBuild(targets, true, true, false)

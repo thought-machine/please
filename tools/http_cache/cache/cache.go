@@ -43,7 +43,7 @@ func (c *Cache) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 func (c *Cache) store(uri string, data io.Reader) error {
 	path := filepath.Join(c.Dir, uri)
-	if err := os.RemoveAll(uri); err != nil {
+	if err := fs.RemoveAll(uri); err != nil {
 		return err
 	}
 

@@ -290,7 +290,7 @@ func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage
 	if target.Test.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
-			if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
+			if err := fs.RemoveAll(target.TestDir(run)); err != nil {
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
@@ -517,13 +517,13 @@ func parseCoverageFile(state *core.BuildState, target *core.BuildTarget, coverag
 
 // RemoveTestOutputs removes any cached test or coverage result files for a target.
 func RemoveTestOutputs(target *core.BuildTarget) error {
-	if err := os.RemoveAll(target.TestResultsFile()); err != nil {
+	if err := fs.RemoveAll(target.TestResultsFile()); err != nil {
 		return err
-	} else if err := os.RemoveAll(target.CoverageFile()); err != nil {
+	} else if err := fs.RemoveAll(target.CoverageFile()); err != nil {
 		return err
 	}
 	for _, output := range target.Test.Outputs {
-		if err := os.RemoveAll(filepath.Join(target.OutDir(), output)); err != nil {
+		if err := fs.RemoveAll(filepath.Join(target.OutDir(), output)); err != nil {
 			return err
 		}
 	}
