@@ -23,6 +23,7 @@ func TestAsyncDeleteDir(t *testing.T) {
 }
 
 func dirExists(t *testing.T, name string) bool {
+	t.Helper()
 	if fs.PathExists(name) {
 		return true
 	}
