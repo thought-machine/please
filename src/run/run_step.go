@@ -191,6 +191,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Dir = dir
+		cmd.Env = env
 		return nil, nil, toExitError(cmd.Start(), args, nil)
 	}
 	// Run as a normal subcommand.
