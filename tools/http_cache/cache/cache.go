@@ -7,12 +7,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/op/go-logging.v1"
-
 	"github.com/thought-machine/please/src/fs"
+	logger "github.com/thought-machine/please/src/cli/logging"
 )
 
-var log = logging.MustGetLogger("httpcache")
+var log = logger.Log
 
 // Cache implements a http handler for caching files. Effectively a read/write http.FileSystem
 type Cache struct {
