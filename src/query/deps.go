@@ -37,19 +37,21 @@ func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done 
 			continue // target is filtered out
 		}
 		done[dep] = true
-		if hidden || !dep.HasParent() {
-			// dep is to be printed; either we're printing hidden deps or it has no parent (i.e. is not hidden)
-			if formatdot {
-				printTargetDot(out, dep, target)
+		for _, l := range dep.ProvideFor(target) {
+			if dep := state.Graph.TargetOrDie(l); hidden || !dep.HasParent() {
+				// dep is to be printed; either we're printing hidden deps or it has no parent (i.e. is not hidden)
+				if formatdot {
+					printTargetDot(out, dep, target)
+				} else {
+					printTarget(out, dep, currentLevel)
+				}
+				deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
+			} else if dep.Label.Parent() == target.Label.Parent() {
+				// This is a hidden dependency of the current target, recurse without increasing depth
+				deps(out, state, dep, done, targetLevel, currentLevel, hidden, formatdot)
 			} else {
-				printTarget(out, dep, currentLevel)
+				deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
 			}
-			deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
-		} else if dep.Label.Parent() == target.Label.Parent() {
-			// This is a hidden dependency of the current target, recurse without increasing depth
-			deps(out, state, dep, done, targetLevel, currentLevel, hidden, formatdot)
-		} else {
-			deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
 		}
 	}
 }
