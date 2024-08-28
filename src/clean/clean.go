@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"syscall"
 
@@ -81,19 +80,20 @@ func clean(path string) {
 // Conversely there is obviously no guarantee about at what point it will actually cease to
 // be on disk any more.
 func AsyncDeleteDir(dir string) error {
-	rm, err := exec.LookPath("rm")
-	if err != nil {
-		return err
-	} else if !fs.PathExists(dir) {
+	if !fs.PathExists(dir) {
 		return nil // not an error, just don't need to do anything.
+	}
+	exec, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("Failed to determine executable path: %w", err)
 	}
 	newDir, err := moveDir(dir)
 	if err != nil {
 		return err
 	}
-	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
-	// Hence why we're using rm rather than fork() + fs.RemoveAll.
-	_, err = syscall.ForkExec(rm, []string{rm, "-rf", newDir}, nil)
+	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay,
+	// so we re-execute ourselves with a specific command that will remove this.
+	_, err = syscall.ForkExec(exec, []string{exec, "clean", "--rm", newDir}, nil)
 	return err
 }
 
