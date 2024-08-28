@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/thought-machine/please/src/fs"
 	logger "github.com/thought-machine/please/src/cli/logging"
+	"github.com/thought-machine/please/src/fs"
 )
 
 var log = logger.Log
