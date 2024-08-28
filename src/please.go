@@ -1419,12 +1419,6 @@ func initBuild(args []string) string {
 		// Shortcut these as they're special commands used for please sandboxing
 		// going through the normal init path would be too slow
 		return args[1]
-	} else if opts.Clean.Rm != "" {
-		// Avoid initialising logging so we don't create an additional file.
-		if err := fs.RemoveAll(opts.Clean.Rm); err != nil {
-			log.Fatalf("%s", err)
-		}
-		os.Exit(0)
 	}
 	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
 		cli.InitLogging(cli.MinVerbosity)
@@ -1467,6 +1461,12 @@ func initBuild(args []string) string {
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
 		fmt.Printf("%s\n", string(assets.PlzComplete))
+		os.Exit(0)
+	} else if opts.Clean.Rm != "" {
+		// Avoid initialising logging so we don't create an additional file.
+		if err := fs.RemoveAll(opts.Clean.Rm); err != nil {
+			log.Fatalf("%s", err)
+		}
 		os.Exit(0)
 	}
 	// Read the config now
