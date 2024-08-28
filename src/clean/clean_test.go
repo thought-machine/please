@@ -2,6 +2,8 @@ package clean
 
 import (
 	"os"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,11 +17,28 @@ func TestAsyncDeleteDir(t *testing.T) {
 	assert.NoError(t, err)
 	err = AsyncDeleteDir("test_dir")
 	assert.NoError(t, err)
-	for i := 0; i < 100; i++ {
-		if !fs.PathExists("test_dir") {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
+	assert.Eventually(t, func() bool {
+		return !dirExists(t, "test_dir")
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func dirExists(t *testing.T, name string) bool {
+	if fs.PathExists(name) {
+		return true
 	}
-	assert.False(t, fs.PathExists("test_dir"))
+	// Check it isn't still there as a .plz_clean dir
+	entries, err := os.ReadDir(".")
+	assert.NoError(t, err)
+	return slices.ContainsFunc(entries, func(entry os.DirEntry) bool {
+		return strings.Contains(entry.Name(), ".plz_clean")
+	})
+}
+
+func TestMain(m *testing.M) {
+	// This mimics what 'plz clean --rm x' does.
+	if slices.Contains(os.Args, "--rm") {
+		fs.RemoveAll(os.Args[len(os.Args)-1])
+		return
+	}
+	os.Exit(m.Run())
 }

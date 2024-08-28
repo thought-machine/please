@@ -247,6 +247,7 @@ var opts struct {
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		Rm           string   `long:"rm" hidden:"true" description:"Removes a specific directory. Only used internally to do async removals."`
 		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
@@ -664,6 +665,12 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"clean": func() int {
+		if opts.Clean.Rm != "" {
+			if err := fs.RemoveAll(opts.Clean.Rm); err != nil {
+				log.Fatalf("%s", err)
+			}
+			return 0
+		}
 		config.Cache.DirClean = false // don't run the normal cleaner
 		if len(opts.Clean.Args.Targets) == 0 && core.InitialPackage()[0].PackageName == "" {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
