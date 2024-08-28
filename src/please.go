@@ -665,12 +665,6 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"clean": func() int {
-		if opts.Clean.Rm != "" {
-			if err := fs.RemoveAll(opts.Clean.Rm); err != nil {
-				log.Fatalf("%s", err)
-			}
-			return 0
-		}
 		config.Cache.DirClean = false // don't run the normal cleaner
 		if len(opts.Clean.Args.Targets) == 0 && core.InitialPackage()[0].PackageName == "" {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
@@ -1425,6 +1419,12 @@ func initBuild(args []string) string {
 		// Shortcut these as they're special commands used for please sandboxing
 		// going through the normal init path would be too slow
 		return args[1]
+	} else if opts.Clean.Rm != "" {
+		// Avoid initialising logging so we don't create an additional file.
+		if err := fs.RemoveAll(opts.Clean.Rm); err != nil {
+			log.Fatalf("%s", err)
+		}
+		os.Exit(0)
 	}
 	if _, present := os.LookupEnv("GO_FLAGS_COMPLETION"); present {
 		cli.InitLogging(cli.MinVerbosity)
