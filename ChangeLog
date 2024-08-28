@@ -1,3 +1,14 @@
+Version 17.11.0
+---------------
+    * Skip special handling of experimental directories when inside a subrepo (#3242)
+    * Detach codepath adds env vars (#3241)
+    * Stop invoking 'rm' as a subprocess (#3238)
+    * Update Python plugin + some deps (#3227)
+    * Deal with require/provide in query deps (#3237)
+    * Implement force deletion for RemoveAll (#3236)
+    * Make Please traverse build defs dirs recursively to find build defs (#3234)
+    * Add support for pretty-printing to the `json()` built-in (#3233)
+
 Version 17.10.3
 ---------------
     * Further improve internal comparison of subrepo structures
