@@ -384,9 +384,9 @@ func convertError(err *rpcstatus.Status) error {
 func wrap(err error, msg string, args ...interface{}) error {
 	s, ok := status.FromError(err)
 	if !ok {
-		return fmt.Errorf(fmt.Sprintf(msg, args...) + ": " + err.Error())
+		return fmt.Errorf(fmt.Sprintf(msg, args...) + ": " + err.Error()) //nolint:govet
 	}
-	return status.Errorf(s.Code(), fmt.Sprintf(msg, args...)+": "+s.Message())
+	return status.Errorf(s.Code(), fmt.Sprintf(msg, args...)+": "+s.Message()) //nolint:govet
 }
 
 // timeout returns either a build or test timeout from a target.

@@ -1009,7 +1009,7 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 			if dependent != OriginalTarget {
 				msg += fmt.Sprintf(" (depended on by %s)", dependent)
 			}
-			return fmt.Errorf(msg + suggestTargets(pkg, label, dependent))
+			return fmt.Errorf("%s", msg+suggestTargets(pkg, label, dependent))
 		}
 	}
 	if state.ParsePackageOnly && !mode.IsForSubinclude() {

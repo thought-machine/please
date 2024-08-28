@@ -303,21 +303,21 @@ func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage
 		resultMsg = "Tests failed"
 		for _, testCase := range target.Test.Results.TestCases {
 			if len(testCase.Failures()) > 0 {
-				resultErr = fmt.Errorf(testCase.Failures()[0].Failure.Message)
+				resultErr = fmt.Errorf("%s", testCase.Failures()[0].Failure.Message)
 			}
 		}
 	} else if target.Test.Results.Errors() > 0 {
 		resultMsg = "Tests errored"
 		for _, testCase := range target.Test.Results.TestCases {
 			if len(testCase.Errors()) > 0 {
-				resultErr = fmt.Errorf(testCase.Errors()[0].Error.Message)
+				resultErr = fmt.Errorf("%s", testCase.Errors()[0].Error.Message)
 			}
 		}
 	} else {
 		resultErr = fmt.Errorf("unknown error")
 		resultMsg = "Something went wrong"
 	}
-	state.LogTestResult(target, run, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
+	state.LogTestResult(target, run, core.TargetTestFailed, target.Test.Results, coverage, resultErr, "%s", resultMsg)
 }
 
 func logTestSuccess(state *core.BuildState, target *core.BuildTarget, run int, results *core.TestSuite, coverage *core.TestCoverage) {
@@ -329,7 +329,7 @@ func logTestSuccess(state *core.BuildState, target *core.BuildTarget, run int, r
 	} else {
 		description = fmt.Sprintf("%d %s passed.", len(results.TestCases), tests)
 	}
-	state.LogTestResult(target, run, core.TargetTested, results, coverage, nil, description)
+	state.LogTestResult(target, run, core.TargetTested, results, coverage, nil, "%s", description)
 }
 
 func pluralise(word string, quantity int) string {
