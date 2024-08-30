@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"hash/adler32"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -41,32 +39,6 @@ var rotations = []string{
 	"rotate-315",
 }
 
-var pageTitles = map[string]string{
-	"acknowledgements.html":   "Acknowledgements",
-	"basics.html":             "Please basics",
-	"build_rules.html":        "Writing additional build rules",
-	"cache.html":              "Please caching system",
-	"commands.html":           "Please commands",
-	"config.html":             "Please config file reference",
-	"codelabs.html":           "Codelabs",
-	"cross_compiling.html":    "Cross-compiling",
-	"dependencies.html":       "Third-party dependencies",
-	"quickstart_dropoff.html": "What's next?",
-	"error.html":              "plz op...",
-	"faq.html":                "Please FAQ",
-	"index.html":              "Please",
-	"language.html":           "The Please BUILD language",
-	"lexicon.html":            "Please Lexicon",
-	"performance.html":        "Performance report",
-	"pleasings.html":          "Extra rules (aka. Pleasings)",
-	"plugins.html":            "Please plugins",
-	"post_build.html":         "Pre- and post-build functions",
-	"remote_builds.html":      "Remote build execution",
-	"require_provide.html":    "Require & Provide",
-	"quickstart.html":         "Please quickstart",
-	"tests.html":              "Testing with Please",
-}
-
 func mustRead(filename string) string {
 	b, err := os.ReadFile(filename)
 	if err != nil {
@@ -101,7 +73,8 @@ func mustHighlight(contents string) string {
 var opts struct {
 	In       string `long:"in" description:"The file to template"`
 	Filename string `short:"f" long:"file" description:"The final file name relative to the web root" default:""`
-	Template string `short:"t" long:"template" description:"The golang template to use"`
+	Template string `long:"template" description:"The golang template to use"`
+	Title    string `long:"title" description:"The title of the HTML document"`
 }
 
 func main() {
@@ -143,22 +116,12 @@ func main() {
 			return false
 		},
 	}
-	var title string
-	if filepath.Dir(opts.Filename) == "milestones" {
-		title = fmt.Sprintf("Please v%v", strings.TrimSuffix(filepath.Base(basename), ".html"))
-	} else {
-		t, present := pageTitles[opts.Filename]
-		if !present {
-			panic("missing title for " + opts.Filename)
-		}
-		title = t
-	}
 
 	data := struct {
 		Title, Header, Contents, Filename string
 		SideImages                        []int
 	}{
-		Title:    title,
+		Title:    opts.Title,
 		Header:   mustRead(opts.Template),
 		Contents: mustHighlight(mustRead(opts.In)),
 		Filename: opts.Filename,
