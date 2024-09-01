@@ -57,7 +57,7 @@ func (m *Map[K, V]) Add(key K, val V) bool {
 // AddOrGet either adds a new item (if the key doesn't exist, calling the given function to create it) or gets the existing one.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
 func (m *Map[K, V]) AddOrGet(key K, f func() V) (V, bool) {
-	return m.shards[m.hasher(key)&m.mask].LazySet(key, f, false)
+	return m.shards[m.hasher(key)&m.mask].LazySet(key, f)
 }
 
 // Set is the equivalent of `map[key] = val`.
@@ -131,19 +131,12 @@ func (s *shard[K, V]) Set(key K, val V, overwrite bool) (V, bool) {
 }
 
 // LazySet is like Set but calls the given function to construct the object only if needed.
-func (s *shard[K, V]) LazySet(key K, f func() V, overwrite bool) (V, bool) {
+func (s *shard[K, V]) LazySet(key K, f func() V) (V, bool) {
 	s.l.Lock()
 	defer s.l.Unlock()
 	if existing, present := s.m[key]; present {
 		if existing.Wait == nil {
-			old := existing.Val
-			if !overwrite {
-				return old, false // already added
-			}
-			val := f()
-			existing.Val = val
-			s.m[key] = awaitableValue[V]{Val: val}
-			return old, true
+			return existing.Val, false // already added
 		}
 		// Hasn't been added, but something is waiting for it to be.
 		s.m[key] = awaitableValue[V]{Val: f()}
