@@ -4,7 +4,7 @@ set -eu
 
 VERSION=$(cat VERSION)
 
-# Synchronises a folder with the aws and gcp buckets.
+# Synchronises a folder with the gcp bucket.
 release_folder() {
   local folder=$1
   local path=$2
