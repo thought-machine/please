@@ -9,4 +9,4 @@ class CoverageOutputTest(unittest.TestCase):
 
     def test_stuff(self):
         """Test that the flux capacitor is correctly calibrated."""
-        self.assertEquals(2, 2)
+        self.assertEqual(2, 2)
