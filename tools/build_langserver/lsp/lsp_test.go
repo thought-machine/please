@@ -280,7 +280,7 @@ func TestCompletion(t *testing.T) {
 				Label:            "//src/core:core",
 				Kind:             lsp.CIKValue,
 				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("core", 5, 20),
+				TextEdit:         textEdit("core", 5, 20, len("//src/core:")),
 			},
 		},
 	}, completions)
@@ -317,7 +317,7 @@ func TestCompletionPackages(t *testing.T) {
 				Label:            "//src",
 				Kind:             lsp.CIKValue,
 				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("rc", 5, 12),
+				TextEdit:         textEdit("rc", 5, 12, len("//s")),
 			},
 		},
 	}, completions)
@@ -372,14 +372,14 @@ func TestCompletionInMemory(t *testing.T) {
 				Label:            ":test",
 				Kind:             lsp.CIKValue,
 				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("test", 13, 10),
+				TextEdit:         textEdit("test", 13, 10, len(":")),
 			},
 			// TODO(peterebden): We should filter this out really...
 			{
 				Label:            ":test_test",
 				Kind:             lsp.CIKValue,
 				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("test_test", 13, 10),
+				TextEdit:         textEdit("test_test", 13, 10, len(":")),
 			},
 		},
 	}, completions)
@@ -423,7 +423,7 @@ func TestCompletionPartial(t *testing.T) {
 				Label:            "//src/core:core",
 				Kind:             lsp.CIKValue,
 				InsertTextFormat: lsp.ITFPlainText,
-				TextEdit:         textEdit("core", 5, 20),
+				TextEdit:         textEdit("core", 5, 20, len("//src/core:")),
 			},
 		},
 	}, completions)
@@ -457,7 +457,7 @@ func TestCompletionFunction(t *testing.T) {
 			Label:            "plugin_repo",
 			Kind:             lsp.CIKFunction,
 			InsertTextFormat: lsp.ITFPlainText,
-			TextEdit:         textEdit("plugin_repo", 0, 4),
+			TextEdit:         textEdit("plugin_repo", 0, 4, 0),
 			Documentation:    h.builtins["plugin_repo"].Stmt.FuncDef.Docstring,
 		}},
 	}, completions)
@@ -491,17 +491,17 @@ func TestCompletionPartialFunction(t *testing.T) {
 			Label:            "plugin_repo",
 			Kind:             lsp.CIKFunction,
 			InsertTextFormat: lsp.ITFPlainText,
-			TextEdit:         textEdit("plugin_repo", 0, 9),
+			TextEdit:         textEdit("plugin_repo", 0, 9, 0),
 			Documentation:    h.builtins["plugin_repo"].Stmt.FuncDef.Docstring,
 		}},
 	}, completions)
 }
 
-func textEdit(text string, line, col int) *lsp.TextEdit {
+func textEdit(text string, line, col, prefixLength int) *lsp.TextEdit {
 	return &lsp.TextEdit{
 		NewText: text,
 		Range: lsp.Range{
-			Start: lsp.Position{Line: line, Character: col},
+			Start: lsp.Position{Line: line, Character: col - prefixLength},
 			End:   lsp.Position{Line: line, Character: col},
 		},
 	}
