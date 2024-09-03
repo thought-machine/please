@@ -30,6 +30,8 @@ func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 		// These are slightly modified forms that are more convenient for some things.
 		"XARCH": state.Arch.XArch(),
 		"XOS":   state.Arch.XOS(),
+		// Set so that commands can detect if they are being run inside Please
+		"PLEASE": "1",
 	}
 
 	if state.Config.Cpp.PkgConfigPath != "" {
