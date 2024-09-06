@@ -12,10 +12,11 @@ import (
 var target = &core.BuildTarget{Label: core.BuildLabel{PackageName: "src/test", Name: "coverage_test"}}
 
 const (
-	pythonCoverageFile    = "src/test/test_data/python-coverage.xml"
-	goCoverageFile        = "src/test/test_data/go_coverage.txt"
-	goCoverageFile2       = "src/test/test_data/go_coverage_2.txt"
-	goCoverageFile3       = "src/test/test_data/go_coverage_3.txt"
+	pythonCoverageFile = "src/test/test_data/python-coverage.xml"
+	// TODO(peterebden): Remove the 'x' on these once we update go-rules again
+	xgoCoverageFile       = "src/test/test_data/go_coverage.txt"
+	xgoCoverageFile2      = "src/test/test_data/go_coverage_2.txt"
+	xgoCoverageFile3      = "src/test/test_data/go_coverage_3.txt"
 	gcovCoverageFile      = "src/test/test_data/gcov_coverage.gcov"
 	istanbulCoverageFile  = "src/test/test_data/istanbul_coverage.json"
 	istanbulCoverageFile2 = "src/test/test_data/istanbul_coverage_2.json"
@@ -68,9 +69,9 @@ func TestPythonResults(t *testing.T) {
 
 // Test the sample Go test output file.
 func TestGoResults(t *testing.T) {
-	coverage, err := parseTestCoverageFile(target, goCoverageFile, 1)
+	coverage, err := parseTestCoverageFile(target, xgoCoverageFile, 1)
 	if err != nil {
-		t.Errorf("Failed to read coverage file %s", goCoverageFile)
+		t.Errorf("Failed to read coverage file %s", xgoCoverageFile)
 	}
 	if len(coverage.Files) != 7 {
 		t.Errorf("Expected exactly seven files covered by this test")
@@ -94,9 +95,9 @@ func TestGoResults(t *testing.T) {
 
 // Test another sample Go file which has been observed to be wrong.
 func TestGoResults2(t *testing.T) {
-	coverage, err := parseTestCoverageFile(target, goCoverageFile2, 1)
+	coverage, err := parseTestCoverageFile(target, xgoCoverageFile2, 1)
 	if err != nil {
-		t.Errorf("Failed to read coverage file %s", goCoverageFile2)
+		t.Errorf("Failed to read coverage file %s", xgoCoverageFile2)
 	}
 	if len(coverage.Files) != 1 {
 		t.Errorf("Expected exactly one file covered by this test")
@@ -122,9 +123,9 @@ func TestGoResults2(t *testing.T) {
 }
 
 func TestGoResults3(t *testing.T) {
-	coverage, err := parseTestCoverageFile(target, goCoverageFile3, 1)
+	coverage, err := parseTestCoverageFile(target, xgoCoverageFile3, 1)
 	if err != nil {
-		t.Errorf("Failed to read coverage file %s", goCoverageFile3)
+		t.Errorf("Failed to read coverage file %s", xgoCoverageFile3)
 	}
 	if len(coverage.Files) != 1 {
 		t.Errorf("Expected exactly one file covered by this test")
