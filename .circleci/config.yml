@@ -131,7 +131,7 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-darwin-amd64-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-amd64-v5-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -148,7 +148,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-darwin-amd64-v4-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-amd64-v5-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
 
    build-freebsd:
@@ -187,7 +187,7 @@ jobs:
        - attach_workspace:
            at: /tmp/workspace
        - restore_cache:
-           key: go-linux-arm64-v2-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-arm64-v3-{{ checksum "third_party/go/BUILD" }}
        - run:
            name: Extract plz
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
@@ -201,7 +201,7 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-linux-arm64-v2-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-arm64-v3-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
    build-darwin:
       macos:
@@ -212,9 +212,9 @@ jobs:
       steps:
        - checkout
        - restore_cache:
-           key: go-mod-darwin-arm64-v7-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-arm64-v8-{{ checksum "bootstrap.sh" }}
        - restore_cache:
-           key: go-darwin-arm64-go121-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-go123-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
        - run:
@@ -237,11 +237,11 @@ jobs:
        - store_artifacts:
            path: /tmp/artifacts
        - save_cache:
-           key: go-mod-darwin-arm64-v7-{{ checksum "go.mod" }}
+           key: go-mod-darwin-arm64-v8-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-darwin-arm64-go121-v1-{{ checksum "third_party/go/BUILD" }}
+           key: go-darwin-arm64-go123-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
