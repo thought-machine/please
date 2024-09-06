@@ -50,8 +50,7 @@ func New[K comparable, V any](shardCount uint64, hasher func(K) uint64) *Map[K, 
 // Add adds the new item to the map.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
 func (m *Map[K, V]) Add(key K, val V) bool {
-	_, inserted := m.shards[m.hasher(key)&m.mask].Set(key, val, false)
-	return inserted
+	return m.shards[m.hasher(key)&m.mask].Set(key, val, false)
 }
 
 // AddOrGet either adds a new item (if the key doesn't exist, calling the given function to create it) or gets the existing one.
@@ -104,33 +103,32 @@ type shard[K comparable, V any] struct {
 }
 
 // Set is the equivalent of `map[key] = val`.
-// It returns the previous value and true if the item was inserted, false if it was not
+// It returns true if the item was inserted, false if it was not
 // (because an existing one was found and overwrite was false).
-func (s *shard[K, V]) Set(key K, val V, overwrite bool) (V, bool) {
+func (s *shard[K, V]) Set(key K, val V, overwrite bool) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 	if existing, present := s.m[key]; present {
 		if existing.Wait == nil {
-			old := existing.Val
 			if !overwrite {
-				return old, false // already added
+				return false // already added
 			}
 			existing.Val = val
 			s.m[key] = awaitableValue[V]{Val: val}
-			return old, true
+			return true
 		}
 		// Hasn't been added, but something is waiting for it to be.
 		s.m[key] = awaitableValue[V]{Val: val}
 		close(existing.Wait)
 		existing.Wait = nil
-		return existing.Val, true
+		return true
 	}
-	var old V
 	s.m[key] = awaitableValue[V]{Val: val}
-	return old, true
+	return true
 }
 
 // LazySet is like Set but calls the given function to construct the object only if needed.
+// It also returns the value that is now set in the map (whether overwritten or not).
 func (s *shard[K, V]) LazySet(key K, f func() V) (V, bool) {
 	s.l.Lock()
 	defer s.l.Unlock()
@@ -139,14 +137,15 @@ func (s *shard[K, V]) LazySet(key K, f func() V) (V, bool) {
 			return existing.Val, false // already added
 		}
 		// Hasn't been added, but something is waiting for it to be.
-		s.m[key] = awaitableValue[V]{Val: f()}
+		v := f()
+		s.m[key] = awaitableValue[V]{Val: v}
 		close(existing.Wait)
 		existing.Wait = nil
-		return existing.Val, true
+		return v, true
 	}
-	var old V
-	s.m[key] = awaitableValue[V]{Val: f()}
-	return old, true
+	v := f()
+	s.m[key] = awaitableValue[V]{Val: v}
+	return v, true
 }
 
 // Get returns the value for a key or, if not present, a channel that it can be waited
