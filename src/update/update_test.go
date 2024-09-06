@@ -30,6 +30,7 @@ func (*fakeLogBackend) Log(level logging.Level, calldepth int, rec *logging.Reco
 }
 
 func TestVerifyNewPlease(t *testing.T) {
+	t.Setenv("GOCOVERDIR", os.Getenv("TEST_DIR"))
 	assert.True(t, verifyNewPlease("src/please", core.PleaseVersion))
 	assert.False(t, verifyNewPlease("src/please", "wibble"))
 	assert.False(t, verifyNewPlease("wibble", core.PleaseVersion))
