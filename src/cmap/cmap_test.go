@@ -56,6 +56,19 @@ func TestReAdd(t *testing.T) {
 	assert.False(t, first)
 }
 
+func TestAddOrGet(t *testing.T) {
+	m := New[int, int](DefaultShardCount, hashInts)
+	x, inserted := m.AddOrGet(5, func() int { return 7 })
+	assert.True(t, inserted)
+	assert.Equal(t, 7, x)
+	x, inserted = m.AddOrGet(5, func() int { return 8 })
+	assert.False(t, inserted)
+	assert.Equal(t, 7, x)
+	x, inserted = m.AddOrGet(8, func() int { return 9 })
+	assert.True(t, inserted)
+	assert.Equal(t, 9, x)
+}
+
 func TestShardCount(t *testing.T) {
 	New[int, int](4, hashInts)
 	assert.Panics(t, func() {
