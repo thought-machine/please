@@ -113,7 +113,6 @@ func (s *shard[K, V]) Set(key K, val V, overwrite bool) bool {
 			if !overwrite {
 				return false // already added
 			}
-			existing.Val = val
 			s.m[key] = awaitableValue[V]{Val: val}
 			return true
 		}
