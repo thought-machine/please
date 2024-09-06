@@ -16,7 +16,7 @@ RUN truncate -s0 /tmp/preseed.cfg; \
     apt-get clean
 
 # Go - we want a specific package version here.
-RUN curl -fsSL https://dl.google.com/go/go1.22.6.linux-amd64.tar.gz | tar -xzC /usr/local
+RUN curl -fsSL https://dl.google.com/go/go1.23.1.linux-amd64.tar.gz | tar -xzC /usr/local
 RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # Locale

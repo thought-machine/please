@@ -3,16 +3,16 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_alpine:20240901
+       - image: thoughtmachine/please_alpine:20240906
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-alpine-v8-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v9-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-alpine-main-v8-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v9-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-alpine-main-v3-{{ checksum "third_party/python/BUILD" }}
        - run:
@@ -30,11 +30,11 @@ jobs:
        - store_artifacts:
            path: plz-out/log
        - save_cache:
-           key: go-mod-alpine-v8-{{ checksum "go.mod" }}
+           key: go-mod-alpine-v9-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-alpine-main-v8-{{ checksum "third_party/go/BUILD" }}
+           key: go-alpine-main-v9-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-alpine-main-v3-{{ checksum "third_party/python/BUILD" }}
@@ -43,16 +43,16 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240901
+       - image: thoughtmachine/please_ubuntu:20240906
      resource_class: large
      environment:
        PLZ_ARGS: "-p --profile ci"
      steps:
        - checkout
        - restore_cache:
-           key: go-mod-linux-v8-{{ checksum "go.mod" }}
+           key: go-mod-linux-v9-{{ checksum "go.mod" }}
        - restore_cache:
-           key: go-linux-main-v8-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v9-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-v3-{{ checksum "third_party/python/BUILD" }}
        - run:
@@ -78,11 +78,11 @@ jobs:
            name: Test perf framework
            command: plz-out/bin/tools/performance/gen_parse_tree.pex --plz plz-out/bin/src/please --size 1 && plz-out/bin/tools/performance/parse_perf_test.pex --plz plz-out/bin/src/please -n 1
        - save_cache:
-           key: go-mod-linux-v8-{{ checksum "go.mod" }}
+           key: go-mod-linux-v9-{{ checksum "go.mod" }}
            paths:
              - "~/go/pkg/mod"
        - save_cache:
-           key: go-linux-main-v8-{{ checksum "third_party/go/BUILD" }}
+           key: go-linux-main-v9-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
            key: python-linux-main-v3-{{ checksum "third_party/python/BUILD" }}
@@ -180,7 +180,7 @@ jobs:
    build-linux-arm64:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240901
+       - image: thoughtmachine/please_ubuntu:20240906
      resource_class: large
      steps:
        - checkout
@@ -250,7 +250,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240901
+       - image: thoughtmachine/please_ubuntu:20240906
      resource_class: xlarge
      steps:
        - checkout
@@ -267,7 +267,7 @@ jobs:
    test-http-cache:
      working_directory: ~/please
      docker:
-       - image: thoughtmachine/please_ubuntu:20240901
+       - image: thoughtmachine/please_ubuntu:20240906
      resource_class: large
      steps:
        - checkout
@@ -283,7 +283,7 @@ jobs:
    # Releases to github and homebrew
    release:
      docker:
-       - image: thoughtmachine/please_ubuntu:20240901
+       - image: thoughtmachine/please_ubuntu:20240906
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
@@ -298,7 +298,7 @@ jobs:
    # Releases the docs and the binaries to gs for please.build and get.please.build
    release-gs:
      docker:
-       - image: thoughtmachine/please_ubuntu:20240901
+       - image: thoughtmachine/please_ubuntu:20240906
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
@@ -310,7 +310,7 @@ jobs:
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
-       - image: thoughtmachine/please_ubuntu:20240901
+       - image: thoughtmachine/please_ubuntu:20240906
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
