@@ -70,12 +70,13 @@ func TestHashLastModified(t *testing.T) {
 	require.NoError(t, err)
 	h := NewPathHasher(wd, true, sha256.New, "_256")
 	path := "src/fs/test_data/test_subfolder1/a.txt"
-	modTime := time.Now().UTC()
+	// Truncate to seconds since some filesystems seem not to support sub-second precision
+	modTime := time.Now().UTC().Truncate(time.Second)
 	err = os.Chtimes(path, modTime, modTime)
 	require.NoError(t, err)
 
 	sha256Hash := sha256.New()
-	sha256Hash.Write([]byte(modTime.Format(time.DateTime)))
+	sha256Hash.Write([]byte(modTime.Format(timeFormat)))
 	expected := sha256Hash.Sum(nil)
 
 	b, err := h.Hash("src/fs/test_data/test_subfolder1/a.txt", false, false, true)

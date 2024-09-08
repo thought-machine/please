@@ -8,13 +8,15 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/pkg/xattr"
 )
 
 // boolTrueHashValue is used when we need to write something indicating a bool in the input.
 var boolTrueHashValue = []byte{2}
+
+// The format we serialise times in when checking whether something has changed (when we do it by timestamp)
+const timeFormat = "2006-01-02 15:04:05.000000000"
 
 // A PathHasher is responsible for hashing & remembering paths.
 type PathHasher struct {
@@ -273,7 +275,7 @@ func (hasher *PathHasher) timestampHash(h hash.Hash, filename string) error {
 	}
 
 	// This doesn't account for the last changed time on macos which is set when modifying permissions etc.
-	h.Write([]byte(file.ModTime().UTC().Format(time.DateTime)))
+	h.Write([]byte(file.ModTime().UTC().Format(timeFormat)))
 	return err
 }
 
