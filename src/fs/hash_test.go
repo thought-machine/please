@@ -75,7 +75,7 @@ func TestHashLastModified(t *testing.T) {
 	require.NoError(t, err)
 
 	sha256Hash := sha256.New()
-	sha256Hash.Write([]byte(modTime.String()))
+	sha256Hash.Write([]byte(modTime.Format(time.DateTime)))
 	expected := sha256Hash.Sum(nil)
 
 	b, err := h.Hash("src/fs/test_data/test_subfolder1/a.txt", false, false, true)

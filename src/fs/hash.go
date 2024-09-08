@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/xattr"
 )
@@ -270,8 +271,9 @@ func (hasher *PathHasher) timestampHash(h hash.Hash, filename string) error {
 	if err != nil {
 		return err
 	}
+
 	// This doesn't account for the last changed time on macos which is set when modifying permissions etc.
-	h.Write([]byte(file.ModTime().UTC().String()))
+	h.Write([]byte(file.ModTime().UTC().Format(time.DateTime)))
 	return err
 }
 
