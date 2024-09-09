@@ -48,3 +48,12 @@ filegroup(
     binary = True,
     visibility = ["//:install"],
 )
+
+# On Linux, we should produce statically linked binaries. Emit a test to verify this is the case.
+if is_platform(os = "linux"):
+    gentest(
+        name = "static_test",
+        test_cmd = "file $DATA | grep 'statically linked'",
+        data = [":please"],
+        no_test_output = True,
+    )
