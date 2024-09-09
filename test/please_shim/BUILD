@@ -4,7 +4,7 @@ please_repo_e2e_test(
     name = "install",
     expect_output_contains = {
         # Version installed must match the one in the .plzconfig file.
-        "plz_version.txt": "Please version 16.18.0",
+        "plz_version.txt": "Please version 17.11.0",
     },
     plz_command = " && ".join([
         # Install Please since it won't find it. Please location
@@ -41,9 +41,9 @@ please_repo_e2e_test(
     name = "update",
     expect_output_contains = {
         # Version installed must match the one in the .plzconfig file.
-        "install_version.txt": "Please version 16.18.0",
+        "install_version.txt": "Please version 17.11.0",
         # Update version.
-        "update_version.txt": "Please version 16.17.0",
+        "update_version.txt": "Please version 17.10.0",
     },
     plz_command = " && ".join([
         # Install binary first.
