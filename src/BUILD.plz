@@ -53,7 +53,7 @@ filegroup(
 if is_platform(os = "linux"):
     gentest(
         name = "static_test",
-        test_cmd = "file $DATA | grep 'statically linked'",
+        test_cmd = "ldd $DATA && exit 1 || exit 0",
         data = [":please"],
         no_test_output = True,
     )
