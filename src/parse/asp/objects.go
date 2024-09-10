@@ -3,6 +3,7 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
+	"iter"
 	"slices"
 	"sort"
 	"strconv"
@@ -37,7 +38,11 @@ type freezable interface {
 // Not all pyObjects implement this.
 type iterable interface {
 	pyObject
-	// This isn't super generic but it works fine for all cases we have right now.
+	Iter() iter.Seq[pyObject]
+}
+
+// An indexable represents an object that knows its length and can be indexed into.
+type indexable interface {
 	Len() int
 	Item(index int) pyObject
 }
@@ -413,6 +418,16 @@ func (l pyList) String() string {
 	return fmt.Sprintf("%s", []pyObject(l))
 }
 
+func (l pyList) Iter() iter.Seq[pyObject] {
+	return func(yield func(pyObject) bool) {
+		for _, x := range l {
+			if !yield(x) {
+				break
+			}
+		}
+	}
+}
+
 // Freeze freezes this list for further updates.
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
@@ -437,12 +452,12 @@ func (l pyList) Repeat(n pyInt) pyList {
 	return ret
 }
 
-// Len returns the length of this list, implementing iterable.
+// Len returns the length of this list, implementing indexable.
 func (l pyList) Len() int {
 	return len(l)
 }
 
-// Item returns the i'th item of this list, implementing iterable.
+// Item returns the i'th item of this list, implementing indexable.
 func (l pyList) Item(i int) pyObject {
 	return l[i]
 }
@@ -1059,6 +1074,16 @@ func (r *pyRange) Len() int {
 
 func (r *pyRange) Item(index int) pyObject {
 	return r.Start + newPyInt(index)*r.Step
+}
+
+func (r *pyRange) Iter() iter.Seq[pyObject] {
+	return func(yield func(pyObject) bool) {
+		for i := r.Start; i < r.Stop; i += r.Step {
+			if !yield(pyInt(i)) {
+				break
+			}
+		}
+	}
 }
 
 func (r *pyRange) MarshalJSON() ([]byte, error) {
