@@ -834,7 +834,9 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
-	if ch, inserted := state.progress.pendingPackages.AddOrGet(label.packageKey(), make(chan struct{})); !inserted {
+	if ch, inserted := state.progress.pendingPackages.AddOrGet(label.packageKey(), func() chan struct{} {
+		return make(chan struct{})
+	}); !inserted {
 		waitOnChan(ch, "Still waiting for SyncParsePackage(%v)", label)
 	}
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
@@ -888,7 +890,9 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	}
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
-	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, make(chan struct{})); !inserted {
+	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, func() chan struct{} {
+		return make(chan struct{})
+	}); !inserted {
 		// Something's already registered for this, get on the train
 		waitOnChan(ch, "Still waiting on WaitForBuiltTarget(%v, %v, %v)", l, dependent, mode)
 		return state.Graph.Target(l)
