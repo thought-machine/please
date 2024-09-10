@@ -1,6 +1,9 @@
 go_library(
     name = "fs",
-    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -13,7 +16,13 @@ go_library(
 
 go_test(
     name = "fs_test",
-    srcs = glob(["*_test.go"], exclude=["glob_integration_test.go", "*_benchmark_test.go"]),
+    srcs = glob(
+        ["*_test.go"],
+        exclude = [
+            "glob_integration_test.go",
+            "*_benchmark_test.go",
+        ],
+    ),
     data = ["test_data"],
     deps = [
         ":fs",

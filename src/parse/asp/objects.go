@@ -1079,7 +1079,7 @@ func (r *pyRange) Item(index int) pyObject {
 func (r *pyRange) Iter() iter.Seq[pyObject] {
 	return func(yield func(pyObject) bool) {
 		for i := r.Start; i < r.Stop; i += r.Step {
-			if !yield(pyInt(i)) {
+			if !yield(i) {
 				break
 			}
 		}
