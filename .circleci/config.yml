@@ -58,14 +58,19 @@ jobs:
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+       - persist_to_workspace:
+           root: plz-out/pkg
+           paths:
+             - linux_amd64/*
        - store_test_results:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/bin/src/please build //package:signer //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
+           command: plz-out/bin/src/please build //package:all //tools/misc:gen_release //docs:tarball //docs:deep-tarball //tools/performance:all -p
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
+             - linux_amd64/*
              - gen_release.pex
              - release_signer
              - docs.tar.gz
@@ -325,34 +330,32 @@ workflows:
   version: 2
   build-all:
     jobs:
-      - build-alpine
       - build-linux
       - build-linux-alt
       - build-darwin:
           requires:
-            - build-alpine
+            - build-linux
       - build-freebsd:
           requires:
-            - build-alpine
+            - build-linux
       - test-rex:
           requires:
-            - build-alpine
+            - build-linux
       - test-http-cache:
           requires:
-            - build-alpine
+            - build-linux
       - build-linux-arm64:
           requires:
-            - build-alpine
+            - build-linux
       - build-darwin-amd64:
           requires:
             - build-darwin
       - release-gs:
           requires:
-            - build-alpine
+            - build-linux
             - build-freebsd
             - build-darwin-amd64
             - build-linux-arm64
-            - build-linux
             - build-linux-alt
             - build-darwin
             - test-rex
@@ -368,7 +371,6 @@ workflows:
               only: master
       - perf-test:
           requires:
-            - build-alpine
             - build-linux
           filters:
             branches:
