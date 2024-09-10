@@ -58,7 +58,7 @@ func newLexer(r io.Reader) *lex {
 	// This should work OK as long as BUILD files are relatively small.
 	b, err := io.ReadAll(r)
 	if err != nil {
-		fail(NameOfReader(r), 0, err.Error())
+		fail(NameOfReader(r), 0, "%s", err.Error())
 	}
 	// If the file doesn't end in a newline, we will reject it with an "unexpected end of file"
 	// error. That's a bit crap so quietly fix it up here.

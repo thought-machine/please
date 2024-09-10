@@ -1,7 +1,5 @@
 run:
   timeout: 5m
-  skip-dirs:
-    - test_data
 
 issues:
   exclude:
@@ -19,6 +17,8 @@ issues:
     - redefines-builtin-id
     - superfluous-else
     - indent-error-flow # revive getting a bit too pushy here
+  exclude-dirs:
+    - test_data
   exclude-rules:
     - path: _test\.go
       linters:
@@ -44,7 +44,6 @@ linters:
     - containedctx
     - dogsled
     - dupl
-    - exportloopref
     - gci
     - gocritic
     - gofmt

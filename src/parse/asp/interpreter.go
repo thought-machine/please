@@ -532,12 +532,12 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 				if stmt.Assert.Message == nil {
 					s.Error("assertion failed")
 				} else {
-					s.Error(s.interpretExpression(stmt.Assert.Message).String())
+					s.Error("%s", s.interpretExpression(stmt.Assert.Message))
 				}
 			}
 		} else if stmt.Raise != nil {
 			log.Warning("The raise keyword is deprecated, please use fail() instead. See https://github.com/thought-machine/please/issues/1598 for more information.")
-			s.Error(s.interpretExpression(stmt.Raise).String())
+			s.Error("%s", s.interpretExpression(stmt.Raise))
 		} else if stmt.Literal != nil {
 			s.interpretExpression(stmt.Literal)
 		} else if stmt.Continue {

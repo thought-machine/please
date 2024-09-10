@@ -1,4 +1,4 @@
-GO_CI_LINT_VERSION = "1.58.2"
+GO_CI_LINT_VERSION = "1.60.3"
 
 remote_file(
     name = "golangci-lint",
@@ -6,10 +6,10 @@ remote_file(
     exported_files = ["golangci-lint-%s-${OS}-${ARCH}/golangci-lint" % GO_CI_LINT_VERSION],
     extract = True,
     hashes = [
-        "9d8c372fabff0917a0502c86381e9de291bef274b5ccc8e6b849fccb257cfefd",  # darwin-amd64
-        "99ba8037946fb3e3976a0004c93eb0df9f6efc50500f506665f1091ddf5aaba5",  # darwin-arm64
-        "6236a423ea74cc0de61862da007a063f6187ad929bdb3fb54eb12cd689006a99",  # linux-amd64
-        "549a714657e80942166ecb4327bfb21487af872945b50b155339b0b5cc3fa2f2",  # linux-arm64
+        "faf60366f99bb4010b634a030c45eaf57baae6c0b7e10be151139871e3fef40e", # golangci-lint-1.60.3-darwin-amd64.tar.gz
+        "deb0fbd0b99992d97808614db1214f57d5bdc12b907581e2ef10d3a392aca11f", # golangci-lint-1.60.3-darwin-arm64.tar.gz
+        "4037af8122871f401ed874852a471e54f147ff8ce80f5a304e020503bdb806ef", # golangci-lint-1.60.3-linux-amd64.tar.gz
+        "74782943b2d2edae1208be3701e0cafe62817ba90b9b4cc5ca52bdef26df12f9", # golangci-lint-1.60.3-linux-arm64.tar.gz
     ],
     url = "https://github.com/golangci/golangci-lint/releases/download/v%s/golangci-lint-%s-%s-%s.tar.gz" % (
         GO_CI_LINT_VERSION,

@@ -262,8 +262,7 @@ func printTestResults(state *core.BuildState, failedTargets map[core.BuildLabel]
 			printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
 		}
 	}
-	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}.${RESET}\n",
-		pluralise(len(targets), "test target", "test targets"), testResultMessage(aggregate, false)))
+	printf("${BOLD_WHITE}%s and %s${BOLD_WHITE}.${RESET}\n", pluralise(len(targets), "test target", "test targets"), testResultMessage(aggregate, false))
 	printf("${BOLD_WHITE}Total time: %s real, %s compute.${RESET}\n", duration, aggregate.Duration.Round(durationGranularity))
 }
 

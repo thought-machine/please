@@ -311,7 +311,7 @@ func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.Bui
 
 // builtinFail raises an immediate error that can't be intercepted.
 func builtinFail(s *scope, args []pyObject) pyObject {
-	s.Error(string(args[0].(pyString)))
+	s.Error("%s", string(args[0].(pyString)))
 	return None
 }
 
