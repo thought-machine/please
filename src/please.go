@@ -907,14 +907,14 @@ var buildFunctions = map[string]func() int{
 			level = 0
 		}
 		runInexact := func(files []string) int {
-			return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			return runQuery(true, core.FindOwningPackages(config, files), func(state *core.BuildState) {
 				for _, target := range query.Changes(state, files, level, includeSubrepos) {
 					fmt.Println(target.String())
 				}
 			})
 		}
 		if len(opts.Query.Changes.Args.Files) > 0 {
-			return runInexact(opts.Query.Changes.Args.Files.Get())
+			return runInexact(makePathsRelative(opts.Query.Changes.Args.Files.Get()))
 		}
 		scm := scm.MustNew(core.RepoRoot)
 		if opts.Query.Changes.In != "" {
