@@ -89,9 +89,9 @@ func TestAllChildren(t *testing.T) {
 }
 
 func TestFindOwningPackages(t *testing.T) {
-	state := NewDefaultBuildState()
-	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
-	pkgs := FindOwningPackages(state, []string{"src/core/test_data/test_subfolder1/whatever.txt"})
+	config := DefaultConfiguration()
+	config.Parse.BuildFileName = []string{"BUILD_FILE"}
+	pkgs := FindOwningPackages(config, []string{"src/core/test_data/test_subfolder1/whatever.txt"})
 	assert.Equal(t, []BuildLabel{ParseBuildLabel("//src/core/test_data:all", "")}, pkgs)
 }
 

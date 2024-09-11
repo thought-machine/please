@@ -961,7 +961,7 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 			continue
 		}
 
-		pkg := FindOwningPackage(state, out)
+		pkg := FindOwningPackage(state.Config, out)
 		if targetPackage != pkg.PackageName {
 			return fmt.Errorf("trying to output file %s, but that directory belongs to another package (%s)", out, pkg.PackageName)
 		}
@@ -997,7 +997,7 @@ func (target *BuildTarget) checkTargetOwnsBuildInput(state *BuildState, input Bu
 }
 
 func (target *BuildTarget) checkTargetOwnsFileAndSubDirectories(state *BuildState, file string) error {
-	pkg := FindOwningPackage(state, file)
+	pkg := FindOwningPackage(state.Config, file)
 	if target.Label.PackageName != pkg.PackageName {
 		return fmt.Errorf("package %s is trying to use file %s, but that belongs to another package (%s)", target.Label.PackageName, file, pkg.PackageName)
 	}

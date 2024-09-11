@@ -869,25 +869,8 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"query.whatinputs": func() int {
-		files := opts.Query.WhatInputs.Args.Files.Get()
-		// Make all these relative to the repo root; many things do not work if they're absolute.
-		for i, file := range files {
-			if filepath.IsAbs(file) {
-				rel, err := filepath.Rel(core.RepoRoot, file)
-				if err != nil {
-					log.Fatalf("Failed to make input relative to repo root: %s", err)
-				} else if strings.HasPrefix(rel, "..") {
-					log.Fatalf("Input %s does not lie within this repo (relative path: %s)", file, rel)
-				}
-				files[i] = rel
-			}
-		}
-		// We only need this to retrieve the BuildFileName
-		state := core.NewBuildState(config)
-		labels := make([]core.BuildLabel, 0, len(files))
-		for _, file := range files {
-			labels = append(labels, core.FindOwningPackage(state, file))
-		}
+		files := makePathsRelative(opts.Query.WhatInputs.Args.Files.Get())
+		labels := core.FindOwningPackages(config, files)
 		return runQuery(true, labels, func(state *core.BuildState) {
 			query.WhatInputs(state.Graph, files, opts.Query.WhatInputs.Hidden, opts.Query.WhatInputs.EchoFiles, opts.Query.WhatInputs.IgnoreUnknown)
 		})
@@ -1033,6 +1016,23 @@ var buildFunctions = map[string]func() int{
 		}
 		return 0
 	},
+}
+
+// makePathsRelative makes all the given file paths relative to the repo root.
+// Various things don't work later on if they're absolute.
+func makePathsRelative(files []string) []string {
+	for i, file := range files {
+		if filepath.IsAbs(file) {
+			rel, err := filepath.Rel(core.RepoRoot, file)
+			if err != nil {
+				log.Fatalf("Failed to make input relative to repo root: %s", err)
+			} else if strings.HasPrefix(rel, "..") {
+				log.Fatalf("Input %s does not lie within this repo (relative path: %s)", file, rel)
+			}
+			files[i] = rel
+		}
+	}
+	return files
 }
 
 // Check if tool is given as label or path and then run
