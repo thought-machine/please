@@ -37,7 +37,6 @@ type freezable interface {
 // An iterable represents an object that can be iterated (the y in `for x in y`).
 // Not all pyObjects implement this.
 type iterable interface {
-	pyObject
 	Iter() iter.Seq[pyObject]
 }
 
