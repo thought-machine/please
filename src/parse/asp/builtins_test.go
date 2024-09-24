@@ -103,3 +103,12 @@ func TestStrFormat4(t *testing.T) {
 		pyString(`echo "{}@${}" > $OUT`), pyString("tools/images/please_ubuntu"), pyString("please_ubuntu_digest"),
 	}))
 }
+
+func TestObjLen(t *testing.T) {
+	l := pyList{pyInt(1)}
+	assert.EqualValues(t, 1, objLen(l))
+	assert.EqualValues(t, 1, objLen(l.Freeze()))
+	d := pyDict{"1": pyInt(1)}
+	assert.EqualValues(t, 1, objLen(d))
+	assert.EqualValues(t, 1, objLen(d.Freeze()))
+}
