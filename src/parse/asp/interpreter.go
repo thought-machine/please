@@ -652,15 +652,23 @@ func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
 		return s.negate(s.interpretIs(obj, op))
 	case In, NotIn:
 		// the implementation of in is defined by the right-hand side, not the left.
-		return s.interpretExpression(op.Expr).Operator(op.Op, obj)
+		return s.operator(op.Op, s.interpretExpression(op.Expr), obj)
 	case Negate:
 		// Negate is a unary operator so Expr will be nil
 		i, ok := obj.(pyInt)
 		s.Assert(ok, "Unary - can only be applied to an integer")
 		return newPyInt(-int(i))
 	default:
-		return obj.Operator(op.Op, s.interpretExpression(op.Expr))
+		return s.operator(op.Op, obj, s.interpretExpression(op.Expr))
 	}
+}
+
+func (s *scope) operator(op Operator, obj, operand pyObject) pyObject {
+	o, ok := obj.(operatable)
+	if !ok {
+		panic(fmt.Sprintf("operator %s not implemented on type %s", op, obj.Type()))
+	}
+	return o.Operator(op, operand)
 }
 
 func (s *scope) interpretJoin(base string, list *List) pyObject {
@@ -724,7 +732,7 @@ func (s *scope) interpretValueExpression(expr *ValueExpression) pyObject {
 		if sl.Colon == "" {
 			// Indexing, much simpler...
 			s.Assert(sl.End == nil, "Invalid syntax")
-			obj = obj.Operator(Index, s.interpretExpression(sl.Start))
+			obj = s.operator(Index, obj, s.interpretExpression(sl.Start))
 		} else {
 			obj = s.interpretSlice(obj, sl)
 		}
@@ -862,7 +870,7 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		if stmt.Index.Assign != nil {
 			s.indexAssign(obj, idx, s.interpretExpression(stmt.Index.Assign))
 		} else {
-			s.indexAssign(obj, idx, obj.Operator(Index, idx).Operator(Add, s.interpretExpression(stmt.Index.AugAssign)))
+			s.indexAssign(obj, idx, s.operator(Add, s.operator(Index, obj, idx), s.interpretExpression(stmt.Index.AugAssign)))
 		}
 	} else if stmt.Unpack != nil {
 		obj := s.interpretExpression(stmt.Unpack.Expr)
@@ -884,7 +892,7 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		} else if stmt.Action.AugAssign != nil {
 			// The only augmented assignment operation we support is +=, and it's implemented
 			// exactly as x += y -> x = x + y since that matches the semantics of Go types.
-			s.Set(stmt.Name, s.Lookup(stmt.Name).Operator(Add, s.interpretExpression(stmt.Action.AugAssign)))
+			s.Set(stmt.Name, s.operator(Add, s.Lookup(stmt.Name), s.interpretExpression(stmt.Action.AugAssign)))
 		}
 	} else {
 		return s.Lookup(stmt.Name)

@@ -22,8 +22,6 @@ type pyObject interface {
 	TypeTag() int32
 	// Returns true if this object evaluates to something truthy.
 	IsTruthy() bool
-	// Invokes the given operator on this object and returns the result.
-	Operator(operator Operator, operand pyObject) pyObject
 }
 
 // A freezable represents an object that can be frozen into a readonly state.
@@ -60,6 +58,12 @@ type propertied interface {
 	Property(*scope, string) pyObject
 }
 
+// An operatable represents an object that supports operators.
+type operatable interface {
+	// Invokes the given operator on this object and returns the result.
+	Operator(operator Operator, operand pyObject) pyObject
+}
+
 type pyBool bool
 
 // True and False are the singletons representing those values.
@@ -87,10 +91,6 @@ func (b pyBool) TypeTag() int32 {
 
 func (b pyBool) IsTruthy() bool {
 	return b == True
-}
-
-func (b pyBool) Operator(operator Operator, operand pyObject) pyObject {
-	panic(fmt.Sprintf("operator %s not implemented on type bool", operator))
 }
 
 func (b pyBool) String() string {
@@ -124,10 +124,6 @@ func (n pyNone) IsTruthy() bool {
 	return false
 }
 
-func (n pyNone) Operator(operator Operator, operand pyObject) pyObject {
-	panic(fmt.Sprintf("operator %s not implemented on type none", operator))
-}
-
 func (n pyNone) String() string {
 	return "None"
 }
@@ -153,10 +149,6 @@ func (s pySentinel) TypeTag() int32 {
 
 func (s pySentinel) IsTruthy() bool {
 	return false
-}
-
-func (s pySentinel) Operator(operator Operator, operand pyObject) pyObject {
-	panic(fmt.Sprintf("operator %s not implemented on type sentinel", operator))
 }
 
 func (s pySentinel) String() string {
@@ -378,9 +370,15 @@ func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 			panic("Cannot compare list and " + operand.Type())
 		}
 		for i, li := range l {
-			if i >= len(l2) || l2[i].Operator(LessThan, li).IsTruthy() {
+			if i >= len(l2) {
 				return False
-			} else if li.Operator(LessThan, l2[i]).IsTruthy() {
+			} else if o, ok := li.(operatable); !ok {
+				panic(fmt.Sprintf("operator %s not implemented on type %s", LessThan, li.Type()))
+			} else if o2, ok := l2[i].(operatable); !ok {
+				panic(fmt.Sprintf("operator %s not implemented on type %s", LessThan, l2[i].Type()))
+			} else if o2.Operator(LessThan, li).IsTruthy() {
+				return False
+			} else if o.Operator(LessThan, l2[i]).IsTruthy() {
 				return True
 			}
 		}
@@ -679,10 +677,6 @@ func (f *pyFunc) TypeTag() int32 {
 
 func (f *pyFunc) IsTruthy() bool {
 	return true
-}
-
-func (f *pyFunc) Operator(operator Operator, operand pyObject) pyObject {
-	panic("cannot use operators on a function")
 }
 
 func (f *pyFunc) String() string {
@@ -1050,7 +1044,7 @@ func (r *pyRange) IsTruthy() bool {
 }
 
 func (r *pyRange) Operator(operator Operator, operand pyObject) pyObject {
-	if l, ok := operand.(pyList); ok {
+	if l, ok := operand.(pyList); ok && operator == Add {
 		return append(r.toList(len(l)), l...)
 	}
 	panic(fmt.Sprintf("operator %s not implemented on type range", operator))

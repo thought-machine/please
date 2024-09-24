@@ -7,6 +7,7 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -798,7 +799,7 @@ func sorted(s *scope, args []pyObject) pyObject {
 	l, ok := args[0].(pyList)
 	s.Assert(ok, "unsortable type %s", args[0].Type())
 	l = l[:]
-	sort.Slice(l, func(i, j int) bool { return l[i].Operator(LessThan, l[j]).IsTruthy() })
+	sort.Slice(l, func(i, j int) bool { return s.operator(LessThan, l[i], l[j]).IsTruthy() })
 	return l
 }
 
@@ -806,10 +807,7 @@ func reversed(s *scope, args []pyObject) pyObject {
 	l, ok := args[0].(pyList)
 	s.Assert(ok, "irreversible type %s", args[0].Type())
 	l = l[:]
-	// TODO(chrisnovakovic): replace with slices.Reverse after upgrading to Go 1.21
-	for i, j := 0, len(l)-1; i < j; i, j = i+1, j-1 {
-		l[i], l[j] = l[j], l[i]
-	}
+	slices.Reverse(l)
 	return l
 }
 
@@ -1031,7 +1029,7 @@ func extreme(s *scope, args []pyObject, cmp Operator) pyObject {
 			}
 			cli = key.Call(s, c)
 		}
-		if i == 0 || cli.Operator(cmp, cret).IsTruthy() {
+		if i == 0 || s.operator(cmp, cli, cret).IsTruthy() {
 			cret = cli
 			ret = li
 		}
