@@ -1,6 +1,9 @@
 go_library(
     name = "cache",
-    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [

@@ -2,6 +2,7 @@ package asp
 
 import (
 	"fmt"
+	"iter"
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
@@ -565,9 +566,7 @@ func (s *scope) interpretIf(stmt *IfStatement) pyObject {
 }
 
 func (s *scope) interpretFor(stmt *ForStatement) pyObject {
-	it := s.iterable(&stmt.Expr)
-	for i, n := 0, it.Len(); i < n; i++ {
-		li := it.Item(i)
+	for li := range s.iterable(&stmt.Expr) {
 		s.unpackNames(stmt.Names, li)
 		if ret := s.interpretStatements(stmt.Statements); ret != nil {
 			if s, ok := ret.(pySentinel); ok && s == continueIteration {
@@ -896,8 +895,8 @@ func (s *scope) interpretList(expr *List) pyList {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
 	cs := s.NewScope(s.filename, s.mode)
-	it := s.iterable(expr.Comprehension.Expr)
-	ret := make(pyList, 0, it.Len())
+	it, l := s.iterableLen(expr.Comprehension.Expr)
+	ret := make(pyList, 0, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
 		if len(expr.Values) == 1 {
 			ret = append(ret, cs.interpretExpression(expr.Values[0]))
@@ -917,8 +916,8 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		return d
 	}
 	cs := s.NewScope(s.filename, s.mode)
-	it := s.iterable(expr.Comprehension.Expr)
-	ret := make(pyDict, it.Len())
+	it, l := s.iterableLen(expr.Comprehension.Expr)
+	ret := make(pyDict, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
 		ret.IndexAssign(cs.interpretExpression(&expr.Items[0].Key), cs.interpretExpression(&expr.Items[0].Value))
 	})
@@ -927,22 +926,18 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 
 // evaluateComprehension handles iterating a comprehension's loops.
 // The provided callback function is called with each item to be added to the result.
-func (s *scope) evaluateComprehension(it iterable, comp *Comprehension, callback func(pyObject)) {
+func (s *scope) evaluateComprehension(it iter.Seq[pyObject], comp *Comprehension, callback func(pyObject)) {
 	if comp.Second != nil {
-		for i, n := 0, it.Len(); i < n; i++ {
-			li := it.Item(i)
+		for li := range it {
 			s.unpackNames(comp.Names, li)
-			it2 := s.iterable(comp.Second.Expr)
-			for j, n := 0, it2.Len(); j < n; j++ {
-				li2 := it2.Item(j)
+			for li2 := range s.iterable(comp.Second.Expr) {
 				if s.evaluateComprehensionExpression(comp, comp.Second.Names, li2) {
 					callback(li2)
 				}
 			}
 		}
 	} else {
-		for i, n := 0, it.Len(); i < n; i++ {
-			li := it.Item(i)
+		for li := range it {
 			if s.evaluateComprehensionExpression(comp, comp.Names, li) {
 				callback(li)
 			}
@@ -972,11 +967,22 @@ func (s *scope) unpackNames(names []string, obj pyObject) {
 }
 
 // iterable returns the result of the given expression as an iterable object.
-func (s *scope) iterable(expr *Expression) iterable {
+func (s *scope) iterable(expr *Expression) iter.Seq[pyObject] {
 	o := s.interpretExpression(expr)
 	it, ok := o.(iterable)
 	s.Assert(ok, "Non-iterable type %s", o.Type())
-	return it
+	return it.Iter()
+}
+
+// iterableLen returns the result of the given expression as an iterable object, and a length hint
+func (s *scope) iterableLen(expr *Expression) (iter.Seq[pyObject], int) {
+	o := s.interpretExpression(expr)
+	it, ok := o.(iterable)
+	s.Assert(ok, "Non-iterable type %s", o.Type())
+	if l, ok := it.(indexable); ok {
+		return it.Iter(), l.Len()
+	}
+	return it.Iter(), 4 // arbitrary length hint when we don't know
 }
 
 // evaluateExpressions runs a series of Python expressions in this scope and creates a series of concrete objects from them.

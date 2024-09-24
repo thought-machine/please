@@ -11,6 +11,6 @@ go_binary(
 
 sh_cmd(
     name = "run_local",
-    data = [":http_cache"],
     cmd = r"exec \\$DATA -p 1771 -d /tmp/please_http_cache",
+    data = [":http_cache"],
 )
