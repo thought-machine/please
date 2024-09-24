@@ -40,9 +40,14 @@ type iterable interface {
 	Iter() iter.Seq[pyObject]
 }
 
-// An indexable represents an object that knows its length and can be indexed into.
-type indexable interface {
+// A lengthable represents an object that knows its own length.
+type lengthable interface {
 	Len() int
+}
+
+// An indexable represents an object that can be indexed into. It also implicitly knows its length.
+type indexable interface {
+	lengthable
 	Item(index int) pyObject
 }
 
@@ -338,6 +343,10 @@ func (s pyString) String() string {
 	return string(s)
 }
 
+func (s pyString) Len() int {
+	return len([]rune(s))
+}
+
 type pyList []pyObject
 
 var emptyList pyObject = make(pyList, 0) // want this to explicitly have zero capacity
@@ -451,7 +460,7 @@ func (l pyList) Repeat(n pyInt) pyList {
 	return ret
 }
 
-// Len returns the length of this list, implementing indexable.
+// Len returns the length of this list, implementing lengthable.
 func (l pyList) Len() int {
 	return len(l)
 }
@@ -526,6 +535,10 @@ func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
 		return ret
 	}
 	panic("Unsupported operator on dict")
+}
+
+func (d pyDict) Len() int {
+	return len(d)
 }
 
 func (d pyDict) IndexAssign(index, value pyObject) {

@@ -418,17 +418,8 @@ func lenFunc(s *scope, args []pyObject) pyObject {
 }
 
 func objLen(obj pyObject) pyInt {
-	switch t := obj.(type) {
-	case pyList:
-		return newPyInt(len(t))
-	case pyFrozenList:
-		return newPyInt(len(t.pyList))
-	case pyDict:
-		return newPyInt(len(t))
-	case pyFrozenDict:
-		return newPyInt(len(t.pyDict))
-	case pyString:
-		return newPyInt(len([]rune(t)))
+	if l, ok := obj.(lengthable); ok {
+		return newPyInt(l.Len())
 	}
 	panic("object of type " + obj.Type() + " has no len()")
 }
