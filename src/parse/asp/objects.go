@@ -22,8 +22,6 @@ type pyObject interface {
 	TypeTag() int32
 	// Returns true if this object evaluates to something truthy.
 	IsTruthy() bool
-	// Returns a property of this object with the given name.
-	Property(scope *scope, name string) pyObject
 	// Invokes the given operator on this object and returns the result.
 	Operator(operator Operator, operand pyObject) pyObject
 }
@@ -56,6 +54,12 @@ type indexAssignable interface {
 	IndexAssign(index, value pyObject)
 }
 
+// A propertied represents an object that has properties that can be accessed via .
+type propertied interface {
+	// Returns a property of this object with the given name.
+	Property(*scope, string) pyObject
+}
+
 type pyBool bool
 
 // True and False are the singletons representing those values.
@@ -83,10 +87,6 @@ func (b pyBool) TypeTag() int32 {
 
 func (b pyBool) IsTruthy() bool {
 	return b == True
-}
-
-func (b pyBool) Property(scope *scope, name string) pyObject {
-	panic("bool object has no property " + name)
 }
 
 func (b pyBool) Operator(operator Operator, operand pyObject) pyObject {
@@ -124,10 +124,6 @@ func (n pyNone) IsTruthy() bool {
 	return false
 }
 
-func (n pyNone) Property(scope *scope, name string) pyObject {
-	panic("none object has no property " + name)
-}
-
 func (n pyNone) Operator(operator Operator, operand pyObject) pyObject {
 	panic(fmt.Sprintf("operator %s not implemented on type none", operator))
 }
@@ -157,10 +153,6 @@ func (s pySentinel) TypeTag() int32 {
 
 func (s pySentinel) IsTruthy() bool {
 	return false
-}
-
-func (s pySentinel) Property(scope *scope, name string) pyObject {
-	panic("sentinel object has no property " + name)
 }
 
 func (s pySentinel) Operator(operator Operator, operand pyObject) pyObject {
@@ -220,10 +212,6 @@ func (i pyInt) TypeTag() int32 {
 
 func (i pyInt) IsTruthy() bool {
 	return i != 0
-}
-
-func (i pyInt) Property(scope *scope, name string) pyObject {
-	panic("int object has no property " + name)
 }
 
 func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
@@ -361,10 +349,6 @@ func (l pyList) TypeTag() int32 {
 
 func (l pyList) IsTruthy() bool {
 	return len(l) > 0
-}
-
-func (l pyList) Property(scope *scope, name string) pyObject {
-	panic("list object has no property " + name)
 }
 
 func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
@@ -695,10 +679,6 @@ func (f *pyFunc) TypeTag() int32 {
 
 func (f *pyFunc) IsTruthy() bool {
 	return true
-}
-
-func (f *pyFunc) Property(scope *scope, name string) pyObject {
-	panic("function object has no property " + name)
 }
 
 func (f *pyFunc) Operator(operator Operator, operand pyObject) pyObject {
@@ -1067,10 +1047,6 @@ func (r *pyRange) TypeTag() int32 {
 
 func (r *pyRange) IsTruthy() bool {
 	return true
-}
-
-func (r *pyRange) Property(scope *scope, name string) pyObject {
-	panic("range object has no property " + name)
 }
 
 func (r *pyRange) Operator(operator Operator, operand pyObject) pyObject {

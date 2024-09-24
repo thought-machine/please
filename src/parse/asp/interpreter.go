@@ -730,11 +730,19 @@ func (s *scope) interpretValueExpression(expr *ValueExpression) pyObject {
 		}
 	}
 	if expr.Property != nil {
-		obj = s.interpretIdent(obj.Property(s, expr.Property.Name), expr.Property)
+		obj = s.interpretIdent(s.property(obj, expr.Property.Name), expr.Property)
 	} else if expr.Call != nil {
 		obj = s.callObject("", obj, expr.Call)
 	}
 	return obj
+}
+
+func (s *scope) property(obj pyObject, property string) pyObject {
+	p, ok := obj.(propertied)
+	if !ok {
+		panic(obj.Type() + " object has no property " + property)
+	}
+	return p.Property(s, property)
 }
 
 func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
@@ -791,7 +799,7 @@ func (s *scope) interpretFString(f *FString) pyObject {
 	stringVar := func(v FStringVar) string {
 		obj := s.Lookup(v.Var[0])
 		for _, key := range v.Var[1:] {
-			obj = obj.Property(s, key)
+			obj = s.property(obj, key)
 		}
 
 		return obj.String()
@@ -838,7 +846,7 @@ func (s *scope) interpretIdent(obj pyObject, expr *IdentExpr) pyObject {
 	for _, action := range expr.Action {
 		if action.Property != nil {
 			name = action.Property.Name
-			obj = s.interpretIdent(obj.Property(s, name), action.Property)
+			obj = s.interpretIdent(s.property(obj, name), action.Property)
 		} else if action.Call != nil {
 			obj = s.callObject(name, obj, action.Call)
 		}
@@ -868,7 +876,7 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		}
 	} else if stmt.Action != nil {
 		if stmt.Action.Property != nil {
-			return s.interpretIdent(s.Lookup(stmt.Name).Property(s, stmt.Action.Property.Name), stmt.Action.Property)
+			return s.interpretIdent(s.property(s.Lookup(stmt.Name), stmt.Action.Property.Name), stmt.Action.Property)
 		} else if stmt.Action.Call != nil {
 			return s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
 		} else if stmt.Action.Assign != nil {
