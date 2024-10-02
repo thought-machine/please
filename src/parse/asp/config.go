@@ -108,10 +108,19 @@ func resolvePluginValue(values []string, subrepo string) []string {
 				continue // I guess it wasn't a build label. Leave it alone.
 			}
 			// Force the full build label including empty subrepo so this is portable
-			v = fmt.Sprintf("///%v//%v:%v", l.Subrepo, l.PackageName, l.Name)
+			var buf strings.Builder
+			buf.Grow(len(l.Subrepo) + len(l.PackageName) + len(l.Name) + len(annotation) + 7)  // +7 for the delimiters
+			buf.WriteString("///")
+			buf.WriteString(l.Subrepo)
+			buf.WriteString("//")
+			buf.WriteString(l.PackageName)
+			buf.WriteByte(':')
+			buf.WriteString(l.Name)
 			if annotation != "" {
-				v = fmt.Sprintf("%v|%v", v, annotation)
+				buf.WriteByte('|')
+				buf.WriteString(annotation)
 			}
+			v = buf.String()
 		}
 		ret[i] = v
 	}
@@ -155,7 +164,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 			continue
 		}
 
-		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, configKey)
+		fullConfigKey := pluginName + "." + configKey
 		value, ok := extraVals[strings.ToLower(configKey)]
 		if !ok {
 			// The default values are defined in the subrepo so should be parsed in that scope
