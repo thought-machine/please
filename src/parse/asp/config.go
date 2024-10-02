@@ -239,9 +239,9 @@ func toPyObject(key, val, toType string, optional bool) pyObject {
 	case "bool":
 		switch strings.ToLower(val) {
 		case "true", "yes", "on", "1":
-			return pyBool(true)
+			return True
 		case "false", "no", "off", "0":
-			return pyBool(false)
+			return False
 		default:
 			log.Fatalf("%s: invalid bool value: %v", key, val)
 			return pyNone{}
@@ -252,7 +252,7 @@ func toPyObject(key, val, toType string, optional bool) pyObject {
 			log.Fatalf("%s: invalid int value: %v", key, val)
 			return pyNone{}
 		}
-		return pyInt(i)
+		return newPyInt(i)
 	default:
 		log.Fatalf("%s: invalid plugin configuration field type: %v", key, toType)
 		return pyNone{}
