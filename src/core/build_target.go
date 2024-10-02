@@ -1193,7 +1193,7 @@ func (target *BuildTarget) AddProvide(language string, labels []BuildLabel) {
 	if target.Provides == nil {
 		target.Provides = map[string][]BuildLabel{language: labels}
 	} else {
-		target.Provides[language] = slices.Clip(labels)  // Clip so we don't have issues appending in provideFor
+		target.Provides[language] = slices.Clip(labels) // Clip so we don't have issues appending in provideFor
 	}
 }
 

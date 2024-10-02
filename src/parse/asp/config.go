@@ -109,7 +109,7 @@ func resolvePluginValue(values []string, subrepo string) []string {
 			}
 			// Force the full build label including empty subrepo so this is portable
 			var buf strings.Builder
-			buf.Grow(len(l.Subrepo) + len(l.PackageName) + len(l.Name) + len(annotation) + 7)  // +7 for the delimiters
+			buf.Grow(len(l.Subrepo) + len(l.PackageName) + len(l.Name) + len(annotation) + 7) // +7 for the delimiters
 			buf.WriteString("///")
 			buf.WriteString(l.Subrepo)
 			buf.WriteString("//")
