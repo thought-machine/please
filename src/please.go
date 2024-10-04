@@ -88,6 +88,7 @@ var opts struct {
 		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
 		Debug              bool    `long:"debug" description:"When enabled, Please will enter into an interactive debugger when breakpoint() is called during parsing."`
 		KeepGoing          bool    `long:"keep_going" description:"Continue as much as possible after an error. While the target that failed and those that depend on it cannot be build, other prerequisites of these targets can be."`
+		AllowSudo          bool    `long:"allow_sudo" hidden:"true" description:"Allow running under sudo (normally this is a very bad idea)"`
 	} `group:"Options that enable / disable certain behaviors"`
 
 	HelpFlags struct {
@@ -1442,6 +1443,9 @@ func initBuild(args []string) string {
 	}
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)
+	if _, present := os.LookupEnv("SUDO_COMMAND"); present && !opts.BehaviorFlags.AllowSudo {
+		log.Fatalf("Refusing to run under sudo; generally it is a very bad idea to invoke Please in this way. You can pass --allow_sudo to permit it, but almost certainly you do not want to do this.")
+	}
 	if _, err := maxprocs.Set(maxprocs.Logger(log.Info), maxprocs.Min(opts.BuildFlags.NumThreads)); err != nil {
 		log.Error("Failed to set GOMAXPROCS: %s", err)
 	}
