@@ -8,10 +8,10 @@
 
 _plz_complete_bash() {
     COMP_WORDBREAKS=${COMP_WORDBREAKS//:}
-    LINE="${COMP_LINE:0:$COMP_POINT}"
-    ARGS="${LINE#$COMP_WORDS[0]}"
+    COMP_WORDBREAKS=${COMP_WORDBREAKS//=}
+    args=("${COMP_WORDS[@]:1:$COMP_CWORD}")
     local IFS=$'\n'
-    COMPREPLY=($(GO_FLAGS_COMPLETION=1 ${COMP_WORDS[0]} -p -v 0 --noupdate "$ARGS"))
+    COMPREPLY=($(GO_FLAGS_COMPLETION=1 ${COMP_WORDS[0]} -p -v 0 --noupdate "${args[@]}"))
     return 0
 }
 
