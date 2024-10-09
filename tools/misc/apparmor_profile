@@ -1,0 +1,12 @@
+# Allow Please and its sandbox binary to create unprivileged user namespaces.
+# These are used for sandboxing build actions when the appropriate config is enabled.
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile /home/*/.please/please /home/*/.please/please_sandbox flags=(unconfined) {
+  userns,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/please>
+}
