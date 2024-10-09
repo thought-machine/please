@@ -45,19 +45,19 @@ func OpenDirFile(filename string, flag int, perm os.FileMode) (*os.File, error) 
 
 // PathExists returns true if the given path exists, as a file or a directory.
 func PathExists(filename string) bool {
-	_, err := os.Lstat(filename)
+	_, err := os.Lstat(ExpandHomePath(filename))
 	return err == nil
 }
 
 // FileExists returns true if the given path exists and is a file.
 func FileExists(filename string) bool {
-	info, err := os.Lstat(filename)
+	info, err := os.Lstat(ExpandHomePath(filename))
 	return err == nil && !info.IsDir()
 }
 
 // IsSymlink returns true if the given path exists and is a symlink.
 func IsSymlink(filename string) bool {
-	info, err := os.Lstat(filename)
+	info, err := os.Lstat(ExpandHomePath(filename))
 	return err == nil && (info.Mode()&os.ModeSymlink) != 0
 }
 
@@ -71,7 +71,7 @@ func IsSameFile(a, b string) bool {
 
 // getFileInfo returns the FileInfo of a file.
 func getFileInfo(filename string) (os.FileInfo, error) {
-	fi, err := os.Stat(filename)
+	fi, err := os.Stat(ExpandHomePath(filename))
 	if err != nil {
 		return nil, err
 	}
