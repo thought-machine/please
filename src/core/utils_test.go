@@ -37,7 +37,7 @@ func TestIterSources(t *testing.T) {
 	state := NewDefaultBuildState()
 	graph := buildGraph()
 
-	type SourcePair struct {Src, Tmp string}
+	type SourcePair struct{ Src, Tmp string }
 	iterSources := func(label string) []SourcePair {
 		ret := []SourcePair{}
 		for src, tmp := range IterSources(state, graph, graph.TargetOrDie(ParseBuildLabel(label, "")), false) {
