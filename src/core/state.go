@@ -9,6 +9,7 @@ import (
 	"hash/crc64"
 	"io"
 	iofs "io/fs"
+	"iter"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -1329,23 +1330,26 @@ func (state *BuildState) DownloadAllInputs(target *BuildTarget, targetDir string
 	return state.RemoteClient.DownloadInputs(target, targetDir, isTest)
 }
 
-// IterInputs returns a channel that iterates all the input files needed for a target.
-func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
+// IterInputs returns a an iterator over all the input files needed for a target.
+func (state *BuildState) IterInputs(target *BuildTarget, test bool) iter.Seq[BuildInput] {
 	if !test {
 		return IterInputs(state, state.Graph, target, true, target.IsFilegroup)
 	}
-	ch := make(chan BuildInput)
-	go func() {
-		ch <- target.Label
+	return func(yield func(BuildInput) bool) {
+		if !yield(target.Label) {
+			return
+		}
 		for _, datum := range target.AllData() {
-			ch <- datum
+			if !yield(datum) {
+				return
+			}
 		}
-		for _, datum := range target.AllTestTools() {
-			ch <- datum
+		for _, tool := range target.AllTestTools() {
+			if !yield(tool) {
+				return
+			}
 		}
-		close(ch)
-	}()
-	return ch
+	}
 }
 
 // DisableXattrs disables xattr support for this build. This is done for filesystems that
