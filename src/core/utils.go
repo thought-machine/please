@@ -142,7 +142,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 		done := map[BuildLabel]bool{}
 		recursivelyProvideSource := func(target *BuildTarget, src BuildInput) bool {
 			if label, ok := src.nonOutputLabel(); ok {
-				for _, p := range recursivelyProvideFor(graph, target, target, label) {
+				for p := range recursivelyProvideFor(graph, target, target, label) {
 					if !yield(p) {
 						return false
 					}
@@ -162,7 +162,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 			done[dependency.Label] = true
 			if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
 				for _, dep := range dependency.BuildDependencies() {
-					for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
+					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
 						if !done[dep2] && !dependency.IsTool(dep2) {
 							if !inner(graph.TargetOrDie(dep2)) {
 								return false
@@ -172,7 +172,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 				}
 			} else {
 				for _, dep := range dependency.ExportedDependencies() {
-					for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
+					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
 						if !done[dep2] {
 							if !inner(graph.TargetOrDie(dep2)) {
 								return false
@@ -202,27 +202,34 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 }
 
 // recursivelyProvideFor recursively applies ProvideFor to a target.
-func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, dep BuildLabel) []BuildLabel {
-	depTarget := graph.TargetOrDie(dep)
-	ret := depTarget.ProvideFor(dependency)
-	if len(ret) == 1 && ret[0] == dep {
-		// Dependency doesn't have a require/provide directly on this guy, up to the top-level
-		// target. We have to check the dep first to keep things consistent with what targets
-		// have actually been built.
-		ret = depTarget.ProvideFor(target)
+func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, dep BuildLabel) iter.Seq[BuildLabel] {
+	return func(yield func(BuildLabel) bool) {
+		depTarget := graph.TargetOrDie(dep)
+		ret := depTarget.ProvideFor(dependency)
 		if len(ret) == 1 && ret[0] == dep {
-			return ret
+			// Dependency doesn't have a require/provide directly on this guy, up to the top-level
+			// target. We have to check the dep first to keep things consistent with what targets
+			// have actually been built.
+			ret = depTarget.ProvideFor(target)
+			if len(ret) == 1 && ret[0] == dep {
+				yield(ret[0])
+				return
+			}
+		}
+		for _, r := range ret {
+			if r == dep {
+				if !yield(r) { // Providing itself, don't recurse
+					return
+				}
+			} else {
+				for p := range recursivelyProvideFor(graph, target, dependency, r) {
+					if !yield(p) {
+						return
+					}
+				}
+			}
 		}
 	}
-	ret2 := make([]BuildLabel, 0, len(ret))
-	for _, r := range ret {
-		if r == dep {
-			ret2 = append(ret2, r) // Providing itself, don't recurse
-		} else {
-			ret2 = append(ret2, recursivelyProvideFor(graph, target, dependency, r)...)
-		}
-	}
-	return ret2
 }
 
 // IterRuntimeFiles yields all the runtime files for a rule (outputs, tools & data files), similar to above.
@@ -321,7 +328,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) iter.Seq[string] {
 						// Otherwise we should recurse for this build label (and gather its sources)
 					} else {
 						t := graph.TargetOrDie(label)
-						for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+						for d := range recursivelyProvideFor(graph, target, t, t.Label) {
 							if !inner(graph.TargetOrDie(d)) {
 								return false
 							}
@@ -348,7 +355,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) iter.Seq[string] {
 						// Otherwise we should recurse for this build label (and gather its sources)
 					} else {
 						t := graph.TargetOrDie(label)
-						for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+						for d := range recursivelyProvideFor(graph, target, t, t.Label) {
 							if !inner(graph.TargetOrDie(d)) {
 								return false
 							}
@@ -358,7 +365,7 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) iter.Seq[string] {
 
 				// Finally recurse for all the deps of this rule.
 				for _, dep := range target.Dependencies() {
-					for _, d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
+					for d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
 						if !inner(graph.TargetOrDie(d)) {
 							return false
 						}
