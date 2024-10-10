@@ -35,10 +35,15 @@ func TestCollapseHash2(t *testing.T) {
 
 func TestIterSources(t *testing.T) {
 	state := NewDefaultBuildState()
-
 	graph := buildGraph()
+
+	type SourcePair struct {Src, Tmp string}
 	iterSources := func(label string) []SourcePair {
-		return toSlice(IterSources(state, graph, graph.TargetOrDie(ParseBuildLabel(label, "")), false))
+		ret := []SourcePair{}
+		for src, tmp := range IterSources(state, graph, graph.TargetOrDie(ParseBuildLabel(label, "")), false) {
+			ret = append(ret, SourcePair{src, tmp})
+		}
+		return ret
 	}
 
 	assert.Equal(t, []SourcePair{
@@ -175,12 +180,4 @@ func makeTarget4(graph *BuildGraph, label string, deps ...string) *BuildTarget {
 	})
 	target.AddOutput(target.Label.Name + ".a")
 	return target
-}
-
-func toSlice(ch <-chan SourcePair) []SourcePair {
-	ret := []SourcePair{}
-	for x := range ch {
-		ret = append(ret, x)
-	}
-	return ret
 }

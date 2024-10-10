@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,77 +114,91 @@ func ReturnToInitialWorkingDir() {
 	}
 }
 
-// A SourcePair represents a source file with its source and temporary locations.
-// This isn't typically used much by callers; it's just useful to have a single type for channels.
-type SourcePair struct{ Src, Tmp string }
-
 // IterSources returns all the sources for a function, allowing for sources that are other rules
 // and rules that require transitive dependencies.
 // Yielded values are pairs of the original source location and its temporary location for this rule.
 // If includeTools is true it yields the target's tools as well.
-func IterSources(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools bool) <-chan SourcePair {
-	ch := make(chan SourcePair)
-	done := map[string]bool{}
-	tmpDir := target.TmpDir()
-	go func() {
+func IterSources(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools bool) iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		done := map[string]bool{}
+		tmpDir := target.TmpDir()
 		for input := range IterInputs(state, graph, target, includeTools, false) {
 			fullPaths := input.FullPaths(graph)
 			for i, sourcePath := range input.Paths(graph) {
 				if tmpPath := filepath.Join(tmpDir, sourcePath); !done[tmpPath] {
-					ch <- SourcePair{fullPaths[i], tmpPath}
+					if !yield(fullPaths[i], tmpPath) {
+						return
+					}
 					done[tmpPath] = true
 				}
 			}
 		}
-		close(ch)
-	}()
-	return ch
+	}
 }
 
 // IterInputs iterates all the inputs for a target.
-func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) <-chan BuildInput {
-	ch := make(chan BuildInput)
-	done := map[BuildLabel]bool{}
-	var inner func(dependency *BuildTarget)
-	inner = func(dependency *BuildTarget) {
-		if dependency != target {
-			ch <- dependency.Label
+func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, includeTools, sourcesOnly bool) iter.Seq[BuildInput] {
+	return func(yield func(BuildInput) bool) {
+		done := map[BuildLabel]bool{}
+		recursivelyProvideSource := func(target *BuildTarget, src BuildInput) bool {
+			if label, ok := src.nonOutputLabel(); ok {
+				for _, p := range recursivelyProvideFor(graph, target, target, label) {
+					if !yield(p) {
+						return false
+					}
+				}
+				return true
+			}
+			return yield(src)
 		}
+		var inner func(dependency *BuildTarget) bool
+		inner = func(dependency *BuildTarget) bool {
+			if dependency != target {
+				if !yield(dependency.Label) {
+					return false
+				}
+			}
 
-		done[dependency.Label] = true
-		if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
-			for _, dep := range dependency.BuildDependencies() {
-				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
-					if !done[dep2] && !dependency.IsTool(dep2) {
-						inner(graph.TargetOrDie(dep2))
+			done[dependency.Label] = true
+			if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
+				for _, dep := range dependency.BuildDependencies() {
+					for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
+						if !done[dep2] && !dependency.IsTool(dep2) {
+							if !inner(graph.TargetOrDie(dep2)) {
+								return false
+							}
+						}
+					}
+				}
+			} else {
+				for _, dep := range dependency.ExportedDependencies() {
+					for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
+						if !done[dep2] {
+							if !inner(graph.TargetOrDie(dep2)) {
+								return false
+							}
+						}
 					}
 				}
 			}
-		} else {
-			for _, dep := range dependency.ExportedDependencies() {
-				for _, dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
-					if !done[dep2] {
-						inner(graph.TargetOrDie(dep2))
-					}
-				}
-			}
+			return true
 		}
-	}
-	go func() {
 		for _, source := range target.AllSources() {
-			recursivelyProvideSource(graph, target, source, ch)
+			if !recursivelyProvideSource(target, source) {
+				return
+			}
 		}
 		if includeTools {
 			for _, tool := range target.AllTools() {
-				recursivelyProvideSource(graph, target, tool, ch)
+				if !recursivelyProvideSource(target, tool) {
+					return
+				}
 			}
 		}
 		if !sourcesOnly {
 			inner(target)
 		}
-		close(ch)
-	}()
-	return ch
+	}
 }
 
 // recursivelyProvideFor recursively applies ProvideFor to a target.
@@ -210,42 +225,37 @@ func recursivelyProvideFor(graph *BuildGraph, target, dependency *BuildTarget, d
 	return ret2
 }
 
-// recursivelyProvideSource is similar to recursivelyProvideFor but operates on a BuildInput.
-func recursivelyProvideSource(graph *BuildGraph, target *BuildTarget, src BuildInput, ch chan BuildInput) {
-	if label, ok := src.nonOutputLabel(); ok {
-		for _, p := range recursivelyProvideFor(graph, target, target, label) {
-			ch <- p
-		}
-		return
-	}
-	ch <- src
-}
-
 // IterRuntimeFiles yields all the runtime files for a rule (outputs, tools & data files), similar to above.
-func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool, runtimeDir string) <-chan SourcePair {
-	done := map[string]bool{}
-	ch := make(chan SourcePair)
+func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool, runtimeDir string) iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		done := map[string]bool{}
 
-	pushOut := func(src, out string) {
-		if absoluteOuts {
-			out = filepath.Join(RepoRoot, runtimeDir, out)
+		pushOut := func(src, out string) bool {
+			if absoluteOuts {
+				out = filepath.Join(RepoRoot, runtimeDir, out)
+			}
+			if !done[out] {
+				done[out] = true
+				if !yield(src, out) {
+					return false
+				}
+			}
+			return true
 		}
-		if !done[out] {
-			ch <- SourcePair{src, out}
-			done[out] = true
-		}
-	}
 
-	go func() {
 		outDir := target.OutDir()
 		for _, out := range target.Outputs() {
-			pushOut(filepath.Join(outDir, out), out)
+			if !pushOut(filepath.Join(outDir, out), out) {
+				return
+			}
 		}
 
 		for _, data := range target.AllData() {
 			fullPaths := data.FullPaths(graph)
 			for i, dataPath := range data.Paths(graph) {
-				pushOut(fullPaths[i], dataPath)
+				if !pushOut(fullPaths[i], dataPath) {
+					return
+				}
 			}
 		}
 
@@ -253,7 +263,9 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 			for _, tool := range target.AllTestTools() {
 				fullPaths := tool.FullPaths(graph)
 				for i, toolPath := range tool.Paths(graph) {
-					pushOut(fullPaths[i], toolPath)
+					if !pushOut(fullPaths[i], toolPath) {
+						return
+					}
 				}
 			}
 		}
@@ -262,96 +274,109 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 			for _, data := range target.AllDebugData() {
 				fullPaths := data.FullPaths(graph)
 				for i, dataPath := range data.Paths(graph) {
-					pushOut(fullPaths[i], dataPath)
+					if !pushOut(fullPaths[i], dataPath) {
+						return
+					}
 				}
 			}
 			for _, tool := range target.AllDebugTools() {
 				fullPaths := tool.FullPaths(graph)
 				for i, toolPath := range tool.Paths(graph) {
-					pushOut(fullPaths[i], toolPath)
+					if !pushOut(fullPaths[i], toolPath) {
+						return
+					}
 				}
 			}
 		}
-		close(ch)
-	}()
-	return ch
+	}
 }
 
 // IterInputPaths yields all the transitive input files for a rule (sources & data files), similar to above (again).
-func IterInputPaths(graph *BuildGraph, target *BuildTarget) <-chan string {
-	// Use a couple of maps to protect us from dep-graph loops and to stop parsing the same target
-	// multiple times. We also only want to push files to the channel that it has not already seen.
-	donePaths := map[string]bool{}
-	doneTargets := map[*BuildTarget]bool{}
-	ch := make(chan string)
-	var inner func(*BuildTarget)
-	inner = func(target *BuildTarget) {
-		if !doneTargets[target] {
-			// First yield all the sources of the target only ever pushing declared paths to
-			// the channel to prevent us outputting any intermediate files.
-			for _, source := range target.AllSources() {
-				// If the label is nil add any input paths contained here.
-				if label, ok := source.nonOutputLabel(); !ok {
-					// Don't emit inputs from subrepos; they appear to be files in many ways but they are themselves generated
-					if _, ok := source.(SubrepoFileLabel); ok {
-						continue
-					}
-					for _, sourcePath := range source.FullPaths(graph) {
-						if !donePaths[sourcePath] {
-							ch <- sourcePath
-							donePaths[sourcePath] = true
+func IterInputPaths(graph *BuildGraph, target *BuildTarget) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		// Use a couple of maps to protect us from dep-graph loops and to stop parsing the same target
+		// multiple times. We also only want to push files to the channel that it has not already seen.
+		donePaths := map[string]bool{}
+		doneTargets := map[*BuildTarget]bool{}
+		var inner func(*BuildTarget) bool
+		inner = func(target *BuildTarget) bool {
+			if !doneTargets[target] {
+				// First yield all the sources of the target only ever pushing declared paths to
+				// the channel to prevent us outputting any intermediate files.
+				for _, source := range target.AllSources() {
+					// If the label is nil add any input paths contained here.
+					if label, ok := source.nonOutputLabel(); !ok {
+						// Don't emit inputs from subrepos; they appear to be files in many ways but they are themselves generated
+						if _, ok := source.(SubrepoFileLabel); ok {
+							continue
+						}
+						for _, sourcePath := range source.FullPaths(graph) {
+							if !donePaths[sourcePath] {
+								if !yield(sourcePath) {
+									return false
+								}
+								donePaths[sourcePath] = true
+							}
+						}
+						// Otherwise we should recurse for this build label (and gather its sources)
+					} else {
+						t := graph.TargetOrDie(label)
+						for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+							if !inner(graph.TargetOrDie(d)) {
+								return false
+							}
 						}
 					}
-					// Otherwise we should recurse for this build label (and gather its sources)
-				} else {
-					t := graph.TargetOrDie(label)
-					for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
-						inner(graph.TargetOrDie(d))
-					}
 				}
-			}
 
-			// Now yield all the data deps of this rule.
-			for _, data := range target.AllData() {
-				// If the label is nil add any input paths contained here.
-				if label, ok := data.Label(); !ok {
-					// Don't emit inputs from subrepos; they appear to be files in many ways but they are themselves generated
-					if _, ok := data.(SubrepoFileLabel); ok {
-						continue
-					}
-					for _, sourcePath := range data.FullPaths(graph) {
-						if !donePaths[sourcePath] {
-							ch <- sourcePath
-							donePaths[sourcePath] = true
+				// Now yield all the data deps of this rule.
+				for _, data := range target.AllData() {
+					// If the label is nil add any input paths contained here.
+					if label, ok := data.Label(); !ok {
+						// Don't emit inputs from subrepos; they appear to be files in many ways but they are themselves generated
+						if _, ok := data.(SubrepoFileLabel); ok {
+							continue
+						}
+						for _, sourcePath := range data.FullPaths(graph) {
+							if !donePaths[sourcePath] {
+								if !yield(sourcePath) {
+									return false
+								}
+								donePaths[sourcePath] = true
+							}
+						}
+						// Otherwise we should recurse for this build label (and gather its sources)
+					} else {
+						t := graph.TargetOrDie(label)
+						for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
+							if !inner(graph.TargetOrDie(d)) {
+								return false
+							}
 						}
 					}
-					// Otherwise we should recurse for this build label (and gather its sources)
-				} else {
-					t := graph.TargetOrDie(label)
-					for _, d := range recursivelyProvideFor(graph, target, t, t.Label) {
-						inner(graph.TargetOrDie(d))
+				}
+
+				// Finally recurse for all the deps of this rule.
+				for _, dep := range target.Dependencies() {
+					for _, d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
+						if !inner(graph.TargetOrDie(d)) {
+							return false
+						}
 					}
 				}
+				doneTargets[target] = true
 			}
-
-			// Finally recurse for all the deps of this rule.
-			for _, dep := range target.Dependencies() {
-				for _, d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
-					inner(graph.TargetOrDie(d))
-				}
-			}
-			doneTargets[target] = true
+			return true
 		}
-	}
-	go func() {
 		inner(target)
-		close(ch)
-	}()
-	return ch
+	}
 }
 
 // PrepareSource symlinks a single source file for a build rule.
 func PrepareSource(sourcePath string, tmpPath string) error {
+	if !filepath.IsAbs(sourcePath) {
+		sourcePath = filepath.Join(RepoRoot, sourcePath)
+	}
 	dir := filepath.Dir(tmpPath)
 	if !PathExists(dir) {
 		if err := os.MkdirAll(dir, DirPermissions); err != nil {
@@ -362,14 +387,6 @@ func PrepareSource(sourcePath string, tmpPath string) error {
 		return fmt.Errorf("Source file %s doesn't exist", sourcePath)
 	}
 	return fs.RecursiveLink(sourcePath, tmpPath)
-}
-
-// PrepareSourcePair prepares a source file for a build.
-func PrepareSourcePair(pair SourcePair) error {
-	if filepath.IsAbs(pair.Src) {
-		return PrepareSource(pair.Src, pair.Tmp)
-	}
-	return PrepareSource(filepath.Join(RepoRoot, pair.Src), pair.Tmp)
 }
 
 // PrepareRuntimeDir prepares a directory with a target's runtime data for a command to be run on.
@@ -386,8 +403,8 @@ func PrepareRuntimeDir(state *BuildState, target *BuildTarget, dir string) error
 		return err
 	}
 
-	for out := range IterRuntimeFiles(state.Graph, target, true, dir) {
-		if err := PrepareSourcePair(out); err != nil {
+	for src, tmp := range IterRuntimeFiles(state.Graph, target, true, dir) {
+		if err := PrepareSource(src, tmp); err != nil {
 			return err
 		}
 	}
