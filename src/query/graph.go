@@ -152,7 +152,7 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 		Tools:   makeJSONInputField(state.Graph, buildInputsToStrings(state.Graph, target.AllTools()), target.AllNamedTools()),
 	}
 	for in := range core.IterSources(state, state.Graph, target, false) {
-		t.Inputs = append(t.Inputs, in.Src)
+		t.Inputs = append(t.Inputs, in)
 	}
 	for _, out := range target.Outputs() {
 		t.Outputs = append(t.Outputs, filepath.Join(target.Label.PackageName, out))
@@ -162,7 +162,7 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 	}
 	// just use run 1 as this is only used to print the test dir
 	for data := range core.IterRuntimeFiles(state.Graph, target, false, target.TestDir(1)) {
-		t.Data = append(t.Data, data.Src)
+		t.Data = append(t.Data, data)
 	}
 	t.Labels = target.Labels
 	t.Requires = target.Requires

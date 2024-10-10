@@ -217,8 +217,8 @@ func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, er
 		return "", err
 	}
 
-	for out := range core.IterRuntimeFiles(state.Graph, target, true, path) {
-		if err := core.PrepareSourcePair(out); err != nil {
+	for src, tmp := range core.IterRuntimeFiles(state.Graph, target, true, path) {
+		if err := core.PrepareSource(src, tmp); err != nil {
 			return "", err
 		}
 	}
