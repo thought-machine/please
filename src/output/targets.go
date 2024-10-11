@@ -86,7 +86,7 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) int {
 		return 0
 	}
 	if t := bt.state.Graph.Target(result.Label); t != nil {
-		idx := bt.index(result.Label, result.Run, !t.WasLocal)
+		idx := bt.index(result.Label, result.Run, bt.anyRemote && !t.Local)
 		bt.updateTarget(idx, result, t)
 		return idx
 	}
