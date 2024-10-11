@@ -59,8 +59,8 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}()
 	go func() {
 		for task := range actions {
+			wg.Add(1)
 			go func(task core.Task) {
-				wg.Add(1)
 				defer wg.Done()
 				remote := anyRemote && !task.Target.Local
 				if remote {
