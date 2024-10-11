@@ -1,5 +1,6 @@
 Version 17.12.0
 ---------------
+    * Update profile for guided optimisation (#3273)
     * Replace channel-based iterators with new-style ones (#3272)
     * Expand home path in `fs.PathExists` (#3270)
     * Fix bash completion around = character (#3269)
