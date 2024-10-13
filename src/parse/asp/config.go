@@ -108,10 +108,19 @@ func resolvePluginValue(values []string, subrepo string) []string {
 				continue // I guess it wasn't a build label. Leave it alone.
 			}
 			// Force the full build label including empty subrepo so this is portable
-			v = fmt.Sprintf("///%v//%v:%v", l.Subrepo, l.PackageName, l.Name)
+			var buf strings.Builder
+			buf.Grow(len(l.Subrepo) + len(l.PackageName) + len(l.Name) + len(annotation) + 7) // +7 for the delimiters
+			buf.WriteString("///")
+			buf.WriteString(l.Subrepo)
+			buf.WriteString("//")
+			buf.WriteString(l.PackageName)
+			buf.WriteByte(':')
+			buf.WriteString(l.Name)
 			if annotation != "" {
-				v = fmt.Sprintf("%v|%v", v, annotation)
+				buf.WriteByte('|')
+				buf.WriteString(annotation)
 			}
+			v = buf.String()
 		}
 		ret[i] = v
 	}
@@ -155,7 +164,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 			continue
 		}
 
-		fullConfigKey := fmt.Sprintf("%v.%v", pluginName, configKey)
+		fullConfigKey := pluginName + "." + configKey
 		value, ok := extraVals[strings.ToLower(configKey)]
 		if !ok {
 			// The default values are defined in the subrepo so should be parsed in that scope
@@ -230,9 +239,9 @@ func toPyObject(key, val, toType string, optional bool) pyObject {
 	case "bool":
 		switch strings.ToLower(val) {
 		case "true", "yes", "on", "1":
-			return pyBool(true)
+			return True
 		case "false", "no", "off", "0":
-			return pyBool(false)
+			return False
 		default:
 			log.Fatalf("%s: invalid bool value: %v", key, val)
 			return pyNone{}
@@ -243,7 +252,7 @@ func toPyObject(key, val, toType string, optional bool) pyObject {
 			log.Fatalf("%s: invalid int value: %v", key, val)
 			return pyNone{}
 		}
-		return pyInt(i)
+		return newPyInt(i)
 	default:
 		log.Fatalf("%s: invalid plugin configuration field type: %v", key, toType)
 		return pyNone{}
