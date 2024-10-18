@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"io"
 	iofs "io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -755,9 +757,11 @@ func (config *Configuration) Hash() []byte {
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
-	for _, env := range config.getBuildEnv(false, false) {
-		if !strings.HasPrefix(env, "SECRET") {
-			h.Write([]byte(env))
+	env := config.getBuildEnv(false, false)
+	for _, k := range slices.Sorted(maps.Keys(env)) {
+		if !strings.HasPrefix(k, "SECRET") {
+			h.Write([]byte(k))
+			h.Write([]byte(env[k]))
 		}
 	}
 	return h.Sum(nil)
