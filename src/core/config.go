@@ -5,6 +5,7 @@ package core
 import (
 	"crypto/sha1"
 	"fmt"
+	"hash"
 	"io"
 	iofs "io/fs"
 	"os"
@@ -755,12 +756,23 @@ func (config *Configuration) Hash() []byte {
 	for _, l := range config.Licences.Reject {
 		h.Write([]byte(l))
 	}
-	for _, env := range config.getBuildEnv(false, false) {
+	config.hashBuildEnv(h)
+
+	return h.Sum(nil)
+}
+
+func (config *Configuration) hashBuildEnv(h hash.Hash) {
+	var keys []string
+	buildEnv := config.getBuildEnv(false, false)
+	for key, env := range buildEnv {
 		if !strings.HasPrefix(env, "SECRET") {
-			h.Write([]byte(env))
+			keys = append(keys, key)
 		}
 	}
-	return h.Sum(nil)
+	sort.Strings(keys)
+	for _, key := range keys {
+		h.Write([]byte(buildEnv[key]))
+	}
 }
 
 // GetBuildEnv returns the build environment configured for this config object.
