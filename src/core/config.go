@@ -761,6 +761,7 @@ func (config *Configuration) Hash() []byte {
 	for _, k := range slices.Sorted(maps.Keys(env)) {
 		if !strings.HasPrefix(k, "SECRET") {
 			h.Write([]byte(k))
+			h.Write([]byte{'='})
 			h.Write([]byte(env[k]))
 		}
 	}
