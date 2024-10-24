@@ -1,3 +1,8 @@
+Version 17.12.1
+---------------
+    * Ensure build env is sorted on input to config hash (#3279)
+    * Remove test args from remote test command (#3266)
+
 Version 17.12.0
 ---------------
     * Require building tasks to complete before shutdown (#3275)
