@@ -1,3 +1,7 @@
+Version 17.12.2
+---------------
+    * Exclude test_tools from dependencies in working dir during build.
+
 Version 17.12.1
 ---------------
     * Ensure build env is sorted on input to config hash (#3279)
