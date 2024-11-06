@@ -1,3 +1,7 @@
+Version 17.12.3
+---------------
+    * Updated arcat to fix some subtle issues with ar archives and filenames of an unusual size
+
 Version 17.12.2
 ---------------
     * Exclude test_tools from dependencies in working dir during build.
