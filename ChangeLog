@@ -1,3 +1,7 @@
+Version 17.12.4
+---------------
+    * Reverted back to arcat v1.0.2 while we work out behavioural issues
+
 Version 17.12.3
 ---------------
     * Updated arcat to fix some subtle issues with ar archives and filenames of an unusual size
