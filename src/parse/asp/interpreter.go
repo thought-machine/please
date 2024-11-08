@@ -291,7 +291,7 @@ type parseTarget struct {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
-	ctx             context.Context
+	ctx             context.Context //nolint:containedctx
 	interpreter     *interpreter
 	filename        string
 	state           *core.BuildState

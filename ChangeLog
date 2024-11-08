@@ -1,3 +1,7 @@
+17.12.6-beta.1
+--------------
+    * Add goroutine labels to track what they are getting up to if we suspect a hang (#3292)
+
 Version 17.12.5
 ---------------
     * Add a stat for number of BUILD files currently parsing (#3290)
