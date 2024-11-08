@@ -51,7 +51,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	go func() {
 		for task := range parses {
 			go func(task core.ParseTask) {
+				state.Parses().Add(1)
 				parse.Parse(state, task.Label, task.Dependent, task.Mode)
+				state.Parses().Add(-1)
 				state.TaskDone()
 			}(task)
 		}
