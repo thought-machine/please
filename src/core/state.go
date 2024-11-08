@@ -632,10 +632,6 @@ func (state *BuildState) forwardResults() {
 		}
 	}()
 	activeTargets := map[*BuildTarget]struct{}{}
-	go func() {
-		time.Sleep(4 * time.Second)
-		dumpGoroutineInfo()
-	}()
 	// Persist this one timer throughout so we don't generate bazillions of them.
 	t := time.NewTimer(cycleCheckDuration)
 	t.Stop()
