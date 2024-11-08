@@ -6,12 +6,10 @@
 package parse
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	iofs "io/fs"
 	"path/filepath"
-	"runtime/pprof"
 	"strings"
 
 	"github.com/thought-machine/please/src/cli/logging"
@@ -81,9 +79,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
 		return nil
 	}
-	pprof.Do(context.Background(), pprof.Labels("parse", label.String()), func(_ context.Context) {
-		pkg, err = parsePackage(state, label, dependent, subrepo, mode)
-	})
+	pkg, err = parsePackage(state, label, dependent, subrepo, mode)
 
 	if err != nil {
 		return err
