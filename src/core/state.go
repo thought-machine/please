@@ -279,6 +279,7 @@ type stateProgress struct {
 	numActive  int64
 	numPending int64
 	numDone    int64
+	numParses  atomic.Int64
 	mutex      sync.Mutex
 	closeOnce  sync.Once
 	resultOnce sync.Once
@@ -368,6 +369,11 @@ func (state *BuildState) AddPendingTest(target *BuildTarget) {
 	} else {
 		state.addPendingTest(target, int(state.NumTestRuns))
 	}
+}
+
+// Parses returns the number of current parse tasks
+func (state *BuildState) Parses() *atomic.Int64 {
+	return &state.progress.numParses
 }
 
 func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
