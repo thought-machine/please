@@ -46,7 +46,7 @@ type plainDisplay struct {
 
 func (d *plainDisplay) Update(targets []buildingTarget) {
 	localbusy, remotebusy := countActive(targets)
-	log.Notice("Build running for %s, %d / %d tasks done, %s busy, parsing %d BUILD files", time.Since(d.state.StartTime).Round(time.Second), d.state.NumDone(), d.state.NumActive(), pluralise(localbusy+remotebusy, "worker", "workers"), d.state.Parses().Load())
+	log.Notice("Build running for %s, %d / %d tasks done, %s busy, parsing %s", time.Since(d.state.StartTime).Round(time.Second), d.state.NumDone(), d.state.NumActive(), pluralise(localbusy+remotebusy, "worker", "workers"), pluralise(int(d.state.Parses().Load()), "BUILD file", "BUILD files"))
 }
 
 func countActive(targets []buildingTarget) (local int, remote int) {
