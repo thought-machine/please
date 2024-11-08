@@ -1,11 +1,13 @@
 package asp
 
 import (
+	"context"
 	"fmt"
 	"iter"
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
+	"runtime/pprof"
 	"strings"
 	"sync"
 
@@ -206,6 +208,8 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, preload bool) pyDict {
 	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
 	globals, err := i.subincludes.GetOrSet(key, func() (pyDict, error) {
+		pprof.SetGoroutineLabels(pprof.WithLabels(context.Background(), pprof.Labels("subinclude", path)))
+		defer pprof.SetGoroutineLabels(context.Background())
 		stmts, err := i.parseSubinclude(path)
 		if err != nil {
 			return nil, err

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	iofs "io/fs"
 	"iter"
 	"path/filepath"
+	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -630,6 +632,10 @@ func (state *BuildState) forwardResults() {
 		}
 	}()
 	activeTargets := map[*BuildTarget]struct{}{}
+	go func() {
+		time.Sleep(4 * time.Second)
+		dumpGoroutineInfo()
+	}()
 	// Persist this one timer throughout so we don't generate bazillions of them.
 	t := time.NewTimer(cycleCheckDuration)
 	t.Stop()
@@ -645,6 +651,7 @@ func (state *BuildState) forwardResults() {
 				}
 			case <-t.C:
 				go state.checkForCycles()
+				go dumpGoroutineInfo()
 				// Still need to get a result!
 				result = <-state.progress.internalResults
 			}
@@ -1533,4 +1540,11 @@ func (s BuildResultStatus) IsFailure() bool {
 // IsActive returns true if this status represents a target that is not yet finished.
 func (s BuildResultStatus) IsActive() bool {
 	return s == PackageParsing || s == TargetBuilding || s == TargetTesting
+}
+
+// dumpGoroutineInfo logs out the goroutine stacks when we believe we might have hung.
+func dumpGoroutineInfo() {
+	var buf bytes.Buffer
+	pprof.Lookup("goroutine").WriteTo(&buf, 1)
+	log.Debug("Current stacks: %s", buf.String())
 }
