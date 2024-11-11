@@ -1,11 +1,13 @@
 package asp
 
 import (
+	"context"
 	"fmt"
 	"iter"
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
+	"runtime/pprof"
 	"strings"
 	"sync"
 
@@ -35,6 +37,7 @@ type interpreter struct {
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
+		ctx:    context.Background(),
 		state:  state,
 		locals: map[string]pyObject{},
 	}
@@ -166,6 +169,10 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 			label:     *forLabel,
 			dependent: *dependent,
 		}
+		old := s.ctx
+		s.ctx = pprof.WithLabels(s.ctx, pprof.Labels("parse", forLabel.String()))
+		pprof.SetGoroutineLabels(s.ctx)
+		defer pprof.SetGoroutineLabels(old)
 	}
 
 	if !mode.IsPreload() {
@@ -206,6 +213,8 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, preload bool) pyDict {
 	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
 	globals, err := i.subincludes.GetOrSet(key, func() (pyDict, error) {
+		pprof.SetGoroutineLabels(pprof.WithLabels(pkgScope.ctx, pprof.Labels("subinclude", path)))
+		defer pprof.SetGoroutineLabels(pkgScope.ctx)
 		stmts, err := i.parseSubinclude(path)
 		if err != nil {
 			return nil, err
@@ -282,6 +291,7 @@ type parseTarget struct {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
+	ctx             context.Context //nolint:containedctx
 	interpreter     *interpreter
 	filename        string
 	state           *core.BuildState
@@ -400,6 +410,7 @@ func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint in
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
 	s2 := &scope{
+		ctx:         s.ctx,
 		filename:    filename,
 		interpreter: s.interpreter,
 		state:       s.state,
