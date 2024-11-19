@@ -22,6 +22,7 @@ jobs:
           build_file=$(cat docs/BUILD)
 
           PLUGINS=("python" "java" "go" "cc" "shell" "go-proto" "proto")
+          URL_PREFIX="https://github.com/please-build/"
           for plugin in "${PLUGINS[@]}"; do
             latest=$(git ls-remote --tags --sort=version:refname "${URL_PREFIX}""${plugin}"-rules.git | sed 's/.*\///' | sed '/^v[0-9]\+\.[0-9]\+\.[0-9]\+$/!d' | tail -n 1)
             if [ -z "$latest" ]; then
