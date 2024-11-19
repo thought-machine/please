@@ -1,0 +1,63 @@
+name: Update Plugin Docs
+on:
+  schedule:
+    - cron: '0 9 * * *'
+    workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for updates
+        id: check
+        run: |
+          updates_needed=false
+          updates_text=""
+          build_file=$(cat docs/BUILD)
+
+          PLUGINS=("python" "java" "go" "cc" "shell" "go-proto" "proto")
+          for plugin in "${PLUGINS[@]}"; do
+            latest=$(git ls-remote --tags --sort=version:refname "${URL_PREFIX}""${plugin}"-rules.git | sed 's/.*\///' | sed '/^v[0-9]\+\.[0-9]\+\.[0-9]\+$/!d' | tail -n 1)
+            if [ -z "$latest" ]; then
+              echo "No tags found for ${plugin}"
+              exit 1
+            fi
+
+            docs_version=$(./pleasew query print //docs/... --include "${plugin}"_plugin_docs* | grep labels | cut -d: -f2 | cut -d\' -f1)
+            if [ -z "$docs_version" ]; then
+              echo "No docs found for ${plugin}"
+              exit 1
+            fi
+
+            if [ "$latest" != "$docs_version" ]; then
+              updates_needed=true
+              updates_text="${updates_text}${plugin}: ${docs_version} -> ${latest}\n"
+              build_file=$(echo "$build_file" | sed "s/\"$plugin\": \"$docs_version\"/\"$plugin\": \"$latest\"/")
+            fi
+          done
+
+          if [ "$updates_needed" = true ]; then
+            echo "$build_file" > docs/BUILD
+          fi
+
+          echo "UPDATES_NEEDED=${updates_needed}" >> "$GITHUB_OUTPUT"
+          echo "UPDATES_TEXT=${updates_text}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.check.outputs.UPDATES_NEEDED == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "docs: Update plugin documentation versions"
+          title: "docs: Update plugin documentation versions"
+          body: |
+            Automated PR to update plugin documentation versions:
+
+            ${{ steps.check.outputs.UPDATES_TEXT }}
+          branch: update-plugin-docs
+          delete-branch: true
