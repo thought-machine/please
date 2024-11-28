@@ -402,6 +402,11 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 				s.Error("Failed to activate subinclude target: %v", err)
 			}
 		}
+	} else if isLocal && s.pkg == nil {
+		// The subinclude is local to this package but we didn't hit the part above.
+		// This is almost certainly going to cause problems sooner or later; we will probably
+		// lock up having not activated it.
+		s.Error("Cannot make package-local subincludes from within another subinclude")
 	}
 
 	t := s.WaitForSubincludedTarget(l, pkgLabel)
