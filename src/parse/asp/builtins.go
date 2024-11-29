@@ -392,7 +392,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// If the subinclude is local to this package, it must already exist in the graph. If it already exists in the graph
 	// but isn't activated, we should activate it otherwise WaitForSubincludedTarget might block. This can happen when
 	// another package also subincludes this target, and queues it first.
-	if isLocal && s.pkg != nil {
+	if isLocal {
 		t := s.state.Graph.Target(l)
 		if t == nil {
 			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)

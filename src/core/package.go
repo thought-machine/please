@@ -240,6 +240,9 @@ func FindOwningPackage(state *BuildState, file string) BuildLabel {
 // suggestTargets suggests the targets in the given package that might be misspellings of
 // the requested one.
 func suggestTargets(pkg *Package, label, dependent BuildLabel) string {
+	if pkg == nil {
+		return ""
+	}
 	// The initial haystack only contains target names
 	haystack := []string{}
 	for _, t := range pkg.AllTargets() {

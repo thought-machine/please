@@ -1017,7 +1017,9 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 			// Bazel allows some things that look like build targets but aren't - notably the syntax
 			// to load(). It suits us to treat that as though it is one, but we now have to
 			// implicitly make it available.
-			exportFile(state, pkg, label)
+			if pkg != nil {
+				exportFile(state, pkg, label)
+			}
 		} else {
 			msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
 			if dependent != OriginalTarget {
@@ -1029,6 +1031,9 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 	if state.ParsePackageOnly && !mode.IsForSubinclude() {
 		return nil // Some kinds of query don't need a full recursive parse.
 	} else if label.IsAllTargets() {
+		if pkg == nil {
+			return fmt.Errorf("Cannot use :all in this context")
+		}
 		if dependent == OriginalTarget {
 			for _, target := range pkg.AllTargets() {
 				// Don't activate targets that were added in a post-build function; that causes a race condition
