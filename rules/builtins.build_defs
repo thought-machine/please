@@ -291,6 +291,11 @@ def json(value, pretty=False) -> str:
     pass
 
 
+def yaml(value) -> str:
+    """Returns a YAML-formatted representation of a plz value.
+    """
+    pass
+
 def breakpoint():
     """Breaks into an interactive debugging session."""
     pass
