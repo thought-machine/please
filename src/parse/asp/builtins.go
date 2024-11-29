@@ -16,10 +16,11 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
+	"gopkg.in/yaml.v3"
+
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"gopkg.in/yaml.v3"
 )
 
 // A nativeFunc is a function that implements a builtin function natively.
