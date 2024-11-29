@@ -80,9 +80,6 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()
-	if target.IsTest() && state.NeedTests && state.IsOriginalTarget(target) {
-		state.QueueTestTarget(target)
-	}
 }
 
 func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTarget) error {

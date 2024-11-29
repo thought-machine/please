@@ -712,8 +712,8 @@ func (target *BuildTarget) FinishBuild() {
 }
 
 // WaitForBuild blocks until this target has finished building.
-func (target *BuildTarget) WaitForBuild() {
-	<-target.finishedBuilding
+func (target *BuildTarget) WaitForBuild(dependant BuildLabel) {
+	waitOnChan(target.finishedBuilding, "Still waiting on (target %v).WaitForBuild(dependant %v)", target.Label, dependant)
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.

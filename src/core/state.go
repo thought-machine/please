@@ -904,7 +904,7 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 		return make(chan struct{})
 	}); !inserted {
 		// Something's already registered for this, get on the train
-		waitOnChan(ch, "Still waiting on WaitForBuiltTarget(%v, %v, %v)", l, dependent, mode)
+		waitOnChan(ch, "Still waiting on WaitForBuiltTarget(label %v, dependant %v, ParseMode(%v))", l, dependent, mode)
 		return state.Graph.Target(l)
 	}
 	if err := state.queueTarget(l, dependent, mode.IsForSubinclude(), mode); err != nil {
@@ -1187,7 +1187,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		// Wait for these targets to actually build.
 		if building {
 			for _, t := range target.Dependencies() {
-				t.WaitForBuild()
+				t.WaitForBuild(target.Label)
 				if t.State() >= DependencyFailed { // Either the target failed or its dependencies failed
 					// Give up and set the original target as dependency failed
 					target.SetState(DependencyFailed)
