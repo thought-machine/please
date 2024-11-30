@@ -423,3 +423,13 @@ ul.bulleted-list > li > * {
 .code {
   font-family: "EssentialPragmataPro", monospace, sans-serif;
 }
+
+/* Google search */
+div.gsc-results-wrapper-overlay {
+  background-color: var(--raisin-black);
+}
+
+li.search {
+  margin-top: 3em;
+  width: 70%;
+}
