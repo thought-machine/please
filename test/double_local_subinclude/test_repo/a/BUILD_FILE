@@ -1,0 +1,16 @@
+filegroup(
+    name = "defs_1",
+    srcs = ["1.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "defs_2",
+    srcs = ["2.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+subinclude(":defs_2")
+
+assert THE_QUESTION.endswith("?"), "not a question"
+assert THE_ANSWER == 42, "wrong answer to life, the universe and everything"

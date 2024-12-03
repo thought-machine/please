@@ -1,0 +1,3 @@
+subinclude("//a:defs_2")
+
+assert THE_ANSWER == 42, "wrong answer to life, the universe and everything"
