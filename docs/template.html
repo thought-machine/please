@@ -8,7 +8,7 @@
       content="Please is a cross-language build system with an emphasis on high performance, portability, extensibility and correctness."
     />
     <meta property="og:title" content="{{ .Title }}" />
-    <meta 
+    <meta
       property="og:description"
       content="Please is a cross-language build system with an emphasis on high performance, portability, extensibility and correctness."
     />
@@ -52,6 +52,8 @@
     <link rel="stylesheet" href="/styles.css" />
     <script src="/action.js"></script>
     <script src="/tabs.js"></script>
+    <!-- The ID here is the Google Programmable Search Engine ID. See https://developers.google.com/custom-search/docs/overview for more information. -->
+    <script async src="https://cse.google.com/cse.js?cx=a49b06597fd4f470d"></script>
   </head>
   <body
     class="silver bg-raisin-black f5 lh-copy nested-list-reset"
@@ -372,6 +374,10 @@
               >
             </li>
 
+            <li class="search">
+              <div class="gcse-search" enableAutoComplete="true"></div>
+            <li>
+
           </ul>
         </nav>
         <div class="ph3 pb4 w-80-l mw8-l">
@@ -379,13 +385,13 @@
             <div class="h4 relative">
               <img
                 class="absolute {{rotate 5}}"
-                style="height: 10rem; top: -7rem; left: 20%;"
+                style="height: 10rem; top: -7rem; left: 20%; z-index: -1;"
                 alt=""
                 src="/images/{{shape 4}}_{{colour 7}}.png"
               />
               <img
                 class="absolute {{rotate 6}}"
-                style="height: 8rem; top: 0; right: 20%;"
+                style="height: 8rem; top: 0; right: 20%; z-index: -1;"
                 alt=""
                 src="/images/{{shape 5}}_{{colour 8}}.png"
               />
