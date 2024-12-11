@@ -12,6 +12,7 @@
 #include <sched.h>
 #include <signal.h>
 #include <net/if.h>
+#include <net/route.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
@@ -19,6 +20,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <linux/rtnetlink.h>
+#include <arpa/inet.h>
+
+inline int perror_sock(char *errmsg, const int sock) {
+    close(sock);
+    perror(errmsg);
+    return 1;
+}
 
 // lo_up brings up the loopback interface in the new network namespace.
 // By default the namespace is created with lo but it is down.
@@ -35,15 +44,99 @@ int lo_up() {
     memset(&req, 0, sizeof(req));
     strncpy(req.ifr_name, "lo", IFNAMSIZ);
     if (ioctl(sock, SIOCGIFFLAGS, &req) < 0) {
-        perror("SIOCGIFFLAGS");
+      perror_sock("SIOCGIFFLAGS", sock);
         return 1;
     }
 
     req.ifr_flags |= IFF_UP;
     if (ioctl(sock, SIOCSIFFLAGS, &req) < 0) {
-        perror("SIOCSIFFLAGS");
+      perror_sock("SIOCSIFFLAGS", sock);
         return 1;
     }
+    close(sock);
+    return 0;
+}
+
+// default_gateway adds a routing table entry for all traffic to be
+// routed via the localhost. This is required to communicate with
+// additional IP addresses added to the loopback interface that are
+// outside of the 127.0.0.0/8 range.
+int default_gateway() {
+    const int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        perror("socket");
+        return 1;
+    }
+
+    struct rtentry rte;
+    struct sockaddr_in *sa;
+    memset(&rte, 0, sizeof(rte));
+    rte.rt_flags = RTF_UP | RTF_GATEWAY;
+
+    sa = (struct sockaddr_in*) &rte.rt_gateway;
+    sa->sin_family = AF_INET;
+    sa->sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    sa = (struct sockaddr_in*) &rte.rt_dst;
+    sa->sin_family = AF_INET;
+    sa->sin_addr.s_addr = INADDR_ANY;
+
+    sa = (struct sockaddr_in*) &rte.rt_genmask;
+    sa->sin_family = AF_INET;
+    sa->sin_addr.s_addr = INADDR_ANY;
+
+    if (ioctl(sock, SIOCADDRT, &rte) < 0) {
+        return perror_sock("SIOCADDRT", sock);
+    }
+
+    close(sock);
+    return 0;
+}
+
+// add_local_ip assigns an additional IP address to the loopback interface.
+// This is required for envtest to run in the sandbox which has a default
+// cluster IP range of 10.0.0.0/24 and cannot use addresses in the local
+// 127.0.0.0/8 range
+int add_local_ip()
+{
+    const int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (sock < 0) {
+        perror("socket");
+        return 1;
+    }
+
+    struct sockaddr_nl sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.nl_family = AF_NETLINK;
+
+    if (bind(sock, (struct sockaddr*) &sa, sizeof(sa)) < 0) {
+        return perror_sock("bind", sock);
+    }
+
+    struct {
+        struct nlmsghdr nh;
+        struct ifaddrmsg ifa;
+        struct rtattr rta;
+        in_addr_t addr;
+    } req;
+    memset(&req, 0, sizeof(req));
+
+    req.nh.nlmsg_type = RTM_NEWADDR;
+    req.nh.nlmsg_flags = NLM_F_CREATE | NLM_F_EXCL | NLM_F_REQUEST;
+    req.nh.nlmsg_len = sizeof(req);
+
+    req.ifa.ifa_family = AF_INET;
+    req.ifa.ifa_prefixlen = 8;
+    req.ifa.ifa_index = 1 ; // 1 is the loopback interface in our sandbox
+
+    req.rta.rta_type = IFA_LOCAL;
+    req.rta.rta_len = RTA_LENGTH(sizeof(req.addr));
+    req.addr = inet_addr("10.1.1.1");
+
+    if (send(sock, &req, req.nh.nlmsg_len, 0) < 0) {
+        return perror_sock("send", sock);
+    }
+
     close(sock);
     return 0;
 }
@@ -204,7 +297,7 @@ int contain_child(void* p) {
     }
   }
   if (arg->net) {
-    if (lo_up() != 0) {
+    if (lo_up() || add_local_ip() || default_gateway()) {
       return 1;
     }
   }
