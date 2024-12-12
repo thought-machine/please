@@ -44,13 +44,13 @@ int lo_up() {
     memset(&req, 0, sizeof(req));
     strncpy(req.ifr_name, "lo", IFNAMSIZ);
     if (ioctl(sock, SIOCGIFFLAGS, &req) < 0) {
-      perror_sock("SIOCGIFFLAGS", sock);
+        perror_sock("SIOCGIFFLAGS", sock);
         return 1;
     }
 
     req.ifr_flags |= IFF_UP;
     if (ioctl(sock, SIOCSIFFLAGS, &req) < 0) {
-      perror_sock("SIOCSIFFLAGS", sock);
+        perror_sock("SIOCSIFFLAGS", sock);
         return 1;
     }
     close(sock);
