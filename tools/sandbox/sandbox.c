@@ -23,7 +23,7 @@
 #include <linux/rtnetlink.h>
 #include <arpa/inet.h>
 
-inline int perror_sock(char *errmsg, const int sock) {
+int perror_sock(char *errmsg, const int sock) {
     close(sock);
     perror(errmsg);
     return 1;
