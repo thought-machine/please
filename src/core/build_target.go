@@ -1206,16 +1206,9 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 }
 
 func (target *BuildTarget) isDataFor(other *BuildTarget) bool {
-	for _, data := range other.Data {
+	for _, data := range other.AllData() {
 		if label, ok := data.Label(); ok && label == target.Label {
 			return true
-		}
-	}
-	for _, v := range other.NamedData {
-		for _, data := range v {
-			if label, ok := data.Label(); ok && label == target.Label {
-				return true
-			}
 		}
 	}
 	return false
