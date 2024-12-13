@@ -401,7 +401,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.21.0",
+    version = "v0.31.0",
 )
 
 go_repo(
