@@ -1,7 +1,7 @@
 Version 17.12.7
 ---------------
     * Fix BuildTarget.ProvideFor not checking named data when deciding whether
-		  to skip resolution.
+		  to skip resolution. (#3316)
 
 Version 17.12.6
 ---------------
