@@ -57,6 +57,11 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 			return
 		}
 
+		if !task.Target.State().IsBuilt() {
+			state.TaskDone()
+			return
+		}
+
 		if state.NeedTests && task.Target.IsTest() && state.IsOriginalTarget(task.Target) {
 			state.QueueTestTarget(task.Target)
 		}
