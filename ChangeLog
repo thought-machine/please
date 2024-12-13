@@ -1,6 +1,9 @@
-17.12.6-beta.1
+Version 17.12.6
 --------------
     * Add goroutine labels to track what they are getting up to if we suspect a hang (#3292)
+    * Fix deadlock with queuing data for tests (#3306)
+    * Fix potential subinclude lockup (#3305)
+    * Don't queue a target up for test if the target failed to build (#3315)
 
 Version 17.12.5
 ---------------
