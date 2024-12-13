@@ -1205,6 +1205,15 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	return []BuildLabel{target.Label}
 }
 
+func (target *BuildTarget) isDataFor(other *BuildTarget) bool {
+	for _, data := range other.AllData() {
+		if label, ok := data.Label(); ok && label == target.Label {
+			return true
+		}
+	}
+	return false
+}
+
 // provideFor is like ProvideFor but returns an empty slice if there is a direct dependency.
 // It's a small optimisation to save allocating extra slices.
 func (target *BuildTarget) provideFor(other *BuildTarget) ([]BuildLabel, bool) {
@@ -1214,10 +1223,8 @@ func (target *BuildTarget) provideFor(other *BuildTarget) ([]BuildLabel, bool) {
 		return nil, false
 	}
 	// Never do this if the other target has a data or tool dependency on us.
-	for _, data := range other.Data {
-		if label, ok := data.Label(); ok && label == target.Label {
-			return nil, false
-		}
+	if target.isDataFor(other) {
+		return nil, false
 	}
 	if other.IsTool(target.Label) {
 		return nil, false
