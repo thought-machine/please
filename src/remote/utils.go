@@ -579,11 +579,10 @@ func removeOutputs(target *core.BuildTarget) error {
 
 // subresourceIntegrity returns a string corresponding to a target's hashes in the Subresource Integrity format.
 func subresourceIntegrity(target *core.BuildTarget) string {
-	ret := make([]string, len(target.Hashes))
-	for i, h := range target.Hashes {
-		ret[i] = reencodeSRI(target, h)
+	if len(target.Hashes) == 1 {
+		return reencodeSRI(target, target.Hashes[0])
 	}
-	return strings.Join(ret, " ")
+	return ""
 }
 
 // reencodeSRI re-encodes a hash from the hex format we use to base64-encoded.
