@@ -470,7 +470,19 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 			}
 
 			for ep, out := range target.EntryPoints {
-				if _, ok := flatOuts[out]; !ok {
+				ok := false
+				// Single output file
+				if _, ok = flatOuts[out]; ok {
+					continue
+				}
+				// Multiple output files or directories
+				for _, outputPath := range command.OutputPaths {
+					entryPointFullPath := fmt.Sprintf("%s/%s", outputPath, out)
+					if _, ok = flatOuts[entryPointFullPath]; ok {
+						break
+					}
+				}
+				if !ok {
 					return fmt.Errorf("failed to produce output %v for entry point %v", out, ep)
 				}
 			}
@@ -508,11 +520,12 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	// At this point it's verified all the directories, but not the files themselves.
 	digests := make([]digest.Digest, 0, len(outputs))
 	for _, output := range outputs {
-		// FlattenTree doesn't populate the digest in for empty dirs... we don't need to check them anyway
-		if !output.IsEmptyDirectory {
+		// FlattenTree doesn't populate the digest in for empty dirs neither symlinks... we don't need to check them anyway
+		if !output.IsEmptyDirectory && output.SymlinkTarget == "" {
 			digests = append(digests, output.Digest)
 		}
 	}
+
 	if missing, err := c.client.MissingBlobs(context.Background(), digests); err != nil {
 		return fmt.Errorf("Failed to verify action result outputs: %s", err)
 	} else if len(missing) != 0 {
