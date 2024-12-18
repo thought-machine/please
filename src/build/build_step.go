@@ -185,6 +185,16 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 			return err
 		}
 		log.Debug("Finished pre-build function for %s", target.Label)
+		
+		// Wait for any new dependencies added by pre-build commands before continuing.
+		for _, dep := range target.Dependencies() {
+			dep.WaitForBuild()
+			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
+				// Give up and set the original target as dependency failed
+				target.SetState(core.DependencyFailed)
+				return fmt.Errorf("error in pre-rule dependency for %s: %s", target.Label, dep.Label)
+			}
+		}
 	}
 
 	state.LogBuildResult(target, core.TargetBuilding, "Preparing...")
