@@ -49,6 +49,7 @@ var keywords = map[string]struct{}{
 type parser struct {
 	l      *lex
 	endPos Position
+	inFor  bool
 }
 
 // parseFileInput is the only external entry point to this class, it parses a file into a FileInput structure.
@@ -153,17 +154,25 @@ func (p *parser) parseStatement() *Statement {
 		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "continue":
+		p.assert(p.inFor, tok, "'continue' outside loop")
 		s.Continue = true
 		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "break":
+		p.assert(p.inFor, tok, "'break' outside loop")
 		s.Break = true
 		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
 	case "def":
+		before := p.inFor
+		p.inFor = false
 		s.FuncDef = p.parseFuncDef()
+		p.inFor = before
 	case "for":
+		before := p.inFor
+		p.inFor = true
 		s.For = p.parseFor()
+		p.inFor = before
 	case "if":
 		s.If = p.parseIf()
 	case "return":

@@ -845,3 +845,15 @@ func TestBreakOutsideLoop(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "'break' outside loop")
 }
+
+// Functions have a new scope that doesn't count as within the enclosing loop
+func TestBreakWithinFunctionWithinLoop(t *testing.T) {
+	const code = `
+for i in [1,2,3]:
+    def foo():
+        break
+`
+	_, err := newParser().parseAndHandleErrors(strings.NewReader(code))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "'break' outside loop")
+}
