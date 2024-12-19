@@ -2,7 +2,7 @@
 file_input = { statement };
 
 # Any single statement. Must occur on its own line.
-statement = ( "pass" | "continue" | func_def | for | if | return |
+statement = ( "pass" | "continue" | "break" | func_def | for | if | return |
              assert | ident_statement | expression ) EOL;
 return = "return" [ expression { "," expression } ];
 assert = "assert" expression [ "," expression ];

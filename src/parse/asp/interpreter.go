@@ -555,6 +555,9 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		} else if stmt.Continue {
 			// This is definitely awkward since we need to control a for loop that's happening in a function outside this scope.
 			return continueIteration
+		} else if stmt.Break {
+			// Similar to above, although CPython does do this the same way...
+			return stopIteration
 		} else if stmt.Pass {
 			continue // Nothing to do...
 		} else {
@@ -580,8 +583,11 @@ func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 	for li := range s.iterable(&stmt.Expr) {
 		s.unpackNames(stmt.Names, li)
 		if ret := s.interpretStatements(stmt.Statements); ret != nil {
-			if s, ok := ret.(pySentinel); ok && s == continueIteration {
+			switch ret {
+			case continueIteration:
 				continue
+			case stopIteration:
+				break
 			}
 			return ret
 		}

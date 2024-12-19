@@ -28,6 +28,7 @@ type Statement struct {
 	Literal  *Expression
 	Pass     bool
 	Continue bool
+	Break    bool
 }
 
 // An AssertStatement implements the 'assert' statement.

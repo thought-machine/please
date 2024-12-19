@@ -709,3 +709,9 @@ func TestListConcatenation(t *testing.T) {
 		pyString("haribo"),
 	}, s.Lookup("fruit_veg_canned_food_and_sweets"))
 }
+
+func TestBreakLoop(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/break_loop.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, 1, s.Lookup("i"))
+}
