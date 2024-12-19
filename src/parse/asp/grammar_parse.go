@@ -156,6 +156,10 @@ func (p *parser) parseStatement() *Statement {
 		s.Continue = true
 		p.endPos = p.l.Next().EndPos()
 		p.next(EOL)
+	case "break":
+		s.Break = true
+		p.endPos = p.l.Next().EndPos()
+		p.next(EOL)
 	case "def":
 		s.FuncDef = p.parseFuncDef()
 	case "for":

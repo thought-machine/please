@@ -134,13 +134,16 @@ func (n pyNone) MarshalJSON() ([]byte, error) {
 
 // A pySentinel is an internal implementation detail used in some cases. It should never be
 // exposed to users.
-type pySentinel struct{}
+type pySentinel string
 
 // continueIteration is used to implement the "continue" statement.
-var continueIteration = pySentinel{}
+var continueIteration = pySentinel("ContinueIteration")
+
+// stopIteration is used to implement the "break" statement.
+var stopIteration = pySentinel("StopIteration")
 
 func (s pySentinel) Type() string {
-	return "sentinel"
+	return string(s)
 }
 
 func (s pySentinel) TypeTag() int32 {
@@ -152,11 +155,11 @@ func (s pySentinel) IsTruthy() bool {
 }
 
 func (s pySentinel) String() string {
-	panic("non stringable type sentinel")
+	panic("non stringable type " + string(s))
 }
 
 func (s pySentinel) MarshalJSON() ([]byte, error) {
-	panic("non serialisable type sentinel")
+	panic("non serialisable type " + string(s))
 }
 
 type pyInt int

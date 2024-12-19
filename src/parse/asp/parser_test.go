@@ -831,3 +831,17 @@ func TestFStringIncompleteError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Unterminated brace in fstring")
 }
+
+// Continue shouldn't be allowed outside a loop
+func TestContinueOutsideLoop(t *testing.T) {
+	_, err := newParser().parseAndHandleErrors(strings.NewReader("continue"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "'continue' outside loop")
+}
+
+// Break shouldn't be allowed outside a loop
+func TestBreakOutsideLoop(t *testing.T) {
+	_, err := newParser().parseAndHandleErrors(strings.NewReader("break"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "'break' outside loop")
+}
