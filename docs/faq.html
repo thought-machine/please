@@ -68,21 +68,26 @@
   <h2 class="title-2" id="verify">How can I verify the download of Please?</h2>
 
   <p>
-    All our release artifacts are signed with a GPG key. If you want assurance that
+    All our release artifacts are signed with a private RSA key. If you want assurance that
     they have not been tampered with since, you can use the signatures to verify them.</p>
+  </p>
 
-  <p>First, fetch the Please release key:
-    <pre><code class="code">gpg --recv-keys 3A6C0AE370E18496045687A9B85AEAE1AA1D5142</code></pre>
-    This should receive key <code class="code">B85AEAE1AA1D5142</code> for
-    <code class="code">Please Releases &lt;releases@please.build&gt;</code>.</p>
+  <p>To get the public key:
+  <pre class="code-container">
+      <!-- prettier-ignore -->
+      <code>
+      curl -O https://please.build/key.pub
+      </code>
+    </pre>
+  </p>
 
   <p>To verify the download script:
     <pre class="code-container">
       <!-- prettier-ignore -->
       <code>
       curl -O https://get.please.build/get_plz.sh
-      curl -O https://get.please.build/get_plz.sh.asc
-      gpg --verify get_plz.sh.asc get_plz.sh
+      curl -O https://get.please.build/get_plz.sh.sig
+      openssl dgst -sha256 -verify key.pub --signature get_plz.sh.sig get_plz.sh
       </code>
     </pre>
     You can now run that directly to install Please.
@@ -93,10 +98,10 @@
       <!-- prettier-ignore -->
       <code>
       ARCH="linux_amd64"
-      VERSION="16.0.0"
+      VERSION="17.0.0"
       curl -O https://get.please.build/${ARCH}/${VERSION}/please_${VERSION}
-      curl -O https://get.please.build/${ARCH}/${VERSION}/please_${VERSION}.asc
-      gpg --verify please_${VERSION}.asc please_${VERSION}
+      curl -O https://get.please.build/${ARCH}/${VERSION}/please_${VERSION}.sig
+      openssl dgst -sha256 -verify key.pub --signature please_${VERSION}.sig please_${VERSION}
       </code>
     </pre>
     You can now use this Please binary on your machine as you please!
