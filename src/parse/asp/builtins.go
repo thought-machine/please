@@ -16,6 +16,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
+	"gopkg.in/yaml.v3"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -75,6 +76,7 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "get_command", getCommand)
 	setNativeCode(s, "set_command", setCommand)
 	setNativeCode(s, "json", valueAsJSON)
+	setNativeCode(s, "yaml", valueAsYAML)
 	setNativeCode(s, "breakpoint", breakpoint)
 	setNativeCode(s, "is_semver", isSemver)
 	setNativeCode(s, "semver_check", semverCheck)
@@ -1341,6 +1343,16 @@ func valueAsJSON(s *scope, args []pyObject) pyObject {
 	}
 	if err != nil {
 		s.Error("Could not marshal object as JSON")
+		return None
+	}
+	return pyString(bs)
+}
+
+// valueAsYAML returns a YAML-formatted string representation of a plz value.
+func valueAsYAML(s *scope, args []pyObject) pyObject {
+	bs, err := yaml.Marshal(args[0])
+	if err != nil {
+		s.Error("Could not marshal object as YAML")
 		return None
 	}
 	return pyString(bs)

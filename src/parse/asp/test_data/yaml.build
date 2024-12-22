@@ -1,0 +1,7 @@
+yaml_dict = yaml(some_dict)
+yaml_list = yaml(some_list)
+yaml_frozen_dict = yaml(some_frozen_dict)
+yaml_frozen_list = yaml(some_frozen_list)
+yaml_config = yaml(some_config)
+yaml_frozen_config = yaml(some_frozen_config)
+yaml_range = yaml(range(4))

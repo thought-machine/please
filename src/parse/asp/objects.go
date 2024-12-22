@@ -107,6 +107,13 @@ func (b pyBool) MarshalJSON() ([]byte, error) {
 	return []byte("false"), nil
 }
 
+func (b pyBool) MarshalYAML() (interface{}, error) {
+	if b {
+		return "true", nil
+	}
+	return "false", nil
+}
+
 type pyNone struct{}
 
 // None is the singleton representing None; there can be only one etc.
@@ -130,6 +137,10 @@ func (n pyNone) String() string {
 
 func (n pyNone) MarshalJSON() ([]byte, error) {
 	return []byte("null"), nil
+}
+
+func (n pyNone) MarshalYAML() (interface{}, error) {
+	return "null", nil
 }
 
 // A pySentinel is an internal implementation detail used in some cases. It should never be
@@ -160,6 +171,10 @@ func (s pySentinel) String() string {
 
 func (s pySentinel) MarshalJSON() ([]byte, error) {
 	panic("non serialisable type " + string(s))
+}
+
+func (s pySentinel) MarshalYAML() (interface{}, error) {
+	panic("non serialisable type sentinel")
 }
 
 type pyInt int
@@ -462,6 +477,10 @@ func (l pyFrozenList) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.pyList)
 }
 
+func (l pyFrozenList) MarshalYAML() (interface{}, error) {
+	return l.pyList, nil
+}
+
 func (l pyFrozenList) IndexAssign(index, value pyObject) {
 	panic("list is immutable")
 }
@@ -591,6 +610,10 @@ type pyFrozenDict struct{ pyDict }
 
 func (d pyFrozenDict) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.pyDict)
+}
+
+func (d pyFrozenDict) MarshalYAML() (interface{}, error) {
+	return d.pyDict, nil
 }
 
 func (d pyFrozenDict) Property(scope *scope, name string) pyObject {
@@ -880,6 +903,10 @@ func (c *pyConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.toPyDict())
 }
 
+func (c *pyConfig) MarshalYAML() (interface{}, error) {
+	return c.toPyDict(), nil
+}
+
 func (c *pyConfig) toPyDict() pyDict {
 	merged := make(pyDict, len(c.base.dict)+len(c.overlay))
 	for k, v := range c.base.dict {
@@ -1012,6 +1039,10 @@ func (c *pyFrozenConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&c.pyConfig)
 }
 
+func (c *pyFrozenConfig) MarshalYAML() (interface{}, error) {
+	return c.pyConfig.toPyDict(), nil
+}
+
 // IndexAssign always fails, assignments to a pyFrozenConfig aren't allowed.
 func (c *pyFrozenConfig) IndexAssign(_, _ pyObject) {
 	panic("Config object is not assignable in this scope")
@@ -1073,6 +1104,10 @@ func (r *pyRange) Iter() iter.Seq[pyObject] {
 
 func (r *pyRange) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.toList(0))
+}
+
+func (r *pyRange) MarshalYAML() (interface{}, error) {
+	return r.toList(0), nil
 }
 
 func (r *pyRange) toList(extraCapacity int) pyList {
