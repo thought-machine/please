@@ -327,7 +327,7 @@ func TestTargetPlatform(t *testing.T) {
 				Value: "linux",
 			},
 		},
-	}, cmd.Platform)
+	}, cmd.Platform) //nolint:staticcheck
 
 	target.Labels = []string{"remote-platform-property:size=chomky"}
 	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
@@ -343,7 +343,7 @@ func TestTargetPlatform(t *testing.T) {
 				Value: "linux",
 			},
 		},
-	}, cmd.Platform)
+	}, cmd.Platform) //nolint:staticcheck
 }
 
 // Store is a small hack that stores a target's outputs for testing only.

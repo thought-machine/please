@@ -158,9 +158,6 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
 	}
 	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
-	if len(state.TestArgs) != 0 {
-		cmd += " " + strings.Join(state.TestArgs, " ")
-	}
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -430,10 +427,10 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 	}
 
 	// TODO(jpoole): remove these two after REAPI 2.1
-	for _, o := range ar.OutputFileSymlinks {
+	for _, o := range ar.OutputFileSymlinks { //nolint:staticcheck
 		ret[o.Path] = true
 	}
-	for _, o := range ar.OutputDirectorySymlinks {
+	for _, o := range ar.OutputDirectorySymlinks { //nolint:staticcheck
 		ret[o.Path] = true
 	}
 	return ret
@@ -446,8 +443,18 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	outs := outputsForActionResult(ar)
 	// Test outputs are optional
 	if isTest {
-		if !outs[core.TestResultsFile] && !target.Test.NoOutput {
+		if !target.Test.NoOutput && !outs[core.TestResultsFile] {
 			return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.TestResultsFile, c.actionURL(actionDigest, true))
+		}
+		if c.state.Config.Remote.OptionalOutputsRequired {
+			if target.NeedCoverage(c.state) && !outs[core.CoverageFile] {
+				return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, core.CoverageFile, c.actionURL(actionDigest, true))
+			}
+			for _, out := range target.Test.Outputs {
+				if !outs[out] {
+					return fmt.Errorf("Remote build action for %s failed to produce output %s%s", target, out, c.actionURL(actionDigest, true))
+				}
+			}
 		}
 	} else {
 		for _, out := range command.OutputPaths {

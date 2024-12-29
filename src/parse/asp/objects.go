@@ -3,6 +3,8 @@ package asp
 import (
 	"encoding/json"
 	"fmt"
+	"iter"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,10 +22,6 @@ type pyObject interface {
 	TypeTag() int32
 	// Returns true if this object evaluates to something truthy.
 	IsTruthy() bool
-	// Returns a property of this object with the given name.
-	Property(scope *scope, name string) pyObject
-	// Invokes the given operator on this object and returns the result.
-	Operator(operator Operator, operand pyObject) pyObject
 }
 
 // A freezable represents an object that can be frozen into a readonly state.
@@ -35,15 +33,35 @@ type freezable interface {
 // An iterable represents an object that can be iterated (the y in `for x in y`).
 // Not all pyObjects implement this.
 type iterable interface {
-	pyObject
-	// This isn't super generic but it works fine for all cases we have right now.
+	Iter() iter.Seq[pyObject]
+}
+
+// A lengthable represents an object that knows its own length.
+type lengthable interface {
 	Len() int
+}
+
+// An indexable represents an object that can be indexed into. It also implicitly knows its length.
+type indexable interface {
+	lengthable
 	Item(index int) pyObject
 }
 
 // An indexAssignable represents an object that can be assigned to by index (i.e. the x in x[y] = z)
 type indexAssignable interface {
 	IndexAssign(index, value pyObject)
+}
+
+// A propertied represents an object that has properties that can be accessed via .
+type propertied interface {
+	// Returns a property of this object with the given name.
+	Property(*scope, string) pyObject
+}
+
+// An operatable represents an object that supports operators.
+type operatable interface {
+	// Invokes the given operator on this object and returns the result.
+	Operator(operator Operator, operand pyObject) pyObject
 }
 
 type pyBool bool
@@ -73,14 +91,6 @@ func (b pyBool) TypeTag() int32 {
 
 func (b pyBool) IsTruthy() bool {
 	return b == True
-}
-
-func (b pyBool) Property(scope *scope, name string) pyObject {
-	panic("bool object has no property " + name)
-}
-
-func (b pyBool) Operator(operator Operator, operand pyObject) pyObject {
-	panic(fmt.Sprintf("operator %s not implemented on type bool", operator))
 }
 
 func (b pyBool) String() string {
@@ -114,14 +124,6 @@ func (n pyNone) IsTruthy() bool {
 	return false
 }
 
-func (n pyNone) Property(scope *scope, name string) pyObject {
-	panic("none object has no property " + name)
-}
-
-func (n pyNone) Operator(operator Operator, operand pyObject) pyObject {
-	panic(fmt.Sprintf("operator %s not implemented on type none", operator))
-}
-
 func (n pyNone) String() string {
 	return "None"
 }
@@ -132,13 +134,16 @@ func (n pyNone) MarshalJSON() ([]byte, error) {
 
 // A pySentinel is an internal implementation detail used in some cases. It should never be
 // exposed to users.
-type pySentinel struct{}
+type pySentinel string
 
 // continueIteration is used to implement the "continue" statement.
-var continueIteration = pySentinel{}
+var continueIteration = pySentinel("ContinueIteration")
+
+// stopIteration is used to implement the "break" statement.
+var stopIteration = pySentinel("StopIteration")
 
 func (s pySentinel) Type() string {
-	return "sentinel"
+	return string(s)
 }
 
 func (s pySentinel) TypeTag() int32 {
@@ -149,20 +154,12 @@ func (s pySentinel) IsTruthy() bool {
 	return false
 }
 
-func (s pySentinel) Property(scope *scope, name string) pyObject {
-	panic("sentinel object has no property " + name)
-}
-
-func (s pySentinel) Operator(operator Operator, operand pyObject) pyObject {
-	panic(fmt.Sprintf("operator %s not implemented on type sentinel", operator))
-}
-
 func (s pySentinel) String() string {
-	panic("non stringable type sentinel")
+	panic("non stringable type " + string(s))
 }
 
 func (s pySentinel) MarshalJSON() ([]byte, error) {
-	panic("non serialisable type sentinel")
+	panic("non serialisable type " + string(s))
 }
 
 type pyInt int
@@ -210,10 +207,6 @@ func (i pyInt) TypeTag() int32 {
 
 func (i pyInt) IsTruthy() bool {
 	return i != 0
-}
-
-func (i pyInt) Property(scope *scope, name string) pyObject {
-	panic("int object has no property " + name)
 }
 
 func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
@@ -333,6 +326,10 @@ func (s pyString) String() string {
 	return string(s)
 }
 
+func (s pyString) Len() int {
+	return len([]rune(s))
+}
+
 type pyList []pyObject
 
 var emptyList pyObject = make(pyList, 0) // want this to explicitly have zero capacity
@@ -349,21 +346,17 @@ func (l pyList) IsTruthy() bool {
 	return len(l) > 0
 }
 
-func (l pyList) Property(scope *scope, name string) pyObject {
-	panic("list object has no property " + name)
-}
-
 func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 	switch operator {
 	case Add:
 		l2, ok := operand.(pyList)
 		if !ok {
 			if l2, ok := operand.(pyFrozenList); ok {
-				return append(l, l2.pyList...)
+				return slices.Clip(append(l, l2.pyList...))
 			}
 			panic("Cannot add list and " + operand.Type())
 		}
-		return append(l, l2...)
+		return slices.Clip(append(l, l2...))
 	case In, NotIn:
 		for _, item := range l {
 			if item == operand {
@@ -380,9 +373,15 @@ func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
 			panic("Cannot compare list and " + operand.Type())
 		}
 		for i, li := range l {
-			if i >= len(l2) || l2[i].Operator(LessThan, li).IsTruthy() {
+			if i >= len(l2) {
 				return False
-			} else if li.Operator(LessThan, l2[i]).IsTruthy() {
+			} else if o, ok := li.(operatable); !ok {
+				panic(fmt.Sprintf("operator %s not implemented on type %s", LessThan, li.Type()))
+			} else if o2, ok := l2[i].(operatable); !ok {
+				panic(fmt.Sprintf("operator %s not implemented on type %s", LessThan, l2[i].Type()))
+			} else if o2.Operator(LessThan, li).IsTruthy() {
+				return False
+			} else if o.Operator(LessThan, l2[i]).IsTruthy() {
 				return True
 			}
 		}
@@ -412,6 +411,16 @@ func (l pyList) String() string {
 	return fmt.Sprintf("%s", []pyObject(l))
 }
 
+func (l pyList) Iter() iter.Seq[pyObject] {
+	return func(yield func(pyObject) bool) {
+		for _, x := range l {
+			if !yield(x) {
+				break
+			}
+		}
+	}
+}
+
 // Freeze freezes this list for further updates.
 // Note that this is a "soft" freeze; callers holding the original unfrozen
 // reference can still modify it.
@@ -429,19 +438,19 @@ func (l pyList) Freeze() pyObject {
 
 // Repeat returns a copy of this list, repeated n times
 func (l pyList) Repeat(n pyInt) pyList {
-	var ret pyList
+	ret := make(pyList, 0, int(n)*len(l))
 	for i := 0; i < int(n); i++ {
 		ret = append(ret, l...)
 	}
 	return ret
 }
 
-// Len returns the length of this list, implementing iterable.
+// Len returns the length of this list, implementing lengthable.
 func (l pyList) Len() int {
 	return len(l)
 }
 
-// Item returns the i'th item of this list, implementing iterable.
+// Item returns the i'th item of this list, implementing indexable.
 func (l pyList) Item(i int) pyObject {
 	return l[i]
 }
@@ -511,6 +520,10 @@ func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
 		return ret
 	}
 	panic("Unsupported operator on dict")
+}
+
+func (d pyDict) Len() int {
+	return len(d)
 }
 
 func (d pyDict) IndexAssign(index, value pyObject) {
@@ -667,14 +680,6 @@ func (f *pyFunc) TypeTag() int32 {
 
 func (f *pyFunc) IsTruthy() bool {
 	return true
-}
-
-func (f *pyFunc) Property(scope *scope, name string) pyObject {
-	panic("function object has no property " + name)
-}
-
-func (f *pyFunc) Operator(operator Operator, operand pyObject) pyObject {
-	panic("cannot use operators on a function")
 }
 
 func (f *pyFunc) String() string {
@@ -943,6 +948,24 @@ func (c *pyConfig) Copy() *pyConfig {
 	return &pyConfig{base: c.base}
 }
 
+// Keys returns the keys of this config object in order, similarly to a dict but it includes keys in
+// both internal maps.
+func (c *pyConfig) Keys() []string {
+	ret := make([]string, 0)
+	for k := range c.base.dict {
+		ret = append(ret, k)
+	}
+	if c.overlay != nil {
+		for k := range c.overlay {
+			ret = append(ret, k)
+		}
+	}
+	sort.Strings(ret)
+	// Remove duplicate keys that appear in both the base and overlay dicts
+	ret = slices.Compact(ret)
+	return ret
+}
+
 // Get implements the get() method, similarly to a dict but looks up in both internal maps.
 func (c *pyConfig) Get(key string, fallback pyObject) pyObject {
 	if c.overlay != nil {
@@ -1023,12 +1046,8 @@ func (r *pyRange) IsTruthy() bool {
 	return true
 }
 
-func (r *pyRange) Property(scope *scope, name string) pyObject {
-	panic("range object has no property " + name)
-}
-
 func (r *pyRange) Operator(operator Operator, operand pyObject) pyObject {
-	if l, ok := operand.(pyList); ok {
+	if l, ok := operand.(pyList); ok && operator == Add {
 		return append(r.toList(len(l)), l...)
 	}
 	panic(fmt.Sprintf("operator %s not implemented on type range", operator))
@@ -1040,6 +1059,16 @@ func (r *pyRange) Len() int {
 
 func (r *pyRange) Item(index int) pyObject {
 	return r.Start + newPyInt(index)*r.Step
+}
+
+func (r *pyRange) Iter() iter.Seq[pyObject] {
+	return func(yield func(pyObject) bool) {
+		for i := r.Start; i < r.Stop; i += r.Step {
+			if !yield(i) {
+				break
+			}
+		}
+	}
 }
 
 func (r *pyRange) MarshalJSON() ([]byte, error) {

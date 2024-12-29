@@ -12,7 +12,7 @@ mkdir "$DIR"
 tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz --strip-components=1 -C "$DIR"
 
 # Start the server in the background
-"${DIR}/please" run parallel -p -v notice --colour --detach //tools/http_cache:run_local
+"${DIR}/please" run parallel --env -p -v notice --colour --detach //tools/http_cache:run_local
 
 # Test we can rebuild plz itself.
 "${DIR}/please" test --profile localcache -p -v notice --colour //src/...

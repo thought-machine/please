@@ -1,0 +1,2 @@
+[Plugin "config_field_value"]
+Target = //plugins:config_field_value

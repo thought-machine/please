@@ -7,6 +7,7 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -110,6 +111,9 @@ func registerBuiltins(s *scope) {
 	s.interpreter.configMethods = map[string]*pyFunc{
 		"get":        setNativeCode(s, "config_get", configGet),
 		"setdefault": s.Lookup("setdefault").(*pyFunc),
+		"keys":       setNativeCode(s, "config_keys", configKeys),
+		"items":      setNativeCode(s, "config_items", configItems),
+		"values":     setNativeCode(s, "config_values", configValues),
 	}
 	if s.state.Config.Parse.GitFunctions {
 		setNativeCode(s, "git_branch", execGitBranch)
@@ -308,7 +312,7 @@ func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.Bui
 
 // builtinFail raises an immediate error that can't be intercepted.
 func builtinFail(s *scope, args []pyObject) pyObject {
-	s.Error(string(args[0].(pyString)))
+	s.Error("%s", string(args[0].(pyString)))
 	return None
 }
 
@@ -388,7 +392,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// If the subinclude is local to this package, it must already exist in the graph. If it already exists in the graph
 	// but isn't activated, we should activate it otherwise WaitForSubincludedTarget might block. This can happen when
 	// another package also subincludes this target, and queues it first.
-	if isLocal && s.pkg != nil {
+	if isLocal {
 		t := s.state.Graph.Target(l)
 		if t == nil {
 			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
@@ -415,17 +419,8 @@ func lenFunc(s *scope, args []pyObject) pyObject {
 }
 
 func objLen(obj pyObject) pyInt {
-	switch t := obj.(type) {
-	case pyList:
-		return newPyInt(len(t))
-	case pyFrozenList:
-		return newPyInt(len(t.pyList))
-	case pyDict:
-		return newPyInt(len(t))
-	case pyFrozenDict:
-		return newPyInt(len(t.pyDict))
-	case pyString:
-		return newPyInt(len([]rune(t)))
+	if l, ok := obj.(lengthable); ok {
+		return newPyInt(l.Len())
 	}
 	panic("object of type " + obj.Type() + " has no len()")
 }
@@ -722,6 +717,38 @@ func configGet(s *scope, args []pyObject) pyObject {
 	return self.Get(string(args[1].(pyString)), args[2])
 }
 
+func configKeys(s *scope, args []pyObject) pyObject {
+	self := args[0].(*pyConfig)
+	keys := self.Keys()
+	ret := make(pyList, len(keys))
+	for i, k := range keys {
+		ret[i] = pyString(k)
+	}
+	return ret
+}
+
+func configValues(s *scope, args []pyObject) pyObject {
+	self := args[0].(*pyConfig)
+	keys := self.Keys()
+	ret := make(pyList, len(keys))
+	for i, k := range self.Keys() {
+		// Safe to use MustGet here, since we know the key exists:
+		ret[i] = self.MustGet(k)
+	}
+	return ret
+}
+
+func configItems(s *scope, args []pyObject) pyObject {
+	self := args[0].(*pyConfig)
+	keys := self.Keys()
+	ret := make(pyList, len(keys))
+	for i, k := range self.Keys() {
+		// Safe to use MustGet here, since we know the key exists:
+		ret[i] = pyList{pyString(k), self.MustGet(k)}
+	}
+	return ret
+}
+
 func dictGet(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyDict)
 	sk, ok := args[1].(pyString)
@@ -772,7 +799,7 @@ func sorted(s *scope, args []pyObject) pyObject {
 	l, ok := args[0].(pyList)
 	s.Assert(ok, "unsortable type %s", args[0].Type())
 	l = l[:]
-	sort.Slice(l, func(i, j int) bool { return l[i].Operator(LessThan, l[j]).IsTruthy() })
+	sort.Slice(l, func(i, j int) bool { return s.operator(LessThan, l[i], l[j]).IsTruthy() })
 	return l
 }
 
@@ -780,10 +807,7 @@ func reversed(s *scope, args []pyObject) pyObject {
 	l, ok := args[0].(pyList)
 	s.Assert(ok, "irreversible type %s", args[0].Type())
 	l = l[:]
-	// TODO(chrisnovakovic): replace with slices.Reverse after upgrading to Go 1.21
-	for i, j := 0, len(l)-1; i < j; i, j = i+1, j-1 {
-		l[i], l[j] = l[j], l[i]
-	}
+	slices.Reverse(l)
 	return l
 }
 
@@ -1005,7 +1029,7 @@ func extreme(s *scope, args []pyObject, cmp Operator) pyObject {
 			}
 			cli = key.Call(s, c)
 		}
-		if i == 0 || cli.Operator(cmp, cret).IsTruthy() {
+		if i == 0 || s.operator(cmp, cli, cret).IsTruthy() {
 			cret = cli
 			ret = li
 		}
@@ -1309,12 +1333,18 @@ func getCommand(s *scope, args []pyObject) pyObject {
 
 // valueAsJSON returns a JSON-formatted string representation of a plz value.
 func valueAsJSON(s *scope, args []pyObject) pyObject {
-	js, err := json.Marshal(args[0])
+	var bs []byte
+	var err error
+	if args[1].(pyBool) {
+		bs, err = json.MarshalIndent(args[0], "", "  ")
+	} else {
+		bs, err = json.Marshal(args[0])
+	}
 	if err != nil {
 		s.Error("Could not marshal object as JSON")
 		return None
 	}
-	return pyString(js)
+	return pyString(bs)
 }
 
 // setCommand sets the command of a target, optionally for a configuration.

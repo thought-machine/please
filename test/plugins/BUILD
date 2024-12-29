@@ -10,6 +10,16 @@ genrule(
     cmd = "mv $SRCS_PLUGIN foo_plugin && mv $SRCS_TOOL foo_plugin/tools && tar -czf $OUT foo_plugin",
 )
 
+genrule(
+    name = "config_field_value_plugin",
+    srcs = ["config_field_value_plugin"],
+    outs = ["config_field_value_plugin.tar.gz"],
+    cmd = [
+        "mv $SRCS config_field_value_plugin",
+        "tar -czf $OUTS config_field_value_plugin",
+    ],
+)
+
 def plugin_e2e_test(name, plz_command, expected_output=None, expected_failure=False, expect_output_contains=None):
     return please_repo_e2e_test(
         name = name,
@@ -75,6 +85,15 @@ plugin_e2e_test(
     plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin python --version v1.2.0",
 )
 
+plugin_e2e_test(
+    name = "init_go_test",
+    expect_output_contains = {
+        "go.conf": "//third_party/go:toolchain|go\n//third_party/go:std",
+    },
+    # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin go && plz query config plugin.go.gotool > go.conf && plz query config plugin.go.stdlib >> go.conf",
+)
+
 # Test that the target is created in plugins/BUILD
 plugin_e2e_test(
     name = "init_create_target_test",
@@ -126,3 +145,27 @@ plugin_e2e_test(
     },
     plz_command = "plz build -o plugin.foo.modulepath:something --arch foo_bar66 //:output_fooc",
 )
+
+config_field_value_tests = {
+    "str_required": "req",
+    "str_optional": "opt",
+    "bool_required": "True",
+    "bool_optional": "True",
+    "int_required": "2",
+    "int_optional": "3",
+}
+
+for field, val in config_field_value_tests.items():
+    field_cli = field.replace("_", "")
+    field_out = field.upper()
+    please_repo_e2e_test(
+        name = f"{field}_config_field_value_test",
+        data = {
+            "plugin": [":config_field_value_plugin"],
+        },
+        expect_output_contains = {
+            "plz-out/gen/test/config_field_value_test": f"{field_out}='{val}'",
+        },
+        plz_command = f"plz build -o please.pluginrepo:file://$TMP_DIR/$DATA_PLUGIN -o plugin.config_field_value.{field_cli}:{val} //test:config_field_value_test",
+        repo = "config_field_value_test_repo",
+    )

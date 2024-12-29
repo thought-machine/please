@@ -68,6 +68,12 @@ func (s *Subrepo) IsRemoteSubrepo() bool {
 	return s.Root != "" && s.Target != nil && !s.Target.Local && s.State.RemoteClient != nil
 }
 
+// Equal returns true if this subrepo is equivalent to another, or false if it is not.
+func (s *Subrepo) Equal(other *Subrepo) bool {
+	return s.Name == other.Name && s.Root == other.Root && s.PackageRoot == other.PackageRoot &&
+		s.Target == other.Target && s.State == other.State && s.Arch == other.Arch && s.IsCrossCompile == other.IsCrossCompile
+}
+
 // SubrepoForArch creates a new subrepo for the given architecture.
 func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
 	s := NewSubrepo(state.ForArch(arch), arch.String(), "", nil, arch, true)

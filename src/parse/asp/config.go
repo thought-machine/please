@@ -179,7 +179,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		if definition.Repeatable {
 			l := make(pyList, 0, len(value))
 			for _, v := range value {
-				l = append(l, toPyObject(fullConfigKey, v, definition.Type))
+				l = append(l, toPyObject(fullConfigKey, v, definition.Type, definition.Optional))
 			}
 			ret[key] = l
 		} else {
@@ -187,7 +187,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 			if len(value) == 1 {
 				val = value[0]
 			}
-			ret[key] = toPyObject(fullConfigKey, val, definition.Type)
+			ret[key] = toPyObject(fullConfigKey, val, definition.Type, definition.Optional)
 		}
 	}
 	return ret
@@ -204,6 +204,8 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 		return
 	}
 
+	log.Debugf("Loading configuration for plugin %s", pluginName)
+
 	if s.config.overlay == nil {
 		s.config.overlay = pyDict{}
 	}
@@ -217,34 +219,33 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 	s.config.overlay[key] = cfg
 }
 
-func toPyObject(key, val, toType string) pyObject {
-	if toType == "" || toType == "str" {
+func toPyObject(key, val, toType string, optional bool) pyObject {
+	if optional && val == "" {
+		return pyNone{}
+	}
+
+	switch toType {
+	case "", "str":
 		return pyString(val)
-	}
-
-	if toType == "bool" {
-		val = strings.ToLower(val)
-		if val == "true" || val == "yes" || val == "on" {
+	case "bool":
+		switch strings.ToLower(val) {
+		case "true", "yes", "on", "1":
 			return pyBool(true)
-		}
-		if val == "false" || val == "no" || val == "off" || val == "" {
+		case "false", "no", "off", "0":
 			return pyBool(false)
+		default:
+			log.Fatalf("%s: invalid bool value: %v", key, val)
+			return pyNone{}
 		}
-		log.Fatalf("%s: Invalid boolean value %v", key, val)
-	}
-
-	if toType == "int" {
-		if val == "" {
-			return pyInt(0)
-		}
-
+	case "int":
 		i, err := strconv.Atoi(val)
 		if err != nil {
-			log.Fatalf("%s: Invalid int value %v", key, val)
+			log.Fatalf("%s: invalid int value: %v", key, val)
+			return pyNone{}
 		}
 		return pyInt(i)
+	default:
+		log.Fatalf("%s: invalid plugin configuration field type: %v", key, toType)
+		return pyNone{}
 	}
-
-	log.Fatalf("%s: invalid config type %v", key, toType)
-	return pyNone{}
 }

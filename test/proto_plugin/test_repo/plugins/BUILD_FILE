@@ -5,7 +5,8 @@ plugin_repo(
 
 plugin_repo(
     name = "go",
-    revision = "v1.16.8",
+    plugin = "go-rules",
+    revision = "v1.21.5",
 )
 
 plugin_repo(

@@ -75,7 +75,7 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 
 	cachedTestResults := func() *core.TestSuite {
 		log.Debug("Not re-running test %s; got cached results.", label)
-		coverage := parseCoverageFile(target, target.CoverageFile(), run)
+		coverage := parseCoverageFile(state, target, target.CoverageFile(), run)
 		results, err := parseTestResultsFile(target.TestResultsFile())
 		results.Package = strings.ReplaceAll(target.Label.PackageName, "/", ".")
 		results.Name = target.Label.Name
@@ -290,7 +290,7 @@ func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage
 	if target.Test.Results.TestCases.AllSucceeded() {
 		// Clean up the test directory.
 		if state.CleanWorkdirs {
-			if err := fs.ForceRemove(state.ProcessExecutor, target.TestDir(run)); err != nil {
+			if err := fs.RemoveAll(target.TestDir(run)); err != nil {
 				log.Warning("Failed to remove test directory for %s: %s", target.Label, err)
 			}
 		}
@@ -303,21 +303,21 @@ func logTargetResults(state *core.BuildState, target *core.BuildTarget, coverage
 		resultMsg = "Tests failed"
 		for _, testCase := range target.Test.Results.TestCases {
 			if len(testCase.Failures()) > 0 {
-				resultErr = fmt.Errorf(testCase.Failures()[0].Failure.Message)
+				resultErr = fmt.Errorf("%s", testCase.Failures()[0].Failure.Message)
 			}
 		}
 	} else if target.Test.Results.Errors() > 0 {
 		resultMsg = "Tests errored"
 		for _, testCase := range target.Test.Results.TestCases {
 			if len(testCase.Errors()) > 0 {
-				resultErr = fmt.Errorf(testCase.Errors()[0].Error.Message)
+				resultErr = fmt.Errorf("%s", testCase.Errors()[0].Error.Message)
 			}
 		}
 	} else {
 		resultErr = fmt.Errorf("unknown error")
 		resultMsg = "Something went wrong"
 	}
-	state.LogTestResult(target, run, core.TargetTestFailed, target.Test.Results, coverage, resultErr, resultMsg)
+	state.LogTestResult(target, run, core.TargetTestFailed, target.Test.Results, coverage, resultErr, "%s", resultMsg)
 }
 
 func logTestSuccess(state *core.BuildState, target *core.BuildTarget, run int, results *core.TestSuite, coverage *core.TestCoverage) {
@@ -329,7 +329,7 @@ func logTestSuccess(state *core.BuildState, target *core.BuildTarget, run int, r
 	} else {
 		description = fmt.Sprintf("%d %s passed.", len(results.TestCases), tests)
 	}
-	state.LogTestResult(target, run, core.TargetTested, results, coverage, nil, description)
+	state.LogTestResult(target, run, core.TargetTested, results, coverage, nil, "%s", description)
 }
 
 func pluralise(word string, quantity int) string {
@@ -390,7 +390,7 @@ func doTestResults(state *core.BuildState, target *core.BuildTarget, runRemotely
 		metadata = &core.BuildMetadata{Stdout: stdout}
 	}
 
-	coverage := parseCoverageFile(target, filepath.Join(target.TestDir(run), core.CoverageFile), run)
+	coverage := parseCoverageFile(state, target, filepath.Join(target.TestDir(run), core.CoverageFile), run)
 
 	var data [][]byte
 	// If this test is meant to produce an output file and the test ran successfully
@@ -504,7 +504,10 @@ func parseTestOutput(stdout string, stderr string, runError error, duration time
 }
 
 // Parses the coverage output for a single target.
-func parseCoverageFile(target *core.BuildTarget, coverageFile string, run int) *core.TestCoverage {
+func parseCoverageFile(state *core.BuildState, target *core.BuildTarget, coverageFile string, run int) *core.TestCoverage {
+	if !target.NeedCoverage(state) {
+		return core.NewTestCoverage()
+	}
 	coverage, err := parseTestCoverageFile(target, coverageFile, run)
 	if err != nil {
 		log.Errorf("Failed to parse coverage file for %s: %s", target.Label, err)
@@ -514,13 +517,13 @@ func parseCoverageFile(target *core.BuildTarget, coverageFile string, run int) *
 
 // RemoveTestOutputs removes any cached test or coverage result files for a target.
 func RemoveTestOutputs(target *core.BuildTarget) error {
-	if err := os.RemoveAll(target.TestResultsFile()); err != nil {
+	if err := fs.RemoveAll(target.TestResultsFile()); err != nil {
 		return err
-	} else if err := os.RemoveAll(target.CoverageFile()); err != nil {
+	} else if err := fs.RemoveAll(target.CoverageFile()); err != nil {
 		return err
 	}
 	for _, output := range target.Test.Outputs {
-		if err := os.RemoveAll(filepath.Join(target.OutDir(), output)); err != nil {
+		if err := fs.RemoveAll(filepath.Join(target.OutDir(), output)); err != nil {
 			return err
 		}
 	}

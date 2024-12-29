@@ -5,7 +5,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/ProtonMail/go-crypto v0.0.0-20210920135941-2c5829bbf927
 	github.com/alessio/shellescape v1.4.2
-	github.com/bazelbuild/remote-apis v0.0.0-20210718193713-0ecef08215cf
+	github.com/bazelbuild/remote-apis v0.0.0-20240409135018-1f36c310b28d
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20221114180157-e62cf9b8696a
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/coreos/go-semver v0.3.1
@@ -19,7 +19,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-retryablehttp v0.7.5
+	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/karrick/godirwalk v1.17.0
 	github.com/manifoldco/promptui v0.9.0
@@ -45,11 +45,11 @@ require (
 	github.com/zeebo/blake3 v0.2.3
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/net v0.23.0
-	golang.org/x/sync v0.6.0
-	golang.org/x/sys v0.18.0
-	golang.org/x/term v0.18.0
-	golang.org/x/tools v0.19.0
+	golang.org/x/net v0.25.0
+	golang.org/x/sync v0.10.0
+	golang.org/x/sys v0.28.0
+	golang.org/x/term v0.27.0
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	google.golang.org/genproto/googleapis/bytestream v0.0.0-20240304212257-790db918fca8
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240304212257-790db918fca8
 	google.golang.org/grpc v1.62.1
@@ -101,9 +101,9 @@ require (
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/api v0.168.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
@@ -114,4 +114,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-go 1.21
+go 1.23

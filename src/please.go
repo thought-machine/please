@@ -88,6 +88,7 @@ var opts struct {
 		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
 		Debug              bool    `long:"debug" description:"When enabled, Please will enter into an interactive debugger when breakpoint() is called during parsing."`
 		KeepGoing          bool    `long:"keep_going" description:"Continue as much as possible after an error. While the target that failed and those that depend on it cannot be build, other prerequisites of these targets can be."`
+		AllowSudo          bool    `long:"allow_sudo" hidden:"true" description:"Allow running under sudo (normally this is a very bad idea)"`
 	} `group:"Options that enable / disable certain behaviors"`
 
 	HelpFlags struct {
@@ -171,7 +172,11 @@ var opts struct {
 	} `command:"cover" description:"Builds and tests one or more targets, and calculates coverage."`
 
 	Debug struct {
-		Port int               `short:"p" long:"port" description:"Debugging server port"`
+		Port  int `short:"p" long:"port" description:"Debugging server port"`
+		Share struct {
+			Network bool `long:"share_network" description:"Share network namespace"`
+			Mount   bool `long:"share_mount" description:"Share mount namespace"`
+		} `group:"Options to override mount and network namespacing on linux, if configured"`
 		Env  map[string]string `short:"e" long:"env" description:"Environment variables to set for the debugged process"`
 		Args struct {
 			Target core.BuildLabel `positional-arg-name:"target" description:"Target to debug"`
@@ -243,6 +248,7 @@ var opts struct {
 
 	Clean struct {
 		NoBackground bool     `long:"nobackground" short:"f" description:"Don't fork & detach until clean is finished."`
+		Rm           string   `long:"rm" hidden:"true" description:"Removes a specific directory. Only used internally to do async removals."`
 		Args         struct { // Inner nesting is necessary to make positional-args work :(
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to clean (default is to clean everything)"`
 		} `positional-args:"true"`
@@ -509,7 +515,7 @@ var buildFunctions = map[string]func() int{
 			opts.BuildFlags.Config = "cover"
 		}
 		targets, args := testTargets(opts.Cover.Args.Target, opts.Cover.Args.Args, opts.Cover.Failed, opts.Cover.TestResultsFile)
-		os.RemoveAll(string(opts.Cover.CoverageResultsFile))
+		fs.RemoveAll(string(opts.Cover.CoverageResultsFile))
 		success, state := doTest(targets, args, opts.Cover.SurefireDir, opts.Cover.TestResultsFile)
 		test.AddOriginalTargetsToCoverage(state, opts.Cover.IncludeAllFiles)
 		test.RemoveFilesFromCoverage(state.Coverage, state.Config.Cover.ExcludeExtension, state.Config.Cover.ExcludeGlob)
@@ -544,7 +550,7 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return toExitCode(success, state)
 		}
-		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args, exec.ConvertEnv(opts.Debug.Env))
+		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args, exec.ConvertEnv(opts.Debug.Env), opts.Debug.Share.Network, opts.Debug.Share.Mount)
 	},
 	"exec": func() int {
 		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target.BuildLabel}, true, false, false)
@@ -772,7 +778,7 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.deps": func() int {
 		return runQuery(true, opts.Query.Deps.Args.Targets, func(state *core.BuildState) {
-			query.Deps(state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level, opts.Query.Deps.DOT)
+			query.Deps(os.Stdout, state, state.ExpandOriginalLabels(), opts.Query.Deps.Hidden, opts.Query.Deps.Level, opts.Query.Deps.DOT)
 		})
 	},
 	"query.revdeps": func() int {
@@ -1087,8 +1093,8 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 }
 
 func doTest(targets []core.BuildLabel, args []string, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
-	os.RemoveAll(string(surefireDir))
-	os.RemoveAll(string(resultsFile))
+	fs.RemoveAll(string(surefireDir))
+	fs.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	opts.Test.StateArgs = args
 	success, state := runBuild(targets, true, true, false)
@@ -1437,6 +1443,9 @@ func initBuild(args []string) string {
 	}
 	// Init logging, but don't do file output until we've chdir'd.
 	cli.InitLogging(opts.OutputFlags.Verbosity)
+	if _, present := os.LookupEnv("SUDO_COMMAND"); present && !opts.BehaviorFlags.AllowSudo {
+		log.Fatalf("Refusing to run under sudo; generally it is a very bad idea to invoke Please in this way. You can pass --allow_sudo to permit it, but almost certainly you do not want to do this.")
+	}
 	if _, err := maxprocs.Set(maxprocs.Logger(log.Info), maxprocs.Min(opts.BuildFlags.NumThreads)); err != nil {
 		log.Error("Failed to set GOMAXPROCS: %s", err)
 	}
@@ -1456,6 +1465,12 @@ func initBuild(args []string) string {
 		os.Exit(buildFunctions[command]())
 	} else if opts.OutputFlags.CompletionScript {
 		fmt.Printf("%s\n", string(assets.PlzComplete))
+		os.Exit(0)
+	} else if opts.Clean.Rm != "" {
+		// Avoid initialising logging so we don't create an additional file.
+		if err := fs.RemoveAll(opts.Clean.Rm); err != nil {
+			log.Fatalf("%s", err)
+		}
 		os.Exit(0)
 	}
 	// Read the config now

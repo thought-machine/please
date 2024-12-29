@@ -165,6 +165,10 @@ fi
 printf >&2 '%bDownloading Please %s to %s...%b\n' "${GREEN}" "${VERSION}" "${DIR}" "${RESET}"
 mkdir -p "${DIR}"
 ${TRANSFER_TOOL} ${TRANSFER_PROGRESS_OPTS} "${PLEASE_URL}" | tar -xJpf- --strip-components=1 -C "${DIR}"
+if [ $? -ne 0 ]; then
+    printf >&2 '%bFailed to download Please%b\n' "${RED}" "${RESET}"
+    exit 1
+fi
 
 # Link it all back up a dir
 for x in "${DIR}"/*; do

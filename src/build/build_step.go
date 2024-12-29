@@ -80,9 +80,6 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()
-	if target.IsTest() && state.NeedTests && state.IsOriginalTarget(target) {
-		state.QueueTestTarget(target)
-	}
 }
 
 func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTarget) error {
@@ -135,7 +132,7 @@ func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 		return errStop
 	}
 
-	if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
+	if err := prepareDirectories(target); err != nil {
 		return err
 	}
 	if err := prepareSources(state, state.Graph, target); err != nil {
@@ -287,7 +284,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 			return nil
 		}
 
-		if err := prepareDirectories(state.ProcessExecutor, target); err != nil {
+		if err := prepareDirectories(target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 		}
 
@@ -426,7 +423,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 	}
 	// Clean up the temporary directory once it's done.
 	if state.CleanWorkdirs {
-		if err := fs.ForceRemove(state.ProcessExecutor, target.TmpDir()); err != nil {
+		if err := fs.RemoveAll(target.TmpDir()); err != nil {
 			log.Warning("Failed to remove temporary directory for %s: %s", target.Label, err)
 		}
 	}
@@ -591,19 +588,19 @@ func prepareParentDirs(target *core.BuildTarget, out string) error {
 }
 
 // Prepares the temp and out directories for a target
-func prepareDirectories(executor *process.Executor, target *core.BuildTarget) error {
-	if err := prepareDirectory(executor, target.TmpDir(), true); err != nil {
+func prepareDirectories(target *core.BuildTarget) error {
+	if err := prepareDirectory(target.TmpDir(), true); err != nil {
 		return err
 	}
 	if err := prepareOutputDirectories(target); err != nil {
 		return err
 	}
-	return prepareDirectory(executor, target.OutDir(), false)
+	return prepareDirectory(target.OutDir(), false)
 }
 
-func prepareDirectory(executor *process.Executor, directory string, remove bool) error {
-	if remove && core.PathExists(directory) {
-		if err := fs.ForceRemove(executor, directory); err != nil {
+func prepareDirectory(directory string, remove bool) error {
+	if remove {
+		if err := fs.RemoveAll(directory); err != nil {
 			return err
 		}
 	}
@@ -616,8 +613,8 @@ func prepareDirectory(executor *process.Executor, directory string, remove bool)
 
 // Symlinks the source files of this rule into its temp directory.
 func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core.BuildTarget) error {
-	for source := range core.IterSources(state, graph, target, false) {
-		if err := core.PrepareSourcePair(source); err != nil {
+	for src, tmp := range core.IterSources(state, graph, target, false) {
+		if err := core.PrepareSource(src, tmp); err != nil {
 			return err
 		}
 	}
@@ -763,7 +760,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 			log.Debug("Checking %s vs. %s, hashes match", tmpOutput, realOutput)
 			return false, nil
 		}
-		if err := os.RemoveAll(realOutput); err != nil {
+		if err := fs.RemoveAll(realOutput); err != nil {
 			return true, err
 		}
 	}
@@ -793,7 +790,7 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 func RemoveOutputs(target *core.BuildTarget) error {
 	for _, output := range target.Outputs() {
 		out := filepath.Join(target.OutDir(), output)
-		if err := os.RemoveAll(out); err != nil {
+		if err := fs.RemoveAll(out); err != nil {
 			return err
 		} else if err := fs.EnsureDir(out); err != nil {
 			return err
@@ -1068,9 +1065,9 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 		httpClientLimiter = make(chan struct{}, state.Config.Build.ParallelDownloads)
 	})
 
-	if err := prepareDirectory(state.ProcessExecutor, target.OutDir(), false); err != nil {
+	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
-	} else if err := prepareDirectory(state.ProcessExecutor, target.TmpDir(), false); err != nil {
+	} else if err := prepareDirectory(target.TmpDir(), false); err != nil {
 		return err
 	}
 	var err error

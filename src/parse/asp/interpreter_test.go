@@ -120,6 +120,14 @@ func TestInterpreterBuiltins(t *testing.T) {
 	assert.NotNil(t, s.pkg.Target("lib"))
 }
 
+func TestInterpreterConfig(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/config.build")
+	require.NoError(t, err)
+	for _, v := range []string{"g", "k1", "k2", "v", "i"} {
+		assert.EqualValues(t, True, s.Lookup(v))
+	}
+}
+
 func TestInterpreterParentheses(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/parentheses.build")
 	require.NoError(t, err)
@@ -609,6 +617,7 @@ func TestJSON(t *testing.T) {
 	assert.Contains(t, s.Lookup("json_frozen_config").String(), "\"foo\":\"bar\"")
 	assert.Contains(t, s.Lookup("json_frozen_config").String(), "\"baz\":6")
 	assert.EqualValues(t, "[0,1,2,3]", s.Lookup("json_range"))
+	assert.Equal(t, "{\n  \"foo\": \"bar\"\n}", s.Lookup("json_pretty").String())
 }
 
 func TestSemverCheck(t *testing.T) {
@@ -685,4 +694,24 @@ func TestOperatorPrecedence(t *testing.T) {
 	assert.EqualValues(t, 1, s.Lookup("l"))
 	assert.EqualValues(t, False, s.Lookup("m"))
 	assert.EqualValues(t, True, s.Lookup("n"))
+}
+
+func TestListConcatenation(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/list_concat.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, pyList{
+		pyString("apple"),
+		pyString("banana"),
+		pyString("edamame"),
+		pyString("fennel"),
+		pyString("tuna"),
+		pyString("baked beans"),
+		pyString("haribo"),
+	}, s.Lookup("fruit_veg_canned_food_and_sweets"))
+}
+
+func TestBreakLoop(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/break_loop.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, 1, s.Lookup("i"))
 }

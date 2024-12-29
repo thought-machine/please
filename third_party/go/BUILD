@@ -5,18 +5,22 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "ebca81df938d2d1047cc992be6c6c759543cf309d401b86af38a6aed3d4090f4",  # darwin-amd64
-        "bf8e388b09134164717cd52d3285a4ab3b68691b80515212da0e9f56f518fb1e",  # darwin-arm64
-        "50f421c7f217083ac94aab1e09400cb9c2fea7d337679ec11f1638a11460da30",  # freebsd-amd64
-        "f6c8a87aa03b92c4b0bf3d558e28ea03006eb29db78917daec5cfb6ec1046265",  # linux-amd64
-        "6a63fef0e050146f275bf02a0896badfe77c11b6f05499bb647e7bd613a45a10",  # linux-arm64
+        "445c0ef19d8692283f4c3a92052cc0568f5a048f4e546105f58e991d4aea54f5", # go1.23.2.darwin-amd64.tar.gz
+        "d87031194fe3e01abdcaf3c7302148ade97a7add6eac3fec26765bcb3207b80f", # go1.23.2.darwin-arm64.tar.gz
+        "025d77f1780906142023a364c31a572afd7d56d3a3be1e4e562e367ca88d3267", # go1.23.2.freebsd-amd64.tar.gz
+        "542d3c1705f1c6a1c5a80d5dc62e2e45171af291e755d591c5e6531ef63b454e", # go1.23.2.linux-amd64.tar.gz
+        "f626cdd92fc21a88b31c1251f419c17782933a42903db87a174ce74eeecc66a9", # go1.23.2.linux-arm64.tar.gz
     ],
     install_std = False,
-    version = "1.22.0",
+    version = "1.23.2",
 )
 
 go_stdlib(
     name = "std",
+    tags = [
+        "netgo",
+        "osusergo",
+    ],
 )
 
 go_repo(
@@ -167,7 +171,7 @@ go_repo(
 
 go_repo(
     module = "github.com/hashicorp/go-retryablehttp",
-    version = "v0.7.5",
+    version = "v0.7.7",
 )
 
 go_repo(
@@ -327,7 +331,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sys",
-    version = "v0.18.0",
+    version = "v0.20.0",
 )
 
 go_repo(
@@ -397,7 +401,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.21.0",
+    version = "v0.31.0",
 )
 
 go_repo(
@@ -504,7 +508,7 @@ go_repo(
 
 go_repo(
     module = "github.com/bazelbuild/remote-apis",
-    version = "v0.0.0-20210718193713-0ecef08215cf",
+    version = "v0.0.0-20240409135018-1f36c310b28d",
 )
 
 go_repo(
@@ -533,9 +537,9 @@ go_repo(
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "cloud.google.com/go/compute",
     version = "v1.25.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
@@ -544,145 +548,145 @@ go_repo(
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/go-ole/go-ole",
     version = "v1.3.0",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/appengine",
     version = "v1.6.8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/rpc",
     version = "v0.0.0-20240304212257-790db918fca8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/secure-systems-lab/go-securesystemslib",
     version = "v0.8.0",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "gopkg.in/go-jose/go-jose.v2",
     version = "v2.6.3",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/api",
     version = "v0.0.0-20240304212257-790db918fca8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/bytestream",
     version = "v0.0.0-20240304212257-790db918fca8",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/sigstore/sigstore/pkg/signature/kms/gcp",
     version = "v1.8.2",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/felixge/httpsnoop",
     version = "v1.0.4",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/go-logr/logr",
     version = "v1.4.1",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/go-logr/stdr",
     version = "v1.2.2",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/google/s2a-go",
     version = "v0.1.7",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/jellydator/ttlcache/v3",
     version = "v3.2.0",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
     version = "v0.49.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
     version = "v0.49.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel",
     version = "v1.24.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/metric",
     version = "v1.24.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/trace",
     version = "v1.24.0",
-    licences = ["Apache-2.0"],
 )
 
 go_repo(
+    licences = ["BSD-3-Clause"],
     module = "golang.org/x/time",
     version = "v0.5.0",
-    licences = ["BSD-3-Clause"],
 )
 
 go_repo(
+    licences = ["BSD-3-Clause"],
     module = "github.com/lufia/plan9stats",
     version = "v0.0.0-20240226150601-1dcf7310316a",
-    licences = ["BSD-3-Clause"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/power-devops/perfstat",
     version = "v0.0.0-20240221224432-82ca36839d55",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["MPL-2.0"],
     module = "github.com/shoenig/go-m1cpu",
     version = "v0.1.6",
-    licences = ["MPL-2.0"],
 )
 
 go_repo(
+    licences = ["MIT"],
     module = "github.com/yusufpapurcu/wmi",
     version = "v1.2.4",
-    licences = ["MIT"],
 )
 
 go_repo(
+    licences = ["Apache-2.0"],
     module = "github.com/grpc-ecosystem/go-grpc-prometheus",
     version = "v1.2.0",
-    licences = ["Apache-2.0"],
 )

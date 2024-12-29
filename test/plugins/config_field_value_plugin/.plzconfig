@@ -1,0 +1,32 @@
+[PluginDefinition]
+Name = config_field_value
+
+[PluginConfig "str_required"]
+Type = str
+Inherit = false
+DefaultValue =
+
+[PluginConfig "str_optional"]
+Type = str
+Optional = true
+Inherit = false
+
+[PluginConfig "int_required"]
+Type = int
+Inherit = false
+DefaultValue = 0
+
+[PluginConfig "int_optional"]
+Type = int
+Optional = true
+Inherit = false
+
+[PluginConfig "bool_required"]
+Type = bool
+Inherit = false
+DefaultValue = false
+
+[PluginConfig "bool_optional"]
+Type = bool
+Optional = true
+Inherit = false

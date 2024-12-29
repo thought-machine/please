@@ -1,3 +1,112 @@
+Version 17.12.7
+---------------
+    * Fix BuildTarget.ProvideFor not checking named data when deciding whether
+		  to skip resolution. (#3316)
+
+Version 17.12.6
+---------------
+    * Add goroutine labels to track what they are getting up to if we suspect a hang (#3292)
+    * Fix deadlock with queuing data for tests (#3306)
+    * Fix potential subinclude lockup (#3305)
+    * Don't queue a target up for test if the target failed to build (#3315)
+
+Version 17.12.5
+---------------
+    * Add a stat for number of BUILD files currently parsing (#3290)
+
+Version 17.12.4
+---------------
+    * Reverted back to arcat v1.0.2 while we work out behavioural issues
+
+Version 17.12.3
+---------------
+    * Updated arcat to fix some subtle issues with ar archives and filenames of an unusual size
+
+Version 17.12.2
+---------------
+    * Exclude test_tools from dependencies in working dir during build.
+
+Version 17.12.1
+---------------
+    * Ensure build env is sorted on input to config hash (#3279)
+    * Remove test args from remote test command (#3266)
+
+Version 17.12.0
+---------------
+    * Require building tasks to complete before shutdown (#3275)
+    * Update profile for guided optimisation (#3273)
+    * Replace channel-based iterators with new-style ones (#3272)
+    * Expand home path in `fs.PathExists` (#3270)
+    * Fix bash completion around = character (#3269)
+    * Add AppArmor profile for Ubuntu Noble (#3271)
+    * Update to Go 1.23.2 (#3264)
+    * Bump go-rules plugin to v1.21.5 (#3268)
+    * Bump python-rules plugin to v1.7.4 (#3267)
+    * Prohibit running under sudo unless explicitly forced to do so (#3265)
+    * Make property and operator not part of default object (#3260)
+    * Minor clean up to len() (#3259)
+    * Change iterable interface to be more flexible (#3255)
+    * Update lint (#3239)
+    * Avoid storing package cache in Alpine build image (#3250)
+    * Add Go build tags to stdlib (#3252)
+    * Avoid allocating channels unnecessarily on map inserts (#3246)
+    * Update toolchain to Go 1.23.1 (#3249, superseded by #3264)
+    * Fix a couple of things on arm64 (#3251)
+    * Update to Go 1.23.1 (#3248, superseded by #3264)
+    * Fix autocompletion by replacing partial text in LSP (#3244)
+    * Refresh Docker images (#3245)
+
+Version 17.11.0
+---------------
+    * Skip special handling of experimental directories when inside a subrepo (#3242)
+    * Detach codepath adds env vars (#3241)
+    * Stop invoking 'rm' as a subprocess (#3238)
+    * Update Python plugin + some deps (#3227)
+    * Deal with require/provide in query deps (#3237)
+    * Implement force deletion for RemoveAll (#3236)
+    * Make Please traverse build defs dirs recursively to find build defs (#3234)
+    * Add support for pretty-printing to the `json()` built-in (#3233)
+
+Version 17.10.3
+---------------
+    * Further improve internal comparison of subrepo structures
+
+Version 17.10.2
+---------------
+    * Revert change to filename auto-completion from 17.10.0 (#3229)
+
+Version 17.10.1
+---------------
+    * Improve internal comparison of subrepo structures, resolving a "found multiple definitions for
+      subrepo" error when cross-compiling a build target (#3223)
+
+Version 17.10.0
+---------------
+    * Make `1`/`0` synonyms for `true`/`false` in boolean plugin config fields (#3220)
+    * Return `None` for empty optional plugin config fields (#3219)
+    * Correctly report name of missing dependency when it can't be resolved (#3216)
+    * Output debug message when plugin config is loaded (#3214)
+    * Implement `keys`, `values` and `items` methods for `config` builtin type (#3213)
+    * Report plugin name in error message when failing to override plugin config field value (#3211)
+    * Add Go toolchain and standard library targets when initialising Go plugin (#3212)
+    * Don't print input targets in `plz query deps` output (#3204)
+    * Implement filename auto-completion and support for reading from stdin for the `plz query`
+      subcommands `whatinputs`, `whatoutputs`, `rules` and `changes` (#3202)
+
+Version 17.9.0
+--------------
+    * Allow values in `provides` to be a list (#3140)
+    * Don't show passed test output for large numbers of tests (#3131)
+    * Deduplicate env vars passed to build actions (#3143, #3144)
+    * More efficient `str.format()` implementation in BUILD language (#3146)
+    * Fix hang on preloading subincludes with syntax errors (#3151)
+    * Some low-level performance improvements to BUILD file parsing (#3147, #3152)
+    * Support \t escapes in strings (#3170)
+    * Remove mention of pleasings from plz init message (#3173)
+    * Report remote worker name in interactive output (#3178)
+    * New `no_test_coverage` option to explicitly opt tests out of producing coverage (#3188)
+    * Add sandbox flags to `plz debug` matching `plz exec`'s behaviour (#3200)
+
 Version 17.8.7
 --------------
     * Use local paths only for determining tool changes (#3139)

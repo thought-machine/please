@@ -2,13 +2,14 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/thought-machine/please/src/cli/logging"
-	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.Log
@@ -145,7 +146,7 @@ func renameFile(from, to string) (err error) {
 	if err != nil {
 		return err
 	}
-	err = os.RemoveAll(from)
+	err = RemoveAll(from)
 	if err != nil {
 		return err
 	}
@@ -186,18 +187,25 @@ func copyFile(from, to string) (err error) {
 	return nil
 }
 
-// ForceRemove will try and remove the path with `os.RemoveAll`, and if that fails, it will use `rm -rf` running the
-// command in any namespace that please is configured to.
-func ForceRemove(exec *process.Executor, path string) error {
-	// Try and remove it normally first
-	if err := os.RemoveAll(path); err == nil || os.IsNotExist(err) {
+// RemoveAll will try and remove the path with `os.RemoveAll`; if that fails with a permission error,
+// it will attempt to adjust permissions to make things writable, then remove them.
+func RemoveAll(path string) error {
+	if err := os.RemoveAll(path); err == nil || !errors.Is(err, os.ErrPermission) {
+		return err
+	} else if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		const writable = 0o220
+		if err != nil {
+			return err
+		} else if d.IsDir() && d.Type()&writable != writable {
+			if info, err := d.Info(); err != nil {
+				return fmt.Errorf("could not read info for %s: %w", path, err)
+			} else if err := os.Chmod(path, info.Mode()|writable); err != nil {
+				return fmt.Errorf("could not make %s writable: %w", path, err)
+			}
+		}
 		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to remove directory %s: %w", path, err)
 	}
-
-	cmd := exec.ExecCommand(process.NoSandbox, false, "rm", "-rf", path)
-
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to remove %s: %w\nOutput: %s", path, err, string(out))
-	}
-	return nil
+	return os.RemoveAll(path)
 }

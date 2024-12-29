@@ -83,7 +83,7 @@ func Sequential(state *core.BuildState, labels []core.AnnotatedOutputLabel, args
 }
 
 func prepareRun() {
-	if err := os.RemoveAll("plz-out/run"); err != nil && !os.IsNotExist(err) {
+	if err := fs.RemoveAll("plz-out/run"); err != nil && !os.IsNotExist(err) {
 		log.Warningf("failed to clean up old run working directory: %v", err)
 	}
 }
@@ -191,6 +191,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Dir = dir
+		cmd.Env = env
 		return nil, nil, toExitError(cmd.Start(), args, nil)
 	}
 	// Run as a normal subcommand.
@@ -216,8 +217,8 @@ func prepareRunDir(state *core.BuildState, target *core.BuildTarget) (string, er
 		return "", err
 	}
 
-	for out := range core.IterRuntimeFiles(state.Graph, target, true, path) {
-		if err := core.PrepareSourcePair(out); err != nil {
+	for src, tmp := range core.IterRuntimeFiles(state.Graph, target, true, path) {
+		if err := core.PrepareSource(src, tmp); err != nil {
 			return "", err
 		}
 	}

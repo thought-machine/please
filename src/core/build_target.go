@@ -81,6 +81,10 @@ type TestFields struct {
 	// True if the target is a test and has no output file.
 	// Default is false, meaning all tests must produce test.results as output.
 	NoOutput bool `name:"no_test_output"`
+	// True if the target is a test and won't produce coverage.
+	// Default is false, where tests are expected to, but we don't error if it's not there;
+	// this is mostly relevant for remote execution.
+	NoCoverage bool `name:"no_test_coverage"`
 }
 
 type DebugFields struct {
@@ -558,29 +562,29 @@ func (target *BuildTarget) resolveDependencies(graph *BuildGraph, callback func(
 }
 
 func (target *BuildTarget) resolveOneDependency(graph *BuildGraph, dep *depInfo) error {
-	t := graph.WaitForTarget(*dep.declared)
-	if t == nil {
+	depTarget := graph.WaitForTarget(*dep.declared)
+	if depTarget == nil {
 		return fmt.Errorf("Couldn't find dependency %s", dep.declared)
 	}
-	dep.declared = &t.Label // saves memory by not storing the label twice once resolved
+	dep.declared = &depTarget.Label // saves memory by not storing the label twice once resolved
 
-	labels, ok := t.provideFor(target)
+	providesLabels, ok := depTarget.provideFor(target)
 	if !ok {
 		target.mutex.Lock()
 		defer target.mutex.Unlock()
 
 		// Small optimisation to avoid re-looking-up the same target again.
-		dep.deps = []*BuildTarget{t}
+		dep.deps = []*BuildTarget{depTarget}
 		return nil
 	}
 
-	deps := make([]*BuildTarget, 0, len(labels))
-	for _, l := range labels {
-		t := graph.WaitForTarget(l)
-		if t == nil {
-			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, t)
+	deps := make([]*BuildTarget, 0, len(providesLabels))
+	for _, l := range providesLabels {
+		providesTarget := graph.WaitForTarget(l)
+		if providesTarget == nil {
+			return fmt.Errorf("%s depends on %s (provided by %s), however that target doesn't exist", target, l, depTarget)
 		}
-		deps = append(deps, t)
+		deps = append(deps, providesTarget)
 	}
 
 	target.mutex.Lock()
@@ -708,8 +712,8 @@ func (target *BuildTarget) FinishBuild() {
 }
 
 // WaitForBuild blocks until this target has finished building.
-func (target *BuildTarget) WaitForBuild() {
-	<-target.finishedBuilding
+func (target *BuildTarget) WaitForBuild(dependant BuildLabel) {
+	waitOnChan(target.finishedBuilding, "Still waiting on (target %v).WaitForBuild(dependant %v)", target.Label, dependant)
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.
@@ -1201,6 +1205,15 @@ func (target *BuildTarget) ProvideFor(other *BuildTarget) []BuildLabel {
 	return []BuildLabel{target.Label}
 }
 
+func (target *BuildTarget) isDataFor(other *BuildTarget) bool {
+	for _, data := range other.AllData() {
+		if label, ok := data.Label(); ok && label == target.Label {
+			return true
+		}
+	}
+	return false
+}
+
 // provideFor is like ProvideFor but returns an empty slice if there is a direct dependency.
 // It's a small optimisation to save allocating extra slices.
 func (target *BuildTarget) provideFor(other *BuildTarget) ([]BuildLabel, bool) {
@@ -1210,10 +1223,8 @@ func (target *BuildTarget) provideFor(other *BuildTarget) ([]BuildLabel, bool) {
 		return nil, false
 	}
 	// Never do this if the other target has a data or tool dependency on us.
-	for _, data := range other.Data {
-		if label, ok := data.Label(); ok && label == target.Label {
-			return nil, false
-		}
+	if target.isDataFor(other) {
+		return nil, false
 	}
 	if other.IsTool(target.Label) {
 		return nil, false
@@ -1665,12 +1676,22 @@ func (target *BuildTarget) RegisterDependencyTarget(dep BuildLabel, deptarget *B
 
 // IsTool returns true if the given build label is a tool used by this target.
 func (target *BuildTarget) IsTool(tool BuildLabel) bool {
-	for _, t := range target.Tools {
+	if target.isTool(tool, target.Tools, target.namedTools) {
+		return true
+	} else if target.Test != nil && target.isTool(tool, target.Test.tools, target.Test.namedTools) {
+		return true
+	}
+	return false
+}
+
+// isTool returns true if the given build label is a named or unnamed tool in the given sets.
+func (target *BuildTarget) isTool(tool BuildLabel, tools []BuildInput, namedTools map[string][]BuildInput) bool {
+	for _, t := range tools {
 		if label, ok := t.Label(); ok && label == tool {
 			return true
 		}
 	}
-	for _, tools := range target.namedTools {
+	for _, tools := range namedTools {
 		for _, t := range tools {
 			if label, ok := t.Label(); ok && label == tool {
 				return true
@@ -1817,7 +1838,7 @@ func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
 	if target.Test == nil {
 		return false
 	}
-	return state.NeedCoverage && !target.Test.NoOutput && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+	return state.NeedCoverage && !target.Test.NoOutput && !target.Test.NoCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.

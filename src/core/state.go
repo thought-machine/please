@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
@@ -9,7 +10,9 @@ import (
 	"hash/crc64"
 	"io"
 	iofs "io/fs"
+	"iter"
 	"path/filepath"
+	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -278,6 +281,7 @@ type stateProgress struct {
 	numActive  int64
 	numPending int64
 	numDone    int64
+	numParses  atomic.Int64
 	mutex      sync.Mutex
 	closeOnce  sync.Once
 	resultOnce sync.Once
@@ -367,6 +371,11 @@ func (state *BuildState) AddPendingTest(target *BuildTarget) {
 	} else {
 		state.addPendingTest(target, int(state.NumTestRuns))
 	}
+}
+
+// Parses returns the number of current parse tasks
+func (state *BuildState) Parses() *atomic.Int64 {
+	return &state.progress.numParses
 }
 
 func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
@@ -638,6 +647,7 @@ func (state *BuildState) forwardResults() {
 				}
 			case <-t.C:
 				go state.checkForCycles()
+				go dumpGoroutineInfo()
 				// Still need to get a result!
 				result = <-state.progress.internalResults
 			}
@@ -834,24 +844,25 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	if p := state.Graph.PackageByLabel(label); p != nil {
 		return p
 	}
-	if ch, inserted := state.progress.pendingPackages.AddOrGet(label.packageKey(), make(chan struct{})); !inserted {
-		waitOnChan(ch, fmt.Sprintf("Still waiting for SyncParsePackage(%v)", label))
+	if ch, inserted := state.progress.pendingPackages.AddOrGet(label.packageKey(), func() chan struct{} {
+		return make(chan struct{})
+	}); !inserted {
+		waitOnChan(ch, "Still waiting for SyncParsePackage(%v)", label)
 	}
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
-func waitOnChan[T any](ch chan T, message string) T {
+func waitOnChan[T any](ch chan T, message string, args ...any) {
 	start := time.Now()
-	for {
-		select {
-		case v := <-ch:
-			return v
-		case <-time.After(time.Second * 10):
-			{
-				log.Debugf("%v (after %v)", message, time.Since(start))
-			}
-		}
+	t := time.NewTimer(10 * time.Second)
+	defer t.Stop()
+	select {
+	case <-ch:
+		return
+	case <-t.C:
+		log.Debugf("%v (after %v)", fmt.Sprintf(message, args...), time.Since(start))
 	}
+	<-ch
 }
 
 // WaitForPackage is similar to WaitForBuiltTarget however it waits for the package to be parsed, queuing it for parse
@@ -864,13 +875,13 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 
 	// If something has promised to parse it, wait for them to do so
 	if ch := state.progress.pendingPackages.Get(key); ch != nil {
-		waitOnChan(ch, fmt.Sprintf("Still waiting for pending package in WaitForPackage(%v, %v, %v)", l, dependent, mode))
+		waitOnChan(ch, "Still waiting for pending package in WaitForPackage(%v, %v, %v)", l, dependent, mode)
 		return state.Graph.PackageByLabel(l)
 	}
 
 	// If something has already queued the package to be parsed, wait for them
 	if ch := state.progress.packageWaits.Get(key); ch != nil {
-		waitOnChan(ch, fmt.Sprintf("Still waiting for package wait in WaitForPackage(%v, %v, %v)", l, dependent, mode))
+		waitOnChan(ch, "Still waiting for package wait in WaitForPackage(%v, %v, %v)", l, dependent, mode)
 		return state.Graph.PackageByLabel(l)
 	}
 
@@ -889,9 +900,11 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	}
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
-	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, make(chan struct{})); !inserted {
+	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, func() chan struct{} {
+		return make(chan struct{})
+	}); !inserted {
 		// Something's already registered for this, get on the train
-		waitOnChan(ch, fmt.Sprintf("Still waiting on WaitForBuiltTarget(%v, %v, %v)", l, dependent, mode))
+		waitOnChan(ch, "Still waiting on WaitForBuiltTarget(label %v, dependant %v, ParseMode(%v))", l, dependent, mode)
 		return state.Graph.Target(l)
 	}
 	if err := state.queueTarget(l, dependent, mode.IsForSubinclude(), mode); err != nil {
@@ -1004,18 +1017,23 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 			// Bazel allows some things that look like build targets but aren't - notably the syntax
 			// to load(). It suits us to treat that as though it is one, but we now have to
 			// implicitly make it available.
-			exportFile(state, pkg, label)
+			if pkg != nil {
+				exportFile(state, pkg, label)
+			}
 		} else {
 			msg := fmt.Sprintf("Parsed build file %s but it doesn't contain target %s", pkg.Filename, label.Name)
 			if dependent != OriginalTarget {
 				msg += fmt.Sprintf(" (depended on by %s)", dependent)
 			}
-			return fmt.Errorf(msg + suggestTargets(pkg, label, dependent))
+			return fmt.Errorf("%s", msg+suggestTargets(pkg, label, dependent))
 		}
 	}
 	if state.ParsePackageOnly && !mode.IsForSubinclude() {
 		return nil // Some kinds of query don't need a full recursive parse.
 	} else if label.IsAllTargets() {
+		if pkg == nil {
+			return fmt.Errorf("Cannot use :all in this context")
+		}
 		if dependent == OriginalTarget {
 			for _, target := range pkg.AllTargets() {
 				// Don't activate targets that were added in a post-build function; that causes a race condition
@@ -1174,7 +1192,7 @@ func (state *BuildState) queueTargetAsync(target *BuildTarget, forceBuild, build
 		// Wait for these targets to actually build.
 		if building {
 			for _, t := range target.Dependencies() {
-				t.WaitForBuild()
+				t.WaitForBuild(target.Label)
 				if t.State() >= DependencyFailed { // Either the target failed or its dependencies failed
 					// Give up and set the original target as dependency failed
 					target.SetState(DependencyFailed)
@@ -1326,23 +1344,26 @@ func (state *BuildState) DownloadAllInputs(target *BuildTarget, targetDir string
 	return state.RemoteClient.DownloadInputs(target, targetDir, isTest)
 }
 
-// IterInputs returns a channel that iterates all the input files needed for a target.
-func (state *BuildState) IterInputs(target *BuildTarget, test bool) <-chan BuildInput {
+// IterInputs returns a an iterator over all the input files needed for a target.
+func (state *BuildState) IterInputs(target *BuildTarget, test bool) iter.Seq[BuildInput] {
 	if !test {
 		return IterInputs(state, state.Graph, target, true, target.IsFilegroup)
 	}
-	ch := make(chan BuildInput)
-	go func() {
-		ch <- target.Label
+	return func(yield func(BuildInput) bool) {
+		if !yield(target.Label) {
+			return
+		}
 		for _, datum := range target.AllData() {
-			ch <- datum
+			if !yield(datum) {
+				return
+			}
 		}
-		for _, datum := range target.AllTestTools() {
-			ch <- datum
+		for _, tool := range target.AllTestTools() {
+			if !yield(tool) {
+				return
+			}
 		}
-		close(ch)
-	}()
-	return ch
+	}
 }
 
 // DisableXattrs disables xattr support for this build. This is done for filesystems that
@@ -1520,4 +1541,11 @@ func (s BuildResultStatus) IsFailure() bool {
 // IsActive returns true if this status represents a target that is not yet finished.
 func (s BuildResultStatus) IsActive() bool {
 	return s == PackageParsing || s == TargetBuilding || s == TargetTesting
+}
+
+// dumpGoroutineInfo logs out the goroutine stacks when we believe we might have hung.
+func dumpGoroutineInfo() {
+	var buf bytes.Buffer
+	pprof.Lookup("goroutine").WriteTo(&buf, 1)
+	log.Debug("Current stacks: %s", buf.String())
 }

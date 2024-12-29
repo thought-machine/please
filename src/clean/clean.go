@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"syscall"
 
@@ -68,7 +67,7 @@ func cleanTarget(state *core.BuildState, target *core.BuildTarget) {
 func clean(path string) {
 	if core.PathExists(path) {
 		log.Info("Cleaning path %s", path)
-		if err := deleteDir(path, false); err != nil {
+		if err := fs.RemoveAll(path); err != nil {
 			log.Fatalf("Failed to clean path %s: %s", path, err)
 		}
 	}
@@ -81,30 +80,20 @@ func clean(path string) {
 // Conversely there is obviously no guarantee about at what point it will actually cease to
 // be on disk any more.
 func AsyncDeleteDir(dir string) error {
-	return deleteDir(dir, true)
-}
-
-func deleteDir(dir string, async bool) error {
-	rm, err := exec.LookPath("rm")
-	if err != nil {
-		return err
-	} else if !fs.PathExists(dir) {
+	if !fs.PathExists(dir) {
 		return nil // not an error, just don't need to do anything.
+	}
+	exec, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("Failed to determine executable path: %w", err)
 	}
 	newDir, err := moveDir(dir)
 	if err != nil {
 		return err
 	}
-	if async {
-		// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay.
-		// Hence why we're using rm rather than fork() + os.RemoveAll.
-		_, err = syscall.ForkExec(rm, []string{rm, "-rf", newDir}, nil)
-		return err
-	}
-	out, err := exec.Command(rm, "-rf", newDir).CombinedOutput()
-	if err != nil {
-		log.Error("Failed to remove directory: %s", string(out))
-	}
+	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay,
+	// so we re-execute ourselves with a specific command that will remove this.
+	_, err = syscall.ForkExec(exec, []string{exec, "clean", "--rm", newDir}, nil)
 	return err
 }
 

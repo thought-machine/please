@@ -1,4 +1,4 @@
-<h1 class="title-1">Please config file reference</h1>
+<h1 id="config-file-reference" class="title-1">Please config file reference</h1>
 
 <p>
   The root of a Please repo is identified by a <code class="code">.plzconfig</code> file.
@@ -918,6 +918,14 @@
       </div>
     </li>
   </ul>
+  <p>N.B. On Ubuntu Noble (24.04) or later, sandboxing may fail with a "Permission denied" error (often referring
+    to <code class="code">/proc/self/setgroups</code>). This is due to a
+    <a href="https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces">security change</a>
+    which prohibits unprivileged user namespaces, which the sandboxing relies upon.<br/>
+    To fix this, you need to create an AppArmor profile allowing it; we have an
+    <a href="https://github.com/thought-machine/please/blob/master/tools/misc/apparmor_profile">example</a>
+    for the default install location, which you should copy to <code class="code">/etc/apparmor.d/build.please</code>,
+    then run <code class="code">sudo systemctl reload apparmor</code> to apply the new profile.</p>
 </section>
 
 <section class="mt4">
@@ -1012,6 +1020,12 @@
       <div>
         <h3 class="mt1 f6 lh-title" id="remote.uploaddirs">UploadDirs <span class="normal">(bool)</span></h3>
         <p>{{ index .ConfigHelpText "remote.uploaddirs" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.optionaloutputsrequired">OptionalOutputsRequired <span class="normal">(bool)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.optionaloutputsrequired" }}</p>
       </div>
     </li>
     <li>

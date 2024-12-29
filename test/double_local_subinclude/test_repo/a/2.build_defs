@@ -1,0 +1,3 @@
+subinclude("//a:defs_1")
+
+THE_ANSWER = 42

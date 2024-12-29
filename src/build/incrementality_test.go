@@ -65,10 +65,11 @@ var KnownFields = map[string]bool{
 	"Test.Outputs":    true,
 
 	// These don't need to be hashed
-	"Test.NoOutput":  true,
-	"Test.Timeout":   true,
-	"Test.Flakiness": true,
-	"Test.Results":   true, // Recall that unsuccessful test results aren't cached...
+	"Test.NoOutput":   true,
+	"Test.NoCoverage": true,
+	"Test.Timeout":    true,
+	"Test.Flakiness":  true,
+	"Test.Results":    true, // Recall that unsuccessful test results aren't cached...
 
 	// Debug fields don't contribute to any hash
 	"Debug":            true,

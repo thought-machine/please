@@ -513,6 +513,11 @@ func (label BuildLabel) CanSee(state *BuildState, dep *BuildTarget) bool {
 
 // isExperimental returns true if this label is in the "experimental" tree
 func (label BuildLabel) isExperimental(state *BuildState) bool {
+	// Special handling of experimental directories should only be applied in the top-level repo,
+	// and not in any sub-repos.
+	if label.Subrepo != "" {
+		return false
+	}
 	for _, exp := range state.experimentalLabels {
 		if exp.Includes(label) {
 			return true

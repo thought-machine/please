@@ -10,7 +10,7 @@ import (
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hidden bool) {
-	targets := FindRevdeps(state, labels, hidden, true, level)
+	targets := FindRevdeps(state, labels, hidden, true, true, level)
 	ls := make(core.BuildLabels, 0, len(targets))
 
 	for target := range targets {
@@ -81,7 +81,7 @@ type revdeps struct {
 }
 
 // newRevdeps creates a new reverse dependency searcher. revdeps is non-reusable.
-func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth int) *revdeps {
+func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes, includeSubrepos bool, maxDepth int) *revdeps {
 	// Initialise a map of labels to the packages that subinclude them upfront so we can include those targets as
 	// dependencies efficiently later
 	subincludes := make(map[core.BuildLabel][]*core.Package)
@@ -94,7 +94,7 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 	}
 
 	return &revdeps{
-		revdeps:           buildRevdeps(graph),
+		revdeps:           buildRevdeps(graph, includeSubrepos),
 		subincludes:       subincludes,
 		followSubincludes: followSubincludes,
 		os: &openSet{
@@ -107,7 +107,7 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes bool, maxDepth
 }
 
 // buildRevdeps builds the reverse dependency map from a build graph.
-func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarget {
+func buildRevdeps(graph *core.BuildGraph, includeSubrepos bool) map[core.BuildLabel][]*core.BuildTarget {
 	targets := graph.AllTargets()
 	revdeps := make(map[core.BuildLabel][]*core.BuildTarget, len(targets))
 	for _, t := range targets {
@@ -120,7 +120,10 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 				}
 			}
 		}
-		if t.Subrepo != nil && t.Subrepo.Target != nil {
+		// Targets in a subrepo don't express an explicit dependency on their subrepo's target.
+		// However this is often useful for query commands where you expect to see this kind of
+		// relationship. Hence, if requested, we add the extra 'dependency' here.
+		if includeSubrepos && t.Subrepo != nil && t.Subrepo.Target != nil {
 			revdeps[t.Subrepo.Target.Label] = append(revdeps[t.Subrepo.Target.Label], t)
 		}
 	}
@@ -128,8 +131,8 @@ func buildRevdeps(graph *core.BuildGraph) map[core.BuildLabel][]*core.BuildTarge
 }
 
 // FindRevdeps will return a set of build targets that are reverse dependencies of the provided labels.
-func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden, followSubincludes bool, depth int) map[*core.BuildTarget]struct{} {
-	r := newRevdeps(state.Graph, hidden, followSubincludes, depth)
+func FindRevdeps(state *core.BuildState, targets core.BuildLabels, hidden, followSubincludes, includeSubrepos bool, depth int) map[*core.BuildTarget]struct{} {
+	r := newRevdeps(state.Graph, hidden, followSubincludes, includeSubrepos, depth)
 	// Initialise the open set with the original targets
 	for _, label := range targets {
 		target := state.Graph.TargetOrDie(label)

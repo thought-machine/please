@@ -34,8 +34,8 @@ func (m *ErrMap[K, V]) Add(key K, val V) bool {
 
 // AddOrGet either adds a new item (if the key doesn't exist) or gets the existing one.
 // It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
-func (m *ErrMap[K, V]) AddOrGet(key K, val V) (V, bool, error) {
-	v, present := m.m.AddOrGet(key, errV[V]{Val: val})
+func (m *ErrMap[K, V]) AddOrGet(key K, f func() V) (V, bool, error) {
+	v, present := m.m.AddOrGet(key, func() errV[V] { return errV[V]{Val: f()} })
 	return v.Val, present, v.Err
 }
 

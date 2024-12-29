@@ -45,13 +45,46 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	remoteLimiter := make(limiter, config.NumRemoteExecutors())
 	anyRemote := config.NumRemoteExecutors() > 0
 
+	completeAction := func(remote bool, task core.Task) {
+		if remote {
+			remoteLimiter.Release()
+		} else {
+			localLimiter.Release()
+		}
+
+		if task.Type != core.BuildTask {
+			state.TaskDone()
+			return
+		}
+
+		if !task.Target.State().IsBuilt() {
+			state.TaskDone()
+			return
+		}
+
+		if state.NeedTests && task.Target.IsTest() && state.IsOriginalTarget(task.Target) {
+			state.QueueTestTarget(task.Target)
+		}
+		state.TaskDone()
+	}
+
+	startAction := func(remote bool) {
+		if remote {
+			remoteLimiter.Acquire()
+		} else {
+			localLimiter.Acquire()
+		}
+	}
+
 	// Start up all the build workers
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		for task := range parses {
 			go func(task core.ParseTask) {
+				state.Parses().Add(1)
 				parse.Parse(state, task.Label, task.Dependent, task.Mode)
+				state.Parses().Add(-1)
 				state.TaskDone()
 			}(task)
 		}
@@ -59,22 +92,20 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}()
 	go func() {
 		for task := range actions {
+			wg.Add(1)
 			go func(task core.Task) {
-				remote := anyRemote && !task.Target.Local
-				if remote {
-					remoteLimiter.Acquire()
-					defer remoteLimiter.Release()
-				} else {
-					localLimiter.Acquire()
-					defer localLimiter.Release()
-				}
+				defer wg.Done()
+
+				isRemote := anyRemote && !task.Target.Local
+				startAction(isRemote)
+				defer completeAction(isRemote, task)
+
 				switch task.Type {
 				case core.TestTask:
-					test.Test(state, task.Target, remote, int(task.Run))
+					test.Test(state, task.Target, isRemote, int(task.Run))
 				case core.BuildTask:
-					build.Build(state, task.Target, remote)
+					build.Build(state, task.Target, isRemote)
 				}
-				state.TaskDone()
 			}(task)
 		}
 		wg.Done()

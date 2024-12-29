@@ -18,7 +18,6 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/process"
 )
 
 type httpCache struct {
@@ -204,7 +203,7 @@ func openFile(header *tar.Header) (*os.File, error) {
 	if err != nil {
 		if os.IsPermission(err) {
 			// The file might already exist and be ro. If so, remove it.
-			if err := fs.ForceRemove(process.New(), header.Name); err != nil {
+			if err := fs.RemoveAll(header.Name); err != nil {
 				log.Debug("failed to remove existing file when restoring from the cache: %w", err)
 			}
 			return os.OpenFile(header.Name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(header.Mode))

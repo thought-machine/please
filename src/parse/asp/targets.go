@@ -71,6 +71,7 @@ const (
 	envArgIdx
 	fileContentArgIdx
 	subrepoArgIdx
+	noTestCoverageArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -165,6 +166,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Test.Timeout = sizeAndTimeout(s, size, args[testTimeoutBuildRuleArgIdx], s.state.Config.Test.Timeout)
 		target.Test.Sandbox = isTruthy(testSandboxBuildRuleArgIdx)
 		target.Test.NoOutput = isTruthy(noTestOutputBuildRuleArgIdx)
+		target.Test.NoCoverage = target.Test.NoOutput || isTruthy(noTestCoverageArgIdx)
 	}
 
 	if err := validateSandbox(s.state, target); err != nil {

@@ -149,7 +149,7 @@ func completionItem(label, prefix string, line, col int) lsp.CompletionItem {
 		TextEdit: &lsp.TextEdit{
 			NewText: strings.TrimPrefix(label, prefix),
 			Range: lsp.Range{
-				Start: lsp.Position{Line: line, Character: col},
+				Start: lsp.Position{Line: line, Character: col - len(prefix)},
 				End:   lsp.Position{Line: line, Character: col},
 			},
 		},

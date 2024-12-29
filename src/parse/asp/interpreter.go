@@ -1,10 +1,13 @@
 package asp
 
 import (
+	"context"
 	"fmt"
+	"iter"
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
+	"runtime/pprof"
 	"strings"
 	"sync"
 
@@ -34,6 +37,7 @@ type interpreter struct {
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
+		ctx:    context.Background(),
 		state:  state,
 		locals: map[string]pyObject{},
 	}
@@ -165,6 +169,10 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 			label:     *forLabel,
 			dependent: *dependent,
 		}
+		old := s.ctx
+		s.ctx = pprof.WithLabels(s.ctx, pprof.Labels("parse", forLabel.String()))
+		pprof.SetGoroutineLabels(s.ctx)
+		defer pprof.SetGoroutineLabels(old)
 	}
 
 	if !mode.IsPreload() {
@@ -205,6 +213,8 @@ func (i *interpreter) interpretStatements(s *scope, statements []*Statement) (re
 func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildLabel, preload bool) pyDict {
 	key := filepath.Join(path, pkgScope.state.CurrentSubrepo)
 	globals, err := i.subincludes.GetOrSet(key, func() (pyDict, error) {
+		pprof.SetGoroutineLabels(pprof.WithLabels(pkgScope.ctx, pprof.Labels("subinclude", path)))
+		defer pprof.SetGoroutineLabels(pkgScope.ctx)
 		stmts, err := i.parseSubinclude(path)
 		if err != nil {
 			return nil, err
@@ -281,6 +291,7 @@ type parseTarget struct {
 
 // A scope contains all the information about a lexical scope.
 type scope struct {
+	ctx             context.Context //nolint:containedctx
 	interpreter     *interpreter
 	filename        string
 	state           *core.BuildState
@@ -399,6 +410,7 @@ func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint in
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
 	s2 := &scope{
+		ctx:         s.ctx,
 		filename:    filename,
 		interpreter: s.interpreter,
 		state:       s.state,
@@ -532,17 +544,20 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 				if stmt.Assert.Message == nil {
 					s.Error("assertion failed")
 				} else {
-					s.Error(s.interpretExpression(stmt.Assert.Message).String())
+					s.Error("%s", s.interpretExpression(stmt.Assert.Message))
 				}
 			}
 		} else if stmt.Raise != nil {
 			log.Warning("The raise keyword is deprecated, please use fail() instead. See https://github.com/thought-machine/please/issues/1598 for more information.")
-			s.Error(s.interpretExpression(stmt.Raise).String())
+			s.Error("%s", s.interpretExpression(stmt.Raise))
 		} else if stmt.Literal != nil {
 			s.interpretExpression(stmt.Literal)
 		} else if stmt.Continue {
 			// This is definitely awkward since we need to control a for loop that's happening in a function outside this scope.
 			return continueIteration
+		} else if stmt.Break {
+			// Similar to above, although CPython does do this the same way...
+			return stopIteration
 		} else if stmt.Pass {
 			continue // Nothing to do...
 		} else {
@@ -565,13 +580,14 @@ func (s *scope) interpretIf(stmt *IfStatement) pyObject {
 }
 
 func (s *scope) interpretFor(stmt *ForStatement) pyObject {
-	it := s.iterable(&stmt.Expr)
-	for i, n := 0, it.Len(); i < n; i++ {
-		li := it.Item(i)
+	for li := range s.iterable(&stmt.Expr) {
 		s.unpackNames(stmt.Names, li)
 		if ret := s.interpretStatements(stmt.Statements); ret != nil {
-			if s, ok := ret.(pySentinel); ok && s == continueIteration {
+			switch ret {
+			case continueIteration:
 				continue
+			case stopIteration:
+				break
 			}
 			return ret
 		}
@@ -653,15 +669,23 @@ func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
 		return s.negate(s.interpretIs(obj, op))
 	case In, NotIn:
 		// the implementation of in is defined by the right-hand side, not the left.
-		return s.interpretExpression(op.Expr).Operator(op.Op, obj)
+		return s.operator(op.Op, s.interpretExpression(op.Expr), obj)
 	case Negate:
 		// Negate is a unary operator so Expr will be nil
 		i, ok := obj.(pyInt)
 		s.Assert(ok, "Unary - can only be applied to an integer")
 		return newPyInt(-int(i))
 	default:
-		return obj.Operator(op.Op, s.interpretExpression(op.Expr))
+		return s.operator(op.Op, obj, s.interpretExpression(op.Expr))
 	}
+}
+
+func (s *scope) operator(op Operator, obj, operand pyObject) pyObject {
+	o, ok := obj.(operatable)
+	if !ok {
+		panic(fmt.Sprintf("operator %s not implemented on type %s", op, obj.Type()))
+	}
+	return o.Operator(op, operand)
 }
 
 func (s *scope) interpretJoin(base string, list *List) pyObject {
@@ -725,17 +749,25 @@ func (s *scope) interpretValueExpression(expr *ValueExpression) pyObject {
 		if sl.Colon == "" {
 			// Indexing, much simpler...
 			s.Assert(sl.End == nil, "Invalid syntax")
-			obj = obj.Operator(Index, s.interpretExpression(sl.Start))
+			obj = s.operator(Index, obj, s.interpretExpression(sl.Start))
 		} else {
 			obj = s.interpretSlice(obj, sl)
 		}
 	}
 	if expr.Property != nil {
-		obj = s.interpretIdent(obj.Property(s, expr.Property.Name), expr.Property)
+		obj = s.interpretIdent(s.property(obj, expr.Property.Name), expr.Property)
 	} else if expr.Call != nil {
 		obj = s.callObject("", obj, expr.Call)
 	}
 	return obj
+}
+
+func (s *scope) property(obj pyObject, property string) pyObject {
+	p, ok := obj.(propertied)
+	if !ok {
+		panic(obj.Type() + " object has no property " + property)
+	}
+	return p.Property(s, property)
 }
 
 func (s *scope) interpretValueExpressionPart(expr *ValueExpression) pyObject {
@@ -792,7 +824,7 @@ func (s *scope) interpretFString(f *FString) pyObject {
 	stringVar := func(v FStringVar) string {
 		obj := s.Lookup(v.Var[0])
 		for _, key := range v.Var[1:] {
-			obj = obj.Property(s, key)
+			obj = s.property(obj, key)
 		}
 
 		return obj.String()
@@ -839,7 +871,7 @@ func (s *scope) interpretIdent(obj pyObject, expr *IdentExpr) pyObject {
 	for _, action := range expr.Action {
 		if action.Property != nil {
 			name = action.Property.Name
-			obj = s.interpretIdent(obj.Property(s, name), action.Property)
+			obj = s.interpretIdent(s.property(obj, name), action.Property)
 		} else if action.Call != nil {
 			obj = s.callObject(name, obj, action.Call)
 		}
@@ -855,7 +887,7 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		if stmt.Index.Assign != nil {
 			s.indexAssign(obj, idx, s.interpretExpression(stmt.Index.Assign))
 		} else {
-			s.indexAssign(obj, idx, obj.Operator(Index, idx).Operator(Add, s.interpretExpression(stmt.Index.AugAssign)))
+			s.indexAssign(obj, idx, s.operator(Add, s.operator(Index, obj, idx), s.interpretExpression(stmt.Index.AugAssign)))
 		}
 	} else if stmt.Unpack != nil {
 		obj := s.interpretExpression(stmt.Unpack.Expr)
@@ -869,7 +901,7 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		}
 	} else if stmt.Action != nil {
 		if stmt.Action.Property != nil {
-			return s.interpretIdent(s.Lookup(stmt.Name).Property(s, stmt.Action.Property.Name), stmt.Action.Property)
+			return s.interpretIdent(s.property(s.Lookup(stmt.Name), stmt.Action.Property.Name), stmt.Action.Property)
 		} else if stmt.Action.Call != nil {
 			return s.callObject(stmt.Name, s.Lookup(stmt.Name), stmt.Action.Call)
 		} else if stmt.Action.Assign != nil {
@@ -877,7 +909,7 @@ func (s *scope) interpretIdentStatement(stmt *IdentStatement) pyObject {
 		} else if stmt.Action.AugAssign != nil {
 			// The only augmented assignment operation we support is +=, and it's implemented
 			// exactly as x += y -> x = x + y since that matches the semantics of Go types.
-			s.Set(stmt.Name, s.Lookup(stmt.Name).Operator(Add, s.interpretExpression(stmt.Action.AugAssign)))
+			s.Set(stmt.Name, s.operator(Add, s.Lookup(stmt.Name), s.interpretExpression(stmt.Action.AugAssign)))
 		}
 	} else {
 		return s.Lookup(stmt.Name)
@@ -896,8 +928,8 @@ func (s *scope) interpretList(expr *List) pyList {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
 	cs := s.NewScope(s.filename, s.mode)
-	it := s.iterable(expr.Comprehension.Expr)
-	ret := make(pyList, 0, it.Len())
+	it, l := s.iterableLen(expr.Comprehension.Expr)
+	ret := make(pyList, 0, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
 		if len(expr.Values) == 1 {
 			ret = append(ret, cs.interpretExpression(expr.Values[0]))
@@ -917,8 +949,8 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		return d
 	}
 	cs := s.NewScope(s.filename, s.mode)
-	it := s.iterable(expr.Comprehension.Expr)
-	ret := make(pyDict, it.Len())
+	it, l := s.iterableLen(expr.Comprehension.Expr)
+	ret := make(pyDict, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
 		ret.IndexAssign(cs.interpretExpression(&expr.Items[0].Key), cs.interpretExpression(&expr.Items[0].Value))
 	})
@@ -927,22 +959,18 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 
 // evaluateComprehension handles iterating a comprehension's loops.
 // The provided callback function is called with each item to be added to the result.
-func (s *scope) evaluateComprehension(it iterable, comp *Comprehension, callback func(pyObject)) {
+func (s *scope) evaluateComprehension(it iter.Seq[pyObject], comp *Comprehension, callback func(pyObject)) {
 	if comp.Second != nil {
-		for i, n := 0, it.Len(); i < n; i++ {
-			li := it.Item(i)
+		for li := range it {
 			s.unpackNames(comp.Names, li)
-			it2 := s.iterable(comp.Second.Expr)
-			for j, n := 0, it2.Len(); j < n; j++ {
-				li2 := it2.Item(j)
+			for li2 := range s.iterable(comp.Second.Expr) {
 				if s.evaluateComprehensionExpression(comp, comp.Second.Names, li2) {
 					callback(li2)
 				}
 			}
 		}
 	} else {
-		for i, n := 0, it.Len(); i < n; i++ {
-			li := it.Item(i)
+		for li := range it {
 			if s.evaluateComprehensionExpression(comp, comp.Names, li) {
 				callback(li)
 			}
@@ -972,11 +1000,22 @@ func (s *scope) unpackNames(names []string, obj pyObject) {
 }
 
 // iterable returns the result of the given expression as an iterable object.
-func (s *scope) iterable(expr *Expression) iterable {
+func (s *scope) iterable(expr *Expression) iter.Seq[pyObject] {
 	o := s.interpretExpression(expr)
 	it, ok := o.(iterable)
 	s.Assert(ok, "Non-iterable type %s", o.Type())
-	return it
+	return it.Iter()
+}
+
+// iterableLen returns the result of the given expression as an iterable object, and a length hint
+func (s *scope) iterableLen(expr *Expression) (iter.Seq[pyObject], int) {
+	o := s.interpretExpression(expr)
+	it, ok := o.(iterable)
+	s.Assert(ok, "Non-iterable type %s", o.Type())
+	if l, ok := it.(indexable); ok {
+		return it.Iter(), l.Len()
+	}
+	return it.Iter(), 4 // arbitrary length hint when we don't know
 }
 
 // evaluateExpressions runs a series of Python expressions in this scope and creates a series of concrete objects from them.

@@ -13,7 +13,7 @@ def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str=''
                test_outputs:list=None, system_srcs:list=None, stamp:bool=False, tag:str='', optional_outs:list=None, progress:bool=False,
                size:str=None, _urls:list=None, internal_deps:list=None, pass_env:list=None, local:bool=False, output_dirs:list=[],
                exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={}, env:dict={}, _file_content:str=None,
-               _subrepo:bool=False):
+               _subrepo:bool=False, no_test_coverage:bool=False):
     pass
 
 def chr(i:int) -> str:
@@ -138,9 +138,23 @@ def setdefault(self:config, key:str, default=None) -> config:
         return self[key]
     self[key] = default
     return default
-def config_get(self:config, key:str, default=None) -> config:
+def keys(self:dict) -> list:
+    pass
+def values(self:dict) -> list:
+    pass
+def items(self:dict) -> list:
+    pass
+def copy(self:dict) -> dict:
     pass
 
+def config_get(self:config, key:str, default=None) -> config:
+    pass
+def config_keys(self:config) -> list:
+    pass
+def config_items(self:config) -> list:
+    pass
+def config_values(self:config) -> list:
+    pass
 
 def get_base_path(label:str=None, subinclude_context:bool=None) -> str:
     pass
@@ -169,17 +183,6 @@ def tag(name:str, tag:str):
         tag("_name#foo", "bar") -> "_name#foo_bar"
     """
     pass
-
-
-def keys(self:dict) -> list:
-    pass
-def values(self:dict) -> list:
-    pass
-def items(self:dict) -> list:
-    pass
-def copy(self:dict) -> dict:
-    pass
-
 
 def git_branch(short:bool=True) -> str:
     fail('Disabled in config')
@@ -280,8 +283,11 @@ def licenses(licences):
     package(default_licences = licences)
 
 
-def json(value) -> str:
-    """Returns a JSON-formatted representation of a plz value"""
+def json(value, pretty=False) -> str:
+    """Returns a JSON-formatted representation of a plz value.
+    
+    If pretty is true, the JSON will be pretty-printed with 2 spaces of indentation per level.
+    """
     pass
 
 

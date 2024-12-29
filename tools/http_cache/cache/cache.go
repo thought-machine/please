@@ -7,12 +7,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/op/go-logging.v1"
-
+	logger "github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/fs"
 )
 
-var log = logging.MustGetLogger("httpcache")
+var log = logger.Log
 
 // Cache implements a http handler for caching files. Effectively a read/write http.FileSystem
 type Cache struct {
@@ -43,7 +42,7 @@ func (c *Cache) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 func (c *Cache) store(uri string, data io.Reader) error {
 	path := filepath.Join(c.Dir, uri)
-	if err := os.RemoveAll(uri); err != nil {
+	if err := fs.RemoveAll(uri); err != nil {
 		return err
 	}
 

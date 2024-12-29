@@ -7,13 +7,13 @@ go_library(
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
-        "///third_party/go/golang.org_x_exp//maps",
         "///third_party/go/github.com_please-build_gcfg//:gcfg",
+        "///third_party/go/golang.org_x_exp//maps",
         "//src/build",
         "//src/cli/logging",
         "//src/core",
-        "//src/parse",
         "//src/fs",
+        "//src/parse",
     ],
 )
 
@@ -25,6 +25,7 @@ go_test(
         ":query",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
+        "//src/cli",
         "//src/core",
         "//src/parse",
     ],
