@@ -185,7 +185,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		
 		// Wait for any new dependencies added by pre-build commands before continuing.
 		for _, dep := range target.Dependencies() {
-			dep.WaitForBuild()
+			dep.WaitForBuild(target.Label)
 			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
 				// Give up and set the original target as dependency failed
 				target.SetState(core.DependencyFailed)
@@ -352,7 +352,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 
 		// Wait for any new dependencies added by post-build commands before continuing.
 		for _, dep := range target.Dependencies() {
-			dep.WaitForBuild()
+			dep.WaitForBuild(target.Label)
 			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
 				// Give up and set the original target as dependency failed
 				target.SetState(core.DependencyFailed)
