@@ -1,3 +1,10 @@
+Version 17.13.0
+---------------
+    * Add a `break` statement to the build language (#3320)
+    * Handle symlinks to directories in a number of places, including but not limited
+      to output directories in remote execution (#3330)
+
+
 Version 17.12.7
 ---------------
     * Fix BuildTarget.ProvideFor not checking named data when deciding whether
