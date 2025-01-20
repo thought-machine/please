@@ -33,7 +33,7 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			continue // This isn't a real package to be copied
 		}
 		if pkg.Subrepo != nil {
-			continue // Don't copy subrepo BUILD files... they don't exist
+			continue // Don't copy subrepo BUILD files... they don't exist in our source tree
 		}
 		dest := filepath.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
@@ -75,13 +75,13 @@ func exportSources(graph *core.BuildGraph, dir string, target *core.BuildTarget)
 
 // export implements the logic of ToDir, but prevents repeating targets.
 func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
+	if done[target] {
+		return
+	}
 	// We want to export the package that made this subrepo available, but we still need to walk the target deps
 	// as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
 		export(graph, dir, target.Subrepo.Target, done)
-	}
-	if done[target] {
-		return
 	}
 	if target.Subrepo == nil {
 		exportSources(graph, dir, target)
