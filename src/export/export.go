@@ -21,7 +21,7 @@ var log = logging.Log
 func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	done := map[*core.BuildTarget]bool{}
 	for _, target := range append(state.Config.Parse.PreloadSubincludes, targets...) {
-		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
+		exportSubinclude(state.Graph, dir, target, done)
 	}
 	// Now write all the build files
 	packages := map[*core.Package]bool{}
@@ -80,10 +80,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 		export(graph, dir, dep, done)
 	}
 	for _, subinclude := range graph.PackageOrDie(target.Label).Subincludes {
-		export(graph, dir, graph.TargetOrDie(subinclude), done)
-		for _, l := range graph.TransitiveSubincludes(subinclude) {
-			export(graph, dir, graph.TargetOrDie(l), done)
-		}
+		exportSubinclude(graph, dir, subinclude, done)
 	}
 	if parent := target.Parent(graph); parent != nil && parent != target {
 		export(graph, dir, parent, done)
@@ -104,5 +101,12 @@ func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 				log.Fatalf("Failed to copy export file: %s", err)
 			}
 		}
+	}
+}
+
+func exportSubinclude(graph *core.BuildGraph, dir string, subinclude core.BuildLabel, done map[*core.BuildTarget]bool) {
+	export(graph, dir, graph.TargetOrDie(subinclude), done)
+	for _, l := range graph.TransitiveSubincludes(subinclude) {
+		export(graph, dir, graph.TargetOrDie(l), done)
 	}
 }

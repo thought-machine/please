@@ -11,6 +11,8 @@ import (
 	"github.com/thought-machine/please/src/cmap"
 )
 
+type labelSet = map[BuildLabel]struct{}
+
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
@@ -21,7 +23,7 @@ type BuildGraph struct {
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.Map[string, *Subrepo]
 	// Subincludes that are subincluded by other subincludes
-	subincludeSubincludes map[BuildLabel][]BuildLabel
+	subincludeSubincludes map[BuildLabel]labelSet
 	subincMux             sync.RWMutex
 }
 
@@ -154,7 +156,7 @@ func NewGraph() *BuildGraph {
 		targets:               cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, hashBuildLabel),
 		packages:              cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
 		subrepos:              cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
-		subincludeSubincludes: map[BuildLabel][]BuildLabel{},
+		subincludeSubincludes: map[BuildLabel]map[BuildLabel]struct{}{},
 	}
 	return g
 }
@@ -178,7 +180,8 @@ func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
 
 func (graph *BuildGraph) transitiveSubincludes(l BuildLabel) []BuildLabel {
 	var ret []BuildLabel
-	for _, l := range graph.subincludeSubincludes[l] {
+	ls := graph.subincludeSubincludes[l]
+	for l := range ls {
 		ret = append(ret, l)
 		ret = append(ret, graph.transitiveSubincludes(l)...)
 	}
@@ -189,5 +192,10 @@ func (graph *BuildGraph) RegisterTransitiveSubinclude(from, to BuildLabel) {
 	graph.subincMux.Lock()
 	defer graph.subincMux.Unlock()
 
-	graph.subincludeSubincludes[from] = append(graph.subincludeSubincludes[from], to)
+	incs, ok := graph.subincludeSubincludes[from]
+	if !ok {
+		incs = map[BuildLabel]struct{}{}
+		graph.subincludeSubincludes[from] = incs
+	}
+	incs[to] = struct{}{}
 }
