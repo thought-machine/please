@@ -20,8 +20,11 @@ var log = logging.Log
 // It dies on any errors.
 func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	done := map[*core.BuildTarget]bool{}
-	for _, target := range append(state.Config.Parse.PreloadSubincludes, targets...) {
+	for _, target := range state.Config.Parse.PreloadSubincludes {
 		exportSubinclude(state.Graph, dir, target, done)
+	}
+	for _, target := range targets {
+		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
 	}
 	// Now write all the build files
 	packages := map[*core.Package]bool{}
