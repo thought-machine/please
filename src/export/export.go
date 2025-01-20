@@ -57,7 +57,7 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	exportPlzConf(dir)
 }
 
-func exportPlzConf(dir string) {
+func exportPlzConf(destDir string) {
 	profiles, err := filepath.Glob(".plzconfig*")
 	log.Fatalf("failed to glob .plzconfig files: %v", err)
 	for _, file := range append(profiles, ".plzconfig") {
