@@ -405,9 +405,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	}
 
 	t := s.WaitForSubincludedTarget(l, pkgLabel)
-
-	// TODO(jpoole): when pkg is nil, that means this subinclude was made by another subinclude. We're currently loosing
-	// this information here. We probably need a way to transitively record the subincludes.
+	
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	} else {
