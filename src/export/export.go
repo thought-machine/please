@@ -32,6 +32,9 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 		if pkg.Name == parse.InternalPackageName {
 			continue // This isn't a real package to be copied
 		}
+		if pkg.Subrepo != nil {
+			continue // Don't copy subrepo BUILD files... they don't exist
+		}
 		dest := filepath.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
 			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
@@ -55,15 +58,8 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	}
 }
 
-// export implements the logic of ToDir, but prevents repeating targets.
-func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
-	// We want to export the package that made this subrepo available
-	if target.Subrepo != nil {
-		target = target.Subrepo.Target
-	}
-	if done[target] {
-		return
-	}
+// exportSources exports any source files (srcs and data) for the rule
+func exportSources(graph *core.BuildGraph, dir string, target *core.BuildTarget) {
 	for _, src := range append(target.AllSources(), target.AllData()...) {
 		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
@@ -75,6 +71,22 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 			}
 		}
 	}
+}
+
+// export implements the logic of ToDir, but prevents repeating targets.
+func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
+	// We want to export the package that made this subrepo available, but we still need to walk the target deps
+	// as it may depend on other subrepos or first party targets
+	if target.Subrepo != nil {
+		export(graph, dir, target.Subrepo.Target, done)
+	}
+	if done[target] {
+		return
+	}
+	if target.Subrepo == nil {
+		exportSources(graph, dir, target)
+	}
+
 	done[target] = true
 	for _, dep := range target.Dependencies() {
 		export(graph, dir, dep, done)
