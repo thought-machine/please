@@ -405,11 +405,14 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	}
 
 	t := s.WaitForSubincludedTarget(l, pkgLabel)
-
-	// TODO(jpoole): when pkg is nil, that means this subinclude was made by another subinclude. We're currently loosing
-	// this information here. We probably need a way to transitively record the subincludes.
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
+	} else if s.subincludeLabel != nil {
+		if s.subincludeLabel.Subrepo == "go" && l.Subrepo == "java" {
+			log.Debug("")
+		}
+		// Preloaded subincludes don't have a package either, so ignore those
+		s.state.Graph.RegisterTransitiveSubinclude(*s.subincludeLabel, l)
 	}
 	return t
 }
