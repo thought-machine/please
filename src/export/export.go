@@ -81,6 +81,9 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	}
 	for _, subinclude := range graph.PackageOrDie(target.Label).Subincludes {
 		export(graph, dir, graph.TargetOrDie(subinclude), done)
+		for _, l := range graph.TransitiveSubincludes(subinclude) {
+			export(graph, dir, graph.TargetOrDie(l), done)
+		}
 	}
 	if parent := target.Parent(graph); parent != nil && parent != target {
 		export(graph, dir, parent, done)

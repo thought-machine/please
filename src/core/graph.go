@@ -6,6 +6,7 @@ package core
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/thought-machine/please/src/cmap"
 )
@@ -19,6 +20,9 @@ type BuildGraph struct {
 	packages *cmap.Map[packageKey, *Package]
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.Map[string, *Subrepo]
+	// Subincludes that are subincluded by other subincludes
+	subincludeSubincludes map[BuildLabel][]BuildLabel
+	subincMux             sync.RWMutex
 }
 
 // AddTarget adds a new target to the graph.
@@ -162,4 +166,27 @@ func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 		return toTarget.ProvideFor(fromTarget)
 	}
 	return []BuildLabel{to}
+}
+
+func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
+	graph.subincMux.RLock()
+	defer graph.subincMux.RUnlock()
+
+	return graph.transitiveSubincludes(l)
+}
+
+func (graph *BuildGraph) transitiveSubincludes(l BuildLabel) []BuildLabel {
+	var ret []BuildLabel
+	for _, l := range graph.subincludeSubincludes[l] {
+		ret = append(ret, l)
+		ret = append(ret, graph.transitiveSubincludes(l)...)
+	}
+	return ret
+}
+
+func (graph *BuildGraph) RegisterTransitiveSubinclude(from, to BuildLabel) {
+	graph.subincMux.Lock()
+	defer graph.subincMux.Unlock()
+
+	graph.subincludeSubincludes[from] = append(graph.subincludeSubincludes[from], to)
 }

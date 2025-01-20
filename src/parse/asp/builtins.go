@@ -410,6 +410,8 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// this information here. We probably need a way to transitively record the subincludes.
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
+	} else {
+		s.state.Graph.RegisterTransitiveSubinclude(*s.subincludeLabel, l)
 	}
 	return t
 }
