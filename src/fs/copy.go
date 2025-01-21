@@ -72,7 +72,7 @@ func RecursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fal
 	return CopyOrLinkFile(from, to, info.Mode(), mode, link, fallback)
 }
 
-// copySymlink will resolve the symlink, and recursively copy the content to the destination
+// copySymlink will resolve the symlink and create an equivalent symlink at dest. Assumes the symlink is relative, not absolute.
 func copySymlink(name, dest string) error {
 	resolvedPath, err := os.Readlink(name)
 	if err != nil {
