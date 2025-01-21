@@ -4,11 +4,12 @@ package fs
 import (
 	"errors"
 	"fmt"
-	"github.com/thought-machine/please/src/cli/logging"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/thought-machine/please/src/cli/logging"
 )
 
 var log = logging.Log
@@ -80,9 +81,6 @@ func getFileInfo(filename string) (os.FileInfo, error) {
 // CopyFile copies a file from 'from' to 'to', with an attempt to perform a copy & rename
 // to avoid chaos if anything goes wrong partway.
 func CopyFile(from string, to string, mode os.FileMode) error {
-	if filepath.Base(from) == "ca" {
-		log.Debug("")
-	}
 	fromFile, err := os.Open(from)
 	if err != nil {
 		return err
