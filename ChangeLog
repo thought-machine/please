@@ -1,10 +1,13 @@
+Version 17.13.1
+---------------
+    * Preserve symlinks when copying files
+
 Version 17.13.0
 ---------------
     * Add a `break` statement to the build language (#3320)
     * Handle symlinks to directories in a number of places, including but not limited
       to output directories in remote execution (#3330)
     * Make output target display not have local targets hanging around so much (#3276)
-
 
 Version 17.12.7
 ---------------
