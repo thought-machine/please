@@ -48,7 +48,7 @@ func RecursiveLink(from string, to string) error {
 	return RecursiveCopyOrLinkFile(from, to, 0, true, true)
 }
 
-// RecursiveCopyOrLinkFile recursively copies or links a file or directory.
+// RecursiveCopyOrLin kFile recursively copies or links a file or directory.
 // 'mode' is the mode of the destination file.
 // If 'link' is true then we'll hardlink files instead of copying them.
 // If 'fallback' is true then we'll fall back to a copy if linking fails.
@@ -78,11 +78,6 @@ func copySymlink(name, dest string) error {
 	if err != nil {
 		return err
 	}
-
-	if resolvedPath == "../mocha/bin/_mocha" {
-		log.Warningf("linking %v to %v", resolvedPath, dest)
-	}
-
 	return os.Symlink(resolvedPath, dest)
 }
 
