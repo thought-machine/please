@@ -79,7 +79,11 @@ func copySymlink(name, dest string) error {
 		return err
 	}
 
-	return os.Symlink(dest, resolvedPath)
+	if resolvedPath == "../mocha/bin/_mocha" {
+		log.Warningf("linking %v to %v", resolvedPath, dest)
+	}
+
+	return os.Symlink(resolvedPath, dest)
 }
 
 type LinkFunc func(string, string) error
