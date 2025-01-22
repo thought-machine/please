@@ -59,9 +59,11 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 
 func exportPlzConf(destDir string) {
 	profiles, err := filepath.Glob(".plzconfig*")
-	log.Fatalf("failed to glob .plzconfig files: %v", err)
+	if err != nil {
+		log.Fatalf("failed to glob .plzconfig files: %v", err)
+	}
 	for _, file := range append(profiles, ".plzconfig") {
-		path := filepath.Join(dir, file)
+		path := filepath.Join(destDir, file)
 		if err := os.RemoveAll(path); err != nil {
 			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
 		}
