@@ -62,7 +62,7 @@ func exportPlzConf(destDir string) {
 	if err != nil {
 		log.Fatalf("failed to glob .plzconfig files: %v", err)
 	}
-	for _, file := range append(profiles, ".plzconfig") {
+	for _, file := range profiles {
 		path := filepath.Join(destDir, file)
 		if err := os.RemoveAll(path); err != nil {
 			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
