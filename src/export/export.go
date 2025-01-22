@@ -53,6 +53,24 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
 		}
 	}
+
+	exportPlzConf(dir)
+}
+
+func exportPlzConf(destDir string) {
+	profiles, err := filepath.Glob(".plzconfig*")
+	if err != nil {
+		log.Fatalf("failed to glob .plzconfig files: %v", err)
+	}
+	for _, file := range profiles {
+		path := filepath.Join(destDir, file)
+		if err := os.RemoveAll(path); err != nil {
+			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
+		}
+		if err := fs.CopyFile(file, path, 0); err != nil {
+			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
+		}
+	}
 }
 
 // export implements the logic of ToDir, but prevents repeating targets.
