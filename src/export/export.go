@@ -82,8 +82,7 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 	// as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
 		export(graph, dir, target.Subrepo.Target, done)
-	}
-	else {
+	} else {
 		exportSources(graph, dir, target)
 	}
 
