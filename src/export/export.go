@@ -66,7 +66,7 @@ func exportPlzConf(destDir string) {
 			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
 		}
 		if err := fs.CopyFile(file, path, 0); err != nil {
-			log.Fatalf("failed to copy .plzconfig file: %v", err)
+			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
 		}
 	}
 }
