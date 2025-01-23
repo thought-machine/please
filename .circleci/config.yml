@@ -6,7 +6,7 @@ jobs:
        - image: thoughtmachine/please_alpine:20240906
      resource_class: large
      environment:
-       PLZ_ARGS: "-p -v2 --profile ci --profile alpine --exclude no-musl"
+       PLZ_ARGS: "--profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
        - restore_cache:
@@ -46,7 +46,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu:20240906
      resource_class: large
      environment:
-       PLZ_ARGS: "-p -v2 --profile ci"
+       PLZ_ARGS: "--profile ci"
      steps:
        - checkout
        - restore_cache:
@@ -94,7 +94,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu_alt:20240910
      resource_class: large
      environment:
-       PLZ_ARGS: "-p -v2 -c cover --profile ci-alt"
+       PLZ_ARGS: "-c cover --profile ci-alt"
        PLZ_COVER: "cover --nocoverage_report"
      steps:
        - checkout
@@ -208,7 +208,7 @@ jobs:
         xcode: "13.4.1"
       resource_class: macos.m1.medium.gen1
       environment:
-        PLZ_ARGS: "-p -v2 --profile ci --exclude pip --exclude embed"
+        PLZ_ARGS: "--profile ci --exclude pip --exclude embed"
       steps:
        - checkout
        - restore_cache:
