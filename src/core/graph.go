@@ -24,7 +24,7 @@ type BuildGraph struct {
 	subrepos *cmap.Map[string, *Subrepo]
 	// Subincludes that are subincluded by other subincludes
 	subincludeSubincludes map[BuildLabel]labelSet
-	subincMux             sync.RWMutex
+	subincMux             sync.Mutex
 }
 
 // AddTarget adds a new target to the graph.
@@ -173,8 +173,8 @@ func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 
 // TransitiveSubincludes returns all the subincludes made by a given subinclude
 func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
-	graph.subincMux.RLock()
-	defer graph.subincMux.RUnlock()
+	graph.subincMux.Lock()
+	defer graph.subincMux.Unlock()
 
 	incs := make(labelSet)
 	graph.findTransitiveSubincludes(l, incs)
