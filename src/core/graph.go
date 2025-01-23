@@ -6,9 +6,12 @@ package core
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/thought-machine/please/src/cmap"
 )
+
+type labelSet = map[BuildLabel]struct{}
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
@@ -19,6 +22,9 @@ type BuildGraph struct {
 	packages *cmap.Map[packageKey, *Package]
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.Map[string, *Subrepo]
+	// Subincludes that are subincluded by other subincludes
+	subincludeSubincludes map[BuildLabel]labelSet
+	subincMux             sync.RWMutex
 }
 
 // AddTarget adds a new target to the graph.
@@ -147,9 +153,10 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		targets:  cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, hashBuildLabel),
-		packages: cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
-		subrepos: cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
+		targets:               cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, hashBuildLabel),
+		packages:              cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
+		subrepos:              cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
+		subincludeSubincludes: map[BuildLabel]labelSet{},
 	}
 	return g
 }
@@ -162,4 +169,42 @@ func (graph *BuildGraph) DependentTargets(from, to BuildLabel) []BuildLabel {
 		return toTarget.ProvideFor(fromTarget)
 	}
 	return []BuildLabel{to}
+}
+
+// TransitiveSubincludes returns all the subincludes made by a given subinclude
+func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
+	graph.subincMux.RLock()
+	defer graph.subincMux.RUnlock()
+
+	incs := make(labelSet)
+	graph.findTransitiveSubincludes(l, incs)
+
+	ret := make(BuildLabels, 0, len(incs))
+	for l := range incs {
+		ret = append(ret, l)
+	}
+	sort.Sort(ret)
+	return ret
+}
+
+func (graph *BuildGraph) findTransitiveSubincludes(label BuildLabel, includes labelSet) {
+	if _, ok := includes[label]; ok {
+		return
+	}
+	includes[label] = struct{}{}
+	for l := range graph.subincludeSubincludes[label] {
+		graph.findTransitiveSubincludes(l, includes)
+	}
+}
+
+func (graph *BuildGraph) RegisterTransitiveSubinclude(from, to BuildLabel) {
+	graph.subincMux.Lock()
+	defer graph.subincMux.Unlock()
+
+	incs, ok := graph.subincludeSubincludes[from]
+	if !ok {
+		incs = map[BuildLabel]struct{}{}
+		graph.subincludeSubincludes[from] = incs
+	}
+	incs[to] = struct{}{}
 }

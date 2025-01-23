@@ -101,6 +101,26 @@ func (pkg *Package) RegisterSubinclude(label BuildLabel) {
 	}
 }
 
+// AllSubincludes returns the full set of subincludes needed for this package, including transitive subincludes
+func (pkg *Package) AllSubincludes(graph *BuildGraph) []BuildLabel {
+	includes := make(labelSet, len(pkg.Subincludes))
+
+	for _, s := range pkg.Subincludes {
+		includes[s] = struct{}{}
+		for _, inc := range graph.TransitiveSubincludes(s) {
+			includes[inc] = struct{}{}
+		}
+	}
+
+	ret := make(BuildLabels, 0, len(includes))
+	for l := range includes {
+		ret = append(ret, l)
+	}
+
+	sort.Sort(ret)
+	return ret
+}
+
 // HasSubinclude returns true if the package has subincluded the given label.
 func (pkg *Package) HasSubinclude(label BuildLabel) bool {
 	for _, l := range pkg.Subincludes {
