@@ -2,7 +2,9 @@ package core
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -106,18 +108,13 @@ func (pkg *Package) AllSubincludes(graph *BuildGraph) []BuildLabel {
 	includes := make(labelSet, len(pkg.Subincludes))
 
 	for _, s := range pkg.Subincludes {
-		includes[s] = struct{}{}
-		for _, inc := range graph.TransitiveSubincludes(s) {
-			includes[inc] = struct{}{}
+		for _, inc := range append(graph.TransitiveSubincludes(s), s) {
+			includes.add(inc)
 		}
 	}
 
-	ret := make(BuildLabels, 0, len(includes))
-	for l := range includes {
-		ret = append(ret, l)
-	}
-
-	sort.Sort(ret)
+	ret := slices.Collect(maps.Keys(includes))
+	sort.Sort(BuildLabels(ret))
 	return ret
 }
 

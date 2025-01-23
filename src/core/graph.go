@@ -5,13 +5,24 @@
 package core
 
 import (
+	"maps"
+	"slices"
 	"sort"
 	"sync"
 
 	"github.com/thought-machine/please/src/cmap"
 )
 
-type labelSet = map[BuildLabel]struct{}
+type labelSet map[BuildLabel]struct{}
+
+func (ls labelSet) add(l BuildLabel) {
+	ls[l] = struct{}{}
+}
+
+func (ls labelSet) contains(l BuildLabel) bool {
+	_, ok := ls[l]
+	return ok
+}
 
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
@@ -24,7 +35,8 @@ type BuildGraph struct {
 	subrepos *cmap.Map[string, *Subrepo]
 	// Subincludes that are subincluded by other subincludes
 	subincludeSubincludes map[BuildLabel]labelSet
-	subincMux             sync.Mutex
+	// Use a mutex as a labelSet isn't atomic. We need to guard against inserting as well as mutating the value.
+	subincMux sync.Mutex
 }
 
 // AddTarget adds a new target to the graph.
@@ -176,22 +188,19 @@ func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
 	graph.subincMux.Lock()
 	defer graph.subincMux.Unlock()
 
-	incs := make(labelSet)
+	incs := labelSet{}
 	graph.findTransitiveSubincludes(l, incs)
 
-	ret := make(BuildLabels, 0, len(incs))
-	for l := range incs {
-		ret = append(ret, l)
-	}
-	sort.Sort(ret)
-	return ret
+	ls := slices.Collect(maps.Keys(incs))
+	sort.Sort(BuildLabels(ls))
+	return ls
 }
 
 func (graph *BuildGraph) findTransitiveSubincludes(label BuildLabel, includes labelSet) {
-	if _, ok := includes[label]; ok {
+	if includes.contains(label) {
 		return
 	}
-	includes[label] = struct{}{}
+	includes.add(label)
 	for l := range graph.subincludeSubincludes[label] {
 		graph.findTransitiveSubincludes(l, includes)
 	}
@@ -203,8 +212,8 @@ func (graph *BuildGraph) RegisterTransitiveSubinclude(from, to BuildLabel) {
 
 	incs, ok := graph.subincludeSubincludes[from]
 	if !ok {
-		incs = map[BuildLabel]struct{}{}
+		incs = labelSet{}
 		graph.subincludeSubincludes[from] = incs
 	}
-	incs[to] = struct{}{}
+	incs.add(to)
 }
