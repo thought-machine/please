@@ -296,7 +296,7 @@ type scope struct {
 	filename        string
 	state           *core.BuildState
 	pkg             *core.Package
-	subincludeLabel *core.BuildLabel
+	subincludeLabel *core.BuildLabel // If set, label of the subinclude we're currently interpreting
 	parsingFor      *parseTarget
 	parent          *scope
 	locals          pyDict

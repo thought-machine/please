@@ -2,7 +2,9 @@ package core
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -99,6 +101,21 @@ func (pkg *Package) RegisterSubinclude(label BuildLabel) {
 	if !pkg.HasSubinclude(label) {
 		pkg.Subincludes = append(pkg.Subincludes, label)
 	}
+}
+
+// AllSubincludes returns the full set of subincludes needed for this package, including transitive subincludes
+func (pkg *Package) AllSubincludes(graph *BuildGraph) []BuildLabel {
+	includes := make(labelSet, len(pkg.Subincludes))
+
+	for _, s := range pkg.Subincludes {
+		for _, inc := range append(graph.TransitiveSubincludes(s), s) {
+			includes.add(inc)
+		}
+	}
+
+	ret := slices.Collect(maps.Keys(includes))
+	sort.Sort(BuildLabels(ret))
+	return ret
 }
 
 // HasSubinclude returns true if the package has subincluded the given label.
