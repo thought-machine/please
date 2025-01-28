@@ -412,7 +412,7 @@ go_repo(
 go_repo(
     module = "github.com/golang/glog",
     patch = ["glog_disable.patch"],
-    version = "v1.2.0",
+    version = "v1.2.4",
 )
 
 go_repo(
