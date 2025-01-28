@@ -6,7 +6,7 @@ jobs:
        - image: thoughtmachine/please_alpine:20240906
      resource_class: large
      environment:
-       PLZ_ARGS: "-p --profile ci --profile alpine --exclude no-musl"
+       PLZ_ARGS: "--profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
        - restore_cache:
@@ -22,7 +22,7 @@ jobs:
            path: plz-out/results
        - run:
            name: Package
-           command: plz-out/bin/src/please build //package:all -p --profile ci --profile alpine
+           command: plz-out/bin/src/please build //package:all -p -v2 --profile ci --profile alpine
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -46,7 +46,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu:20240906
      resource_class: large
      environment:
-       PLZ_ARGS: "-p --profile ci"
+       PLZ_ARGS: "--profile ci"
      steps:
        - checkout
        - restore_cache:
@@ -94,7 +94,7 @@ jobs:
        - image: thoughtmachine/please_ubuntu_alt:20240910
      resource_class: large
      environment:
-       PLZ_ARGS: "-p -c cover --profile ci-alt"
+       PLZ_ARGS: "-c cover --profile ci-alt"
        PLZ_COVER: "cover --nocoverage_report"
      steps:
        - checkout
@@ -140,7 +140,7 @@ jobs:
            command: tar -xzf /tmp/workspace/darwin_arm64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch darwin_amd64 -o plugin.go.cgoenabled:true -o plugin.go.cctool:clang -o "plugin.go.cflags:-target x86_64-apple-macos13" //package:release_files
+           command: ./please/please build -p -v2 --profile ci --arch darwin_amd64 -o plugin.go.cgoenabled:true -o plugin.go.cctool:clang -o "plugin.go.cflags:-target x86_64-apple-macos13" //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -167,7 +167,7 @@ jobs:
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch freebsd_amd64 //package:release_files
+           command: ./please/please build -p -v2 --profile ci --arch freebsd_amd64 //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -193,7 +193,7 @@ jobs:
            command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
        - run:
            name: Cross-compile
-           command: ./please/please build -p --profile ci --arch linux_arm64 -o please.location:~/please/please //package:release_files
+           command: ./please/please build -p -v2 --profile ci --arch linux_arm64 -o please.location:~/please/please //package:release_files
        - persist_to_workspace:
            root: plz-out/pkg
            paths:
@@ -208,7 +208,7 @@ jobs:
         xcode: "13.4.1"
       resource_class: macos.m1.medium.gen1
       environment:
-        PLZ_ARGS: "-p --profile ci --exclude pip --exclude embed"
+        PLZ_ARGS: "--profile ci --exclude pip --exclude embed"
       steps:
        - checkout
        - restore_cache:

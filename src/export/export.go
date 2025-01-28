@@ -20,7 +20,12 @@ var log = logging.Log
 // It dies on any errors.
 func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	done := map[*core.BuildTarget]bool{}
-	for _, target := range append(state.Config.Parse.PreloadSubincludes, targets...) {
+	for _, target := range state.Config.Parse.PreloadSubincludes {
+		for _, includeLabel := range append(state.Graph.TransitiveSubincludes(target), target) {
+			export(state.Graph, dir, state.Graph.TargetOrDie(includeLabel), done)
+		}
+	}
+	for _, target := range targets {
 		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
 	}
 	// Now write all the build files
@@ -31,6 +36,9 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	for pkg := range packages {
 		if pkg.Name == parse.InternalPackageName {
 			continue // This isn't a real package to be copied
+		}
+		if pkg.Subrepo != nil {
+			continue // Don't copy subrepo BUILD files... they don't exist in our source tree
 		}
 		dest := filepath.Join(dir, pkg.Filename)
 		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
@@ -53,17 +61,28 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
 		}
 	}
+
+	exportPlzConf(dir)
 }
 
-// export implements the logic of ToDir, but prevents repeating targets.
-func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
-	// We want to export the package that made this subrepo available
-	if target.Subrepo != nil {
-		target = target.Subrepo.Target
+func exportPlzConf(destDir string) {
+	profiles, err := filepath.Glob(".plzconfig*")
+	if err != nil {
+		log.Fatalf("failed to glob .plzconfig files: %v", err)
 	}
-	if done[target] {
-		return
+	for _, file := range profiles {
+		path := filepath.Join(destDir, file)
+		if err := os.RemoveAll(path); err != nil {
+			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
+		}
+		if err := fs.CopyFile(file, path, 0); err != nil {
+			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
+		}
 	}
+}
+
+// exportSources exports any source files (srcs and data) for the rule
+func exportSources(graph *core.BuildGraph, dir string, target *core.BuildTarget) {
 	for _, src := range append(target.AllSources(), target.AllData()...) {
 		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
 			for _, p := range src.FullPaths(graph) {
@@ -75,11 +94,26 @@ func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done m
 			}
 		}
 	}
+}
+
+// export implements the logic of ToDir, but prevents repeating targets.
+func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
+	if done[target] {
+		return
+	}
+	// We want to export the package that made this subrepo available, but we still need to walk the target deps
+	// as it may depend on other subrepos or first party targets
+	if target.Subrepo != nil {
+		export(graph, dir, target.Subrepo.Target, done)
+	} else {
+		exportSources(graph, dir, target)
+	}
+
 	done[target] = true
 	for _, dep := range target.Dependencies() {
 		export(graph, dir, dep, done)
 	}
-	for _, subinclude := range graph.PackageOrDie(target.Label).Subincludes {
+	for _, subinclude := range graph.PackageOrDie(target.Label).AllSubincludes(graph) {
 		export(graph, dir, graph.TargetOrDie(subinclude), done)
 	}
 	if parent := target.Parent(graph); parent != nil && parent != target {

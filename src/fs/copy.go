@@ -63,10 +63,22 @@ func RecursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fal
 			if fileMode.IsDir() {
 				return os.MkdirAll(dest, DirPermissions)
 			}
+			if fileMode.IsSymlink() {
+				return copySymlink(name, dest)
+			}
 			return CopyOrLinkFile(name, dest, fileMode.ModeType(), mode, link, fallback)
 		})
 	}
 	return CopyOrLinkFile(from, to, info.Mode(), mode, link, fallback)
+}
+
+// copySymlink will resolve the symlink and create an equivalent symlink at dest. Assumes the symlink is relative, not absolute.
+func copySymlink(name, dest string) error {
+	resolvedPath, err := os.Readlink(name)
+	if err != nil {
+		return err
+	}
+	return os.Symlink(resolvedPath, dest)
 }
 
 type LinkFunc func(string, string) error

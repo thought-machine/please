@@ -31,31 +31,46 @@ type buildingTargetKey struct {
 
 // Collects all the currently building targets.
 type buildingTargets struct {
-	plain          bool
-	anyRemote      bool
-	state          *core.BuildState
-	targets        []buildingTarget
-	currentTargets map[buildingTargetKey]int
-	available      map[int]struct{}
-	FailedTargets  map[core.BuildLabel]error
-	FailedNonTests []core.BuildLabel
+	plain           bool
+	anyRemote       bool
+	state           *core.BuildState
+	targets         []buildingTarget
+	currentTargets  map[buildingTargetKey]int
+	localAvailable  map[int]struct{}
+	remoteAvailable map[int]struct{}
+	FailedTargets   map[core.BuildLabel]error
+	FailedNonTests  []core.BuildLabel
 }
 
 func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTargets {
 	n := state.Config.Please.NumThreads + state.Config.NumRemoteExecutors()
+	return &buildingTargets{
+		plain:           plainOutput,
+		anyRemote:       state.Config.NumRemoteExecutors() > 0,
+		state:           state,
+		targets:         make([]buildingTarget, n),
+		currentTargets:  make(map[buildingTargetKey]int, n),
+		localAvailable:  makeAvailable(state.Config.Please.NumThreads, 0),
+		remoteAvailable: makeAvailable(state.Config.NumRemoteExecutors(), state.Config.Please.NumThreads),
+		FailedTargets:   map[core.BuildLabel]error{},
+	}
+}
+
+// makeAvailable makes one of our maps of available 'workers'
+func makeAvailable(n, offset int) map[int]struct{} {
 	available := make(map[int]struct{}, n)
 	for i := 0; i < n; i++ {
-		available[i] = struct{}{}
+		available[i+offset] = struct{}{}
 	}
-	return &buildingTargets{
-		plain:          plainOutput,
-		anyRemote:      state.Config.NumRemoteExecutors() > 0,
-		state:          state,
-		targets:        make([]buildingTarget, n),
-		currentTargets: make(map[buildingTargetKey]int, n),
-		available:      available,
-		FailedTargets:  map[core.BuildLabel]error{},
+	return available
+}
+
+// available returns the available map for either local or remote
+func (bt *buildingTargets) available(remote bool) map[int]struct{} {
+	if remote {
+		return bt.remoteAvailable
 	}
+	return bt.localAvailable
 }
 
 // Targets returns the set of currently known building targets.
@@ -70,11 +85,12 @@ func (bt *buildingTargets) ProcessResult(result *core.BuildResult) int {
 	if result.Status.IsParse() { // Parse tasks don't take a slot here
 		return 0
 	}
-	idx := bt.index(result.Label, result.Run)
 	if t := bt.state.Graph.Target(result.Label); t != nil {
+		idx := bt.index(result.Label, result.Run, bt.anyRemote && !t.Local)
 		bt.updateTarget(idx, result, t)
+		return idx
 	}
-	return idx
+	return bt.index(result.Label, result.Run, false)
 }
 
 func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
@@ -112,13 +128,14 @@ func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
 }
 
 // index returns the index to use for a result
-func (bt *buildingTargets) index(label core.BuildLabel, run int) int {
+func (bt *buildingTargets) index(label core.BuildLabel, run int, remote bool) int {
 	if idx, present := bt.currentTargets[buildingTargetKey{Label: label, Run: run}]; present {
 		return idx
 	}
 	// Grab whatever is available
-	for idx := range bt.available {
-		delete(bt.available, idx)
+	available := bt.available(remote)
+	for idx := range available {
+		delete(available, idx)
 		return idx
 	}
 	// Nothing available. This theoretically shouldn't happen - let's see in practice...
@@ -157,7 +174,8 @@ func (bt *buildingTargets) updateTarget(idx int, result *core.BuildResult, t *co
 	}
 	key := buildingTargetKey{Label: t.Label, Run: result.Run}
 	if !active {
-		bt.available[idx] = struct{}{}
+		available := bt.available(target.Remote)
+		available[idx] = struct{}{}
 		delete(bt.currentTargets, key)
 	} else {
 		bt.currentTargets[key] = idx
