@@ -45,7 +45,7 @@ require (
 	github.com/zeebo/blake3 v0.2.3
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/net v0.25.0
+	golang.org/x/net v0.33.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.28.0
 	golang.org/x/term v0.27.0
