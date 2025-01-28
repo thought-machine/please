@@ -92,3 +92,6 @@ accept = notice
 
 [remote]
 url =
+
+[featureflags]
+hidedeprecatedconfigoptions = true
