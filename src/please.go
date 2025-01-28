@@ -314,6 +314,7 @@ var opts struct {
 
 	Export struct {
 		Output string `short:"o" long:"output" required:"true" description:"Directory to export into"`
+		NoTrim bool   `long:"notrim" description:"export the build file as is, without trying to trim unused targets"`
 		Args   struct {
 			Targets []core.BuildLabel `positional-arg-name:"targets" description:"Labels to export."`
 		} `positional-args:"true"`
@@ -759,7 +760,7 @@ var buildFunctions = map[string]func() int{
 	"export": func() int {
 		success, state := runBuild(opts.Export.Args.Targets, false, false, false)
 		if success {
-			export.ToDir(state, opts.Export.Output, state.ExpandOriginalLabels())
+			export.ToDir(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
 		}
 		return toExitCode(success, state)
 	},

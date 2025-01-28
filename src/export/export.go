@@ -4,6 +4,7 @@
 package export
 
 import (
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 
@@ -16,23 +17,52 @@ import (
 
 var log = logging.Log
 
+type export struct {
+	state     *core.BuildState
+	targetDir string
+	noTrim    bool
+
+	exportedTargets  map[core.BuildLabel]bool
+	exportedPackages map[string]bool
+}
+
 // ToDir exports a set of targets to the given directory.
 // It dies on any errors.
-func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
-	done := map[*core.BuildTarget]bool{}
+func ToDir(state *core.BuildState, dir string, noTrim bool, targets []core.BuildLabel) {
+	e := &export{
+		state:            state,
+		noTrim:           noTrim,
+		targetDir:        dir,
+		exportedPackages: map[string]bool{},
+		exportedTargets:  map[core.BuildLabel]bool{},
+	}
+
+	e.exportPlzConf()
 	for _, target := range state.Config.Parse.PreloadSubincludes {
 		for _, includeLabel := range append(state.Graph.TransitiveSubincludes(target), target) {
-			export(state.Graph, dir, state.Graph.TargetOrDie(includeLabel), done)
+			e.export(state.Graph.TargetOrDie(includeLabel))
 		}
 	}
 	for _, target := range targets {
-		export(state.Graph, dir, state.Graph.TargetOrDie(target), done)
+		e.export(state.Graph.TargetOrDie(target))
 	}
 	// Now write all the build files
 	packages := map[*core.Package]bool{}
-	for target := range done {
-		packages[state.Graph.PackageOrDie(target.Label)] = true
+	for target := range e.exportedTargets {
+		packages[state.Graph.PackageOrDie(target)] = true
 	}
+
+	// Write any preloaded build defs as well; preloaded subincludes should be fine though.
+	for _, preload := range state.Config.Parse.PreloadBuildDefs {
+		if err := fs.RecursiveCopy(preload, filepath.Join(dir, preload), 0); err != nil {
+			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
+		}
+	}
+
+	if noTrim {
+		return // We have already exported the whole directory
+	}
+
 	for pkg := range packages {
 		if pkg.Name == parse.InternalPackageName {
 			continue // This isn't a real package to be copied
@@ -41,13 +71,13 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			continue // Don't copy subrepo BUILD files... they don't exist in our source tree
 		}
 		dest := filepath.Join(dir, pkg.Filename)
-		if err := fs.RecursiveCopy(pkg.Filename, dest, 0); err != nil {
+		if err := fs.CopyFile(pkg.Filename, dest, 0); err != nil {
 			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
 		}
 		// Now rewrite the unused targets out of it
-		victims := []string{}
+		var victims []string
 		for _, target := range pkg.AllTargets() {
-			if !done[target] && !target.HasParent() {
+			if !e.exportedTargets[target.Label] && !target.HasParent() {
 				victims = append(victims, target.Label.Name)
 			}
 		}
@@ -55,23 +85,15 @@ func ToDir(state *core.BuildState, dir string, targets []core.BuildLabel) {
 			log.Fatalf("Failed to rewrite BUILD file: %s\n", err)
 		}
 	}
-	// Write any preloaded build defs as well; preloaded subincludes should be fine though.
-	for _, preload := range state.Config.Parse.PreloadBuildDefs {
-		if err := fs.RecursiveCopy(preload, filepath.Join(dir, preload), 0); err != nil {
-			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
-		}
-	}
-
-	exportPlzConf(dir)
 }
 
-func exportPlzConf(destDir string) {
+func (e *export) exportPlzConf() {
 	profiles, err := filepath.Glob(".plzconfig*")
 	if err != nil {
 		log.Fatalf("failed to glob .plzconfig files: %v", err)
 	}
 	for _, file := range profiles {
-		path := filepath.Join(destDir, file)
+		path := filepath.Join(e.targetDir, file)
 		if err := os.RemoveAll(path); err != nil {
 			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
 		}
@@ -82,12 +104,12 @@ func exportPlzConf(destDir string) {
 }
 
 // exportSources exports any source files (srcs and data) for the rule
-func exportSources(graph *core.BuildGraph, dir string, target *core.BuildTarget) {
+func (e *export) exportSources(target *core.BuildTarget) {
 	for _, src := range append(target.AllSources(), target.AllData()...) {
 		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
-			for _, p := range src.FullPaths(graph) {
+			for _, p := range src.FullPaths(e.state.Graph) {
 				if !filepath.IsAbs(p) { // Don't copy system file deps.
-					if err := fs.RecursiveCopy(p, filepath.Join(dir, p), 0); err != nil {
+					if err := fs.RecursiveCopy(p, filepath.Join(e.targetDir, p), 0); err != nil {
 						log.Fatalf("Error copying file: %s\n", err)
 					}
 				}
@@ -96,28 +118,65 @@ func exportSources(graph *core.BuildGraph, dir string, target *core.BuildTarget)
 	}
 }
 
+// exportPackage exports the package BUILD file and all sources
+func (e *export) exportPackage(pkgName string) {
+	if pkgName == parse.InternalPackageName {
+		return
+	}
+	if e.exportedPackages[pkgName] {
+		return
+	}
+	e.exportedPackages[pkgName] = true
+
+	err := filepath.WalkDir(pkgName, func(path string, d iofs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if path != pkgName && fs.IsPackage(e.state.Config.Parse.BuildFileName, path) {
+				return filepath.SkipDir // We want to stop when we find another package in our dir tree
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil // Ignore symlinks, which are almost certainly generated sources.
+		}
+		dest := filepath.Join(e.targetDir, path)
+		if err := fs.EnsureDir(dest); err != nil {
+			return err
+		}
+		return fs.CopyFile(path, dest, 0)
+	})
+	if err != nil {
+		log.Fatalf("failed to export package: %v", err)
+	}
+}
+
 // export implements the logic of ToDir, but prevents repeating targets.
-func export(graph *core.BuildGraph, dir string, target *core.BuildTarget, done map[*core.BuildTarget]bool) {
-	if done[target] {
+func (e *export) export(target *core.BuildTarget) {
+	if e.exportedTargets[target.Label] {
 		return
 	}
 	// We want to export the package that made this subrepo available, but we still need to walk the target deps
 	// as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
-		export(graph, dir, target.Subrepo.Target, done)
+		e.export(target.Subrepo.Target)
+	} else if e.noTrim {
+		// Export the whole package, rather than trying to trim the package down to only the targets we need
+		e.exportPackage(target.Label.PackageName)
 	} else {
-		exportSources(graph, dir, target)
+		e.exportSources(target)
 	}
 
-	done[target] = true
+	e.exportedTargets[target.Label] = true
 	for _, dep := range target.Dependencies() {
-		export(graph, dir, dep, done)
+		e.export(dep)
 	}
-	for _, subinclude := range graph.PackageOrDie(target.Label).AllSubincludes(graph) {
-		export(graph, dir, graph.TargetOrDie(subinclude), done)
+	for _, subinclude := range e.state.Graph.PackageOrDie(target.Label).AllSubincludes(e.state.Graph) {
+		e.export(e.state.Graph.TargetOrDie(subinclude))
 	}
-	if parent := target.Parent(graph); parent != nil && parent != target {
-		export(graph, dir, parent, done)
+	if parent := target.Parent(e.state.Graph); parent != nil && parent != target {
+		e.export(parent)
 	}
 }
 
