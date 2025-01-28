@@ -220,6 +220,51 @@ func (label SystemPathLabel) String() string {
 	return label.Name
 }
 
+// SingleOutputLabel represents a build label for a specific output of a rule.
+// This can be used to target a specific output of this rule when depended on or an entry point when used in
+// the context of tools.
+type SingleOutputLabel struct {
+	BuildLabel
+	Output string
+}
+
+// MarshalText implements the encoding.TextMarshaler interface, which makes AnnotatedOutputLabel
+// usable as map keys in JSON.
+func (label SingleOutputLabel) MarshalText() ([]byte, error) {
+	return []byte(label.String()), nil
+}
+
+// Paths returns a slice of paths to the files of this input.
+func (label SingleOutputLabel) Paths(graph *BuildGraph) []string {
+	target := graph.TargetOrDie(label.BuildLabel)
+	return addPathPrefix([]string{label.Output}, target.PackageDir())
+}
+
+// FullPaths is like Paths but includes the leading plz-out/gen directory.
+func (label SingleOutputLabel) FullPaths(graph *BuildGraph) []string {
+	target := graph.TargetOrDie(label.BuildLabel)
+	return addPathPrefix([]string{label.Output}, target.OutDir())
+}
+
+// LocalPaths returns paths within the local package
+func (label SingleOutputLabel) LocalPaths(graph *BuildGraph) []string {
+	return []string{label.Output}
+}
+
+// Label returns the build rule associated with this input. For a SingleOutputLabel it's always non-nil.
+func (label SingleOutputLabel) Label() (BuildLabel, bool) {
+	return label.BuildLabel, true
+}
+
+func (label SingleOutputLabel) nonOutputLabel() (BuildLabel, bool) {
+	return BuildLabel{}, false
+}
+
+// String returns a string representation of this input.
+func (label SingleOutputLabel) String() string {
+	return label.BuildLabel.String() + "+" + label.Output
+}
+
 // AnnotatedOutputLabel represents a build label with an annotation e.g. //foo:bar|baz where baz constitutes the
 // annotation. This can be used to target a named output of this rule when depended on or an entry point when used in
 // the context of tools.

@@ -192,6 +192,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 				return fmt.Errorf("error in pre-rule dependency for %s: %s", target.Label, dep.Label)
 			}
 		}
+		log.Debug("Finished waiting for dependencies for %s", target.Label)
 	}
 
 	state.LogBuildResult(target, core.TargetBuilding, "Preparing...")

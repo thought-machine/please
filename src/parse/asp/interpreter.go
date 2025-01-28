@@ -310,6 +310,16 @@ type scope struct {
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
 // package. It may return an AnnotatedOutputLabel or a BuildLabel depending on if the label is annotated.
 func (s *scope) parseAnnotatedLabelInPackage(label string, pkg *core.Package) core.BuildInput {
+	if(strings.Contains(label, "+")){
+		parts := strings.Split(label, "+")
+		if len(parts) == 2 {
+			return core.SingleOutputLabel{
+				BuildLabel: s.parseLabelInPackage(parts[0], pkg),
+				Output: parts[1],
+			}
+		}
+	}
+
 	label, annotation := core.SplitLabelAnnotation(label)
 	if annotation != "" {
 		return core.AnnotatedOutputLabel{
