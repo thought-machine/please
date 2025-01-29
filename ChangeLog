@@ -1,3 +1,9 @@
+Version 17.14.0
+---------------
+    * Add a `--notrim` flag to `plz export` that avoids trying to clean out unused build targerts
+      when exporting a repo (#3340)
+    * Fix a number of issues with `plz export` not picking up all dependencies (#3333, #3334, #3335)
+
 Version 17.13.1
 ---------------
     * Preserve symlinks when copying files
