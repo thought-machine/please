@@ -60,9 +60,18 @@ positionallabels = true
 desc = Runs the linters for this repo
 cmd = run //tools/misc:lint -p --
 
-[alias "go-get"]
-desc = Runs the go deps tool to install new dependencies into the repo
-cmd = run ///go//tools/go_get_migrator --
+[alias "puku"]
+cmd = run //third_party/binary:puku --
+positionallabels = true
+subcommand = fmt
+subcommand = licences
+subcommand = lint
+subcommand = migrate
+subcommand = sync
+subcommand = version
+subcommand = watch
+
+
 
 [licences]
 accept = MIT
