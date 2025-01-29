@@ -37,6 +37,10 @@ func ToDir(state *core.BuildState, dir string, noTrim bool, targets []core.Build
 		exportedTargets:  map[core.BuildLabel]bool{},
 	}
 
+	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
+		log.Fatalf("failed to create export dir: %v", dir)
+	}
+
 	e.exportPlzConf()
 	for _, target := range state.Config.Parse.PreloadSubincludes {
 		for _, includeLabel := range append(state.Graph.TransitiveSubincludes(target), target) {
