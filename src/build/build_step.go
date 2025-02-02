@@ -182,7 +182,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 			return err
 		}
 		log.Debug("Finished pre-build function for %s", target.Label)
-		
+
 		// Wait for any new dependencies added by pre-build commands before continuing.
 		for _, dep := range target.Dependencies() {
 			dep.WaitForBuild(target.Label)
