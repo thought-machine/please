@@ -340,6 +340,16 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 			return err
 		}
 
+		// Wait for any new dependencies added by post-build commands before continuing.
+		for _, dep := range target.Dependencies() {
+			dep.WaitForBuild()
+			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
+				// Give up and set the original target as dependency failed
+				target.SetState(core.DependencyFailed)
+				return fmt.Errorf("error in post-rule dependency for %s: %s", target.Label, dep.Label)
+			}
+		}
+
 		if runRemotely && len(outs) != len(target.Outputs()) {
 			// postBuildFunction has changed the target - must rebuild it
 			log.Info("Rebuilding %s after post-build function", target)
