@@ -266,13 +266,19 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 func ParseBuildLabels(targets []string) []BuildLabel {
 	ret := make([]BuildLabel, len(targets))
 	for i, target := range targets {
-		if label, err := parseMaybeRelativeBuildLabel(target, ""); err != nil {
-			log.Fatalf("%s", err)
-		} else {
-			ret[i] = label
-		}
+		ret[i] = MustParseMaybeRelativeBuildLabel(target)
 	}
 	return ret
+}
+
+// MustParseMaybeRelativeBuildLabel parses a build label from a string. It dies on failure.
+// Relative labels are allowed since this is generally used at initialisation.
+func MustParseMaybeRelativeBuildLabel(in string) BuildLabel {
+	label, err := parseMaybeRelativeBuildLabel(in, "")
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	return label
 }
 
 // IsAllSubpackages returns true if the label ends in ..., ie. it includes all subpackages.
