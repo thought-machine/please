@@ -28,6 +28,7 @@ import (
 	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
+	"github.com/thought-machine/please/src/version"
 )
 
 var log = logging.Log
@@ -1134,7 +1135,7 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 // setHeaders sets up all the headers we should send on remote_file() requests, including User-Agent and any user
 // defined ones.
 func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) error {
-	req.Header.Set("User-Agent", "please.build/"+core.PleaseVersion)
+	req.Header.Set("User-Agent", "please.build/"+version.PleaseVersion)
 
 	param := func(str string) (string, string) {
 		if !strings.HasPrefix(str, "remote_file:") {

@@ -31,6 +31,7 @@ import (
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
 	remotefs "github.com/thought-machine/please/src/remote/fs"
+	"github.com/thought-machine/please/src/version"
 )
 
 var downloadErrors = metrics.NewCounter(
@@ -658,7 +659,7 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 		CorrelatedInvocationsId: c.buildID,
 		ToolDetails: &pb.ToolDetails{
 			ToolName:    "please",
-			ToolVersion: core.PleaseVersion,
+			ToolVersion: version.PleaseVersion,
 		},
 	})
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(key, string(b)))

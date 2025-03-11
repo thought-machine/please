@@ -1,3 +1,7 @@
+Version 17.15.0
+---------------
+    * Add metrics for alias and command invocations (#3351)
+
 Version 17.14.0
 ---------------
     * Add a `--notrim` flag to `plz export` that avoids trying to clean out unused build targerts

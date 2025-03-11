@@ -7,7 +7,8 @@ go_library(
         "///third_party/go/github.com_prometheus_client_golang//prometheus",
         "///third_party/go/github.com_prometheus_client_golang//prometheus/push",
         "///third_party/go/github.com_prometheus_common//expfmt",
+        "//src/cli",
         "//src/cli/logging",
-        "//src/core",
+        "//src/version",
     ],
 )
