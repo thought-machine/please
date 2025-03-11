@@ -4,7 +4,7 @@ go_binary(
     definitions = {
         # Enforce this pseudo-version instead of "0.0.0" to not conflict with
         # an empty please version config.
-        "github.com/thought-machine/please/src/core.PleaseVersion": "0.0.1",
+        "github.com/thought-machine/please/src/version.PleaseVersion": "0.0.1",
     },
     visibility = [
         "//package:all",
@@ -17,5 +17,6 @@ go_binary(
         "//src/core",
         "//src/fs",
         "//src/update",
+        "//src/version",
     ],
 )

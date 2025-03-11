@@ -17,6 +17,7 @@ go_library(
         "//src/generate",
         "//src/metrics",
         "//src/process",
+        "//src/version",
     ],
 )
 

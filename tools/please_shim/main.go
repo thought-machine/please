@@ -16,6 +16,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/update"
+	"github.com/thought-machine/please/src/version"
 )
 
 var log = logging.MustGetLogger("plz")
@@ -162,7 +163,7 @@ func maybeUpdatePlease(state state, isUpdateCommand bool) {
 	}
 	// Set the version of shim to that of the main binary to make it look like
 	// the real thing to the existing `update.CheckAndUpdate` logic.
-	core.PleaseVersion = strings.TrimPrefix(strings.TrimSpace(string(out)), "Please version ")
+	version.PleaseVersion = strings.TrimPrefix(strings.TrimSpace(string(out)), "Please version ")
 
 	// Read and load the configuration as it would have been done by the main binary.
 	cfg, err := core.ReadDefaultConfigFiles(fs.HostFS, opts.BuildFlags.Profile)

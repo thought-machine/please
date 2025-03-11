@@ -12,6 +12,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/scm"
+	"github.com/thought-machine/please/src/version"
 )
 
 const configTemplate = `; Please config file
@@ -59,7 +60,7 @@ func InitConfig(dir string, bazelCompatibility bool, noPrompt bool) {
 		log.Warning("Can't determine absolute directory: %s", err)
 	}
 	config := filepath.Join(dir, core.ConfigFileName)
-	contents := fmt.Sprintf(configTemplate, core.PleaseVersion)
+	contents := fmt.Sprintf(configTemplate, version.PleaseVersion)
 
 	if bazelCompatibility {
 		contents += bazelCompatibilityConfig

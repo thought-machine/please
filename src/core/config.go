@@ -27,6 +27,8 @@ import (
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/metrics"
+	"github.com/thought-machine/please/src/version"
 )
 
 // OsArch is the os/arch pair, like linux_amd64 etc.
@@ -108,7 +110,7 @@ func readConfigFile(fs iofs.FS, config *Configuration, filename string, subrepo 
 
 func checkPluginVersionRequirements(config *Configuration) {
 	if config.PluginDefinition.Name != "" {
-		currentPlzVersion := *semver.New(PleaseVersion)
+		currentPlzVersion := *semver.New(version.PleaseVersion)
 		// Get plugin config version requirement which may or may not exist
 		pluginVerReq := config.Please.Version.Version
 
@@ -692,11 +694,7 @@ type Configuration struct {
 
 	FeatureFlags struct {
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
-	Metrics struct {
-		PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
-		Timeout              cli.Duration `help:"timeout for pushing to the gateway. Defaults to 2 seconds." `
-		PushHostInfo         bool         `help:"Whether to push host info"`
-	} `help:"Settings for collecting metrics."`
+	Metrics metrics.Config `help:"Settings for collecting metrics."`
 }
 
 // An Alias represents aliases in the config.
@@ -1027,6 +1025,13 @@ func (config *Configuration) Completions(prefix string) []flags.Completion {
 	return ret
 }
 
+var aliasInvocationCount = metrics.NewCounterVec(
+	"alias",
+	"invocation",
+	"How many times each alias is used",
+	[]string{"alias"},
+)
+
 // UpdateArgsWithAliases applies the aliases in this config to the given set of arguments.
 func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 	for idx, arg := range args[1:] {
@@ -1036,6 +1041,7 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		}
 		for k, v := range config.Alias {
 			if arg == k {
+				aliasInvocationCount.WithLabelValues(k).Inc()
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
 				// stick the replacement in wholesale instead.

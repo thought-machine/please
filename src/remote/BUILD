@@ -41,6 +41,7 @@ go_library(
         "//src/process",
         "//src/remote/fs",
         "//src/remote/fs/cache",
+        "//src/version",
     ],
 )
 

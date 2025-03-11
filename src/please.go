@@ -34,6 +34,7 @@ import (
 	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
+	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
 	"github.com/thought-machine/please/src/plzinit"
@@ -45,6 +46,7 @@ import (
 	"github.com/thought-machine/please/src/test"
 	"github.com/thought-machine/please/src/tool"
 	"github.com/thought-machine/please/src/update"
+	"github.com/thought-machine/please/src/version"
 	"github.com/thought-machine/please/src/watch"
 )
 
@@ -684,7 +686,7 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"update": func() int {
-		fmt.Printf("Up to date (version %s).\n", core.PleaseVersion)
+		fmt.Printf("Up to date (version %s).\n", version.PleaseVersion)
 		return 0 // We'd have died already if something was wrong.
 	},
 	"op": func() int {
@@ -1428,7 +1430,7 @@ func initBuild(args []string) string {
 	parser, extraArgs, flagsErr := cli.ParseFlags("Please", &opts, args, flags.PassDoubleDash, handleCompletions, additionalUsageInfo)
 	// Note that we must leave flagsErr for later, because it may be affected by aliases.
 	if opts.HelpFlags.Version {
-		fmt.Printf("Please version %s\n", core.PleaseVersion)
+		fmt.Printf("Please version %s\n", version.PleaseVersion)
 		os.Exit(0) // Ignore other flags if --version was passed.
 	} else if opts.HelpFlags.Help {
 		parser.WriteHelp(os.Stderr)
@@ -1544,6 +1546,13 @@ func toExitCode(success bool, state *core.BuildState) int {
 	return 1
 }
 
+var commandInvocationCount = metrics.NewCounterVec(
+	"command",
+	"invocation",
+	"How many times each command is used",
+	[]string{"command"},
+)
+
 func execute(command string) int {
 	if opts.Profile != "" {
 		f, err := os.Create(opts.Profile)
@@ -1583,6 +1592,7 @@ func execute(command string) int {
 	}
 
 	log.Debugf("plz %v", command)
+	commandInvocationCount.WithLabelValues(command).Inc()
 	return buildFunctions[command]()
 }
 

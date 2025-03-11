@@ -4,7 +4,7 @@ go_binary(
     name = "please",
     srcs = ["please.go"],
     definitions = {
-        "github.com/thought-machine/please/src/core.PleaseVersion": VERSION,
+        "github.com/thought-machine/please/src/version.PleaseVersion": VERSION,
     },
     visibility = ["PUBLIC"],
     deps = [
@@ -26,6 +26,7 @@ go_binary(
         "//src/generate",
         "//src/hashes",
         "//src/help",
+        "//src/metrics",
         "//src/output",
         "//src/plz",
         "//src/plzinit",
@@ -37,6 +38,7 @@ go_binary(
         "//src/test",
         "//src/tool",
         "//src/update",
+        "//src/version",
         "//src/watch",
     ],
 )
