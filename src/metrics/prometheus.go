@@ -23,7 +23,7 @@ var registerer = prometheus.WrapRegistererWith(prometheus.Labels{
 }, prometheus.DefaultRegisterer)
 
 type Config struct {
-	PrometheusGatewayURL string       `help:"The gateway URL to push prometheus updates to."`
+	PrometheusGatewayURL string       `help:"The aggregation gateway URL to push prometheus updates to."`
 	Timeout              cli.Duration `help:"timeout for pushing to the gateway. Defaults to 2 seconds." `
 	PushHostInfo         bool         `help:"Whether to push host info"`
 }
