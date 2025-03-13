@@ -1380,6 +1380,10 @@ func (state *BuildState) Root() *BuildState {
 	return state.ParentState.Root()
 }
 
+func (state *BuildState) IsPendingTarget(label BuildLabel) bool {
+	return state.progress.pendingTargets.Contains(label)
+}
+
 func newCRC32() hash.Hash {
 	return hash.Hash(crc32.NewIEEE())
 }

@@ -1,12 +1,14 @@
 filegroup(
-    name = "defs_1",
-    srcs = ["1.build_defs"],
+    name = "defs_2",
+    srcs = ["2.build_defs"],
     visibility = ["PUBLIC"],
 )
 
+sleep()
+
 filegroup(
-    name = "defs_2",
-    srcs = ["2.build_defs"],
+    name = "defs_1",
+    srcs = ["1.build_defs"],
     visibility = ["PUBLIC"],
 )
 

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unicode"
 
 	"github.com/Masterminds/semver/v3"
@@ -30,6 +31,7 @@ func registerBuiltins(s *scope) {
 	const varargs = true
 	const kwargs = true
 	setNativeCode(s, "build_rule", buildRule)
+	setNativeCode(s, "sleep", sleep)
 	setNativeCode(s, "tag", tag)
 	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "fail", builtinFail)
@@ -129,6 +131,12 @@ func registerBuiltins(s *scope) {
 	setLogCode(s, "fatal", log.Fatalf)
 }
 
+// sleep can be used to induce race conditions in please
+func sleep(s *scope, _ []pyObject) pyObject {
+	time.Sleep(100 * time.Millisecond)
+	return None
+}
+
 // registerSubincludePackage sets up the package for remote subincludes.
 func registerSubincludePackage(s *scope) {
 	// Another small hack - replace the code for these two with native code, must be done after the
@@ -208,8 +216,17 @@ func buildRule(s *scope, args []pyObject) pyObject {
 		target.AddedPostBuild = true
 	}
 
+	if target.Label.String() == "//a:defs_1" {
+		log.Debug("")
+	}
+
 	if s.parsingFor != nil && s.parsingFor.label == target.Label {
 		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.mode); err != nil {
+			s.Error("%v", err)
+		}
+	}
+	if s.state.IsPendingTarget(target.Label) {
+		if err := s.state.ActivateTarget(s.pkg, target.Label, target.Label, s.mode); err != nil {
 			s.Error("%v", err)
 		}
 	}
@@ -387,24 +404,23 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	}
 
 	// isLocal is true when this subinclude target in the current package being parsed
-	isLocal := l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName
+	isLocal := s.pkg != nil && l.Subrepo == s.pkg.Label().Subrepo && l.PackageName == s.pkg.Name
 
 	// If the subinclude is local to this package, it must already exist in the graph. If it already exists in the graph
 	// but isn't activated, we should activate it otherwise WaitForSubincludedTarget might block. This can happen when
 	// another package also subincludes this target, and queues it first.
-	if isLocal {
-		t := s.state.Graph.Target(l)
-		if t == nil {
-			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
-		}
+	t := s.state.Graph.Target(l)
+	if t != nil {
 		if t.State() < core.Active {
 			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, s.mode|core.ParseModeForSubinclude); err != nil {
 				s.Error("Failed to activate subinclude target: %v", err)
 			}
 		}
+	} else if isLocal {
+		s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
 
-	t := s.WaitForSubincludedTarget(l, pkgLabel)
+	t = s.WaitForSubincludedTarget(l, pkgLabel)
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude
