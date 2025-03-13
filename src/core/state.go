@@ -893,11 +893,15 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 }
 
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
-	if t := state.Graph.Target(l); t != nil {
+	t := state.Graph.Target(l)
+	if t != nil {
 		if t.State().IsBuilt() {
+			log.Warningf("Wait for built target %v, %v found target already in state %v", l, dependent, t.State())
 			return t
 		}
 	}
+	log.Warningf("Wait for built target %v, %v found target not found", l, dependent)
+
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, func() chan struct{} {
@@ -1094,6 +1098,7 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild boo
 			}
 			// Queue the target up for parse. The parse step activates the target for us if it needs to be built, so we
 			// don't need to do this here.
+			log.Warningf("Adding parse for target %v from queueTarget", label.String())
 			state.addPendingParse(label, dependent, mode)
 			return nil
 		}

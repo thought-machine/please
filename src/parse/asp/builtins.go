@@ -216,10 +216,6 @@ func buildRule(s *scope, args []pyObject) pyObject {
 		target.AddedPostBuild = true
 	}
 
-	if target.Label.String() == "//a:defs_1" {
-		log.Debug("")
-	}
-
 	if s.parsingFor != nil && s.parsingFor.label == target.Label {
 		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.mode); err != nil {
 			s.Error("%v", err)
@@ -371,6 +367,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		} else {
 			outs = t.Outputs()
 		}
+		log.Warningf("Got built target, subinclude outs %v", t.Label.String())
 		for _, out := range outs {
 			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false)
 		}
@@ -381,10 +378,12 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
+
 	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
 	pkg := s.contextPackage()
 	pkgLabel := pkg.Label()
+	log.Warningf("subinclude(%v) from %v", l, s.pkg)
 
 	// If we're including from a subrepo, or if we're in a subrepo and including from a different subrepo, make sure
 	// that package is parsed to avoid locking. Locks can occur when the target's package also subincludes that target.
@@ -419,8 +418,9 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	} else if isLocal {
 		s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-
+	log.Warningf("wait for built target start %v, %v", l, pkgLabel)
 	t = s.WaitForSubincludedTarget(l, pkgLabel)
+	log.Warningf("wait for built target end %v, %v", l, pkgLabel)
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude
