@@ -38,8 +38,6 @@ func Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 }
 
 func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
-	log.Warningf("parsing %v", label.String())
-
 	if t := state.Graph.Target(label); t != nil && t.State() < core.Active {
 		return state.ActivateTarget(nil, label, dependent, mode)
 	}
@@ -64,12 +62,8 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	// See if something else has parsed this package first.
 	pkg := state.SyncParsePackage(label)
 	if pkg != nil {
-		log.Warningf("activating %v from parse step", label.String())
-
 		// Does exist, all we need to do is toggle on this target
 		return state.ActivateTarget(pkg, label, dependent, mode)
-	} else {
-		log.Warningf("was first: %v", label.String())
 	}
 	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(label, core.PackageParsing, "Parsing...")

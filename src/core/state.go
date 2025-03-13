@@ -896,7 +896,6 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	t := state.Graph.Target(l)
 	if t != nil {
 		if t.State().IsBuilt() {
-			log.Warningf("Wait for built target %v, %v found target already in state %v", l, dependent, t.State())
 			return t
 		}
 	}

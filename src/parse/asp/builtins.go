@@ -382,7 +382,6 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 
 	pkg := s.contextPackage()
 	pkgLabel := pkg.Label()
-	log.Warningf("subinclude(%v) from %v", l, s.pkg)
 
 	// If we're including from a subrepo, or if we're in a subrepo and including from a different subrepo, make sure
 	// that package is parsed to avoid locking. Locks can occur when the target's package also subincludes that target.
