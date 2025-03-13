@@ -367,7 +367,6 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		} else {
 			outs = t.Outputs()
 		}
-		log.Warningf("Got built target, subinclude outs %v", t.Label.String())
 		for _, out := range outs {
 			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false)
 		}
@@ -418,9 +417,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	} else if isLocal {
 		s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-	log.Warningf("wait for built target start %v, %v", l, pkgLabel)
 	t = s.WaitForSubincludedTarget(l, pkgLabel)
-	log.Warningf("wait for built target end %v, %v", l, pkgLabel)
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude

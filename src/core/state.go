@@ -900,7 +900,6 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 			return t
 		}
 	}
-	log.Warningf("Wait for built target %v, %v found target not found", l, dependent)
 
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
@@ -1098,7 +1097,6 @@ func (state *BuildState) queueTarget(label, dependent BuildLabel, forceBuild boo
 			}
 			// Queue the target up for parse. The parse step activates the target for us if it needs to be built, so we
 			// don't need to do this here.
-			log.Warningf("Adding parse for target %v from queueTarget", label.String())
 			state.addPendingParse(label, dependent, mode)
 			return nil
 		}
