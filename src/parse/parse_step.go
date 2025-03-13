@@ -38,6 +38,10 @@ func Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 }
 
 func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
+	if t := state.Graph.Target(label); t != nil && t.State() < core.Active {
+		return state.ActivateTarget(nil, label, dependent, mode)
+	}
+
 	subrepo, err := checkSubrepo(state, label, dependent, mode)
 	if err != nil {
 		return err
