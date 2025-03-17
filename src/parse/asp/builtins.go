@@ -213,6 +213,11 @@ func buildRule(s *scope, args []pyObject) pyObject {
 			s.Error("%v", err)
 		}
 	}
+	if s.state.IsPendingTarget(target.Label) {
+		if err := s.state.ActivateTarget(s.pkg, target.Label, target.Label, s.mode); err != nil {
+			s.Error("%v", err)
+		}
+	}
 
 	return pyString(":" + target.Label.Name)
 }
@@ -387,24 +392,22 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	}
 
 	// isLocal is true when this subinclude target in the current package being parsed
-	isLocal := l.Subrepo == pkgLabel.Subrepo && l.PackageName == pkgLabel.PackageName
+	isLocal := s.pkg != nil && l.Subrepo == s.pkg.Label().Subrepo && l.PackageName == s.pkg.Name
 
 	// If the subinclude is local to this package, it must already exist in the graph. If it already exists in the graph
 	// but isn't activated, we should activate it otherwise WaitForSubincludedTarget might block. This can happen when
 	// another package also subincludes this target, and queues it first.
-	if isLocal {
-		t := s.state.Graph.Target(l)
-		if t == nil {
-			s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
-		}
+	t := s.state.Graph.Target(l)
+	if t != nil {
 		if t.State() < core.Active {
 			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, s.mode|core.ParseModeForSubinclude); err != nil {
 				s.Error("Failed to activate subinclude target: %v", err)
 			}
 		}
+	} else if isLocal {
+		s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-
-	t := s.WaitForSubincludedTarget(l, pkgLabel)
+	t = s.WaitForSubincludedTarget(l, pkgLabel)
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude

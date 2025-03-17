@@ -71,6 +71,10 @@ func (m *Map[K, V]) Get(key K) V {
 	return v
 }
 
+func (m *Map[K, V]) Contains(key K) bool {
+	return m.shards[m.hasher(key)&m.mask].Contains(key)
+}
+
 // GetOrWait returns the value or, if the key isn't present, a channel that it can be waited
 // on for. The caller will need to call Get again after the channel closes.
 // If the channel is non-nil, then val will exist in the map; otherwise it will have its zero value.
@@ -182,4 +186,12 @@ func (s *shard[K, V]) Values() []V {
 		}
 	}
 	return ret
+}
+
+func (s *shard[K, V]) Contains(key K) bool {
+	s.l.RLock()
+	defer s.l.RUnlock()
+
+	_, ok := s.m[key]
+	return ok
 }

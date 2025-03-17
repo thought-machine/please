@@ -893,11 +893,10 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 }
 
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
-	if t := state.Graph.Target(l); t != nil {
-		if t.State().IsBuilt() {
-			return t
-		}
+	if t := state.Graph.Target(l); t != nil && t.State().IsBuilt() {
+		return t
 	}
+
 	dependent.Name = "all" // Every target in this package depends on this one.
 	// okay, we need to register and wait for this guy.
 	if ch, inserted := state.progress.pendingTargets.AddOrGet(l, func() chan struct{} {
@@ -1378,6 +1377,10 @@ func (state *BuildState) Root() *BuildState {
 		return state
 	}
 	return state.ParentState.Root()
+}
+
+func (state *BuildState) IsPendingTarget(label BuildLabel) bool {
+	return state.progress.pendingTargets.Contains(label)
 }
 
 func newCRC32() hash.Hash {
