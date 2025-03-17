@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unicode"
 
 	"github.com/Masterminds/semver/v3"
@@ -31,7 +30,6 @@ func registerBuiltins(s *scope) {
 	const varargs = true
 	const kwargs = true
 	setNativeCode(s, "build_rule", buildRule)
-	setNativeCode(s, "sleep", sleep)
 	setNativeCode(s, "tag", tag)
 	setNativeCode(s, "subrepo", subrepo)
 	setNativeCode(s, "fail", builtinFail)
@@ -129,12 +127,6 @@ func registerBuiltins(s *scope) {
 	setLogCode(s, "warning", log.Warning)
 	setLogCode(s, "error", log.Errorf)
 	setLogCode(s, "fatal", log.Fatalf)
-}
-
-// sleep can be used to induce race conditions in please
-func sleep(s *scope, _ []pyObject) pyObject {
-	time.Sleep(100 * time.Millisecond)
-	return None
 }
 
 // registerSubincludePackage sets up the package for remote subincludes.

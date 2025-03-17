@@ -303,7 +303,3 @@ def is_semver(s:str) -> bool:
 
 def semver_check(version:str, constraint:str) -> bool:
     pass
-
-
-def sleep():
-    pass

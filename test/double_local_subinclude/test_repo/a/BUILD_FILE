@@ -4,7 +4,9 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
-sleep()
+# "Sleep" for some time by bussy looping to induce a lockup
+for n in range(10000000):
+  pass
 
 filegroup(
     name = "defs_1",
