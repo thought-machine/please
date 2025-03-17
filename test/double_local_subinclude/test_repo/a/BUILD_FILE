@@ -4,7 +4,8 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
-# "Sleep" for some time by bussy looping to induce a lockup
+# "Sleep" for some time by busy looping to make sure we subinclude from 2.build_defs before registering :defs_1.
+# This was a race condition fixed in #3354
 for n in range(10000000):
   pass
 
