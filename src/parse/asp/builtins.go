@@ -377,7 +377,6 @@ func subinclude(s *scope, args []pyObject) pyObject {
 // subincludeTarget returns the target for a subinclude() call to a label.
 // It blocks until the target exists and is built.
 func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
-
 	s.NAssert(l.IsPseudoTarget(), "Can't pass :all or /... to subinclude()")
 
 	pkg := s.contextPackage()
