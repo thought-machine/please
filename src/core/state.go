@@ -893,11 +893,8 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 }
 
 func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseMode) *BuildTarget {
-	t := state.Graph.Target(l)
-	if t != nil {
-		if t.State().IsBuilt() {
-			return t
-		}
+	if t := state.Graph.Target(l); t != nil && t.State().IsBuilt() {
+		return t
 	}
 
 	dependent.Name = "all" // Every target in this package depends on this one.
