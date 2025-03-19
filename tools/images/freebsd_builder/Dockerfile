@@ -1,5 +1,5 @@
 FROM ubuntu:noble
-MAINTAINER peter.ebden@gmail.com
+LABEL org.opencontainers.image.authors="please <at> thoughtmachine <dot> net"
 LABEL org.opencontainers.image.source https://github.com/thought-machine/please
 
 # A few miscellaneous dependencies.
