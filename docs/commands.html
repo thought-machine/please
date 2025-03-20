@@ -1022,11 +1022,11 @@
         <h3 class="mt1 f6 lh-title">
           <code class="code">--notrim</code>
         </h3>
-        <p>Disables trimming targets from exported packages that aren't dependencies of the original exported
-          targets</p>
+        <p>Disables trimming unnecessary targets from exported packages. Normally targets in exported packages that
+          aren't dependencies of the originally exported targets are removed.</p>
         <p>
-          This trimming syntax based, so doesn't always work depending on how the rule is authored. Passing this flag
-          will disable this feature, allowing these rules to be exported.
+          This trimming syntax based, so doesn't always work depending on how the build definition is authored. Passing
+          this flag will disable this feature, avoiding cases where these rules will be erroneously trimmed.
         </p>
         <p>
           To make sure a rule works without this flag, the rule must follow the naming convention, whereby children of
