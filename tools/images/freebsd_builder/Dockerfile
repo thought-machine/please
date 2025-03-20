@@ -1,6 +1,6 @@
 FROM ubuntu:noble
 LABEL org.opencontainers.image.authors="please <at> thoughtmachine <dot> net"
-LABEL org.opencontainers.image.source https://github.com/thought-machine/please
+LABEL org.opencontainers.image.source=https://github.com/thought-machine/please
 
 # A few miscellaneous dependencies.
 RUN apt-get update && apt-get install -y curl git gcc xz-utils && apt-get clean

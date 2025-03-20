@@ -1,6 +1,6 @@
 FROM ubuntu:jammy
 LABEL org.opencontainers.image.authors="please <at> thoughtmachine <dot> net"
-LABEL org.opencontainers.image.source https://github.com/thought-machine/please
+LABEL org.opencontainers.image.source=https://github.com/thought-machine/please
 
 ENV DEBIAN_FRONTEND noninteractive
 
