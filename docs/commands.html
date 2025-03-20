@@ -993,6 +993,51 @@
 </section>
 
 <section class="mt4">
+  <h2 id="export" class="title-2">plz export</h2>
+
+  <p>
+    Exports a subset of a please project based on a list of targets
+  </p>
+
+  <p>
+    Example: <code class="code">plz export //cmd:main --output plz-out/export</code>
+  </p>
+
+  <p>There are a few flags controlling it:</p>
+
+  <ul class="bulleted-list">
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">-o, --output</code>
+        </h3>
+
+        <p>
+          The directory to export into
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title">
+          <code class="code">--notrim</code>
+        </h3>
+        <p>Disables trimming targets from exported packages that aren't dependencies of the original exported
+          targets</p>
+        <p>
+          This trimming syntax based, so doesn't always work depending on how the rule is authored. Passing this flag
+          will disable this feature, allowing these rules to be exported.
+        </p>
+        <p>
+          To make sure a rule works without this flag, the rule must follow the naming convention, whereby children of
+          <code class="code">:name</code> follow the format <code class="code">:_name#{some-tag}</code>.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
   <h2 id="gc" class="title-2">plz gc</h2>
 
   <p>
