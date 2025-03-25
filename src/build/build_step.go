@@ -46,7 +46,7 @@ var successfulRemoteTargetBuildDuration = metrics.NewHistogramVec(
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
 	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
-  []string{"ci"},
+	[]string{"ci"},
 )
 
 var successfulLocalTargetBuildDuration = metrics.NewHistogramVec(
@@ -54,7 +54,7 @@ var successfulLocalTargetBuildDuration = metrics.NewHistogramVec(
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
 	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
-  []string{"ci"},
+	[]string{"ci"},
 )
 
 // Build implements the core logic for building a single target.

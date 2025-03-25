@@ -38,21 +38,21 @@ var downloadErrors = metrics.NewCounterVec(
 	"remote",
 	"tree_digest_download_errors_total",
 	"Number of times the an error has been seen during a tree digest download",
-  []string{"ci"},
+	[]string{"ci"},
 )
 
 var directoriesRetrieved = metrics.NewCounterVec(
 	"remote",
 	"dirs_retrieved_total",
 	"Number of directories retrieved from cache",
-  []string{"ci"},
+	[]string{"ci"},
 )
 
 var directoriesDownloaded = metrics.NewCounterVec(
 	"remote",
 	"dirs_downloaded_total",
 	"Number of directories downloaded from remote",
-  []string{"ci"},
+	[]string{"ci"},
 )
 
 // xattrName is the name we use to record attributes on files.

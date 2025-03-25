@@ -109,8 +109,8 @@ func ExponentialBuckets(start, factor float64, numBuckets int) []float64 {
 
 // CILabel is the value to set for `ci` labels on metrics based on the presence of the `CI` environment variable.
 var CILabel = func() string {
-  if val := strings.ToLower(os.Getenv("CI")); val == "true" {
-    return "true"
-  }
-  return "false"
+	if val := strings.ToLower(os.Getenv("CI")); val == "true" {
+		return "true"
+	}
+	return "false"
 }()

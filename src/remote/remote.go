@@ -52,7 +52,7 @@ var remoteCacheReadDuration = metrics.NewHistogramVec(
 	"cache_read_duration",
 	"Time taken to read the remote cache, in milliseconds",
 	metrics.ExponentialBuckets(0.1, 2, 12), // 12 buckets, starting at 0.1ms and doubling in width.
-  []string{"ci"},
+	[]string{"ci"},
 )
 
 // A Client is the interface to the remote API.
