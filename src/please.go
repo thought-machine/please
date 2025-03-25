@@ -1550,7 +1550,7 @@ var commandInvocationCount = metrics.NewCounterVec(
 	"command",
 	"invocation",
 	"How many times each command is used",
-	[]string{"command"},
+	[]string{"command", "ci"},
 )
 
 func execute(command string) int {
@@ -1592,7 +1592,7 @@ func execute(command string) int {
 	}
 
 	log.Debugf("plz %v", command)
-	commandInvocationCount.WithLabelValues(command).Inc()
+	commandInvocationCount.WithLabelValues(command, metrics.CILabel).Inc()
 	return buildFunctions[command]()
 }
 

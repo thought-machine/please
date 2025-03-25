@@ -41,18 +41,20 @@ var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
 var httpClientLimiter chan struct{}
 
-var successfulRemoteTargetBuildDuration = metrics.NewHistogram(
+var successfulRemoteTargetBuildDuration = metrics.NewHistogramVec(
 	"remote",
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
 	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
+	[]string{"ci"},
 )
 
-var successfulLocalTargetBuildDuration = metrics.NewHistogram(
+var successfulLocalTargetBuildDuration = metrics.NewHistogramVec(
 	"local",
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
 	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
+	[]string{"ci"},
 )
 
 // Build implements the core logic for building a single target.
@@ -75,9 +77,9 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 		return
 	}
 	if remote {
-		successfulRemoteTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
+		successfulRemoteTargetBuildDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 	} else {
-		successfulLocalTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
+		successfulLocalTargetBuildDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()

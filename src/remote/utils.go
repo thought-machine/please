@@ -34,22 +34,25 @@ import (
 	"github.com/thought-machine/please/src/version"
 )
 
-var downloadErrors = metrics.NewCounter(
+var downloadErrors = metrics.NewCounterVec(
 	"remote",
 	"tree_digest_download_errors_total",
 	"Number of times the an error has been seen during a tree digest download",
+	[]string{"ci"},
 )
 
-var directoriesRetrieved = metrics.NewCounter(
+var directoriesRetrieved = metrics.NewCounterVec(
 	"remote",
 	"dirs_retrieved_total",
 	"Number of directories retrieved from cache",
+	[]string{"ci"},
 )
 
-var directoriesDownloaded = metrics.NewCounter(
+var directoriesDownloaded = metrics.NewCounterVec(
 	"remote",
 	"dirs_downloaded_total",
 	"Number of directories downloaded from remote",
+	[]string{"ci"},
 )
 
 // xattrName is the name we use to record attributes on files.
@@ -157,7 +160,7 @@ func (c *Client) outputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.
 	for _, d := range ar.OutputDirectories {
 		tree := &pb.Tree{}
 		if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(d.TreeDigest), tree); err != nil {
-			downloadErrors.Inc()
+			downloadErrors.WithLabelValues(metrics.CILabel).Inc()
 			return nil, wrap(err, "Downloading tree digest for %s [%s]", d.Path, d.TreeDigest.Hash)
 		}
 		o.Children = append(o.Children, append(tree.Children, tree.Root)...)
@@ -201,12 +204,12 @@ func (c *Client) setOutputDirectoryOuts(target *core.BuildTarget, actionResultFS
 // readDirectory reads a Directory proto, possibly using a local cache, otherwise going to the remote
 func (c *Client) readDirectory(dg *pb.Digest) (*pb.Directory, error) {
 	if dir, present := c.directories.Load(dg.Hash); present {
-		directoriesRetrieved.Inc()
+		directoriesRetrieved.WithLabelValues(metrics.CILabel).Inc()
 		return dir.(*pb.Directory), nil
 	}
 	dir := &pb.Directory{}
 	_, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir)
-	directoriesDownloaded.Inc()
+	directoriesDownloaded.WithLabelValues(metrics.CILabel).Inc()
 	return dir, err
 }
 
