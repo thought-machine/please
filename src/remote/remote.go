@@ -47,11 +47,12 @@ var log = logging.Log
 // The API version we support.
 var apiVersion = semver.SemVer{Major: 2}
 
-var remoteCacheReadDuration = metrics.NewHistogram(
+var remoteCacheReadDuration = metrics.NewHistogramVec(
 	"remote",
 	"cache_read_duration",
 	"Time taken to read the remote cache, in milliseconds",
 	metrics.ExponentialBuckets(0.1, 2, 12), // 12 buckets, starting at 0.1ms and doubling in width.
+  []string{"ci"},
 )
 
 // A Client is the interface to the remote API.
@@ -621,7 +622,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 		InlineStdout: needStdout,
 	}); err == nil {
 		// This action already exists and has been cached.
-		remoteCacheReadDuration.Observe(float64(time.Since(start).Milliseconds()))
+		remoteCacheReadDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 		if metadata, err := c.buildMetadata(target, ar, needStdout, false); err == nil {
 			log.Debug("Got remotely cached results for %s %s", target.Label, c.actionURL(digest, true))
 			if command != nil {

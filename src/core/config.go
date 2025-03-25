@@ -1029,7 +1029,7 @@ var aliasInvocationCount = metrics.NewCounterVec(
 	"alias",
 	"invocation",
 	"How many times each alias is used",
-	[]string{"alias"},
+	[]string{"alias", "ci"},
 )
 
 // UpdateArgsWithAliases applies the aliases in this config to the given set of arguments.
@@ -1041,7 +1041,7 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		}
 		for k, v := range config.Alias {
 			if arg == k {
-				aliasInvocationCount.WithLabelValues(k).Inc()
+				aliasInvocationCount.WithLabelValues(k, metrics.CILabel).Inc()
 				// We could insert every token in v into os.Args at this point and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
 				// stick the replacement in wholesale instead.
