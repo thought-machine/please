@@ -1,3 +1,15 @@
+Version 17.16.0
+---------------
+    * Add a `ci` label to all Please metrics (#3358)
+
+Version 17.15.1
+---------------
+    * Attempt to fix some race conditions in local subincludes (#3354)
+
+Version 17.15.0
+---------------
+    * Add metrics for alias and command invocations (#3351)
+
 Version 17.14.0
 ---------------
     * Add a `--notrim` flag to `plz export` that avoids trying to clean out unused build targerts

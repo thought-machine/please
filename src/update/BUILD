@@ -21,6 +21,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/process",
+        "//src/version",
     ],
 )
 
@@ -37,7 +38,7 @@ go_test(
         "//src:please",
     ],
     definitions = {
-        "github.com/thought-machine/please/src/core.PleaseVersion": VERSION,
+        "github.com/thought-machine/please/src/version.PleaseVersion": VERSION,
     },
     labels = ["xz"],
     resources = ["key.pub"],
@@ -50,6 +51,7 @@ go_test(
         "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//src/cli",
         "//src/core",
+        "//src/version",
     ],
 )
 

@@ -20,6 +20,7 @@ go_library(
         "//src/fs",
         "//src/parse/asp",
         "//src/plz",
+        "//src/version",
     ],
 )
 

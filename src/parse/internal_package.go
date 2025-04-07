@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/version"
 )
 
 const InternalPackageName = "_please"
@@ -23,7 +24,7 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 
 	url := config.Please.ToolsURL.String()
 	if url == "" {
-		url = fmt.Sprintf("%s/%s_%s/%s/please_tools_%s.tar.xz", config.Please.DownloadLocation, runtime.GOOS, runtime.GOARCH, core.PleaseVersion, core.PleaseVersion)
+		url = fmt.Sprintf("%s/%s_%s/%s/please_tools_%s.tar.xz", config.Please.DownloadLocation, runtime.GOOS, runtime.GOARCH, version.PleaseVersion, version.PleaseVersion)
 	}
 
 	data := struct {

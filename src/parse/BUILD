@@ -16,6 +16,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/parse/asp",
+        "//src/version",
     ],
 )
 

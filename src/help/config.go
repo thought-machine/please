@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/peterebden/go-deferred-regex"
+	deferredregex "github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/version"
 )
 
 var urlRegex = deferredregex.DeferredRegex{Re: "https?://[^ ]+[^.]"}
@@ -23,7 +24,7 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 	} else if options != "" {
 		return strings.ReplaceAll(options, ",", " | ")
 	} else if name == "version" {
-		return core.PleaseVersion // keep it up to date!
+		return version.PleaseVersion
 	} else if t.Kind() == reflect.String {
 		if f.String() != "" {
 			return f.String()

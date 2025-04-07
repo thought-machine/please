@@ -25,8 +25,10 @@ go_library(
         "//src/cli/logging",
         "//src/cmap",
         "//src/fs",
+        "//src/metrics",
         "//src/process",
         "//src/scm",
+        "//src/version",
     ],
 )
 

@@ -18,6 +18,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/scm",
+        "//src/version",
     ],
 )
 

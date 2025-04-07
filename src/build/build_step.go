@@ -28,6 +28,7 @@ import (
 	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/process"
+	"github.com/thought-machine/please/src/version"
 )
 
 var log = logging.Log
@@ -40,18 +41,20 @@ var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
 var httpClientLimiter chan struct{}
 
-var successfulRemoteTargetBuildDuration = metrics.NewHistogram(
+var successfulRemoteTargetBuildDuration = metrics.NewHistogramVec(
 	"remote",
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
 	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
+	[]string{"ci"},
 )
 
-var successfulLocalTargetBuildDuration = metrics.NewHistogram(
+var successfulLocalTargetBuildDuration = metrics.NewHistogramVec(
 	"local",
 	"target_build_duration",
 	"Time taken to successfully build a target, in milliseconds",
 	metrics.ExponentialBuckets(0.5, 2, 16), // 16 buckets, starting at 0.5ms and doubling in width.
+	[]string{"ci"},
 )
 
 // Build implements the core logic for building a single target.
@@ -74,9 +77,9 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 		return
 	}
 	if remote {
-		successfulRemoteTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
+		successfulRemoteTargetBuildDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 	} else {
-		successfulLocalTargetBuildDuration.Observe(float64(time.Since(start).Milliseconds()))
+		successfulLocalTargetBuildDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 	}
 	// Mark the target as having finished building.
 	target.FinishBuild()
@@ -1155,7 +1158,7 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 // setHeaders sets up all the headers we should send on remote_file() requests, including User-Agent and any user
 // defined ones.
 func setHeaders(req *http.Request, target *core.BuildTarget, env core.BuildEnv) error {
-	req.Header.Set("User-Agent", "please.build/"+core.PleaseVersion)
+	req.Header.Set("User-Agent", "please.build/"+version.PleaseVersion)
 
 	param := func(str string) (string, string) {
 		if !strings.HasPrefix(str, "remote_file:") {

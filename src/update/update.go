@@ -30,6 +30,7 @@ import (
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/process"
+	"github.com/thought-machine/please/src/version"
 )
 
 var log = logging.Log
@@ -43,7 +44,7 @@ const milestoneURL = "https://please.build/milestones"
 
 // pleaseVersion returns the current version of Please as a semver.
 func pleaseVersion() semver.Version {
-	return *semver.New(core.PleaseVersion)
+	return *semver.New(version.PleaseVersion)
 }
 
 // CheckAndUpdate checks whether we should update Please and does so if needed.
@@ -174,7 +175,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 	if config.Please.Version.Major == 0 {
 		// Specific version isn't set, only update on `plz update`.
 		if !updateCommand {
-			config.Please.Version.Set(core.PleaseVersion)
+			config.Please.Version.Set(version.PleaseVersion)
 			return false
 		}
 		config.Please.Version = findLatestVersion(config.Please.DownloadLocation.String(), prerelease)
