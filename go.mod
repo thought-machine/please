@@ -46,9 +46,9 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	golang.org/x/net v0.33.0
-	golang.org/x/sync v0.10.0
-	golang.org/x/sys v0.28.0
-	golang.org/x/term v0.27.0
+	golang.org/x/sync v0.11.0
+	golang.org/x/sys v0.30.0
+	golang.org/x/term v0.29.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	google.golang.org/genproto/googleapis/bytestream v0.0.0-20240304212257-790db918fca8
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240304212257-790db918fca8
@@ -101,9 +101,9 @@ require (
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/api v0.168.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
@@ -115,3 +115,4 @@ require (
 )
 
 go 1.23
+toolchain go1.24.1
