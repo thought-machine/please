@@ -118,12 +118,14 @@ func (e *export) exportSources(target *core.BuildTarget) {
 	}
 }
 
-// exportPackage exports the package BUILD file and all sources
-func (e *export) exportPackage(pkgName string) {
+// exportPackage exports the package BUILD file containing the given target and all sources
+func (e *export) exportPackage(target *core.BuildTarget) {
+	pkgName := target.Label.PackageName
 	if pkgName == parse.InternalPackageName {
 		return
 	}
 	if pkgName == "" {
+		log.Warning("Not exporting root package; you may need to manually export %s", target.Label)
 		return
 	}
 	if e.exportedPackages[pkgName] {
@@ -166,7 +168,7 @@ func (e *export) export(target *core.BuildTarget) {
 		e.export(target.Subrepo.Target)
 	} else if e.noTrim {
 		// Export the whole package, rather than trying to trim the package down to only the targets we need
-		e.exportPackage(target.Label.PackageName)
+		e.exportPackage(target)
 	} else {
 		e.exportSources(target)
 	}
