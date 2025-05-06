@@ -118,14 +118,17 @@ func (e *export) exportSources(target *core.BuildTarget) {
 	}
 }
 
+var ignoreDirectories = map[string]bool{
+	"plz-out": true,
+	".git":    true,
+	".svn":    true,
+	".hg":     true,
+}
+
 // exportPackage exports the package BUILD file containing the given target and all sources
 func (e *export) exportPackage(target *core.BuildTarget) {
 	pkgName := target.Label.PackageName
 	if pkgName == parse.InternalPackageName {
-		return
-	}
-	if pkgName == "" {
-		log.Warning("Not exporting root package; you may need to manually export %s", target.Label)
 		return
 	}
 	if e.exportedPackages[pkgName] {
@@ -133,13 +136,18 @@ func (e *export) exportPackage(target *core.BuildTarget) {
 	}
 	e.exportedPackages[pkgName] = true
 
-	err := filepath.WalkDir(pkgName, func(path string, d iofs.DirEntry, err error) error {
+	pkgDir := filepath.Clean(pkgName)
+
+	err := filepath.WalkDir(pkgDir, func(path string, d iofs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			if path != pkgName && fs.IsPackage(e.state.Config.Parse.BuildFileName, path) {
+			if path != pkgDir && fs.IsPackage(e.state.Config.Parse.BuildFileName, path) {
 				return filepath.SkipDir // We want to stop when we find another package in our dir tree
+			}
+			if ignoreDirectories[d.Name()] {
+				return filepath.SkipDir
 			}
 			return nil
 		}
@@ -153,7 +161,7 @@ func (e *export) exportPackage(target *core.BuildTarget) {
 		return fs.CopyFile(path, dest, 0)
 	})
 	if err != nil {
-		log.Fatalf("failed to export package %s: %v", pkgName, err)
+		log.Fatalf("failed to export package %s for %s: %v", pkgName, target.Label, err)
 	}
 }
 
