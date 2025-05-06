@@ -123,6 +123,9 @@ func (e *export) exportPackage(pkgName string) {
 	if pkgName == parse.InternalPackageName {
 		return
 	}
+	if pkgName == "" {
+		return
+	}
 	if e.exportedPackages[pkgName] {
 		return
 	}
@@ -148,7 +151,7 @@ func (e *export) exportPackage(pkgName string) {
 		return fs.CopyFile(path, dest, 0)
 	})
 	if err != nil {
-		log.Fatalf("failed to export package: %v", err)
+		log.Fatalf("failed to export package %s: %v", pkgName, err)
 	}
 }
 
