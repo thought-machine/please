@@ -211,10 +211,18 @@
     </li>
     <li>
       <div>
-        <h3 class="mt1 f6 lh-title" id="please.autoclean">Autoclean <span class="normal">(b ool)</span></h3>
+        <h3 class="mt1 f6 lh-title" id="please.autoclean">Autoclean <span class="normal">(bool)</span></h3>
 
         <p>
           Automatically clean stale versions without prompting. Defaults to true.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="please.keepgoing">KeepGoing <span class="normal">(bool)</span></h3>
+        <p>
+          Continue as much as possible after an error. While the target that failed and those that depend on it cannot be built, other prerequisites of these targets can be. Default to false.
         </p>
       </div>
     </li>
