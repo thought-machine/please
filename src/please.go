@@ -89,7 +89,7 @@ var opts struct {
 		KeepWorkdirs       bool    `long:"keep_workdirs" description:"Don't clean directories in plz-out/tmp after successfully building targets."`
 		HTTPProxy          cli.URL `long:"http_proxy" env:"HTTP_PROXY" description:"HTTP proxy to use for downloads"`
 		Debug              bool    `long:"debug" description:"When enabled, Please will enter into an interactive debugger when breakpoint() is called during parsing."`
-		KeepGoing          bool    `long:"keep_going" description:"Continue as much as possible after an error. While the target that failed and those that depend on it cannot be build, other prerequisites of these targets can be."`
+		KeepGoing          bool    `long:"keep_going" description:"Continue as much as possible after an error. Builds prerequisites of failed targets and disables safety checks."`
 		AllowSudo          bool    `long:"allow_sudo" hidden:"true" description:"Allow running under sudo (normally this is a very bad idea)"`
 	} `group:"Options that enable / disable certain behaviors"`
 
@@ -1128,7 +1128,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 		config.Build.Config = "dbg"
 	}
 	state := core.NewBuildState(config)
-	state.KeepGoing = opts.BehaviorFlags.KeepGoing
+	state.KeepGoing = opts.BehaviorFlags.KeepGoing || config.Please.KeepGoing
 	state.VerifyHashes = !opts.BehaviorFlags.NoHashVerification
 	// Only one of these two can be passed
 	state.NumTestRuns = uint16(opts.Test.NumRuns)

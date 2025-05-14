@@ -1,0 +1,6 @@
+build_rule(
+    name = "pass",
+    srcs = glob([]),
+    cmd = "touch $OUTS",
+    outs = ["pass"],
+)

@@ -376,6 +376,7 @@ func DefaultConfiguration() *Configuration {
 	config.Please.SelfUpdate = true
 	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
+	config.Please.KeepGoing = false
 	config.Please.NumOldVersions = 10
 	config.Please.NumThreads = runtime.NumCPU() + 2
 	config.Parse.NumThreads = config.Please.NumThreads
@@ -490,6 +491,7 @@ type Configuration struct {
 		Motd             []string    `help:"Message of the day; is displayed once at the top during builds. If multiple are given, one is randomly chosen."`
 		DefaultRepo      string      `help:"Location of the default repository; this is used if plz is invoked when not inside a repo, it changes to that directory then does its thing."`
 		PluginRepo       []string    `help:"A list of template URLS used to download plugins from. The download should be an archive e.g. .tar.gz, or .zip. Templatized variables should be surrounded in curly braces, and the available options are: owner, revision and plugin. Defaults to github and gitlab." example:"https://gitlab.you.org/{owner}/{plugin}/-/archive/{revision}/{plugin}-{revision}.zip" var:"PLUGIN_REPOS"`
+		KeepGoing        bool        `help:"Continue as much as possible after an error. Builds prerequisites of failed targets and disables safety checks." var:"KEEP_GOING"`
 	} `help:"The [please] section in the config contains non-language-specific settings defining how Please should operate."`
 	Parse struct {
 		ExperimentalDir    []string     `help:"Directory containing experimental code. This is subject to some extra restrictions:\n - Code in the experimental dir can override normal visibility constraints\n - Code outside the experimental dir can never depend on code inside it\n - Tests are excluded from general detection." example:"experimental"`
