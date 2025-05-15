@@ -34,3 +34,24 @@ please_repo_e2e_test(
     plz_command = "plz build --keep_going //package:all //package2:all",
     repo = "test_repo",
 )
+
+please_repo_e2e_test(
+    name = "test_parse_empty_glob_default",
+    expected_failure = True,
+    plz_command = "plz build //parse_empty_glob:all",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "test_parse_empty_glob_keep_going_flag",
+    expected_failure = False,
+    plz_command = "plz --keep_going build //parse_empty_glob:all",
+    repo = "test_repo",
+)
+
+please_repo_e2e_test(
+    name = "test_parse_empty_glob_keep_going_option",
+    expected_failure = False,
+    plz_command = "plz -o please.keepgoing:true build //parse_empty_glob:all",
+    repo = "test_repo",
+)

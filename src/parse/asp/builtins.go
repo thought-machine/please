@@ -678,9 +678,12 @@ func glob(s *scope, args []pyObject) pyObject {
 	if !allowEmpty && len(glob) == 0 {
 		// Strip build file name from exclude list for error message
 		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]
-		log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
+		if s.state.KeepGoing {
+			log.Warningf("glob(include=%s, exclude=%s) in %s returned no files; continuing due to enabled KeepGoing option.", include, exclude, s.pkg.Filename)
+		} else {
+			log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
+		}
 	}
-
 	return fromStringList(glob)
 }
 
