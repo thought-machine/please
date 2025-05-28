@@ -1,3 +1,7 @@
+Version 17.17.0
+---------------
+    * Make export work when it hits something in the repository root (#3364)
+
 Version 17.16.0
 ---------------
     * Add a `ci` label to all Please metrics (#3358)
