@@ -17,7 +17,7 @@ func Deps(out io.Writer, state *core.BuildState, labels []core.BuildLabel, hidde
 		fmt.Fprintf(out, "  edge [fontname=\"Helvetica,Arial,sans-serif\"]\n")
 		fmt.Fprintf(out, "  rankdir=\"LR\"\n")
 	}
-	done := map[*core.BuildTarget]bool{}
+	done := map[core.BuildLabel]bool{}
 	for _, label := range labels {
 		deps(out, state, state.Graph.TargetOrDie(label), done, targetLevel, 0, hidden, formatdot)
 	}
@@ -27,17 +27,17 @@ func Deps(out io.Writer, state *core.BuildState, labels []core.BuildLabel, hidde
 }
 
 // deps looks at all the deps of the given target & recurses into them, printing as appropriate.
-func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done map[*core.BuildTarget]bool, targetLevel, currentLevel int, hidden, formatdot bool) {
+func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done map[core.BuildLabel]bool, targetLevel, currentLevel int, hidden, formatdot bool) {
 	if currentLevel == targetLevel {
 		return
 	}
 	for _, l := range target.DeclaredDependencies() {
 		dep := state.Graph.TargetOrDie(l)
-		if !state.ShouldInclude(dep) || done[dep] {
-			continue // target is filtered out
-		}
-		done[dep] = true
 		for _, l := range dep.ProvideFor(target) {
+			if !state.ShouldInclude(dep) || done[l] {
+				continue // target is filtered out
+			}
+			done[l] = true
 			if dep := state.Graph.TargetOrDie(l); hidden || !dep.HasParent() {
 				// dep is to be printed; either we're printing hidden deps or it has no parent (i.e. is not hidden)
 				if formatdot {
