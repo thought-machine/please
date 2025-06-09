@@ -252,7 +252,15 @@ func (l *lex) nextToken() Token {
 			return Token{Type: LexOperator, Value: string([]byte{next, l.bytes[l.pos-1]}), Pos: pos}
 		}
 		fallthrough
-	case ',', '.', '%', '*', '|', '&', ':', '/':
+	case ',', '.', '%', '*', '|', '&', ':':
+		return Token{Type: rune(next), Value: string(next), Pos: pos}
+	case '/':
+		// Look ahead one byte to see if this is a floor division.
+		if l.bytes[l.pos] == '/' {
+			l.pos++
+			l.col++
+			return Token{Type: LexOperator, Value: string([]byte{next, l.bytes[l.pos-1]}), Pos: pos}
+		}
 		return Token{Type: rune(next), Value: string(next), Pos: pos}
 	case '#':
 		// Comment character, consume to end of line.

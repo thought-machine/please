@@ -283,6 +283,8 @@ const (
 	Multiply Operator = '×'
 	// Divide implements division, currently only between integers
 	Divide Operator = '÷'
+	// FloorDivide implements floor division, currently only between integers
+	FloorDivide Operator = '⑊'
 	// Modulo implements % (including string interpolation)
 	Modulo Operator = '%'
 	// Negate is the unary negation operator (not exactly the same as Subtract)
@@ -339,7 +341,7 @@ func (o Operator) Precedence() int {
 	switch o {
 	case Negate:
 		return 4
-	case Multiply, Divide, Modulo:
+	case Multiply, Divide, FloorDivide, Modulo:
 		return 3
 	case Add, Subtract:
 		return 2
@@ -366,6 +368,7 @@ var operators = map[string]Operator{
 	"-":      Subtract,
 	"*":      Multiply,
 	"/":      Divide,
+	"//":     FloorDivide,
 	"%":      Modulo,
 	"<":      LessThan,
 	">":      GreaterThan,

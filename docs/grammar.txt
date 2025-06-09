@@ -37,5 +37,5 @@ comprehension = "for" Ident { "," Ident } "in" expression
 slice = "[" [ expression ] [ ":" expression ] "]";
 lambda = "lambda" [ lambda_arg { "," lambda_arg } ] ":" expression;
 lambda_arg = Ident [ "=" expression ];
-operator = ("+" | "-" | "*" | "/" | "%" | "<" | ">" | "and" | "or" |
+operator = ("+" | "-" | "*" | "/" | "//" | "%" | "<" | ">" | "and" | "or" |
             "is" | "is" "not" | "in" | "not" "in" | "==" | "!=" | ">=" | "<=" | "|");
