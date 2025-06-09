@@ -444,6 +444,18 @@ func TestDivide(t *testing.T) {
 	assert.EqualValues(t, -2, s.Lookup("k"))
 }
 
+func TestFloorDivide(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/floor_divide.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, 2, s.Lookup("a"))
+	assert.EqualValues(t, -2, s.Lookup("b"))
+	assert.EqualValues(t, 0, s.Lookup("c"))
+	assert.EqualValues(t, -1, s.Lookup("d"))
+	assert.EqualValues(t, 0, s.Lookup("e"))
+	assert.EqualValues(t, 1, s.Lookup("f"))
+	assert.EqualValues(t, 5, s.Lookup("g"))
+}
+
 func TestFStringOptimisation(t *testing.T) {
 	s, stmts, err := parseFileToStatements("src/parse/asp/test_data/interpreter/fstring_optimisation.build")
 	require.NoError(t, err)

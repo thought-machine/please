@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"iter"
+	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -221,6 +222,8 @@ func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
 			return i * o
 		case Divide:
 			return i / o
+		case FloorDivide:
+			return newPyInt(int(math.Floor(float64(i) / float64(o))))
 		case LessThan:
 			return newPyBool(i < o)
 		case GreaterThan:

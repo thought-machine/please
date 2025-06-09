@@ -1,0 +1,9 @@
+a = 4 // 2
+b = 4 // -2
+c = 0 // 2
+d = -1 // 2
+e = -1 // -2
+
+# Precedence tests
+f = 8 / 4 // 2  # (8 / 4) // 2: / and // have the same precedence
+g = 4 + 3 // 2  # 4 + (3 // 2): // has greater precedence than +
