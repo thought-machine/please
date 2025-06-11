@@ -169,8 +169,9 @@ func TestInterpreterSlicing(t *testing.T) {
 func TestInterpreterSorting(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/sorted.build")
 	require.NoError(t, err)
-	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("y"))
 	// N.B. sorted() sorts in-place, unlike Python's one. We may change that later.
+	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("r1"))
+	assert.Equal(t, pyList{pyString("ONE"), pyString("THREE"), pyString("two")}, s.Lookup("r2"))
 }
 
 func TestReversed(t *testing.T) {

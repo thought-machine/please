@@ -1,2 +1,6 @@
-x = [3, 2, 1]
-y = sorted(x)
+l1 = [3, 2, 1]
+r1 = sorted(l1)
+
+# key parameter test
+l2 = ["ONE", "two", "THREE"]
+r2 = sorted(l2, key=lambda s: s.lower())
