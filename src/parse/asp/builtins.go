@@ -800,11 +800,17 @@ func dictCopy(s *scope, args []pyObject) pyObject {
 func sorted(s *scope, args []pyObject) pyObject {
 	l, isList := args[0].(pyList)
 	key, isFunc := args[1].(*pyFunc)
+	reverse, isBool := args[2].(pyBool)
 	s.Assert(isList, "Argument seq must be a list, not %s", args[0].Type())
+	s.Assert(isBool, "Argument reverse must be a bool, not %s", args[2].Type())
+	order := LessThan
+	if reverse {
+		order = GreaterThan
+	}
 	l = l[:]
 	if key == nil {
 		sort.Slice(l, func(i, j int) bool {
-			return s.operator(LessThan, l[i], l[j]).IsTruthy()
+			return s.operator(order, l[i], l[j]).IsTruthy()
 		})
 	} else {
 		s.Assert(isFunc, "Argument key must be callable, not %s", args[1].Type())
@@ -819,7 +825,7 @@ func sorted(s *scope, args []pyObject) pyObject {
 					Value: Expression{optimised: &optimisedExpression{Constant: l[j]}},
 				}},
 			})
-			return s.operator(LessThan, iKey, jKey).IsTruthy()
+			return s.operator(order, iKey, jKey).IsTruthy()
 		})
 	}
 	return l
