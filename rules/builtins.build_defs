@@ -125,7 +125,7 @@ def glob(include:list|str, exclude:list|str&excludes=[], hidden:bool=CONFIG.BAZE
 def package():
     pass
 
-def sorted(seq:list, key:function=None) -> list:
+def sorted(seq:list, key:function=None, reverse:bool=False) -> list:
     pass
 
 def reversed(seq:list) -> list:

@@ -172,6 +172,8 @@ func TestInterpreterSorting(t *testing.T) {
 	// N.B. sorted() sorts in-place, unlike Python's one. We may change that later.
 	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3)}, s.Lookup("r1"))
 	assert.Equal(t, pyList{pyString("ONE"), pyString("THREE"), pyString("two")}, s.Lookup("r2"))
+	assert.Equal(t, pyList{pyInt(4), pyInt(3), pyInt(2), pyInt(1)}, s.Lookup("r3"))
+	assert.Equal(t, pyList{pyInt(1), pyInt(2), pyInt(3), pyInt(4)}, s.Lookup("r4"))
 }
 
 func TestReversed(t *testing.T) {

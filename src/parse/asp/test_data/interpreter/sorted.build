@@ -4,3 +4,7 @@ r1 = sorted(l1)
 # key parameter test
 l2 = ["ONE", "two", "THREE"]
 r2 = sorted(l2, key=lambda s: s.lower())
+
+# reverse parameter test
+r3 = sorted([2, 4, 1, 3], reverse=True)
+r4 = sorted([2, 4, 1, 3], reverse=False)
