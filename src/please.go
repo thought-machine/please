@@ -1153,6 +1153,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
 	state.EnableBreakpoints = opts.BehaviorFlags.Debug
+	state.NeedDebugDeps = debug
 
 	// What outputs get downloaded in remote execution.
 	if debug {

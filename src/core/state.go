@@ -237,6 +237,9 @@ type BuildState struct {
 	// EnableBreakpoints enablese the breakpoint() build-in, and drops Please into an interactive debugger when
 	// they're encountered.
 	EnableBreakpoints bool
+	// NeedDebugDeps is true if we're doing a `plz debug` and we need to build the debug tools and
+	// data
+	NeedDebugDeps bool
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
