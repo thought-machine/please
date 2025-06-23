@@ -28,6 +28,7 @@ go_binary(
         "//src/help",
         "//src/metrics",
         "//src/output",
+        "//src/parse",
         "//src/plz",
         "//src/plzinit",
         "//src/process",

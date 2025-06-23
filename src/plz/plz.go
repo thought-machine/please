@@ -157,12 +157,33 @@ func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildL
 	}
 	findOriginalTaskSet(state, targets, true, arch)
 	log.Debug("Original target scan complete")
+	if state.NeedDebugDeps {
+		if len(targets) != 1 {
+			log.Fatalf("expected exactly 1 target in debug mode; got %d", len(targets))
+		}
+		queueTargetsForDebug(state, targets[0])
+	}
 	state.TaskDone() // initial target adding counts as one.
 }
 
 func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addToList bool, arch cli.Arch) {
 	for _, target := range ReadStdinLabels(targets) {
 		findOriginalTask(state, target, addToList, arch)
+	}
+}
+
+func queueTargetsForDebug(state *core.BuildState, target core.BuildLabel) {
+	parse.Parse(state, target, core.OriginalTarget, core.ParseModeNormal)
+	t := state.Graph.TargetOrDie(target)
+	for _, tool := range t.AllDebugTools() {
+		if l, ok := tool.Label(); ok {
+			state.AddOriginalTarget(l, false)
+		}
+	}
+	for _, data := range t.AllDebugData() {
+		if l, ok := data.Label(); ok {
+			state.AddOriginalTarget(l, false)
+		}
 	}
 }
 
