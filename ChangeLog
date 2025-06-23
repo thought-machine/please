@@ -1,6 +1,10 @@
 Version 17.18.0
 ---------------
     * Make sure debug tools/data get queued to be built (#3373)
+    * Implement reverse parameter for `sorted` built-in function (#3372)
+    * Implement key parameter for `sorted` built-in function (#3371)
+    * Add `//` operator (#3370)
+    * fix(query.deps): memoize provided labels rather than declared targets (#3369)
 
 Version 17.17.0
 ---------------
