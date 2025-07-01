@@ -137,11 +137,8 @@ func printMilestoneMessage(pleaseVersion string) {
 		printLn("Read all about it here: %v#cli", milestoneURL)
 		printLn("")
 		fmt.Fprintf(os.Stderr, "%s\n", border)
-		return
-	}
-
-	// If we get a 40x resp back, assume there's no milestone release. Cloudfront gives 403s rather than 404s.
-	if !(resp.StatusCode >= 400 && resp.StatusCode < 500) {
+	} else if resp.StatusCode < 400 || resp.StatusCode >= 500 {
+		// If we get a 40x resp back, assume there's no milestone release. Cloudfront gives 403s rather than 404s.
 		body, _ := io.ReadAll(resp.Body)
 		log.Warningf("Got unexpected error code from %v: %v\n %v", milestoneURL, resp.StatusCode, string(body))
 	}

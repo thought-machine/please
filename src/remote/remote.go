@@ -642,7 +642,7 @@ func (c *Client) retrieveResults(target *core.BuildTarget, command *pb.Command, 
 // maybeRetrieveResults is like retrieveResults but only retrieves if we aren't forcing a rebuild of the target
 // (i.e. not if we're doing plz build --rebuild or plz test --rerun).
 func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool, run int) (*core.BuildMetadata, *pb.ActionResult) {
-	if !c.state.ShouldRebuild(target) && !(c.state.NeedTests && isTest && c.state.ForceRerun) {
+	if !c.state.ShouldRebuild(target) && (!c.state.NeedTests || !isTest || !c.state.ForceRerun) {
 		if metadata, ar := c.retrieveResults(target, command, digest, needStdout, isTest, run); metadata != nil {
 			return metadata, ar
 		}
