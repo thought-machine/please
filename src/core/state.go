@@ -615,9 +615,10 @@ func (state *BuildState) logResult(result *BuildResult) {
 	state.progress.internalResults <- result
 	if result.Status.IsFailure() {
 		state.progress.failed.Store(true)
-		if result.Status == TargetBuildFailed {
+		switch result.Status {
+		case TargetBuildFailed:
 			state.progress.buildFailed.Store(true)
-		} else if result.Status == TargetTestFailed {
+		case TargetTestFailed:
 			state.progress.testFailed.Store(true)
 		}
 	}

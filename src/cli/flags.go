@@ -288,24 +288,28 @@ func (arch *Arch) XOS() string {
 // XArch returns the "alternative" architecture spelling which some things prefer.
 // In this case amd64 is instead returned as x86_64 and x86 as x86_32.
 func (arch *Arch) XArch() string {
-	if arch.Arch == "amd64" {
+	switch arch.Arch {
+	case "amd64":
 		return "x86_64"
-	} else if arch.Arch == "x86" {
+	case "x86":
 		return "x86_32"
-	} else if arch.Arch == "arm64" {
+	case "arm64":
 		return "aarch_64"
+	default:
+		return arch.Arch
 	}
-	return arch.Arch
 }
 
 // GoArch returns the architecture as Go would name it.
 func (arch *Arch) GoArch() string {
-	if arch.Arch == "x86" {
+	switch arch.Arch {
+	case "x86":
 		return "386"
-	} else if arch.Arch == "x86-64" {
+	case "x86-64":
 		return "amd64"
+	default:
+		return arch.Arch
 	}
-	return arch.Arch
 }
 
 // ContainsString returns true if the given slice contains an individual string.

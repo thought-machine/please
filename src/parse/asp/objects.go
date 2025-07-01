@@ -494,13 +494,14 @@ func (d pyDict) Property(scope *scope, name string) pyObject {
 }
 
 func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
-	if operator == In || operator == NotIn {
+	switch operator {
+	case In, NotIn:
 		if s, ok := operand.(pyString); ok {
 			_, present := d[string(s)]
 			return newPyBool(present == (operator == In))
 		}
 		return newPyBool(operator == NotIn)
-	} else if operator == Index {
+	case Index:
 		s, ok := operand.(pyString)
 		if !ok {
 			panic("Dict keys must be strings, not " + operand.Type())
@@ -508,7 +509,7 @@ func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
 			return v
 		}
 		panic("unknown dict key: " + s.String())
-	} else if operator == Union {
+	case Union:
 		d2, ok := operand.(pyDict)
 		if !ok {
 			panic("Operator to | must be another dict, not " + operand.Type())
@@ -521,8 +522,9 @@ func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
 			ret[k] = v
 		}
 		return ret
+	default:
+		panic("Unsupported operator on dict")
 	}
-	panic("Unsupported operator on dict")
 }
 
 func (d pyDict) Len() int {
@@ -924,16 +926,18 @@ func (c *pyConfig) Operator(operator Operator, operand pyObject) pyObject {
 	if !ok {
 		panic("config keys must be strings")
 	}
-	if operator == In || operator == NotIn {
+	switch operator {
+	case In, NotIn:
 		v := c.Get(string(s), nil)
 		if (v != nil) == (operator == In) {
 			return True
 		}
 		return False
-	} else if operator == Index {
+	case Index:
 		return c.MustGet(string(s))
+	default:
+		panic("Cannot operate on config object")
 	}
-	panic("Cannot operate on config object")
 }
 
 func (c *pyConfig) IndexAssign(index, value pyObject) {

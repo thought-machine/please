@@ -115,12 +115,13 @@ func getLineCoverageInfo(lineCover []core.LineCoverage) ([]line, int, int) {
 	total := 0
 
 	for index, status := range lineCover {
-		if status == core.Covered {
+		switch status {
+		case core.Covered:
 			line := line{Hits: 1, Number: index}
 			lines = append(lines, line)
 			covered++
 			total++
-		} else if status == core.Uncovered {
+		case core.Uncovered:
 			line := line{Hits: 0, Number: index}
 			lines = append(lines, line)
 			total++

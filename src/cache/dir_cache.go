@@ -248,16 +248,17 @@ func (cache *dirCache) retrieveCompressed(target *core.BuildTarget, filename str
 		if err != nil {
 			return err
 		}
-		if hdr.Typeflag == tar.TypeDir {
+		switch hdr.Typeflag {
+		case tar.TypeDir:
 			// Just create the directory
 			if err := os.MkdirAll(out, core.DirPermissions); err != nil {
 				return err
 			}
-		} else if hdr.Typeflag == tar.TypeSymlink {
+		case tar.TypeSymlink:
 			if err := os.Symlink(hdr.Linkname, out); err != nil {
 				return err
 			}
-		} else {
+		default:
 			f, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, os.FileMode(hdr.Mode))
 			if err != nil {
 				return err
