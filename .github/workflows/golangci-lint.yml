@@ -20,4 +20,3 @@ jobs:
         with:
           version: v2.2
           args: src/... tools/...
-          skip-pkg-cache: true
