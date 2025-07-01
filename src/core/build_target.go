@@ -915,7 +915,7 @@ func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 		dep := state.Graph.TargetOrDie(*d.declared)
 		if !target.CanSee(state, dep) {
 			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-		} else if dep.TestOnly && !(target.IsTest() || target.TestOnly) {
+		} else if dep.TestOnly && !target.IsTest() && !target.TestOnly {
 			if target.Label.isExperimental(state) {
 				log.Info("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
 			} else {
