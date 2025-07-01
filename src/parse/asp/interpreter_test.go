@@ -689,7 +689,7 @@ func TestLogConfigVariable(t *testing.T) {
 	setLogCode(s, "info", capture)
 	s.interpretStatements(statements)
 
-	assert.Equal(t, `//: {"baz": 6, "foo": bar}`, capturedOutput)
+	assert.Equal(t, `: {"baz": 6, "foo": bar}`, capturedOutput)
 }
 
 func TestOperatorPrecedence(t *testing.T) {

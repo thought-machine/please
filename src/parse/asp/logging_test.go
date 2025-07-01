@@ -52,9 +52,9 @@ func TestLogNotice(t *testing.T) {
 	_, err := parseFile2("src/parse/asp/test_data/interpreter/log.build")
 	require.NoError(t, err)
 	assertRecords(t, backend, []record{
-		{logging.NOTICE, "//test/package/BUILD: notice"},
-		{logging.WARNING, "//test/package/BUILD: warning"},
-		{logging.ERROR, "//test/package/BUILD: error"},
+		{logging.NOTICE, "test/package/BUILD: notice"},
+		{logging.WARNING, "test/package/BUILD: warning"},
+		{logging.ERROR, "test/package/BUILD: error"},
 	})
 }
 
@@ -64,9 +64,9 @@ func TestLogInfo(t *testing.T) {
 	_, err := parseFile2("src/parse/asp/test_data/interpreter/log.build")
 	require.NoError(t, err)
 	assertRecords(t, backend, []record{
-		{logging.INFO, "//test/package/BUILD: info"},
-		{logging.NOTICE, "//test/package/BUILD: notice"},
-		{logging.WARNING, "//test/package/BUILD: warning"},
-		{logging.ERROR, "//test/package/BUILD: error"},
+		{logging.INFO, "test/package/BUILD: info"},
+		{logging.NOTICE, "test/package/BUILD: notice"},
+		{logging.WARNING, "test/package/BUILD: warning"},
+		{logging.ERROR, "test/package/BUILD: error"},
 	})
 }
