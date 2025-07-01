@@ -1,41 +1,6 @@
-run:
-  timeout: 5m
-
-issues:
-  exclude:
-    - SA4006  # Too many false positives :(
-    - SA5008  # Warns for duplicate struct tags which are meaningful to go-flags
-    - unslice  # This may be useful in some places.
-    - ifElseChain  # Generally don't agree.
-    - appendAssign
-    - halp  # Make misspell be quiet about this.
-    - exitAfterDefer # Potentially useful but not in any cases it fires right now.
-    - receiver-naming # Think this is confused about generics
-    - error-strings
-    - unused-parameter # Potentially useful but we have quite a few cases to fix
-    - empty-block # generally not useful
-    - redefines-builtin-id
-    - superfluous-else
-    - indent-error-flow # revive getting a bit too pushy here
-  exclude-dirs:
-    - test_data
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - dupl
-        - gocritic
-    - path: src/core/config.go # The config struct is big & complex and there's usually only one.
-      text: fieldalignment
-      linters:
-        - govet
-    - path: src/please.go # Similarly for flags.
-      text: fieldalignment
-      linters:
-        - govet
-
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
     - asasalint
     - asciicheck
@@ -44,10 +9,7 @@ linters:
     - containedctx
     - dogsled
     - dupl
-    - gci
     - gocritic
-    - gofmt
-    - gosimple
     - govet
     - ineffassign
     - misspell
@@ -57,26 +19,100 @@ linters:
     - prealloc
     - revive
     - staticcheck
-    - tenv
     - thelper
     - unconvert
     - unused
     - wastedassign
     - whitespace
-
-linters-settings:
-  govet:
-    enable-all: true
-    disable:
-      - deepequalerrors # Only seen this once and it's a false positive
-      - shadow # Probably not useful enough to clean everything up
-      # TODO(peterebden): Should clean up these warnings & enable (although they are pretty finicky)
-      - fieldalignment
-  gci:
-    sections:
-      - standard # Captures all standard packages if they do not match another section.
-      - default # Contains all imports that could not be matched to another section type.
-      - prefix(github.com/thought-machine/please)
-
-  perfsprint:
-    errorf: false # sometimes it's easier not to import another package
+  settings:
+    govet:
+      disable:
+        - deepequalerrors # Only seen this once and it's a false positive
+        - shadow # Probably not useful enough to clean everything up
+        - fieldalignment # TODO(peterebden): Should clean up these warnings and enable (although they are pretty finicky)
+      enable-all: true
+    perfsprint:
+      errorf: false # Sometimes it's easier not to import another package
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - gocritic
+        path: _test\.go
+      # The config struct is big and complex and there's usually only one.
+      - linters:
+          - govet
+        path: src/core/config.go
+        text: fieldalignment
+      # Similarly for flags.
+      - linters:
+          - govet
+        path: src/please.go
+        text: fieldalignment
+      # Too many false positives :(
+      - path: (.+)\.go$
+        text: SA4006
+      # Warns for duplicate struct tags which are meaningful to go-flags
+      - path: (.+)\.go$
+        text: SA5008
+      # This may be useful in some places.
+      - path: (.+)\.go$
+        text: unslice
+      # Generally don't agree.
+      - path: (.+)\.go$
+        text: ifElseChain
+      - path: (.+)\.go$
+        text: appendAssign
+      # Make misspell be quiet about this.
+      - path: (.+)\.go$
+        text: halp
+      # Potentially useful but not in any cases it fires right now.
+      - path: (.+)\.go$
+        text: exitAfterDefer
+      # Think this is confused about generics
+      - path: (.+)\.go$
+        text: receiver-naming
+      - path: (.+)\.go$
+        text: error-strings
+      # Potentially useful but we have quite a few cases to fix
+      - path: (.+)\.go$
+        text: unused-parameter
+      # Generally not useful
+      - path: (.+)\.go$
+        text: empty-block
+      - path: (.+)\.go$
+        text: redefines-builtin-id
+      - path: (.+)\.go$
+        text: superfluous-else
+      # revive getting a bit too pushy here
+      - path: (.+)\.go$
+        text: indent-error-flow
+    paths:
+      - test_data
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    gci:
+      sections:
+        - standard # Captures all standard packages if they do not match another section.
+        - default # Contains all imports that could not be matched to another section type.
+        - prefix(github.com/thought-machine/please)
+  exclusions:
+    generated: lax
+    paths:
+      - test_data
+      - third_party$
+      - builtin$
+      - examples$
