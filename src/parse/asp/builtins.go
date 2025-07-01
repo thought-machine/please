@@ -172,10 +172,10 @@ func setLogCode(s *scope, name string, f func(format string, args ...interface{}
 			for i, arg := range args {
 				l[i] = arg
 			}
-			f("//%s: %s", s.pkgFilename(), fmt.Sprintf(string(str), l[1:]...))
+			f("%s: %s", s.pkgFilename(), fmt.Sprintf(string(str), l[1:]...))
 			return None
 		}
-		f("//%s: %s", s.pkgFilename(), args)
+		f("%s: %s", s.pkgFilename(), args)
 		return None
 	}).varargs = true
 }
