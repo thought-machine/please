@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/thought-machine/please/docs/tools/lexicon_templater/rules"
 	htmltemplate "html/template"
 	"os"
 	"path/filepath"
@@ -10,9 +9,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/thought-machine/please/docs/tools/plugin_config_tool/plugin"
-
 	"github.com/peterebden/go-cli-init/v5/flags"
+
+	"github.com/thought-machine/please/docs/tools/lexicon_templater/rules"
+	"github.com/thought-machine/please/docs/tools/plugin_config_tool/plugin"
 )
 
 func must(err error) {
@@ -40,9 +40,7 @@ func (p Plugins) Less(i, j int) bool {
 }
 
 func (p Plugins) Swap(i, j int) {
-	iVal := p[i]
-	p[i] = p[j]
-	p[j] = iVal
+	p[i], p[j] = p[j], p[i]
 }
 
 func main() {

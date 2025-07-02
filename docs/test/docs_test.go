@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thought-machine/please/src/core"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/html"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestAllLinksAreLive(t *testing.T) {
@@ -54,7 +54,6 @@ func TestAllLinksAreLive(t *testing.T) {
 							allnames[filename+"#"+attr.Val] = true
 						}
 					}
-
 				}
 			}
 			for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -89,7 +88,7 @@ var ignoreConfigFields = map[string]struct{}{
 }
 
 // IDs in the html that are for other purposes other than documenting config.
-var nonConfigIds = map[string]struct{}{
+var nonConfigIDs = map[string]struct{}{
 	"menu-list":    {},
 	"nav-graphic":  {},
 	"side-images":  {},
@@ -124,7 +123,7 @@ func TestConfigDocumented(t *testing.T) {
 	}
 
 	for id := range ids {
-		if _, ok := nonConfigIds[id]; ok {
+		if _, ok := nonConfigIDs[id]; ok {
 			continue
 		}
 		if _, ok := configFields[id]; !ok {
@@ -156,7 +155,6 @@ func findConfigFields(path string, configType reflect.Type) []string {
 		if t.Kind() == reflect.Struct {
 			fields = append(fields, findConfigFields(name, t)...)
 		}
-
 	}
 	return fields
 }

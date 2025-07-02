@@ -10,12 +10,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/peterebden/go-cli-init/v5/flags"
+	"github.com/please-build/gcfg"
+
 	"github.com/thought-machine/please/docs/tools/lexicon_templater/rules"
 	"github.com/thought-machine/please/docs/tools/plugin_config_tool/plugin"
 	"github.com/thought-machine/please/src/core"
-
-	"github.com/peterebden/go-cli-init/v5/flags"
-	"github.com/please-build/gcfg"
 )
 
 // formatConfigKey converts the config key from snake_case to CamelCase
@@ -61,7 +61,6 @@ func getConfigFields(config *core.Configuration) []*plugin.ConfigField {
 			f.Type = "string"
 		}
 		fields = append(fields, f)
-
 	}
 	return fields
 }

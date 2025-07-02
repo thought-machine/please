@@ -8,12 +8,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/thought-machine/please/docs/tools/lexicon_templater/rules"
-
 	"github.com/peterebden/go-cli-init/v5/flags"
+
+	"github.com/thought-machine/please/docs/tools/lexicon_templater/rules"
 )
-
-
 
 func must(err error) {
 	if err != nil {

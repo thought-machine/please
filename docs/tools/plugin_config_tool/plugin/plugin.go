@@ -10,6 +10,6 @@ type Plugin struct {
 }
 
 type ConfigField struct {
-	Name, Type, Help, DefaultValue string
+	Name, Type, Help, DefaultValue          string
 	Inherit, Repeatable, Defaults, Optional bool
 }
