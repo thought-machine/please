@@ -49,15 +49,15 @@ func main() {
 	flags.ParseFlagsOrDie("Docs template", &opts, nil)
 	basename := filepath.Base(opts.PluginsTemplate)
 
-	var plugins Plugins
+	plugins := make(Plugins, len(opts.Args.Plugins))
 	allRules := &rules.Rules{Functions: map[string]*rules.Rule{}}
-	for _, rulesFile := range opts.Args.Plugins {
+	for i, rulesFile := range opts.Args.Plugins {
 		b, err := os.ReadFile(rulesFile)
 		must(err)
 
 		p := &plugin.Plugin{}
 		must(json.Unmarshal(b, p))
-		plugins = append(plugins, p)
+		plugins[i] = p
 		for k, v := range p.Rules.Functions {
 			allRules.Functions[k] = v
 		}
