@@ -34,7 +34,7 @@ func (c *Cache) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Errorf("Failed to store in cache: %v", err)
 			resp.WriteHeader(http.StatusInternalServerError)
-			_, _ = resp.Write([]byte(fmt.Sprintf("failed to store in cache: %v", err)))
+			fmt.Fprintf(resp, "failed to store in cache: %v", err)
 		}
 	case http.MethodGet:
 		http.ServeFile(resp, req, filepath.Join(c.Dir, uri))

@@ -282,6 +282,6 @@ func setWindowTitle(state *core.BuildState, running bool) {
 // SetWindowTitle sets the title of the current shell window.
 func SetWindowTitle(title string) {
 	if cli.StdErrIsATerminal && terminalClaimsToBeXterm {
-		os.Stderr.Write([]byte(fmt.Sprintf("\033]0;%s\007", title)))
+		fmt.Fprintf(os.Stderr, "\033]0;%s\007", title)
 	}
 }
