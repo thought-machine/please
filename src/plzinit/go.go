@@ -55,7 +55,7 @@ func golangConfig(dir string, noPrompt bool) string {
 	}
 	if importPath != "" {
 		if !moduleFound {
-			fmt.Sprintln("You may also want to `go mod init " + importPath + "` for better IDE integration")
+			fmt.Printf("You may also want to run `go mod init %s` for better IDE integration\n", importPath)
 		}
 		config += fmt.Sprintf("importpath = %s\n", importPath)
 	} else {
