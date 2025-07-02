@@ -12,9 +12,9 @@ func AllAssets() ([]string, error) {
 		return nil, err
 	}
 
-	var filepaths []string
-	for _, entry := range assets {
-		filepaths = append(filepaths, entry.Name())
+	filepaths := make([]string, len(assets))
+	for i, entry := range assets {
+		filepaths[i] = entry.Name()
 	}
 
 	return filepaths, nil
