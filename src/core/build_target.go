@@ -341,36 +341,38 @@ const (
 
 // String implements the fmt.Stringer interface.
 func (s BuildTargetState) String() string {
-	if s == Inactive {
+	switch s {
+	case Inactive:
 		return "Inactive"
-	} else if s == Semiactive {
+	case Semiactive:
 		return "Semiactive"
-	} else if s == Active {
+	case Active:
 		return "Active"
-	} else if s == Pending {
+	case Pending:
 		return "Pending"
-	} else if s == Building {
+	case Building:
 		return "Building"
-	} else if s == Stopped {
+	case Stopped:
 		return "Stopped"
-	} else if s == Built {
+	case Built:
 		return "Built"
-	} else if s == Cached {
+	case Cached:
 		return "Cached"
-	} else if s == Unchanged {
+	case Unchanged:
 		return "Unchanged"
-	} else if s == Reused {
+	case Reused:
 		return "Reused"
-	} else if s == DependencyFailed {
+	case DependencyFailed:
 		return "Dependency Failed"
-	} else if s == Failed {
+	case Failed:
 		return "Failed"
-	} else if s == BuiltRemotely {
+	case BuiltRemotely:
 		return "Built remotely"
-	} else if s == ReusedRemotely {
+	case ReusedRemotely:
 		return "Reused remote outputs"
+	default:
+		return "Unknown"
 	}
-	return "Unknown"
 }
 
 func (s BuildTargetState) IsBuilt() bool {

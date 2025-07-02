@@ -534,9 +534,10 @@ func parseVisibility(s *scope, vis string) core.BuildLabel {
 	l := s.parseLabelInPackage(vis, s.pkg)
 	if s.state.Config.Bazel.Compatibility {
 		// Bazel has a couple of special aliases for this stuff.
-		if l.Name == "__pkg__" {
+		switch l.Name {
+		case "__pkg__":
 			l.Name = "all"
-		} else if l.Name == "__subpackages__" {
+		case "__subpackages__":
 			l.Name = "..."
 		}
 	}

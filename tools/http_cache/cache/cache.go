@@ -28,14 +28,15 @@ func New(dir string) *Cache {
 // ServeHTTP implements the http.Handler interface for the cache
 func (c *Cache) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	uri := req.RequestURI
-	if req.Method == http.MethodPut {
+	switch req.Method {
+	case http.MethodPut:
 		err := c.store(uri, req.Body)
 		if err != nil {
 			log.Errorf("Failed to store in cache: %v", err)
 			resp.WriteHeader(http.StatusInternalServerError)
 			_, _ = resp.Write([]byte(fmt.Sprintf("failed to store in cache: %v", err)))
 		}
-	} else if req.Method == http.MethodGet {
+	case http.MethodGet:
 		http.ServeFile(resp, req, filepath.Join(c.Dir, uri))
 	}
 }

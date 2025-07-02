@@ -582,22 +582,24 @@ func (*mockCache) Store(target *core.BuildTarget, key []byte, files []string) {
 }
 
 func (*mockCache) Retrieve(target *core.BuildTarget, key []byte, outputs []string) bool {
-	if target.Label.Name == "target8" {
+	switch target.Label.Name {
+	case "target8":
 		os.WriteFile("plz-out/gen/package1/file8", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{}
 		if err := StoreTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
 		return true
-	} else if target.Label.Name == "target10" {
+	case "target10":
 		os.WriteFile("plz-out/gen/package1/file10", []byte("retrieved from cache"), 0664)
 		md := &core.BuildMetadata{Stdout: []byte("retrieved from cache")}
 		if err := StoreTargetMetadata(target, md); err != nil {
 			panic(err)
 		}
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func (*mockCache) Clean(target *core.BuildTarget) {}

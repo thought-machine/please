@@ -280,7 +280,8 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 	s.blobs["5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"] = []byte("hello\n")
 
 	// We use this to conveniently identify whether the request was a test or not.
-	if req.InstanceName == "test" {
+	switch req.InstanceName {
+	case "test":
 		s.blobs["a4226cbd3e94a835ffcb5832ddd07eafe29e99494105b01d0df236bd8e9a15c3"] = testResults
 		s.blobs["a7f899acaabeaeecea132f782a5ebdddccd76fa1041f3e6d4a6e0d58638ffa0a"] = coverageData
 		srv.Send(&longrunningpb.Operation{
@@ -323,7 +324,7 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 				}),
 			},
 		})
-	} else if req.InstanceName == "mock" {
+	case "mock":
 		srv.Send(&longrunningpb.Operation{
 			Name: "geoff",
 			Metadata: mm(&pb.ExecuteOperationMetadata{
@@ -339,7 +340,7 @@ func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteSer
 				}),
 			},
 		})
-	} else {
+	default:
 		s.blobs["aaaf60fab1ff6b3d8147bafa3d29cb3e985cf0265cbf53705372eaabcd76c06b"] = []byte("what is the meaning of life, the universe, and everything?\n")
 		srv.Send(&longrunningpb.Operation{
 			Name: "geoff",
