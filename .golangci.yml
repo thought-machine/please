@@ -97,6 +97,11 @@ linters:
       # revive getting a bit too pushy here
       - path: (.+)\.go$
         text: indent-error-flow
+      # Agree with this in principle, but there are too many instances of it to justify enabling it right now
+      - linters:
+          - staticcheck
+        path: (.+)\.go$
+        text: ST1005
     paths:
       - test_data
       - third_party$
