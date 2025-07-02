@@ -488,7 +488,7 @@ func mustSerialiseResults(graph *core.BuildGraph, storeOutputOnSuccess bool) []b
 					suite.Errors += xmlTestSuite.Errors
 					suite.Failures += xmlTestSuite.Failures
 					suite.Skipped += xmlTestSuite.Skipped
-					suite.timed.Time += xmlTestSuite.timed.Time
+					suite.Time += xmlTestSuite.Time
 					suite.TestCases = append(suite.TestCases, xmlTestSuite.TestCases...)
 				} else {
 					xmlSuites[name] = xmlTestSuite

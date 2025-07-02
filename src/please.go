@@ -1479,7 +1479,7 @@ func initBuild(args []string) string {
 	}
 	// Read the config now
 	config = mustReadConfigAndSetRoot(command == "update")
-	if parser.Command.Active != nil && parser.Command.Active.Name == "query" {
+	if parser.Active != nil && parser.Active.Name == "query" {
 		// Query commands don't need either of these set.
 		opts.OutputFlags.PlainOutput = true
 		config.Cache.DirClean = false
