@@ -241,6 +241,9 @@ type BuildTarget struct {
 	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
+	// Skips generating SRCS environment variables. Used for targets which have too many sources to
+	// fit in an environment variable.
+	NoSrcEnvVars bool `name:"no_src_env_vars"`
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
 	showProgress atomic.Bool `name:"progress"`

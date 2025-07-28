@@ -77,7 +77,6 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 
 	env["TMP_DIR"] = tmpDir
 	env["TMPDIR"] = tmpDir
-	env["SRCS"] = strings.Join(sources, " ")
 	env["OUTS"] = strings.Join(outEnv, " ")
 	env["HOME"] = tmpDir
 	// Set a consistent hash seed for Python. Important for build determinism.
@@ -87,16 +86,21 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	if len(outEnv) == 1 {
 		env["OUT"] = resolveOut(outEnv[0], tmpDir, target.Sandbox)
 	}
-	// The SRC variable is only available on rules that have a single source file.
-	if len(sources) == 1 {
-		env["SRC"] = sources[0]
+
+	if !target.NoSrcEnvVars {
+		env["SRCS"] = strings.Join(sources, " ")
+		// The SRC variable is only available on rules that have a single source file.
+		if len(sources) == 1 {
+			env["SRC"] = sources[0]
+		}
+		// Named source groups if the target declared any.
+		for name, srcs := range target.NamedSources {
+			paths := target.SourcePaths(state.Graph, srcs)
+			// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
+			env["SRCS_"+strings.ToUpper(name)] = strings.Join(paths, " ")
+		}
 	}
-	// Named source groups if the target declared any.
-	for name, srcs := range target.NamedSources {
-		paths := target.SourcePaths(state.Graph, srcs)
-		// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
-		env["SRCS_"+strings.ToUpper(name)] = strings.Join(paths, " ")
-	}
+
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
 		outs = target.GetTmpOutputAll(outs)
