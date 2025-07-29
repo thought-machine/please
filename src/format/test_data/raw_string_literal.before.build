@@ -1,0 +1,26 @@
+# A single-quoted raw string literal containing no double quotes; should be rewritten with
+# double-quote delimiters
+a = r'a\raw\string\literal'
+
+# A single-quoted raw string literal containing double quotes; should be left unmodified
+b = r'a\"raw\string\"literal'
+
+# A double-quoted raw string literal; should be left unmodified
+c = r"a\raw\string\literal"
+
+# A single-quoted raw docstring literal containing no double quotes; should be rewritten with
+# double-quote delimiters
+r'''
+Single-quoted: r'a\raw\string\literal'
+'''
+
+# A double-quoted raw docstring literal containing double quotes; should be left unmodified
+r"""
+Single-quoted: r'a\raw\string\literal'
+
+Double-quoted: r"a\raw\string\literal"
+"""
+
+# Raw string literals inside comments; should be left unmodified, because they're comments
+# Single-quoted: r'a\raw\string\literal'
+# Double-quoted: r"a\raw\string\literal"
