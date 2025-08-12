@@ -25,10 +25,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
       srcs (list | dict): Sources of this rule. Can be a list of files or rules, or a dict of names
                           to lists. In the latter case they can be accessed separately which is useful
                           to be able to refer to them distinctly in the command.
-      outs (list | dict): Outputs of this rule. All are files relative to this package.
-                          If given as a dict, it declares a series of named outputs which work
-                          similarly to named srcs; they have separate environment variables and
-                          can be accessed directly by other rules.
+      outs (list): Outputs of this rule. All are files relative to this package.
       out (str): A single output of this rule, as a string. Discouraged in favour of 'outs'.
       data (list | dict): Runtime data for this rule. Can be a list of files or rules, or a dict of
                           names to lists, with similar semantics to those of srcs.
