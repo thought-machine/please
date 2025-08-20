@@ -72,6 +72,7 @@ const (
 	fileContentArgIdx
 	subrepoArgIdx
 	noTestCoverageArgIdx
+	noSrcEnvVarsIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -112,6 +113,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	target.IsTextFile = args[cmdBuildRuleArgIdx] == textFileCommand
 	target.Local = isTruthy(localBuildRuleArgIdx)
 	target.ExitOnError = isTruthy(exitOnErrorArgIdx)
+	target.NoSrcEnvVars = isTruthy(noSrcEnvVarsIdx)
 	for _, o := range asStringList(s, args[outDirsBuildRuleArgIdx], "output_dirs") {
 		target.AddOutputDirectory(o)
 	}
