@@ -72,6 +72,7 @@ const (
 	fileContentArgIdx
 	subrepoArgIdx
 	noTestCoverageArgIdx
+	buildEntrypointArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -140,6 +141,8 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.AddLabel("remote")
 	}
 	target.Command, target.Commands = decodeCommands(s, args[cmdBuildRuleArgIdx])
+	target.BuildEntrypoint = decodeBuildEntrypoint(s, args[buildEntrypointArgIdx])
+
 	if test {
 		target.Test = new(core.TestFields)
 
@@ -250,6 +253,40 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 		}
 	}
 	return "", m
+}
+
+// decodeBuildEntrypoint takes a Python object and returns it as a BuildEntrypoint.
+func decodeBuildEntrypoint(s *scope, obj pyObject) *core.BuildEntrypoint {
+	if obj == nil || obj == None {
+		s.Assert(false, "obj was nil or none")
+		return core.NewBuildEntrypoint()
+	}
+	pyBuildEntrypointDict, ok := asDict(obj)
+	s.Assert(ok, "Unknown type for build_entrypoint_config [%s]", obj.Type())
+
+	becOpts := []core.BuildEntrypointOpt{}
+	for k, v := range pyBuildEntrypointDict {
+		cmdAndArgsPyList, ok := asList(v)
+		s.Assert(ok, "Unknown type for build_entrypoint_config.%s [%s]", k, v.Type())
+		cmdAndArgs := make([]string, cmdAndArgsPyList.Len())
+		for i, v := range cmdAndArgsPyList {
+			vPyStr, ok := v.(pyString)
+			s.Assert(ok, "build_entrypoint_config.%s must be list of strings", k)
+			cmdAndArgs[i] = string(vPyStr)
+		}
+		switch k {
+		case "entrypoint":
+			becOpts = append(becOpts, core.WithBuildEntrypointEntrypoint(cmdAndArgs))
+		case "exec_command_flags":
+			becOpts = append(becOpts, core.WithBuildEntrypointExecCommandArgs(cmdAndArgs))
+		case "exit_on_error_flags":
+			becOpts = append(becOpts, core.WithBuildEntrypointExitOnErrorArgs(cmdAndArgs))
+		case "interactive_flags":
+			becOpts = append(becOpts, core.WithBuildEntrypointInteractiveArgs(cmdAndArgs))
+		}
+	}
+
+	return core.NewBuildEntrypoint(becOpts...)
 }
 
 // populateTarget sets the assorted attributes on a build target.

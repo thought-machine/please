@@ -443,11 +443,16 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, env.ReplaceEnvironment))
 		} else {
 			fmt.Printf("\n")
-			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
+			buildArgvOpts := []core.BuildArgvOpt{target.BuildEntrypoint.WithBuildArgvInteractive()}
 			if shellRun {
-				argv = append(argv, "-c", cmd)
+				buildArgvOpts = append(buildArgvOpts, target.BuildEntrypoint.WithBuildArgvCommand(cmd))
 			}
-			log.Debug("Full command: %s", strings.Join(argv, " "))
+			argv, err := target.BuildEntrypoint.BuildArgv(state, target, buildArgvOpts...)
+			if err != nil {
+				log.Errorf("Could not build shell args: %s", err)
+			}
+
+			log.Debug("Full command(shellRun: %v): %#v", shellRun, argv)
 			cmd := state.ProcessExecutor.ExecCommand(process.NewSandboxConfig(shouldSandbox, shouldSandbox), false, argv[0], argv[1:]...)
 			cmd.Dir = dir
 			cmd.Env = append(cmd.Env, env.ToSlice()...)

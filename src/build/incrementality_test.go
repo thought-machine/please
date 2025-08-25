@@ -26,6 +26,7 @@ var KnownFields = map[string]bool{
 	"IsTextFile":                  true,
 	"FileContent":                 true,
 	"IsRemoteFile":                true,
+	"BuildEntrypoint":             true,
 	"Command":                     true,
 	"Commands":                    true,
 	"NeedsTransitiveDependencies": true,
