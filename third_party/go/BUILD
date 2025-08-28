@@ -191,7 +191,7 @@ go_repo(
 
 go_repo(
     module = "github.com/ulikunitz/xz",
-    version = "v0.5.11",
+    version = "v0.5.14",
 )
 
 go_repo(
