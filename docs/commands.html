@@ -90,10 +90,8 @@
             Labels of targets to include when selecting multiple targets with
             <code class="code">:all</code> or <code class="code">/...</code>.
             These apply to labels which can be set on individual targets; a
-            number of them are predefined, most notably for each language (<code
-              class="code"
-              >go</code
-            >, <code class="code">python</code>, <code class="code">java</code>,
+            number of them are predefined, most notably for each language (<code class="code">go</code>, <code
+              class="code">python</code>, <code class="code">java</code>,
             <code class="code">cc</code>, etc).<br />
             Only targets with this label will be built.
           </p>
@@ -128,9 +126,7 @@
           <p>
             Architecture to compile for. By default Please will build for the
             host architecture, but has some support for targeting others. See
-            <a class="copy-link" href="/cross_compiling.html"
-              >the cross-compiling docs</a
-            >
+            <a class="copy-link" href="/cross_compiling.html">the cross-compiling docs</a>
             for more information.
           </p>
         </div>
@@ -286,13 +282,7 @@
             File to write Chrome tracing output into.<br />
             This is a JSON format that contains the actions taken by plz during
             the build and their timings. You can load the file up in
-            <a
-              class="copy-link"
-              href="about:tracing"
-              target="_blank"
-              rel="noopener"
-              >about:tracing</a
-            >
+            <a class="copy-link" href="about:tracing" target="_blank" rel="noopener">about:tracing</a>
             and use that to see which parts of your build were slow.
           </p>
         </div>
@@ -410,25 +400,19 @@
 
   <ul class="bulleted-list">
     <li>
-      <span
-        ><code class="code">plz build //src/core:core</code> builds just the one
-        target.</span
-      >
+      <span><code class="code">plz build //src/core:core</code> builds just the one
+        target.</span>
     </li>
     <li>
-      <span
-        ><code class="code">plz build //src/core:all</code> builds every target
-        in.</span
-      >
+      <span><code class="code">plz build //src/core:all</code> builds every target
+        in.</span>
     </li>
     <li>
       <span><code class="code">src/core/BUILD</code>.</span>
     </li>
     <li>
-      <span
-        ><code class="code">plz build //src/...</code> builds every target in
-        <code class="code">src</code> and all subdirectories.</span
-      >
+      <span><code class="code">plz build //src/...</code> builds every target in
+        <code class="code">src</code> and all subdirectories.</span>
     </li>
   </ul>
 </section>
@@ -506,9 +490,9 @@
     </li>
     <li>
       <div>
-        <h4 class="mt1 f6 lh-title">
+        <h3 class="mt1 f6 lh-title">
           <code class="code">--rerun</code>
-        </h4>
+        </h3>
 
         <p>
           Forces the rerun of a test, even if the hash has not changed.
@@ -666,16 +650,16 @@
   </p>
 
   <p>
-    The <code class="code">--share_network</code> and <code class="code">--share_mount</code
-    > flags are available (Linux only) for greater control over the sandboxed environment
+    The <code class="code">--share_network</code> and <code class="code">--share_mount</code> flags are available (Linux
+    only) for greater control over the sandboxed environment
     where the target is run. The <code class="code">--share_network</code> flag is useful
     in situations where the host system might want to connect to a server that the command
     started.
   </p>
 
   <p>
-    The <code class="code">--output_path</code> and <code class="code">--out</code
-    > flags allow for artifacts, produced by the command executed in the sandboxed environment,
+    The <code class="code">--output_path</code> and <code class="code">--out</code> flags allow for artifacts, produced
+    by the command executed in the sandboxed environment,
     to be copied onto the host system where <code class="code">plz exec</code> is being
     run from.
   </p>
@@ -723,76 +707,55 @@
 
   <ul class="bulleted-list">
     <li>
-      <span
-        ><code class="code">alltargets</code>: Lists all targets in the
-        graph.</span
-      >
+      <span><code class="code">alltargets</code>: Lists all targets in the
+        graph.</span>
     </li>
     <li>
-      <span><code class="code">filter</code>: Filter targets based on <code class="code">--include</code> and <code class="code">--exclude</code>.
+      <span><code class="code">filter</code>: Filter targets based on <code class="code">--include</code> and <code
+          class="code">--exclude</code>.
         This is commonly used with other commands. For example, to run e2e tests separately from other tests:
         <code class="code">plz query changes --since master > plz-out/changes</code>, then
         <code class="code">cat plz-out/changes | plz query filter --include e2e - | plz test -</code>.
       </span>
     </li>
     <li>
-      <span
-        ><code class="code">changes</code>: Queries changed targets versus a
-        revision or from a set of files.</span
-      >
+      <span><code class="code">changes</code>: Queries changed targets versus a
+        revision or from a set of files.</span>
     </li>
     <li>
-      <span
-        ><code class="code">completions</code>: Prints possible completions for
-        a string.</span
-      >
+      <span><code class="code">completions</code>: Prints possible completions for
+        a string.</span>
     </li>
     <li>
-      <span
-        ><code class="code">deps</code>: Queries the dependencies of a
-        target.</span
-      >
+      <span><code class="code">deps</code>: Queries the dependencies of a
+        target.</span>
     </li>
     <li>
-      <span
-        ><code class="code">graph</code>: Prints a JSON representation of the
-        build graph.</span
-      >
+      <span><code class="code">graph</code>: Prints a JSON representation of the
+        build graph.</span>
     </li>
     <li>
-      <span
-        ><code class="code">input</code>: Prints all transitive inputs of a
-        target.</span
-      >
+      <span><code class="code">input</code>: Prints all transitive inputs of a
+        target.</span>
     </li>
     <li>
-      <span
-        ><code class="code">output</code>: Prints all outputs of a target.</span
-      >
+      <span><code class="code">output</code>: Prints all outputs of a target.</span>
     </li>
     <li>
-      <span
-        ><code class="code">print</code>: Prints a representation of a single
-        target.</span
-      >
+      <span><code class="code">print</code>: Prints a representation of a single
+        target.</span>
     </li>
     <li>
-      <span
-        ><code class="code">reverseDeps</code>: Queries all the reverse
-        dependencies of a target.</span
-      >
+      <span><code class="code">reverseDeps</code>: Queries all the reverse
+        dependencies of a target.</span>
     </li>
     <li>
-      <span
-        ><code class="code">somepath</code>: Queries for a path between two
-        targets.</span
-      >
+      <span><code class="code">somepath</code>: Queries for a path between two
+        targets.</span>
     </li>
     <li>
-      <span
-        ><code class="code">rules</code>: Prints out a machine-parseable
-        description of all currently known build rules.</span
-      >
+      <span><code class="code">rules</code>: Prints out a machine-parseable
+        description of all currently known build rules.</span>
     </li>
     <li>
       <span>
@@ -894,13 +857,7 @@
 
   <p>
     The implementation is currently based on a lightly modified version of
-    <a
-      class="copy-link"
-      href="https://github.com/bazelbuild/buildtools"
-      target="_blank"
-      rel="noopener"
-      >buildifier</a
-    >
+    <a class="copy-link" href="https://github.com/bazelbuild/buildtools" target="_blank" rel="noopener">buildifier</a>
     which supports nearly a superset of the same dialect, but lacks one or two
     features such as type annotations.<br />
     These are relatively rarely used in BUILD files though.
@@ -972,33 +929,26 @@
 
   <ul class="bulleted-list">
     <li>
-      <span
-        >If <code class="code">selfupdate</code> is true, then it's not normally
+      <span>If <code class="code">selfupdate</code> is true, then it's not normally
         necessary to run this since any invocation of plz will update before
         running. It will still behave as normal though if invoked
-        explicitly.</span
-      >
+        explicitly.</span>
     </li>
     <li>
-      <span
-        >If the <code class="code">version</code> property is set then it will
+      <span>If the <code class="code">version</code> property is set then it will
         attempt to download exactly that version, and fail if it can't for some
         reason.
       </span>
     </li>
     <li>
-      <span
-        >Otherwise it will try to find the latest available version and update
-        to that.</span
-      >
+      <span>Otherwise it will try to find the latest available version and update
+        to that.</span>
     </li>
     <li>
-      <span
-        >The <code class="code">downloadlocation</code> property determines
+      <span>The <code class="code">downloadlocation</code> property determines
         where it tries to download from; by default it's the central plz site,
         but you could set this to a server of your own if you'd rather be more
-        independent.</span
-      >
+        independent.</span>
     </li>
   </ul>
 </section>
