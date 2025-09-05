@@ -134,7 +134,9 @@ type BuildTarget struct {
 	OptionalOutputs []string `name:"optional_outs"`
 	// Optional labels applied to this rule. Used for including/excluding rules.
 	Labels []string
-	// Shell command to run.
+	// Build Entrypoint configuration.
+	BuildEntryPoint *BuildEntrypoint `name:"build_entry_point" hide:"filegroup"`
+	// Shell command to run, this is passed as the last argument to the Binary.
 	Command string `name:"cmd" hide:"filegroup"`
 	// Per-configuration shell commands to run.
 	Commands map[string]string `name:"cmd" hide:"filegroup"`
@@ -384,6 +386,7 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 		state:               int32(Inactive),
 		BuildingDescription: DefaultBuildingDescription,
 		finishedBuilding:    make(chan struct{}),
+		BuildEntryPoint:     NewBuildEntrypoint(),
 	}
 }
 
