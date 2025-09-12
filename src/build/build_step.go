@@ -3,6 +3,7 @@ package build
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -515,12 +516,28 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	if target.IsTextFile {
 		return nil, buildTextFile(state, target)
 	}
+
 	env := core.StampedBuildEnvironment(state, target, inputHash, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp).ToSlice()
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
+
+	buildArgvOpts := []core.BuildArgvOpt{target.BuildEntryPoint.WithBuildArgvCommand(command)}
+	if target.ShouldExitOnError() {
+		buildArgvOpts = append(buildArgvOpts, target.BuildEntryPoint.WithBuildArgvExitOnError())
+	}
+	argv, err := target.BuildEntryPoint.BuildArgv(state, target, buildArgvOpts...)
+	if err != nil {
+		return nil, err
+	}
+	out, combined, err := state.ProcessExecutor.ExecWithTimeout(
+		context.Background(),
+		target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput,
+		false, false, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox),
+		argv,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
+
 	return out, nil
 }
 
