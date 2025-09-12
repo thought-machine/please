@@ -728,5 +728,5 @@ func TestListConcatenation(t *testing.T) {
 func TestBreakLoop(t *testing.T) {
 	s, err := parseFile("src/parse/asp/test_data/interpreter/break_loop.build")
 	assert.NoError(t, err)
-	assert.EqualValues(t, 1, s.Lookup("i"))
+	assert.EqualValues(t, pyString("ok"), s.Lookup("x"))
 }

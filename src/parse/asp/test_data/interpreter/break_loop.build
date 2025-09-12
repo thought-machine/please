@@ -1,2 +1,13 @@
-for i in range(1, 3):
-    break
+# This test checks that the "break" keyword correctly breaks out of a for loop.
+
+def fn():
+    ret = "pre-loop"
+    for i in range(1, 3):
+        if i == 2:
+            ret = "ok"
+            break
+        else:
+            ret = "not ok"
+    return ret
+
+x = fn()
