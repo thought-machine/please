@@ -584,10 +584,10 @@ func (s *scope) interpretFor(stmt *ForStatement) pyObject {
 	for li := range s.iterable(&stmt.Expr) {
 		s.unpackNames(stmt.Names, li)
 		if ret := s.interpretStatements(stmt.Statements); ret != nil {
-			switch ret {
-			case continueIteration:
+			if ret == continueIteration {
 				continue
-			case stopIteration:
+			}
+			if ret == stopIteration {
 				break
 			}
 			return ret
