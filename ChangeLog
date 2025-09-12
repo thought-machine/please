@@ -1,3 +1,25 @@
+Version 17.19.0
+---------------
+    * Improve break interpreter test (#3406)
+    * Fix parsing of break statements inside for loops (#3405)
+    * Add rerun flag in docs (#3402)
+    * Add number of tasks left in plain display update (#3399)
+    * Add formatting tests for raw string literals (#3395)
+    * fix docs typo for --nocoverage_report (#3392)
+    * Enable linting of Go source files repo-wide (#3389)
+    * Actually print go mod init advice during repo initialisation (#3387)
+    * Omit unnecessary embedded field names from selectors (#3386)
+    * golangci-lint: disable staticcheck's error formatting checks (#3385)
+    * golangci-lint: output all linter issues (#3384)
+    * Write format strings to io.Writers using fmt.Fprintf (#3383)
+    * Pre-allocate slices known to require a specific length (#3382)
+    * Simplify more complex Boolean logic expressions (#3381)
+    * Convert if/else-if chains comparing the same variable to tagged switches (#3380)
+    * Simplify Boolean logic expressions (#3379)
+    * Migrate golangci-lint configuration to v2 (#3378)
+    * Correctly format package filenames in log function output (#3376)
+    * CI: run golangci-lint v2.1 (#3377)
+
 Version 17.18.0
 ---------------
     * Make sure debug tools/data get queued to be built (#3373)
