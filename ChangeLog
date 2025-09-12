@@ -1,3 +1,9 @@
+Version 17.19.0
+---------------
+    * Fix parsing of break statements inside for loops (#3405)
+    * Add number of tasks left in plain display update (#3399)
+    * Actually print go mod init advice during repo initialisation (#3387)
+
 Version 17.18.0
 ---------------
     * Make sure debug tools/data get queued to be built (#3373)
