@@ -76,6 +76,7 @@ func (s *Subrepo) Equal(other *Subrepo) bool {
 
 // SubrepoForArch creates a new subrepo for the given architecture.
 func SubrepoForArch(state *BuildState, arch cli.Arch) *Subrepo {
+	log.Debugf("Registering subrepo for architecture %s", arch.String())
 	s := NewSubrepo(state.ForArch(arch), arch.String(), "", nil, arch, true)
 	if err := s.State.Initialise(s); err != nil {
 		// We always return nil as we shortcut loading config for architecture subrepos, but check non-the-less incase
