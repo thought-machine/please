@@ -43,7 +43,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/texttheater/golang-levenshtein v1.0.1
 	github.com/thought-machine/go-flags v1.6.3
-	github.com/ulikunitz/xz v0.5.11
+	github.com/ulikunitz/xz v0.5.14
 	github.com/zeebo/blake3 v0.2.3
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
