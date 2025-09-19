@@ -6,6 +6,11 @@ Version 17.19.0
 
 Version 17.18.0
 ---------------
+    * Add support for suppressing SRCS env variables (#3393)
+    * Assorted cleanup with no functional changes
+
+Version 17.18.0
+---------------
     * Make sure debug tools/data get queued to be built (#3373)
     * Implement reverse parameter for `sorted` built-in function (#3372)
     * Implement key parameter for `sorted` built-in function (#3371)
