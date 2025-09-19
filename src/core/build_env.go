@@ -77,7 +77,12 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 
 	env["TMP_DIR"] = tmpDir
 	env["TMPDIR"] = tmpDir
-	env["SRCS"] = strings.Join(sources, " ")
+	if len(sources) < 100 {
+		env["SRCS"] = strings.Join(sources, " ")
+	} else {
+		// Set a value for the variable to make silent failure less likely
+		env["SRCS"] = "__BUILD_TARGET_HAS_TOO_MANY_SRCS__"
+	}
 	env["OUTS"] = strings.Join(outEnv, " ")
 	env["HOME"] = tmpDir
 	// Set a consistent hash seed for Python. Important for build determinism.
@@ -95,7 +100,12 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	for name, srcs := range target.NamedSources {
 		paths := target.SourcePaths(state.Graph, srcs)
 		// TODO(macripps): Quote these to prevent spaces from breaking everything (consider joining with NUL or sth?)
-		env["SRCS_"+strings.ToUpper(name)] = strings.Join(paths, " ")
+		if len(paths) < 100 {
+			env["SRCS_"+strings.ToUpper(name)] = strings.Join(paths, " ")
+		} else {
+			// Set a value for the variable to make silent failure less likely
+			env["SRCS_"+strings.ToUpper(name)] = "__BUILD_TARGET_HAS_TOO_MANY_SRCS__"
+		}
 	}
 	// Named output groups similarly.
 	for name, outs := range target.DeclaredNamedOutputs() {
