@@ -146,7 +146,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/oauth2",
-    version = "v0.18.0",
+    version = "v0.27.0",
 )
 
 go_repo(
@@ -301,7 +301,7 @@ go_repo(
 
 go_repo(
     module = "cloud.google.com/go/compute/metadata",
-    version = "v0.2.3",
+    version = "v0.3.0",
 )
 
 go_repo(
@@ -537,12 +537,6 @@ go_repo(
 )
 
 go_repo(
-    licences = ["Apache-2.0"],
-    module = "cloud.google.com/go/compute",
-    version = "v1.25.0",
-)
-
-go_repo(
     module = "github.com/StackExchange/wmi",
     version = "v1.2.1",
 )
@@ -551,12 +545,6 @@ go_repo(
     licences = ["MIT"],
     module = "github.com/go-ole/go-ole",
     version = "v1.3.0",
-)
-
-go_repo(
-    licences = ["Apache-2.0"],
-    module = "google.golang.org/appengine",
-    version = "v1.6.8",
 )
 
 go_repo(
@@ -689,4 +677,10 @@ go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/grpc-ecosystem/go-grpc-prometheus",
     version = "v1.2.0",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "go.opentelemetry.io/otel/sdk",
+    version = "v1.22.0",
 )
