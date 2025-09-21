@@ -53,57 +53,6 @@ func TestTag(t *testing.T) {
 	assert.Equal(t, res.String(), "_name#foo_bar")
 }
 
-func TestStrFormat(t *testing.T) {
-	s := &scope{
-		locals: map[string]pyObject{
-			"spam": pyString("abc"),
-			"eggs": pyString("def"),
-		},
-	}
-
-	assert.EqualValues(t, "test 123 abc ${wibble} 456 def {wobble}", strFormat(s, []pyObject{
-		pyString("test {} {spam} ${wibble} {} {eggs} {wobble}"), pyString("123"), pyString("456"),
-	}))
-}
-
-func TestStrFormat2(t *testing.T) {
-	s := &scope{
-		locals: map[string]pyObject{
-			"owner":    pyString("please-build"),
-			"plugin":   pyString("java-rules"),
-			"revision": pyString("v0.3.0"),
-		},
-	}
-
-	assert.EqualValues(t, "https://github.com/please-build/java-rules/archive/v0.3.0.zip", strFormat(s, []pyObject{
-		pyString("https://github.com/{owner}/{plugin}/archive/{revision}.zip"),
-	}))
-}
-
-func TestStrFormat3(t *testing.T) {
-	s := &scope{
-		locals: map[string]pyObject{
-			"url_base":     pyString("https://please.build/py-wheels"),
-			"package_name": pyString("coverage"),
-			"version":      pyString("5.5"),
-		},
-	}
-
-	assert.EqualValues(t, "https://please.build/py-wheels/coverage-5.5-${OS}_${ARCH}.whl", strFormat(s, []pyObject{
-		pyString("{url_base}/{package_name}-{version}-${{OS}}_${{ARCH}}.whl"),
-	}))
-}
-
-func TestStrFormat4(t *testing.T) {
-	s := &scope{
-		locals: map[string]pyObject{},
-	}
-
-	assert.EqualValues(t, `echo "tools/images/please_ubuntu@$please_ubuntu_digest" > $OUT`, strFormat(s, []pyObject{
-		pyString(`echo "{}@${}" > $OUT`), pyString("tools/images/please_ubuntu"), pyString("please_ubuntu_digest"),
-	}))
-}
-
 func TestObjLen(t *testing.T) {
 	l := pyList{pyInt(1)}
 	assert.EqualValues(t, 1, objLen(l))

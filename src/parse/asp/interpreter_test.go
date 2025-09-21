@@ -5,7 +5,9 @@ package asp
 
 import (
 	"fmt"
+	iofs "io/fs"
 	"testing"
+	"testing/fstest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,11 +16,11 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-func parseFileToStatements(filename string) (*scope, []*Statement, error) {
-	return parseFileToStatementsInPkg(filename, core.NewPackage("test/package"))
+func parseFileToStatements(fs iofs.FS, filename string) (*scope, []*Statement, error) {
+	return parseFileToStatementsInPkg(fs, filename, core.NewPackage("test/package"))
 }
 
-func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*Statement, error) {
+func parseFileToStatementsInPkg(fs iofs.FS, filename string, pkg *core.Package) (*scope, []*Statement, error) {
 	state := core.NewDefaultBuildState()
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
 	parser := NewParser(state)
@@ -28,7 +30,7 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 		panic(err)
 	}
 	parser.MustLoadBuiltins("builtins.build_defs", src)
-	statements, err := parser.parse(nil, filename)
+	statements, err := parser.parse(fs, filename)
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +41,15 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 }
 
 func parseFile(filename string) (*scope, error) {
-	s, _, err := parseFileToStatements(filename)
+	s, _, err := parseFileToStatements(nil, filename)
+	return s, err
+}
+
+func parseString(str string) (*scope, error) {
+	s, _, err := parseFileToStatements(
+		fstest.MapFS{"test.build": {Data: []byte(str)}},
+		"test.build",
+	)
 	return s, err
 }
 
@@ -307,7 +317,7 @@ func TestInterpreterArgumentCompatibility(t *testing.T) {
 }
 
 func TestInterpreterOptimiseConfig(t *testing.T) {
-	s, statements, err := parseFileToStatements("src/parse/asp/test_data/interpreter/optimise_config.build")
+	s, statements, err := parseFileToStatements(nil, "src/parse/asp/test_data/interpreter/optimise_config.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
 	assert.NotNil(t, statements[0].Ident)
@@ -342,6 +352,201 @@ func TestInterpreterFStrings(t *testing.T) {
 	assert.EqualValues(t, "a", s.Lookup("y"))
 	assert.EqualValues(t, "x: a y: a fin", s.Lookup("z"))
 	assert.EqualValues(t, "6", s.Lookup("nest_test"))
+}
+
+func TestInterpreterStringFormat(t *testing.T) {
+	tests := map[string]map[string]struct {
+		FormatStr, Args string
+		Expected        string
+		Error           string
+	}{
+		"Edge cases": {
+			"Empty format string, positional arguments": {
+				FormatStr: ``,
+				Args:      `"one", "two", "three"`,
+				Expected:  "",
+			},
+			"Empty format string, keyword arguments": {
+				FormatStr: ``,
+				Args:      `zero="a", one="b", two="c"`,
+				Expected:  "",
+			},
+			"Escaped opening delimiter before replacement field": {
+				FormatStr: `{} {{{} {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one {two three",
+			},
+			"Escaped opening delimiter after replacement field": {
+				FormatStr: `{} {}{{ {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one two{ three",
+			},
+			"Escaped closing delimiter before replacement field": {
+				FormatStr: `{} }}{} {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one }two three",
+			},
+			"Escaped closing delimiter after replacement field": {
+				FormatStr: `{} {}}} {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one two} three",
+			},
+			"Repeated escaped opening delimiters": {
+				FormatStr: `{} {{{{{{{{{} {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one {{{{two three",
+			},
+			"Repeated escaped closing delimiters": {
+				FormatStr: `{} }}}}}}}}{} {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one }}}}two three",
+			},
+		},
+		"Format string errors": {
+			// This manifests as a dangling closing delimiter at character 3, because the opening "{{" is interpreted as an
+			// escaped "{" character.
+			"Dangling opening delimiter at start of string": {
+				FormatStr: `{{} {} {}`,
+				Args:      `"one", "two", "three"`,
+				Error:     "single '}' encountered in format string",
+			},
+			"Dangling opening delimiter at end of string": {
+				FormatStr: `{} {} {}{`,
+				Args:      `"one", "two", "three"`,
+				Error:     "single '{' encountered in format string",
+			},
+			"Dangling closing delimiter at start of string": {
+				FormatStr: `}{} {} {}`,
+				Args:      `"one", "two", "three"`,
+				Error:     "single '}' encountered in format string",
+			},
+			"Dangling closing delimiter at end of string": {
+				FormatStr: `{} {} {}}`,
+				Args:      `"one", "two", "three"`,
+				Error:     "single '}' encountered in format string",
+			},
+		},
+		"Reference by order": {
+			"Equal number of fields and arguments": {
+				FormatStr: `{} {} {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one two three",
+			},
+			"Fewer fields than arguments": {
+				FormatStr: `{} {}`,
+				Args:      `"one", "two", "three"`,
+				Expected:  "one two",
+			},
+			"More fields than arguments": {
+				FormatStr: `{} {} {} {}`,
+				Args:      `"one", "two", "three"`,
+				Error:     "replacement index 3 out of range for positional arguments",
+			},
+			"Named replacement field": {
+				FormatStr: `{} {two} {}`,
+				Args:      `"one", "two", "three"`,
+				Error:     "cannot switch from automatic field numbering to manual field specification",
+			},
+		},
+		"Reference by position": {
+			"Arguments referenced in order": {
+				FormatStr: `0={0} 1={1} 2={2}`,
+				Args:      `"zero", "one", "two"`,
+				Expected:  "0=zero 1=one 2=two",
+			},
+			"Arguments referenced out of order": {
+				FormatStr: `2={2} 0={0} 1={1}`,
+				Args:      `"zero", "one", "two"`,
+				Expected:  "2=two 0=zero 1=one",
+			},
+			"Same argument referenced multiple times": {
+				FormatStr: `2={2} 0={0} 2={2}`,
+				Args:      `"zero", "one", "two"`,
+				Expected:  "2=two 0=zero 2=two",
+			},
+			"Unreferenced arguments": {
+				FormatStr: `0={0} 1={1}`,
+				Args:      `"zero", "one", "two"`,
+				Expected:  "0=zero 1=one",
+			},
+			// The empty field must occur after the first field, otherwise strFormat will initially (and correctly) interpret the
+			// format string as reference-by-order and produce a different error when parsing the second field.
+			"Empty field name after first field": {
+				FormatStr: `1={1} 2={} 0={0}`,
+				Args:      `"zero", "one", "two"`,
+				Error:     "cannot switch from automatic field numbering to manual field specification",
+			},
+			"Non-numerical field name": {
+				FormatStr: `1={1} 2={two} 0={0}`,
+				Args:      `"zero", "one", "two"`,
+				Error:     "must use numerical replacement fields with positional arguments",
+			},
+			"Non-existent argument": {
+				FormatStr: `1={1} 2={2} 3={3} 0={0}`,
+				Args:      `"zero", "one", "two"`,
+				Error:     "replacement index 3 out of range for positional arguments",
+			},
+		},
+		"Reference by name": {
+			"Arguments referenced in order": {
+				FormatStr: `0={zero} 1={one} 2={two}`,
+				Args:      `zero="a", one="b", two="c"`,
+				Expected:  "0=a 1=b 2=c",
+			},
+			"Arguments referenced out of order": {
+				FormatStr: `2={two} 0={zero} 1={one}`,
+				Args:      `zero="a", one="b", two="c"`,
+				Expected:  "2=c 0=a 1=b",
+			},
+			"Same argument referenced multiple times": {
+				FormatStr: `1={one} 0={zero} 1={one}`,
+				Args:      `zero="a", one="b"`,
+				Expected:  "1=b 0=a 1=b",
+			},
+			"Unreferenced arguments": {
+				FormatStr: `0={zero} 1={one}`,
+				Args:      `zero="a", one="b", two="c"`,
+				Expected:  "0=a 1=b",
+			},
+			"Syntactically invalid field name": {
+				FormatStr: `1={one} 2={two!} 0={zero}`,
+				Args:      `zero="a", one="b", two="c"`,
+				Error:     "unspecified keyword argument 'two!'",
+			},
+			"Empty field name": {
+				FormatStr: `1={one} 2={} 0={zero}`,
+				Args:      `zero="a", one="b", two="c"`,
+				Error:     "must use named replacement fields with keyword arguments",
+			},
+			"Numerical field name": {
+				FormatStr: `1={one} 2={2} 0={zero}`,
+				Args:      `zero="a", one="b", two="c"`,
+				Error:     "unspecified keyword argument '2'",
+			},
+			"Non-existent argument": {
+				FormatStr: `1={one} 2={two} 3={three} 0={zero}`,
+				Args:      `zero="a", one="b", two="c"`,
+				Error:     "unspecified keyword argument 'three'",
+			},
+		},
+	}
+
+	for category, ct := range tests {
+		t.Run(category, func(t *testing.T) {
+			for desc, test := range ct {
+				t.Run(desc, func(t *testing.T) {
+					s, err := parseString(fmt.Sprintf(`ret = "%s".format(%s)`, test.FormatStr, test.Args))
+					if test.Error == "" {
+						assert.NotNil(t, s)
+						assert.NoError(t, err)
+						assert.EqualValues(t, pyString(test.Expected), s.Lookup("ret"))
+					} else {
+						assert.ErrorContains(t, err, test.Error)
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestInterpreterSubincludeConfig(t *testing.T) {
@@ -422,7 +627,7 @@ func TestRemoveAffixes(t *testing.T) {
 func TestSubrepoName(t *testing.T) {
 	pkg := core.NewPackage("test/pkg")
 	pkg.SubrepoName = "pleasings"
-	s, _, err := parseFileToStatementsInPkg("src/parse/asp/test_data/interpreter/subrepo_name.build", pkg)
+	s, _, err := parseFileToStatementsInPkg(nil, "src/parse/asp/test_data/interpreter/subrepo_name.build", pkg)
 	assert.NoError(t, err)
 
 	assert.EqualValues(t, "pleasings", s.Lookup("subrepo"))
@@ -460,7 +665,7 @@ func TestFloorDivide(t *testing.T) {
 }
 
 func TestFStringOptimisation(t *testing.T) {
-	s, stmts, err := parseFileToStatements("src/parse/asp/test_data/interpreter/fstring_optimisation.build")
+	s, stmts, err := parseFileToStatements(nil, "src/parse/asp/test_data/interpreter/fstring_optimisation.build")
 	require.NoError(t, err)
 	assert.EqualValues(t, s.Lookup("x"), "test")
 	// Check that it's been optimised to something
