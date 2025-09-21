@@ -7,10 +7,10 @@ import (
 func BenchmarkStrFormat(b *testing.B) {
 	s := &scope{
 		locals: map[string]pyObject{
-			"one": pyString("123"),
-			"two": pyString("456"),
-			"spam": pyString("abc"),
-			"eggs": pyString("def"),
+			"one":    pyString("123"),
+			"two":    pyString("456"),
+			"spam":   pyString("abc"),
+			"eggs":   pyString("def"),
 			"wibble": pyString("ghi"),
 			"wobble": pyString("jkl"),
 		},
