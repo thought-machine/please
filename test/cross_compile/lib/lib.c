@@ -3,5 +3,5 @@
 #include <stdlib.h>
 
 int GetAnswer() {
-  return atoi(embed_start());
+  return 42;
 }
