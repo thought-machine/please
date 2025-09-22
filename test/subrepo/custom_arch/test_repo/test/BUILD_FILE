@@ -1,0 +1,5 @@
+genrule(
+    name = "print_arch",
+    outs = ["arch"],
+    cmd = f"echo '{CONFIG.OS}_{CONFIG.ARCH}' > $OUTS",
+)
