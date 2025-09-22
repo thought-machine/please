@@ -1,0 +1,5 @@
+arch(
+    name = "darwin_ppc",
+    os = "darwin",
+    arch = "ppc",
+)
