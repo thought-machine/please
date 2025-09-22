@@ -145,6 +145,14 @@ func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode
 // maybeParseSubrepoPackage parses a package to make sure subrepos are available, returning the subrepo if it exists.
 // Returns nothing if the package doesn't exist, or the package doesn't define the subrepo.
 func maybeParseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo string, dependent core.BuildLabel, mode core.ParseMode) (*core.Subrepo, error) {
+	// First, check whether this is an architecture subrepo. The built-in architecture subrepos - which are implicitly
+	// defined at the top level - should be registered regardless of whether a top-level BUILD file exists, so we need to
+	// perform this check before we check whether the subrepo package exists.
+	s := state.CheckArchSubrepo(dependent.Subrepo)
+	if s != nil {
+		return s, nil
+	}
+
 	// Check if the subrepo package exists
 	if state.Graph.Package(subrepoPkg, subrepoSubrepo) == nil {
 		// Don't have it already, must parse.
@@ -168,13 +176,7 @@ func maybeParseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo
 	// acquired the package lock. That means another thread may have parsed the package, adding it to the graph by the
 	// time we check above. This means, we need to check if the subrepo exists again here regardless of whether we
 	// actually parsed the package in this thread.
-	s := state.Graph.Subrepo(dependent.Subrepo)
-	if s != nil {
-		return s, nil
-	}
-
-	// If it hasn't, perhaps the subrepo is an architecture subrepo
-	return state.CheckArchSubrepo(dependent.Subrepo), nil
+	return state.Graph.Subrepo(dependent.Subrepo), nil
 }
 
 // parsePackage parses a BUILD file and adds the package to the build graph
