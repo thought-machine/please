@@ -30,6 +30,7 @@ var KnownFields = map[string]bool{
 	"Commands":                    true,
 	"NeedsTransitiveDependencies": true,
 	"Local":                       true,
+	"NoSrcEnvVars":                true,
 	"OptionalOutputs":             true,
 	"OutputIsComplete":            true,
 	"Requires":                    true,
