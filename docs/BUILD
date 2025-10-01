@@ -60,7 +60,7 @@ plugins = {
     "python": "v1.13.0",
     "java": "v0.4.5",
     "go": "v1.24.0",
-    "cc": "v0.5.0",
+    "cc": "v0.5.1",
     "shell": "v0.2.0",
     "go-proto": "v0.3.0",
     "python-proto": "v0.1.0",
