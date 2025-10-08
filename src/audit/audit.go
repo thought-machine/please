@@ -112,8 +112,8 @@ func WriteRemoteFile(buildLabel string, url string, success bool, errorMsg strin
 	globalAuditLog.remoteFilesAuditFile.writeObjectToFile(struct {
 		// BuildLabel is the string representation of the build target of the remote file.
 		BuildLabel string `json:"build_label"`
-		// Url is the url of the source of the remote file.
-		Url string `json:"url"`
+		// URL is the url of the source of the remote file.
+		URL string `json:"url"`
 		// Success is true if the attempt to fetch the remote file was successful, false otherwise.
 		Success bool `json:"success"`
 		// ErrorMsg is the error message returned in the event the attempt to fetch the remote file
@@ -121,13 +121,13 @@ func WriteRemoteFile(buildLabel string, url string, success bool, errorMsg strin
 		ErrorMsg string `json:"error_message"`
 	}{
 		BuildLabel: buildLabel,
-		Url:        url,
+		URL:        url,
 		Success:    success,
 		ErrorMsg:   errorMsg,
 	})
 }
 
-// writePleaseInvocation writes the args, enviroment, current working directory
+// writePleaseInvocation writes the args, environment, current working directory
 // and timestamp of any Please invocation to the Please invocation audit file
 func writePleaseInvocation() {
 	cwd, err := os.Getwd()

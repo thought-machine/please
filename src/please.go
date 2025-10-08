@@ -81,7 +81,7 @@ var opts struct {
 		TraceFile         cli.Filepath  `long:"trace_file" description:"File to write Chrome tracing output into"`
 		ShowAllOutput     bool          `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
 		CompletionScript  bool          `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
-		AuditLogDir       string        `long:"audit_log_dir" env:"PLZ_AUDIT_LOG_DIR" default: "" description:"Directory to save audit logs in. Empty string implies audit log not enabled"`
+		AuditLogDir       string        `long:"audit_log_dir" env:"PLZ_AUDIT_LOG_DIR" default:"" description:"Directory to save audit logs in. Empty string implies audit log not enabled"`
 	} `group:"Options controlling output & logging"`
 
 	BehaviorFlags struct {
@@ -1366,7 +1366,7 @@ func mustReadConfigAndSetRoot(forceUpdate bool) *core.Configuration {
 		cli.InitFileLogging(string(opts.OutputFlags.LogFile), opts.OutputFlags.LogFileLevel, opts.OutputFlags.LogAppend)
 	}
 	if opts.OutputFlags.AuditLogDir != "" {
-		if !filepath.IsAbs(string(opts.OutputFlags.AuditLogDir)) {
+		if !filepath.IsAbs(opts.OutputFlags.AuditLogDir) {
 			opts.OutputFlags.AuditLogDir = filepath.Join(core.RepoRoot, opts.OutputFlags.AuditLogDir)
 		}
 		audit.InitAuditLogging(opts.OutputFlags.AuditLogDir)
