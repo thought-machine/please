@@ -10,7 +10,7 @@ go_library(
     deps = [
         "///third_party/go/github.com_hashicorp_go-multierror//:go-multierror",
         "///third_party/go/github.com_hashicorp_go-retryablehttp//:go-retryablehttp",
-        "//src/audit"
+        "//src/audit",
         "//src/cli",
         "//src/cli/logging",
         "//src/core",
