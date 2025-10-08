@@ -1067,9 +1067,9 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 	for _, src := range target.Sources {
 		if e := fetchOneRemoteFile(state, target, src.String()); e != nil {
 			err = multierror.Append(err, e)
-			audit.WriteFetchRemoteFile(target.Label.Name, src.String(), false, err.Error())
+			audit.WriteRemoteFile(target.Label.Name, src.String(), false, err.Error())
 		} else {
-			audit.WriteFetchRemoteFile(target.Label.Name, src.String(), true, "")
+			audit.WriteRemoteFile(target.Label.Name, src.String(), true, "")
 			return nil
 		}
 	}

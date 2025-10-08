@@ -1,3 +1,5 @@
+// Package audit contains the logic for auditing a Please build by logging to audit files
+// on each Please invocation
 package audit
 
 import (
@@ -17,15 +19,9 @@ var log = logging.Log
 
 type auditLog struct {
 	enabled                   bool
-	baseDir                   string
-	uuid                      string
 	pleaseInvocationAuditFile *auditFile
 	remoteFilesAuditFile      *auditFile
 	buildCommandsAuditFile    *auditFile
-}
-
-func (a *auditLog) getDir() string {
-	return filepath.Join(a.baseDir, a.uuid)
 }
 
 var globalAuditLog auditLog
@@ -35,37 +31,40 @@ type auditFile struct {
 	sync.Mutex
 }
 
-const pleaseInvocationAuditFilename = "please_invocation_audit_file.jsonl"
-const remoteFilesAuditFilename = "remote_files_audit_file.jsonl"
-const buildCommandsAuditFilename = "build_commands_audit_file.jsonl"
+func (a *auditFile) closeAuditFile() {
+	if err := a.Close(); err != nil {
+		log.Errorf("Unable to close file %s: %s", a.Name(), err)
+	}
+}
 
+const pleaseInvocationFilename = "please_invocation.jsonl"
+const remoteFilesFilename = "remote_files.jsonl"
+const buildCommandsFilename = "build_commands.jsonl"
+
+// InitAuditLogging initialises the audit logging directory and logging files, and writes
+// the Please invocation to the Please invocation audit file on startup.
 func InitAuditLogging(auditLogDir string) {
 	id, err := uuid.NewRandom()
 	if err != nil || id.String() == "" {
 		log.Fatalf("Unable to create uuid for subdir within %s: %s", auditLogDir, err)
 	}
 	globalAuditLog.enabled = true
-	globalAuditLog.baseDir = auditLogDir
-	globalAuditLog.uuid = id.String()
-	openAuditFiles()
+	openAuditFiles(auditLogDir, id.String())
 	writePleaseInvocation()
 }
 
-func openAuditFiles() {
-	if !globalAuditLog.enabled {
-		return
-	}
-	dir := globalAuditLog.getDir()
+func openAuditFiles(baseDir string, id string) {
+	dir := filepath.Join(baseDir, id)
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
 		log.Fatalf("Unable to create audit directory %s: %s", dir, err)
 	}
-	globalAuditLog.pleaseInvocationAuditFile = openAuditFile(pleaseInvocationAuditFilename)
-	globalAuditLog.remoteFilesAuditFile = openAuditFile(remoteFilesAuditFilename)
-	globalAuditLog.buildCommandsAuditFile = openAuditFile(buildCommandsAuditFilename)
+	globalAuditLog.pleaseInvocationAuditFile = openAuditFile(dir, pleaseInvocationFilename)
+	globalAuditLog.remoteFilesAuditFile = openAuditFile(dir, remoteFilesFilename)
+	globalAuditLog.buildCommandsAuditFile = openAuditFile(dir, buildCommandsFilename)
 }
 
-func openAuditFile(filename string) *auditFile {
-	fullpath := filepath.Join(globalAuditLog.getDir(), filename)
+func openAuditFile(dir string, filename string) *auditFile {
+	fullpath := filepath.Join(dir, filename)
 	file, err := fs.OpenDirFile(fullpath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Unable to open %s: %s", fullpath, err)
@@ -73,45 +72,53 @@ func openAuditFile(filename string) *auditFile {
 	return &auditFile{File: file}
 }
 
+// Shutdown closes all the audit files
 func Shutdown() {
 	if !globalAuditLog.enabled {
 		return
 	}
-	closeAuditFile(globalAuditLog.pleaseInvocationAuditFile)
-	closeAuditFile(globalAuditLog.remoteFilesAuditFile)
-	closeAuditFile(globalAuditLog.buildCommandsAuditFile)
+	globalAuditLog.pleaseInvocationAuditFile.closeAuditFile()
+	globalAuditLog.remoteFilesAuditFile.closeAuditFile()
+	globalAuditLog.buildCommandsAuditFile.closeAuditFile()
 }
 
-func closeAuditFile(file *auditFile) {
-	if err := file.Close(); err != nil {
-		log.Errorf("Unable to close file %s: %s", file, err)
-	}
-}
-
+// WriteBuildCommand writes the build label, environment and build command
+// as a line of json to the build command audit file
 func WriteBuildCommand(buildLabel string, env []string, command string) {
 	if !globalAuditLog.enabled {
 		return
 	}
-	writeObjectToFile(globalAuditLog.buildCommandsAuditFile, struct {
-		BuildLabel string   `json:"build_label"`
-		Env        []string `json:"env"`
-		Command    string   `json:"command"`
+	globalAuditLog.buildCommandsAuditFile.writeObjectToFile(struct {
+		// BuildLabel is the string representation of the build target of the build command.
+		BuildLabel string `json:"build_label"`
+		// Environment is the shell environment variables used in the build command.
+		Environment []string `json:"environment"`
+		// Command is the actual command used to build a target within the build command.
+		Command string `json:"command"`
 	}{
-		BuildLabel: buildLabel,
-		Env:        env,
-		Command:    command,
+		BuildLabel:  buildLabel,
+		Environment: env,
+		Command:     command,
 	})
 }
 
-func WriteFetchRemoteFile(buildLabel string, url string, success bool, errorMsg string) {
+// WriteRemoteFile writes the build label, source url, whether the attempt was successful
+// and any error message (which may be an empty string) as a line of json to
+// the remote files audit file given an attempt to fetch a remote file.
+func WriteRemoteFile(buildLabel string, url string, success bool, errorMsg string) {
 	if !globalAuditLog.enabled {
 		return
 	}
-	writeObjectToFile(globalAuditLog.remoteFilesAuditFile, struct {
+	globalAuditLog.remoteFilesAuditFile.writeObjectToFile(struct {
+		// BuildLabel is the string representation of the build target of the remote file.
 		BuildLabel string `json:"build_label"`
-		Url        string `json:"url"`
-		Success    bool   `json:"success"`
-		ErrorMsg   string `json:"error_message"`
+		// Url is the url of the source of the remote file.
+		Url string `json:"url"`
+		// Success is true if the attempt to fetch the remote file was successful, false otherwise.
+		Success bool `json:"success"`
+		// ErrorMsg is the error message returned in the event the attempt to fetch the remote file
+		// was unsuccessful. It will be empty if Success is true.
+		ErrorMsg string `json:"error_message"`
 	}{
 		BuildLabel: buildLabel,
 		Url:        url,
@@ -120,6 +127,8 @@ func WriteFetchRemoteFile(buildLabel string, url string, success bool, errorMsg 
 	})
 }
 
+// writePleaseInvocation writes the args, enviroment, current working directory
+// and timestamp of any Please invocation to the Please invocation audit file
 func writePleaseInvocation() {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -127,28 +136,33 @@ func writePleaseInvocation() {
 		cwd = "ERROR"
 	}
 
-	writeObjectToFile(globalAuditLog.pleaseInvocationAuditFile, struct {
-		Args      []string  `json:"args"`
-		Envs      []string  `json:"envs"`
-		Cwd       string    `json:"cwd"`
+	globalAuditLog.pleaseInvocationAuditFile.writeObjectToFile(struct {
+		// Args are the os Args used when invoking Please.
+		Args []string `json:"args"`
+		// Environment are the key:value pair representing the OS environment.
+		Environment []string `json:"environment"`
+		// Cwd is the current working directory when Please was invoked.
+		Cwd string `json:"cwd"`
+		// Timestamp is the timestamp when Please was invoked.
 		Timestamp time.Time `json:"timestamp"`
 	}{
-		Args:      os.Args,
-		Envs:      os.Environ(),
-		Cwd:       cwd,
-		Timestamp: time.Now(),
+		Args:        os.Args,
+		Environment: os.Environ(),
+		Cwd:         cwd,
+		Timestamp:   time.Now(),
 	})
 }
 
-func writeObjectToFile(file *auditFile, obj any) {
+func (a *auditFile) writeObjectToFile(obj any) {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		log.Errorf("Unable to marshal obj %s to json: %s", obj, err)
 		return
 	}
-	file.Lock()
-	defer file.Unlock()
-	if _, err := file.Write(data); err != nil {
+	data = append(data, byte('\n')) // We want json blobs to each be on a new line
+	a.Lock()
+	defer a.Unlock()
+	if _, err := a.Write(data); err != nil {
 		log.Errorf("Unable to write object to audit file: %s", err)
 	}
 }

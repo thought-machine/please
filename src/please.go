@@ -1600,7 +1600,7 @@ func execute(command string) int {
 		}()
 	}
 
-	audit.Shutdown()
+	defer audit.Shutdown()
 
 	log.Debugf("plz %v", command)
 	commandInvocationCount.WithLabelValues(command, metrics.CILabel).Inc()
