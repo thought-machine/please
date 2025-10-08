@@ -10,6 +10,7 @@ go_binary(
     deps = [
         "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
         "///third_party/go/go.uber.org_automaxprocs//maxprocs",
+        "//src/audit",
         "//src/assets",
         "//src/build",
         "//src/cache",
