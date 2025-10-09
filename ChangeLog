@@ -1,3 +1,7 @@
+Version 17.20.0
+---------------
+    * Bump arcat to v1.2.1, fixing a number of bugs relating to handling of ar archives (#3420)
+
 Version 17.19.1
 ---------------
     * Log to debug logger when registering an architecture subrepo (#3410)
