@@ -15,8 +15,22 @@ stdlib = //third_party/go:std
 
 [Plugin "cc"]
 target = //plugins:cc
-defaultoptcppflags = --std=c++11 -O2 -DNDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
-defaultdbgcppflags = --std=c++11 -g3 -DDEBUG -Wall -Wextra -Werror -Wno-unused-parameter
+
+DefaultOptCppFlags = -std=c++11
+DefaultOptCppFlags = -O2
+DefaultOptCppFlags = -DNDEBUG
+DefaultOptCppFlags = -Wall
+DefaultOptCppFlags = -Wextra
+DefaultOptCppFlags = -Werror
+DefaultOptCppFlags = -Wno-unused-parameter
+
+DefaultDbgCppFlags = -std=c++11
+DefaultDbgCppFlags = -g3
+DefaultDbgCppFlags = -DDEBUG
+DefaultDbgCppFlags = -Wall
+DefaultDbgCppFlags = -Wextra
+DefaultDbgCppFlags = -Werror
+DefaultDbgCppFlags = -Wno-unused-parameter
 
 [Plugin "shell"]
 Target = //plugins:shell
