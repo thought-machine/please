@@ -1,5 +1,4 @@
 Found path:
   //src:please
-  //src/build:build
-  //src/core:core
+  //src/audit:audit
   //src/fs:fs
