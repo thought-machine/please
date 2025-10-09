@@ -1,0 +1,43 @@
+build_rule(
+  name = "with_srcs",
+  srcs = [
+    "a.txt",
+    "b.txt",
+  ],
+  outs = ["with_srcs.txt"],
+  cmd = "cat _plz/srcs > with_srcs.txt",
+  no_src_env_vars = True,
+)
+
+build_rule(
+  name = "with_one_src",
+  srcs = [
+    "a.txt",
+  ],
+  outs = ["with_one_src.txt"],
+  cmd = "cat _plz/src > with_one_src.txt",
+  no_src_env_vars = True,
+)
+
+build_rule(
+  name = "with_named_srcs",
+  srcs = {
+    "foo": [
+      "a.txt",
+      "b.txt",
+    ],
+  },
+  outs = ["with_named_srcs.txt"],
+  cmd = "cat _plz/named_srcs/foo > with_named_srcs.txt",
+  no_src_env_vars = True,
+)
+
+build_rule(
+  name = "with_flag_not_set",
+  srcs = [
+    "a.txt",
+    "b.txt",
+  ],
+  outs = ["with_flag_not_set.txt"],
+  cmd = "cat _plz/srcs > with_flag_not_set.txt",
+)
