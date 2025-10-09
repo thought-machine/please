@@ -72,6 +72,10 @@ const (
 	fileContentArgIdx
 	subrepoArgIdx
 	noTestCoverageArgIdx
+	buildEntryPointArgIdx
+	buildEntryPointExitOnErrorArgsArgIdx
+	buildEntryPointInteractiveArgsArgIdx
+	buildEntryPointExecCommandArgsArgIdx
 )
 
 // createTarget creates a new build target as part of build_rule().
@@ -140,6 +144,8 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.AddLabel("remote")
 	}
 	target.Command, target.Commands = decodeCommands(s, args[cmdBuildRuleArgIdx])
+	target.BuildEntryPoint = decodeBuildEntrypointFromArgs(s, args)
+
 	if test {
 		target.Test = new(core.TestFields)
 
@@ -250,6 +256,37 @@ func decodeCommands(s *scope, obj pyObject) (string, map[string]string) {
 		}
 	}
 	return "", m
+}
+
+// decodeBuildEntrypointFromArgs takes a Python object and returns it as a BuildEntrypoint.
+func decodeBuildEntrypointFromArgs(s *scope, args []pyObject) *core.BuildEntrypoint {
+	buildEntrypointOpts := []core.BuildEntrypointOpt{}
+
+	if obj := args[buildEntryPointArgIdx]; obj != nil && obj != None {
+		buildEntrypointOpts = append(buildEntrypointOpts,
+			core.WithBuildEntrypointEntrypoint(asStringList(s, mustList(obj), "build_entry_point")),
+		)
+	}
+
+	if obj := args[buildEntryPointExecCommandArgsArgIdx]; obj != nil && obj != None {
+		buildEntrypointOpts = append(buildEntrypointOpts,
+			core.WithBuildEntrypointExecCommandArgs(asStringList(s, mustList(obj), "build_entry_point_exec_command_args")),
+		)
+	}
+
+	if obj := args[buildEntryPointExitOnErrorArgsArgIdx]; obj != nil && obj != None {
+		buildEntrypointOpts = append(buildEntrypointOpts,
+			core.WithBuildEntrypointExitOnErrorArgs(asStringList(s, mustList(obj), "build_entry_point_exit_on_error_args")),
+		)
+	}
+
+	if obj := args[buildEntryPointInteractiveArgsArgIdx]; obj != nil && obj != None {
+		buildEntrypointOpts = append(buildEntrypointOpts,
+			core.WithBuildEntrypointInteractiveArgs(asStringList(s, mustList(obj), "build_entry_point_interactive_args")),
+		)
+	}
+
+	return core.NewBuildEntrypoint(buildEntrypointOpts...)
 }
 
 // populateTarget sets the assorted attributes on a build target.
