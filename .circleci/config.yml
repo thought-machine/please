@@ -124,7 +124,7 @@ jobs:
    build-darwin-amd64:
      working_directory: ~/please
      macos:
-       xcode: "13.4.1"
+       xcode: "16.4.0"
      resource_class: macos.m1.medium.gen1
      steps:
        - checkout
@@ -205,7 +205,7 @@ jobs:
            paths: [ ".plz-cache/third_party/go" ]
    build-darwin:
       macos:
-        xcode: "13.4.1"
+        xcode: "16.4.0"
       resource_class: macos.m1.medium.gen1
       environment:
         PLZ_ARGS: "--profile ci --exclude pip --exclude embed"
