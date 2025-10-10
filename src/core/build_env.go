@@ -87,7 +87,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		env["OUT"] = resolveOut(outEnv[0], tmpDir, target.Sandbox)
 	}
 
-	if !target.NoSrcEnvVars {
+	if !target.SrcListFiles {
 		env["SRCS"] = strings.Join(sources, " ")
 		// The SRC variable is only available on rules that have a single source file.
 		if len(sources) == 1 {

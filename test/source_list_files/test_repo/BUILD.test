@@ -6,7 +6,7 @@ build_rule(
   ],
   outs = ["with_srcs.txt"],
   cmd = "cat _plz/srcs > with_srcs.txt",
-  no_src_env_vars = True,
+  src_list_files = True,
 )
 
 build_rule(
@@ -16,7 +16,7 @@ build_rule(
   ],
   outs = ["with_one_src.txt"],
   cmd = "cat _plz/src > with_one_src.txt",
-  no_src_env_vars = True,
+  src_list_files = True,
 )
 
 build_rule(
@@ -29,7 +29,7 @@ build_rule(
   },
   outs = ["with_named_srcs.txt"],
   cmd = "cat _plz/named_srcs/foo > with_named_srcs.txt",
-  no_src_env_vars = True,
+  src_list_files = True,
 )
 
 build_rule(

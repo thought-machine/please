@@ -243,15 +243,15 @@ type BuildTarget struct {
 	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
-	// Skips generating SRCS environment variables. Used for targets which have too many sources to
-	// fit in an environment variable. If this is set, files will be generated in the build
-	// environment containing the lists of sources as follows:
+	// If true, skips generating environment variables for sources; instead files will be generated in
+	// the build environment containing the lists of sources as follows:
 	//  - _plz/srcs (equivalent to $SRCS) always
 	//  - _plz/src (equivalent to $SRC) if the target has exactly one src
 	//  - _plz/named_srcs/foo (equivalent to $SRCS_FOO) if the target has a named src called foo
 	// Note that in contrast to the environment variables which are space separated, these files are
-	// newline separated.
-	NoSrcEnvVars bool `name:"no_src_env_vars"`
+	// newline separated. This can be used for targets which have too many sources to fit in an
+	// environment variable.
+	SrcListFiles bool `name:"src_list_files"`
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
 	showProgress atomic.Bool `name:"progress"`

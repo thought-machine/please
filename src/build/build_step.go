@@ -606,7 +606,7 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 			return err
 		}
 	}
-	if target.NoSrcEnvVars {
+	if target.SrcListFiles {
 		for slf := range target.SourceListFiles(graph) {
 			if err := fs.WriteFile(bytes.NewReader(slf.Content), filepath.Join(target.TmpDir(), slf.Dirname, slf.Filename), 0644); err != nil {
 				return err
