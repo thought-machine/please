@@ -1,6 +1,6 @@
 Version 17.21.0
 ---------------
-    * Add support for suppressing SRCS env variables (#3393)
+    * Expose build target source list via the filesystem instead of the environment with build_rule's src_list_files parameter (#3393)
 
 Version 17.20.0
 ---------------
