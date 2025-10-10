@@ -2,7 +2,9 @@ package core
 
 import (
 	"fmt"
+	"iter"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -241,6 +243,15 @@ type BuildTarget struct {
 	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
+	// If true, skips generating environment variables for sources; instead files will be generated in
+	// the build environment containing the lists of sources as follows:
+	//  - _plz/srcs (equivalent to $SRCS) always
+	//  - _plz/src (equivalent to $SRC) if the target has exactly one src
+	//  - _plz/named_srcs/foo (equivalent to $SRCS_FOO) if the target has a named src called foo
+	// Note that in contrast to the environment variables which are space separated, these files are
+	// newline separated. This can be used for targets which have too many sources to fit in an
+	// environment variable.
+	SrcListFiles bool `name:"src_list_files"`
 	// If true, the interactive progress display will try to infer the target's progress
 	// via some heuristics on its output.
 	showProgress atomic.Bool `name:"progress"`
@@ -1951,4 +1962,48 @@ func (slice BuildTargets) Less(i, j int) bool {
 }
 func (slice BuildTargets) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
+}
+
+const sourceListFileDir = "_plz"
+const sourceListFileNamedDir = "named_srcs"
+
+type SourceListFile struct {
+	Dirname  string
+	Filename string
+	Content  []byte
+}
+
+func (target *BuildTarget) SourceListFiles(graph *BuildGraph) iter.Seq[*SourceListFile] {
+	return func(yield func(*SourceListFile) bool) {
+		sources := target.AllSourcePaths(graph)
+
+		if !yield(&SourceListFile{
+			Dirname:  sourceListFileDir,
+			Filename: "srcs",
+			Content:  []byte(strings.Join(sources, "\n")),
+		}) {
+			return
+		}
+
+		if len(sources) == 1 {
+			if !yield(&SourceListFile{
+				Dirname:  sourceListFileDir,
+				Filename: "src",
+				Content:  []byte(sources[0]),
+			}) {
+				return
+			}
+		}
+
+		for name, srcs := range target.NamedSources {
+			paths := target.SourcePaths(graph, srcs)
+			if !yield(&SourceListFile{
+				Dirname:  path.Join(sourceListFileDir, sourceListFileNamedDir),
+				Filename: name,
+				Content:  []byte(strings.Join(paths, "\n")),
+			}) {
+				return
+			}
+		}
+	}
 }

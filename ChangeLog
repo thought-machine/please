@@ -1,3 +1,7 @@
+Version 17.21.0
+---------------
+    * Expose build target source list via the filesystem instead of the environment with build_rule's src_list_files parameter (#3393)
+
 Version 17.20.0
 ---------------
     * Bump arcat to v1.2.1, fixing a number of bugs relating to handling of ar archives (#3420)

@@ -296,6 +296,19 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 			Digest: entry.Digest.ToProto(),
 		})
 	}
+	if target.SrcListFiles {
+		for slf := range target.SourceListFiles(c.state.Graph) {
+			entry := uploadinfo.EntryFromBlob(slf.Content)
+			if ch != nil {
+				ch <- entry
+			}
+			d := b.Dir(slf.Dirname)
+			d.Files = append(d.Files, &pb.FileNode{
+				Name:   slf.Filename,
+				Digest: entry.Digest.ToProto(),
+			})
+		}
+	}
 	return b, nil
 }
 
