@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/fs"
 )
@@ -41,20 +39,19 @@ const pleaseInvocationFilename = "please_invocation.jsonl"
 const remoteFilesFilename = "remote_files.jsonl"
 const buildCommandsFilename = "build_commands.jsonl"
 
+const nanoTimeFormat = "20060102_150405_999999999"
+
 // InitAuditLogging initialises the audit logging directory and logging files, and writes
 // the Please invocation to the Please invocation audit file on startup.
 func InitAuditLogging(auditLogDir string) {
-	id, err := uuid.NewRandom()
-	if err != nil || id.String() == "" {
-		log.Fatalf("Unable to create uuid for subdir within %s: %s", auditLogDir, err)
-	}
+	ts := time.Now().Format(nanoTimeFormat)
 	globalAuditLog.enabled = true
-	openAuditFiles(auditLogDir, id.String())
+	openAuditFiles(auditLogDir, ts)
 	writePleaseInvocation()
 }
 
-func openAuditFiles(baseDir string, id string) {
-	dir := filepath.Join(baseDir, id)
+func openAuditFiles(baseDir string, ts string) {
+	dir := filepath.Join(baseDir, ts)
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
 		log.Fatalf("Unable to create audit directory %s: %s", dir, err)
 	}
