@@ -81,7 +81,7 @@ var opts struct {
 		TraceFile         cli.Filepath  `long:"trace_file" description:"File to write Chrome tracing output into"`
 		ShowAllOutput     bool          `long:"show_all_output" description:"Show all output live from all commands. Implies --plain_output."`
 		CompletionScript  bool          `long:"completion_script" description:"Prints the bash / zsh completion script to stdout"`
-		AuditLogDir       string        `long:"audit_log_dir" env:"PLZ_AUDIT_LOG_DIR" default:"" description:"Directory to save audit logs in. Empty string implies audit log not enabled"`
+		AuditLogDir       string        `long:"audit_log_dir" env:"PLZ_AUDIT_LOG_DIR" default:"" description:"Directory to save audit logs in. Empty string implies audit log not enabled. Not supported for remote execution."`
 	} `group:"Options controlling output & logging"`
 
 	BehaviorFlags struct {

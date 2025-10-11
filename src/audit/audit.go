@@ -1,5 +1,4 @@
-// Package audit contains the logic for auditing a Please build by logging to audit files
-// on each Please invocation
+// Package audit supports producing audit logs when the --audit_log_dir flag is set.
 package audit
 
 import (
@@ -134,9 +133,9 @@ func writePleaseInvocation() {
 	}
 
 	globalAuditLog.pleaseInvocationAuditFile.writeObjectToFile(struct {
-		// Args are the os Args used when invoking Please.
+		// Args are the command line args used when invoking Please.
 		Args []string `json:"args"`
-		// Environment are the key:value pair representing the OS environment.
+		// Environment contains the environment variables set when Please was invoked, in the format key=value.
 		Environment []string `json:"environment"`
 		// Cwd is the current working directory when Please was invoked.
 		Cwd string `json:"cwd"`
@@ -156,7 +155,7 @@ func (a *auditFile) writeObjectToFile(obj any) {
 		log.Errorf("Unable to marshal obj %s to json: %s", obj, err)
 		return
 	}
-	data = append(data, byte('\n')) // We want json blobs to each be on a new line
+	data = append(data, byte('\n')) // Audit logs are newline-delimited JSON
 	a.Lock()
 	defer a.Unlock()
 	if _, err := a.Write(data); err != nil {
