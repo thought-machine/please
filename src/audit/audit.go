@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,12 +39,12 @@ const pleaseInvocationFilename = "please_invocation.jsonl"
 const remoteFilesFilename = "remote_files.jsonl"
 const buildCommandsFilename = "build_commands.jsonl"
 
-const nanoTimeFormat = "20060102_150405_999999999"
+const nanoTimeFormat = "20060102_150405.999999999" // we need to use a decimal to enforce nanosecond precision
 
 // InitAuditLogging initialises the audit logging directory and logging files, and writes
 // the Please invocation to the Please invocation audit file on startup.
 func InitAuditLogging(auditLogDir string) {
-	ts := time.Now().Format(nanoTimeFormat)
+	ts := strings.Replace(time.Now().Format(nanoTimeFormat), ".", "_", -1)
 	globalAuditLog.enabled = true
 	openAuditFiles(auditLogDir, ts)
 	writePleaseInvocation()
