@@ -1677,6 +1677,16 @@ func (target *BuildTarget) AddMaybeExportedDependency(dep BuildLabel, exported, 
 	}
 }
 
+// RegisterDependencyTarget registers a build target to be used for a dependency label on the given target.
+func (target *BuildTarget) RegisterDependencyTarget(dep BuildLabel, deptarget *BuildTarget) {
+	info := target.dependencyInfo(dep)
+	if info == nil {
+		log.Fatalf("Target %s doesn't contain dependency %s.\n", target.Label, dep)
+	} else {
+		info.deps = append(info.deps, deptarget)
+	}
+}
+
 // IsTool returns true if the given build label is a tool used by this target.
 func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 	if target.isTool(tool, target.Tools, target.namedTools) {
