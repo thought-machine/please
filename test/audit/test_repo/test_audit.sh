@@ -2,8 +2,6 @@
 
 set -euo pipefail
 
-plz clean -f
-
 AUDIT_LOG_DIR="${PWD}/audit_test_dir"
 
 $TOOLS_PLEASE build //:go --audit_log_dir $AUDIT_LOG_DIR
