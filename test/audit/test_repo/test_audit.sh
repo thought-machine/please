@@ -25,8 +25,8 @@ AUDIT_LOG_DIR_WITH_ID="${AUDIT_LOG_DIR}/$(basename "$DIR_LIST")"
 # Check files were created
 FILES=(
     "please_invocation.jsonl"
-    "remote_files.jsonl"
     "build_commands.jsonl"
+    "remote_files.jsonl"
 )
 
 for FILE_NAME in "${FILES[@]}"; do
@@ -37,20 +37,19 @@ for FILE_NAME in "${FILES[@]}"; do
     fi
 done
 
-# Check contents of the files
-declare -A file_to_expected_str
-file_to_expected_str["please_invocation.jsonl"]='"build","//:go"'
-file_to_expected_str["build_commands.jsonl"]='"build_label":"//:go"'
-file_to_expected_str["remote_files.jsonl"]='"build_label":"_go#download"'
+CONTENTS=(
+    '"build","//:go"'
+    '"build_label":"//:go"'
+    '"build_label":"_go#download"'
+)
 
-for file in "${!file_to_expected_str[@]}"
-do
-    FILE_PATH="${AUDIT_LOG_DIR_WITH_ID}/${file}"
-    if ! grep -q "${file_to_expected_str[$file]}" "$FILE_PATH"; then
-        echo "ERROR: $FILE_PATH does not contain ${file_to_expected_str[$file]}" >&2
+for i in ${!FILES[@]}; do
+    FILE_PATH="${AUDIT_LOG_DIR_WITH_ID}/${FILES[$i]}"
+    EXPECTED_STR="${CONTENTS[$i]}"
+    if ! grep -q "$EXPECTED_STR" "$FILE_PATH"; then
+        echo "ERROR: $FILE_PATH does not contain $EXPECTED_STR" >&2
         exit 1
     fi
 done
-
 
 exit 0
