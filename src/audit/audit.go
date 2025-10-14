@@ -44,7 +44,7 @@ const nanoTimeFormat = "20060102_150405.999999999" // we need to use a decimal t
 // InitAuditLogging initialises the audit logging directory and logging files, and writes
 // the Please invocation to the Please invocation audit file on startup.
 func InitAuditLogging(auditLogDir string) {
-	ts := strings.Replace(time.Now().Format(nanoTimeFormat), ".", "_", -1)
+	ts := strings.ReplaceAll(time.Now().Format(nanoTimeFormat), ".", "_")
 	globalAuditLog.enabled = true
 	openAuditFiles(auditLogDir, ts)
 	writePleaseInvocation()
