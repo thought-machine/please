@@ -7,12 +7,16 @@ import (
 func BenchmarkStrFormat(b *testing.B) {
 	s := &scope{
 		locals: map[string]pyObject{
-			"spam": pyString("abc"),
-			"eggs": pyString("def"),
+			"one":    pyString("123"),
+			"two":    pyString("456"),
+			"spam":   pyString("abc"),
+			"eggs":   pyString("def"),
+			"wibble": pyString("ghi"),
+			"wobble": pyString("jkl"),
 		},
 	}
 	args := []pyObject{
-		pyString("test {} {spam} ${wibble} {} {eggs} {wobble}"), pyString("123"), pyString("456"),
+		pyString("test {one} {spam} ${wibble} {two} {eggs} {wobble}"),
 	}
 	b.ReportAllocs()
 
@@ -52,11 +56,11 @@ export PKG=$PKG
 export NAME=$(echo $NAME | sed -E 's/^_(.*)#.*$/\1/')
 EOF
 cat << 'EOF' >> $OUT
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-export TF_DATA_DIR="/tmp/plz/terraform/${PKG}_${NAME}"
+DIR="$( cd "$( dirname "${{BASH_SOURCE[0]}}" )" >/dev/null 2>&1 && pwd )"
+export TF_DATA_DIR="/tmp/plz/terraform/${{PKG}}_${{NAME}}"
 >&2 echo "-> using $TF_DATA_DIR"
 rm -rf "$TF_DATA_DIR" && mkdir -p "$TF_DATA_DIR"
-trap "rm -rf ${TF_DATA_DIR}" EXIT
+trap "rm -rf ${{TF_DATA_DIR}}" EXIT
 tar xfz $DIR/$(location {tarball_target}) -C $TF_DATA_DIR
 mkdir -p $TF_DATA_DIR/.terraform.d/plugins/linux_amd64
 {plugins_extract_script}
@@ -76,9 +80,9 @@ else
 fi
 if [ -n "$tfregistry_token" ]; then
     cat <<EOC > $TF_DATA_DIR/.terraformrc
-credentials "terraform.external.thoughtmachine.io" {
+credentials "terraform.external.thoughtmachine.io" {{
     token = "$tfregistry_token"
-}
+}}
 EOC
 else
     cat <<WARN >&2
@@ -91,8 +95,8 @@ else
 WARN
 fi
 
-export TF_CLI_ARGS_plan="${TF_CLI_ARGS_plan:-} -lock-timeout=60s"
-export TF_CLI_ARGS_apply="${TF_CLI_ARGS_apply:-} -lock-timeout=60s"
+export TF_CLI_ARGS_plan="${{TF_CLI_ARGS_plan:-}} -lock-timeout=60s"
+export TF_CLI_ARGS_apply="${{TF_CLI_ARGS_apply:-}} -lock-timeout=60s"
 export CWD=$(pwd)
 TERRAFORM_CLI="$CWD/$(out_location {terraform_cli})"
 var_file_paths=({var_file_paths_csv})
@@ -102,7 +106,7 @@ then
 TERRAFORM_CLI="$CWD/$(location {terraform_cli})"
 var_file_paths=({var_file_paths_csv_sandbox})
 data_paths=({data_paths_csv_sandbox})
-trap 'echo -n $? 1>&3 && rm -rf ${TF_DATA_DIR} && exit 0' EXIT
+trap 'echo -n $? 1>&3 && rm -rf ${{TF_DATA_DIR}} && exit 0' EXIT
 fi
 var_flags=""
 for i in "${{!var_file_paths[@]}}"
