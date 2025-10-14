@@ -21,7 +21,6 @@ fi
 
 AUDIT_LOG_DIR_WITH_ID="${AUDIT_LOG_DIR}/$(basename "$DIR_LIST")"
 
-
 # Check files were created
 FILES=(
     "please_invocation.jsonl"
