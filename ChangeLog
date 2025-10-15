@@ -1,6 +1,6 @@
 Version 17.22.0
 ---------------
-    * Add optional audit logging to log please invocations, build commands and remote file fetching (#3425)
+    * Add `--audit_log_dir` option for logging of Please invocations, build commands and remote file fetching (#3425)
 
 Version 17.21.0
 ---------------
