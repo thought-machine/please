@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-retryablehttp"
 
+	"github.com/thought-machine/please/src/audit"
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
@@ -517,6 +518,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	}
 	env := core.StampedBuildEnvironment(state, target, inputHash, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp).ToSlice()
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
+	audit.WriteBuildCommand(target.Label.String(), env, command)
 	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
@@ -1057,14 +1059,17 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err
-	} else if err := prepareDirectory(target.TmpDir(), false); err != nil {
+	}
+	if err := prepareDirectory(target.TmpDir(), false); err != nil {
 		return err
 	}
 	var err error
 	for _, src := range target.Sources {
 		if e := fetchOneRemoteFile(state, target, src.String()); e != nil {
 			err = multierror.Append(err, e)
+			audit.WriteRemoteFile(target.Label.Name, src.String(), false, err.Error())
 		} else {
+			audit.WriteRemoteFile(target.Label.Name, src.String(), true, "")
 			return nil
 		}
 	}
