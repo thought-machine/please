@@ -1,3 +1,7 @@
+Version 17.22.0
+---------------
+    * Add optional audit logging to log please invocations, build commands and remote file fetching (#3425)
+
 Version 17.21.0
 ---------------
     * Expose build target source list via the filesystem instead of the environment with build_rule's src_list_files parameter (#3393)
