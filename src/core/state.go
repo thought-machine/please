@@ -1240,7 +1240,10 @@ func (state *BuildState) ForTarget(target *BuildTarget) *BuildState {
 func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
+	return state.forArch(arch)
+}
 
+func (state *BuildState) forArch(arch cli.Arch) *BuildState {
 	for _, s := range state.progress.allStates {
 		if s.Arch == arch && s.CurrentSubrepo == state.CurrentSubrepo {
 			return s
@@ -1269,8 +1272,15 @@ func (state *BuildState) ForArch(arch cli.Arch) *BuildState {
 	s.Config = config
 	s.RepoConfig = repoConfig
 	s.Arch = arch
-	state.progress.allStates = append(state.progress.allStates, s)
 
+	// Make sure that any parent states are also for the requested arch.
+	if s.ParentState != nil {
+		if s.ParentState.Arch != arch {
+			s.ParentState = s.ParentState.forArch(arch)
+		}
+	}
+
+	state.progress.allStates = append(state.progress.allStates, s)
 	return s
 }
 
