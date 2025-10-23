@@ -38,8 +38,12 @@ check the directory we should have a config file, as well as the Please wrapper
 script `pleasew`:
 
 ```bash
-$ plz init
-$ tree -a
+plz init
+tree -a
+```
+
+The output should look like this:
+```bash
 .
 ├── pleasew
 └── .plzconfig
@@ -74,9 +78,12 @@ The easy way to install a plugin in your project is to use `plz init`. We'll
 use the Go plugin in this example:
 
 ```bash
-$ plz init plugin go
+plz init plugin go
+tree -a
+```
 
-$ tree -a
+The output should look like this:
+```bash
 .
 ├── pleasew
 ├── plugins
