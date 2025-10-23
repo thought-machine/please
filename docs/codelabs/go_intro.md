@@ -33,11 +33,11 @@ Duration: 2
 
 The easiest way to get started is from an existing Go module:
 
-```text
-$ mkdir getting_started_go && cd getting_started_go
-$ plz init 
-$ plz init plugin go
-$ go mod init github.com/example/module 
+```bash
+mkdir getting_started_go && cd getting_started_go
+plz init
+plz init plugin go
+go mod init github.com/example/module
 ```
 
 
@@ -77,6 +77,16 @@ Target = //plugins:go
 This configures the Go plugin, and makes the build definitions available in the parse context throughout the repo
 automatically. Alternatively, if you're not using Go everywhere, you can remove the `preloadsubincludes` config and add 
 `subinclude("///go//build_defs:go")` to each `BUILD` file that needs access to Go rules.
+
+### Troubleshooting: "unknown rule go_binary"
+Duration: 1
+
+Seeing `unknown rule go_binary` (or similar for other Go rules) means the plugin was not loaded. Confirm the plugin target exists and re-run the init script if needed.
+
+**Fix checklist**
+- `plz query config Plugin.go.Target` should report `//plugins:go`.
+- Ensure `plugins/BUILD` is present and contains the Go plugin target.
+- If `.plzconfig` was edited manually, re-run `plz init plugin go` or restore the snippet above.
 
 Read the [config](/config.html) and [go plugin config](/plugins.html#go.config) docs for more information on 
 configuration.
@@ -143,8 +153,8 @@ Path = /usr/local/go/bin:/usr/local/bin:/usr/bin:/bin
 Additionally, from version 1.20, golang no longer includes the standard library with its distribution. To use 1.20 from
 the path with Please, you must install it. This can be done like so: 
 
-```text
-$ GODEBUG="installgoroot=all" go install std
+```bash
+GODEBUG="installgoroot=all" go install std
 ```
 
 ## Hello, world!
@@ -158,8 +168,8 @@ package main
 
 import "fmt"
 
-func main(){
-	fmt.Println("Hello, world!")
+func main() {
+    fmt.Println("Hello, world!")
 }
 ```
 
@@ -175,8 +185,14 @@ go_binary(
 ```
 
 That's it! You can now run this with:
+
+```bash
+plz run //src:main
+```
+
+You should see the output:
+
 ```text
-$ plz run //src:main
 Hello, world!
 ```
 
@@ -223,13 +239,18 @@ go_library(
 )
 ```
 
-We can then build it like so:
+Then run the following command to build the greetings package:
+
+```bash
+plz build //src/greetings
+```
+
+You should see output similar to:
 
 ```text
-$ plz build //src/greetings
 Build finished; total time 290ms, incrementality 50.0%. Outputs:
 //src/greetings:greetings:
-  plz-out/gen/src/greetings/greetings.a
+    plz-out/gen/src/greetings/greetings.a
 ```
 
 Here we can see that the output of a `go_library` rule is a `.a` file which is stored in
@@ -244,7 +265,7 @@ NB: This syntax can also be used on the command line e.g. `plz build //src/...`
 ## Using our new package
 Duration: 2
 To maintain a principled model for incremental and hermetic builds, Please requires that rules are explicit about their
-inputs and outputs. To use this new package in our "hello world" program, we have to add it as a dependency:
+inputs and outputs. To use this new package in our "hello world" program, we have to add it as a dependency of our binary rule:
 
 ### `src/BUILD`
 ```python
@@ -270,17 +291,19 @@ import (
     "github.com/example/module/src/greetings"
 )
 
-func main(){
+func main() {
     fmt.Printf("%s, world!\n", greetings.Greeting())
 }
 ```
 
-Give it a whirl:
+Give it a whirl by running the following command:
 
 ```text
 $ plz run //src:main
 Bonjour, world!
 ```
+
+The greeting is selected at random, so your output may vary each time you run the command.
 
 ## Testing our code
 Duration: 5
@@ -338,7 +361,7 @@ package greetings_test
 
 import (
     "testing"
-    
+
     // We now need to import the "production" package 
     "github.com/example/module/src/greetings"
 )
