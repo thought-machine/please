@@ -34,8 +34,13 @@ Duration: 2
 For this codelab we will be using the Please codelabs repo:
 
 ```bash
-$ git clone https://github.com/thought-machine/please-codelabs
-Cloning into 'please-examples'...
+git clone https://github.com/thought-machine/please-codelabs
+```
+
+The output should look something like this:
+
+```bash
+Cloning into 'please-codelabs'...
 remote: Enumerating objects: 228, done.
 remote: Total 228 (delta 0), reused 0 (delta 0), pack-reused 228
 Receiving objects: 100% (228/228), 38.23 KiB | 543.00 KiB/s, done.
@@ -291,8 +296,10 @@ Build finished; total time 300ms, incrementality 100.0%. Outputs:
 This can be especially useful for separating out slow running tests:
 
 ```bash
-plz test --exclude e2e
+plz test --exclude my_label
 ```
+
+This will run all tests except those labeled with `my_label`. 
 
 ## What's next?
 

@@ -32,10 +32,10 @@ get stuck you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 Duration: 2
 
 Let's create a new project:
-```
-$ mkdir getting_started_python && cd getting_started_python
-$ plz init --no_prompt
-$ plz init plugin python
+```bash
+mkdir getting_started_python && cd getting_started_python
+plz init --no_prompt
+plz init plugin python
 ```
 
 ### A note about your Please PATH
@@ -306,12 +306,11 @@ DisableVendorFlags = true
 We can now use this library in our code:
 
 ### `src/greetings/greetings.py`
-```go
+```python
 from numpy import random
 
 def greeting():
     return random.choice(["Hello", "Bonjour", "Marhabaan"])
-
 ```
 
 And add NumPy as a dependency:
@@ -347,6 +346,10 @@ tutorial in more detail.
 - [Config](/config.html#python) - See the available config options for Please, especially those relating to Python.
 - [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
 determine files changes since master, watch rules and build them automatically as things change and much more! Use
+`plz help`, and explore this rich set of commands!
+
+Otherwise, why not try one of the other codelabs!
+, watch rules and build them automatically as things change and much more! Use
 `plz help`, and explore this rich set of commands!
 
 Otherwise, why not try one of the other codelabs!
