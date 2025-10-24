@@ -273,9 +273,10 @@ wc -w $@
 
 ### `tools/BUILD`
 ```python
-sh_binary(
+filegroup(
     name = "wc",
-    main = "wc.sh",
+    srcs = ["wc.sh"],
+    binary = True,
     visibility = ["PUBLIC"],
 )
 ```
@@ -404,3 +405,4 @@ If you create something you believe will be useful to the wider world, we might 
 [pleasings](https://github.com/thought-machine/pleasings) repo!
 
 If you get stuck, jump on [gitter](https://gitter.im/please-build/Lobby) and we'll do our best to help you!
+
