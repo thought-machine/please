@@ -186,6 +186,17 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 			return err
 		}
 		log.Debug("Finished pre-build function for %s", target.Label)
+
+		// Wait for any new dependencies added by pre-build commands before continuing.
+		for _, dep := range target.Dependencies() {
+			dep.WaitForBuild(target.Label)
+			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
+				// Give up and set the original target as dependency failed
+				target.SetState(core.DependencyFailed)
+				return fmt.Errorf("error in pre-rule dependency for %s: %s", target.Label, dep.Label)
+			}
+		}
+		log.Debug("Finished waiting for dependencies for %s", target.Label)
 	}
 
 	state.LogBuildResult(target, core.TargetBuilding, "Preparing...")
@@ -342,6 +353,16 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		outs := target.Outputs()
 		if err := runPostBuildFunction(state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
+		}
+
+		// Wait for any new dependencies added by post-build commands before continuing.
+		for _, dep := range target.Dependencies() {
+			dep.WaitForBuild(target.Label)
+			if dep.State() >= core.DependencyFailed { // Either the target failed or its dependencies failed
+				// Give up and set the original target as dependency failed
+				target.SetState(core.DependencyFailed)
+				return fmt.Errorf("error in post-rule dependency for %s: %s", target.Label, dep.Label)
+			}
 		}
 
 		if runRemotely && len(outs) != len(target.Outputs()) {
