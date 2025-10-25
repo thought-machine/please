@@ -1,5 +1,5 @@
-summary: Third-party dependencies with Puku
-description: Add, update, pin, and remove Go third-party dependencies using go get and plz puku (no go_module())
+summary: Third-party dependencies with go_module() 
+description: Set up gRPC and learn how to manage third party dependencies with Please
 id: go_module
 categories: beginner
 tags: medium
@@ -7,38 +7,18 @@ status: Published
 authors: Jon Poole
 Feedback Link: https://github.com/thought-machine/please
 
-# Third-party dependencies with Puku
-
+# Third-party dependencies with `go_module()`
 ## Overview
-Duration: 2
-
-Notes: `go_module()` is deprecated in Core3. This codelab teaches a practical workflow that uses standard Go tooling (`go get` / `go mod`) together with Puku to generate and maintain third-party go targets (`go_repo`).
-
-### Goals
-- Add a new third‑party dependency with `go get`
-- Sync the dependency into Please with `plz puku sync`
-- Let puku update BUILD deps with `plz puku fmt`
-- Upgrade, pin/exclude, and remove modules safely
-- Diagnose missing import / missing subrepo issues
-
-You will not use `go_module()` in this guide.
+Duration: 1
 
 ### Prerequisites
-- Please installed and configured: https://please.build/quickstart.html
-- Go 1.20+ installed and on PATH
-- Puku available in one of the following ways:
-  - Via Please alias: add an alias to `.plzconfig` (see below), or
-  - Installed locally (if the first doesn't work, try the second):
-    - `go install github.com/please-build/puku/cmd/puku@latest`
-    - `go get github.com/please-build/puku/cmd/puku`
+- You must have Please installed: [Install Please](https://please.build/quickstart.html)
 
-### What you’ll learn
-- Add and upgrade dependencies with `go get`
-- Sync `go.mod` into `third_party/go/BUILD` with `plz puku sync`
-- Let `plz puku fmt` add third-party deps to your BUILD targets
-- Diagnose missing imports and missing subrepos
-- Pin or exclude dependency versions with `go mod edit`
-- Remove third-party modules safely
+### What you'll learn
+In this codelab, we'll be setting up Please to compile third party go modules. You'll learn how to: 
+- Use go_module() to download and compile third party go modules
+- Download and compile the library and binary parts of a module separately 
+- Resolving cyclical dependencies between modules
 
 ### What if I get stuck?
 
@@ -46,396 +26,310 @@ The final result of running through this codelab can be found
 [here](https://github.com/thought-machine/please-codelabs/tree/main/go_modules) for reference. If you really get stuck
 you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 
-## Initialising your project and running puku with please
-Duration: 5
+## Initialising your project
+Duration: 2
 
 The easiest way to get started is from an existing Go module:
 
-```bash
-mkdir puku_sync && cd puku_sync
-go mod init example_module
-plz init --no_prompt
-plz init plugin go
+```
+$ mkdir go_module && cd go_module
+$ go mod init example_module
+$ plz init --no_prompt
+$ plz init plugin go
 ```
 
-Define a valid Puku version number as a build configuration string in `.plzconfig`:
-
+### A note about your Please PATH
+Please doesn't use your host system's `PATH` variable. If where you installed Go isn't in this default path, you will
+need to add the following to `.plzconfig`:
 ```
-[BuildConfig]
-puku-version = "1.17.0"
-```
-
-Uncomment and edit the following lines in your `.plzconfig` to set up `please` version:
-
-```
-[please]
-version = 17.22.0
+[build]
+path = $YOUR_GO_INSTALL_HERE:/usr/local/bin:/usr/bin:/bin
 ```
 
-Configure a Please alias for Puku (optional but convenient):
+You can find out where Go is installed with `dirname $(which go)`.
 
-```
-[Alias "puku"]
-Cmd = run //third_party/binary:puku --
-PositionalLabels = true
-Desc = A tool to update BUILD files in Go packages
-```
+## Dependencies in Please vs. go build
+Duration: 3
 
-With the alias, you can use `plz puku` instead of `plz run //third_party/binary:puku`.
+If you're coming from a language specific build system like `go build`, Please can feel a bit alien. Please is language 
+agnostic so can't parse you source code to automatically update its BUILD files when you add a new import like 
+`go mod edit` would for `go build`. 
 
-Then download that version of Puku in `third_party/binary/BUILD`:
+Instead, you must strictly define all the dependencies of each module. This allows Please to build go modules in a 
+controlled and reproducible way without actually having to understand go itself. However, it does take a little more 
+work to set up.
 
+A basic `go_module()` usage might look like: 
+
+### `third_party/go/BUILD`
 ```python
-remote_file(
-    name = "puku",
-    url = f"https://github.com/please-build/puku/releases/download/v{CONFIG.PUKU_VERSION}/puku-{CONFIG.PUKU_VERSION}-{CONFIG.OS}_{CONFIG.ARCH}",
-    binary = True,
+go_module(
+    name = "protobuf_go",
+    # By default, we only install the top level package i.e. golang.org/x/sys. To 
+    # compile everything, use this wildcard. 
+    install = ["..."],
+    module = "google.golang.org/protobuf",
+    version = "v1.25.0",
+    # We must tell Please that :protobuf_go depends on :cmp so we can link to it.  
+    deps = [":cmp"],
+)
+
+go_module(
+    name = "cmp",
+    install = ["cmp/..."],
+    module = "github.com/google/go-cmp",
+    version = "v0.5.5",
 )
 ```
 
-Configure the Go plugin to point at your go.mod (recommended). Create a repo-root `BUILD` with a filegroup for go.mod:
+### A note on install
+We talk about installing a package. This nomenclature comes from `go install` which would compile a package and 
+install it in the go path. In Please terms, this means compiling and storing the result in `plz-out`. We're not 
+installing anything system wide. 
 
-1) Add a filegroup for go.mod at `BUILD` in repo root:
+The install list can contain exact packages, or could contain wildcards:
+
+### `third_party/go/BUILD`
 ```python
-filegroup(
-    name = "gomod",
-    srcs = ["go.mod"],
-    visibility = ["PUBLIC"],
+go_module(
+    name = "module",
+    module = "example.com/some/module",
+    version = "v1.0.0",
+    install = [
+       ".", # Refers to the root package of the module. This is the default if no install list is provided. 
+       "...", # Refers to everything in the module
+       "foo/...", # installs example.com/some/module/foo and everything under it
+       "foo/bar", # installs example.com/some/module/foo/bar only
+    ]
 )
 ```
 
-2) Update your `.plzconfig`:
-```
-[Plugin "go"]
-Target = //plugins:go
-ModFile = //:gomod
-```
-
-This lets Puku use standard `go get` to resolve modules, then sync them into `third_party/go/BUILD`.
-
-### Configuring the PATH for Go
-
-By default, Please looks for Go in the following locations:
-```
-/usr/local/bin:/usr/bin:/bin
-```
-
-If you installed Go elsewhere (e.g., via Homebrew on macOS, or a custom location), you must configure the path in `.plzconfig`.
-
-First, find where your Go binary is located:
-```bash
-which go
-```
-
-Then add the path to `.plzconfig`. For example, if Go is at `/opt/homebrew/bin/go`:
-
-```ini
-[Build]
-Path = /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
-```
-
-Or if it's at `/usr/local/go/bin/go`:
-
-```ini
-[Build]
-Path = /usr/local/go/bin:/usr/local/bin:/usr/bin:/bin
-```
-
-**Note:** On Windows, use `where.exe go` to find the Go installation path.
-
-### Installing the Go standard library (Go 1.20+)
-
-From Go version 1.20 onwards, the standard library is no longer included by default with the Go distribution. You must install it manually:
-
-```bash
-GODEBUG="installgoroot=all" go install std
-```
-
-## Adding and updating modules
+## go_mod_download()
 Duration: 5
 
-Let's add a new third-party dependency using `go get` and sync it with Puku.
+For most modules, you can get away with compiling them in one pass. Sometimes it can be useful to split this out into
+separate rules. There are many reasons to do this, for example: to resolve cyclic dependencies; download from a fork 
+of a repo; or to vendor a module. 
 
-### Adding a new module
+Another common case is when modules have a `main` package but can also act as a library. One example of this is 
+`github.com/golang/protobuf` which contains the protobuf library, as well as the protoc plugin for go. We might want to 
+have a binary rule for the protoc plugin, so we can refer to that in our proto config in our `.plzconfig`. 
 
-First, let's create a simple Go program that uses a third-party library. Create a file `src/hello/hello.go`:
+To do this, we create a `go_mod_download()` rule that will download our sources for us:
 
-```go
-package main
-
-import (
-	"fmt"
-	"github.com/google/uuid"
-)
-
-func main() {
-	id := uuid.New()
-	fmt.Printf("Generated UUID: %s\n", id.String())
-}
-```
-
-Now add the dependency with `go get`:
-
-```bash
-GOTOOLCHAIN=local go get github.com/google/uuid
-```
-
-Sync the changes to `third_party/go/BUILD`:
-
-```bash
-plz puku sync -w
-```
-
-This creates a `go_repo()` rule in `third_party/go/BUILD` for the `uuid` module. You may need to create the `third_party/go/BUILD` file if it doesn't exist.
-
-### Creating the BUILD file
-
-Create `src/hello/BUILD`:
-
+### `third_party/go/BUILD`
 ```python
-go_binary(
-    name = "hello",
-    srcs = ["hello.go"],
+go_mod_download(
+    name = "protobuf_download",
+    module = "github.com/golang/protobuf",
+    version = "v1.4.3",
 )
 ```
 
-Now let Puku automatically add the dependency:
-
-```bash
-plz puku fmt //src/hello
-```
-
-Puku will update your BUILD file to include the dependency on `//third_party/go:google-uuid` (or the subrepo format).
-
-Build and run your program:
-
-```bash
-plz run //src/hello
-```
-
-### Updating an existing module
-
-To update a module to a specific version:
-
-```bash
-GOTOOLCHAIN=local go get github.com/google/uuid@v1.6.0
-plz puku sync -w
-```
-
-To update to the latest version:
-
-```bash
-GOTOOLCHAIN=local go get -u github.com/google/uuid
-plz puku sync -w
-```
-
-After syncing, rebuild your targets to use the updated version.
-
-### Troubleshooting
-
-**Missing import error?** If you see `could not import ... (open : no such file or directory)`, the module providing that package is missing. Add it with:
-
-```bash
-go get <module-name>
-plz puku sync -w
-```
-
-**Missing subrepo error?** If you see `Subrepo ... is not defined`, you need to add or migrate the module:
-
-```bash
-go get <module-name>
-plz puku sync -w
-```
-
-## Stop a module from updating
-Duration: 3
-
-Sometimes you need to prevent a module from being updated due to breaking changes or compatibility issues.
-
-### Excluding a specific version
-
-Use the `exclude` directive to prevent a specific version from being used:
-
-```bash
-go mod edit -exclude github.com/example/module@v2.0.0
-plz puku sync -w
-```
-
-This prevents version `v2.0.0` from being selected. Go will use the next highest non-excluded version.
-
-To remove an exclusion:
-
-```bash
-go mod edit -dropexclude github.com/example/module@v2.0.0
-plz puku sync -w
-```
-
-### Pinning to a specific version
-
-Use the `replace` directive to pin a module to a specific version:
-
-```bash
-go mod edit -replace github.com/example/module=github.com/example/module@v1.5.0
-plz puku sync -w
-```
-
-This pins the module to `v1.5.0` regardless of what other dependencies require.
-
-To unpin (and upgrade at the same time):
-
-```bash
-go mod edit -dropreplace github.com/example/module
-go get -u github.com/example/module
-plz puku sync -w
-```
-
-**Warning:** Pinning modules can cause compatibility issues with other dependencies. Use sparingly and resolve as soon as possible.
-
-### Example scenario
-
-Let's say a new version of `uuid` has a breaking change. Pin it to a working version:
-
-```bash
-go mod edit -replace github.com/google/uuid=github.com/google/uuid@v1.3.0
-plz puku sync -w
-plz build //src/hello
-```
-
-## Removing modules
-Duration: 3
-
-Before removing a module, ensure it's not used anywhere in your codebase.
-
-### Steps to remove a module
-
-1. **Verify no dependencies exist:**
-
-```bash
-plz query revdeps //third_party/go:module_name --level=-1 | grep -v //third_party/go
-```
-
-If this returns no results, the module is safe to remove.
-
-2. **Remove the `go_repo()` target from `third_party/go/BUILD`:**
-
-Open `third_party/go/BUILD` and delete the corresponding `go_repo()` rule.
-
-3. **Remove from `go.mod` and `go.sum`:**
-
-```bash
-go mod edit -droprequire github.com/example/module
-go mod tidy
-```
-
-4. **Sync the changes:**
-
-```bash
-plz puku sync -w
-```
-
-**Note:** Puku does not currently automate module removal, so this process is manual.
-
-### Example
-
-Let's say we want to remove an unused module:
-
-```bash
-# Check for dependencies
-plz query revdeps //third_party/go:unused_module --level=-1 | grep -v //third_party/go
-
-# If safe, remove from go.mod
-go mod edit -droprequire github.com/unused/module
-go mod tidy
-
-# Manually delete the go_repo() rule from third_party/go/BUILD
-# Then sync
-plz puku sync -w
-```
-
-## Using new modules
-Duration: 4
-
-Once you've added a module with `go get` and `plz puku sync`, you can use it in your code.
-
-### Automatic dependency management
-
-The easiest way is to let Puku handle dependencies automatically:
-
-1. Import the package in your `.go` file
-2. Run `plz puku fmt //your/package`
-
-Puku will parse your imports and add the necessary dependencies to your BUILD file.
-
-### Manual dependency specification
-
-There are two ways to specify dependencies on third-party packages:
-
-**1. Subrepo convention (recommended):**
-
+We can then create a rule to compile the library like so: 
 ```python
-go_library(
-    name = "mylib",
-    srcs = ["mylib.go"],
+go_module(
+    name = "protobuf",
+    # Depend on our download rule instead of providing a version
+    download = ":protobuf_download",
+    install = ["..."],
+    module = "github.com/golang/protobuf",
+    # Let's skip compiling this package which as we're compiling this separately.
+    strip = ["protoc-gen-go"], 
+    deps = [":protobuf_download"],
+)
+```
+
+And then compile the main package under `github.com/golang/protobuf/protoc-gen-go` like so:
+```python
+go_module(
+    name = "protoc-gen-go",
+    # Mark this as binary so Please knows it can be executed 
+    binary = True,
+    # Depend on our download rule instead of providing a version
+    download = ":protobuf_download",
+    install = ["protoc-gen-go"],
+    module = "github.com/golang/protobuf",
+    deps = [":protobuf_go"],
+)
+```
+
+## Resolving cyclic dependencies
+Duration: 5
+
+While go packages can't be cyclically dependent on each other, go modules can. For the most part, this is considered 
+bad practice and is quite rare, however the `google.golang.org/grpc` and `google.golang.org/genproto` modules are one 
+such example. 
+
+In order to solve this, we need to figure out what parts of the modules actually depend on each other. We can then 
+download that module and compile these two parts separately. We will use `go_mod_download()` to achieve this. 
+
+N.B. To run a gRPC service written in go, you will have to install almost all of `google.golang.org/grpc`. For the sake
+of brevity, this example only install the subset that `google.golang.org/genproto` needs. You may want to complete this 
+by adding `go_module()` rules for the rest of the modules `google.golang.org/grpc` depends on. 
+
+### Installing gRPC's deps `third_party/go/BUILD`
+First we must install the dependencies of `google.golang.org/grpc`:
+```python
+go_module(
+    name = "xsys",
+    module = "golang.org/x/sys",
+    install = ["..."],
+    version = "v0.0.0-20210415045647-66c3f260301c",
+)
+
+go_module(
+    name = "net",
+    install = ["..."],
+    module = "golang.org/x/net",
+    version = "136a25c244d3019482a795d728110278d6ba09a4",
     deps = [
-        "///third_party/go/github.com_google_uuid//",
+        ":crypto",
+        ":text",
+    ],
+)
+
+go_module(
+    name = "text",
+    install = [
+        "secure/...",
+        "unicode/...",
+        "transform",
+        "encoding/...",
+    ],
+    module = "golang.org/x/text",
+    version = "v0.3.5",
+)
+
+go_module(
+    name = "crypto",
+    install = [
+        "ssh/terminal",
+        "cast5",
+    ],
+    module = "golang.org/x/crypto",
+    version = "7b85b097bf7527677d54d3220065e966a0e3b613",
+)
+```
+
+### Finding out what gRPC needs `third_party/go/BUILD`
+
+Next let's try and compile gRPC. We know it has a dependency on some of genproto, but let's set that aside for now:
+```python
+go_module(
+    name = "grpc",
+    module = "google.golang.org/grpc",
+    version = "v1.34.0",
+    # Installing just a subset of stuff to reduce the complexity of this example. You may want to just install "...",
+    # and add the rest of the dependencies. 
+    install = [
+        ".",
+        "codes",
+        "status",
+    ],
+    deps = [
+        # ":genproto",
+        ":cmp",
+        ":protobuf",
+        ":xsys",
+        ":net",
+        ":protobuf_go",
     ],
 )
 ```
 
-The subrepo format is: `///third_party/go/<module_path_with_underscores>//<package_path>`
+If we attempt to compile this, we will get an exception along the lines of:
+```
+google.golang.org/grpc/internal/status/status.go, line 36, column 2: can't find import: "google.golang.org/genproto/googleapis/rpc/status"
+```
 
-**2. Install list (go_module style):**
-
-Add packages to the `install` list on the `go_repo()` target:
-
+So let's add `google.golang.org/genproto/googleapis/rpc/...` as a dependency:
 ```python
-go_repo(
-    name = "google-uuid",
-    module = "github.com/google/uuid",
-    version = "v1.6.0",
-    install = ["."],  # Installs the root package
+go_mod_download(
+    name = "genproto_download",
+    module = "google.golang.org/genproto",
+    version = "v0.0.0-20210315173758-2651cd453018",
+)
+
+go_module(
+    name = "genproto_rpc",
+    download = ":genproto_download",
+    install = [
+        "googleapis/rpc/...",
+    ],
+    module = "google.golang.org/genproto",
+    deps = [
+        ":protobuf",
+    ],
+)
+
+go_module(
+    name = "genproto_api",
+    download = ":genproto_download",
+    install = [
+        "googleapis/api/...",
+    ],
+    module = "google.golang.org/genproto",
+    deps = [
+        ":grpc",
+        ":protobuf",
+    ],
 )
 ```
 
-Then depend on it like:
+And update our `:grpc` rule to add `:genproto_rpc` as a dependency:
+```python
+go_module(
+    name = "grpc",
+    module = "google.golang.org/grpc",
+    version = "v1.34.0",
+    # Installing just a subset of stuff to reduce the complexity of this example. You may want to just install "...",
+    # and add the rest of the dependencies. 
+    install = [
+        ".",
+        "codes",
+        "status",
+    ],
+    deps = [
+        ":genproto_rpc",
+        ":cmp",
+        ":protobuf",
+        ":xsys",
+        ":net",
+        ":protobuf_go",
+    ],
+)
+```
 
+And if we compile that with `plz build //third_party/go:grpc //third_party/go:genproto_api` we should see they build 
+now.
+
+## Using third party libraries
+Third party dependencies can be depended on in the same way as `go_library()` rules:
+
+### `third_party/go/BUILD`
 ```python
 go_library(
-    name = "mylib",
-    srcs = ["mylib.go"],
-    deps = ["//third_party/go:google-uuid"],
+    name = "service",
+    srcs = ["service.go"],
+    deps = ["//third_party/go:net"],
 )
 ```
 
-### Watch mode
-
-For active development, use watch mode to automatically update BUILD files as you code:
-
-```bash
-plz puku watch //src/...
-```
-
-This watches for changes to `.go` files and updates dependencies automatically.
-
-### Best practices
-
-- Use `plz puku fmt` to keep dependencies up to date
-- Use the subrepo format for better build incrementality
-- Review changes before committing to avoid unexpected version changes
-- Run `plz test` after adding/updating dependencies to catch issues early
+For more information on writing go code with Please, check out the [go](/codelabs/go_intro) codelab.
 
 ## What's next?
 Duration: 1
 
-Congratulations! You now know how to manage Go third-party dependencies using `go get` and Puku.
+Hopefully you now have an idea as to how to build Go modules with Please. Please is capable of so much more though!
 
-### Learn more
-
-- [Puku GitHub repository](https://github.com/please-build/puku) - Complete Puku reference
-- [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this tutorial in more detail.
-- [Go plugin rules](/plugins.html#go) - See the rest of the Go plugin rules and config.
+- [Please basics](/basics.html) - A more general introduction to Please. It covers a lot of what we have in this
+tutorial in more detail.
+- [go plugin rules](/plugins.html#go) - See the rest of the Go plugin rules and config.
 - [Built-in rules](/lexicon.html#go) - See the rest of the built in rules.
 - [Config](/config.html) - See the available config options for Please.
-- [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph, determine file changes since master, watch rules and build them automatically as things change, and much more! Use `plz help`, and explore this rich set of commands!
+- [Command line interface](/commands.html) - Please has a powerful command line interface. Interrogate the build graph,
+determine file changes since master, watch rules and build them automatically as things change, and much more! Use
+`plz help`, and explore this rich set of commands!
 
 Otherwise, why not try one of the other codelabs!
