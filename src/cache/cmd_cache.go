@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/hex"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -53,7 +54,7 @@ func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string
 	log.Debug("Retrieve %s: %s from custom cache...", target.Label, strKey)
 
 	cmd := exec.Command("sh", "-c", cache.retrieveCommand)
-	cmd.Env = append(cmd.Env, "CACHE_KEY="+strKey)
+	cmd.Env = append(os.Environ(), "CACHE_KEY="+strKey)
 
 	var cmdOutputBuffer bytes.Buffer
 	cmd.Stderr = &cmdOutputBuffer
