@@ -1,14 +1,14 @@
 remote_file(
     name = "arcat",
-    url = f"https://github.com/please-build/arcat/releases/download/v1.2.1/arcat-1.2.1-{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}",
+    url = f"https://github.com/please-build/arcat/releases/download/v1.3.0/arcat-1.3.0-{CONFIG.HOSTOS}_{CONFIG.HOSTARCH}",
     out = "arcat",
     binary = True,
     hashes = [
-        "507958f2e44e5de7529cb85fa9137ddcca2293daf6ef30dbc1a1cfa22e86ee96", # darwin_amd64
-        "717cb15f1237010740be50df3561027a976ac5bd2a5d8f5c30d2ea57ccbcad82", # darwin_arm64
-        "190fbf9cdcbcf53a82b886076c45a07323eeb6b4f460485c645cf2f306927c0c", # freebsd_amd64
-        "e5b23a127c093939f21bf2f8cb66635b7f0b88cf8a3d1fca1bc19a114f5c5a0c", # linux_amd64
-        "019ee52b534a3c48028e9a7229990055432af24a23892619e1a0d28eb3265245", # linux_arm64
+        "27fa940b2a1fd2c8beb84d1e29ed7d04ecfca489e021ed9bd7c8e975e5f43839", # darwin_amd64
+        "3191b2896451a4f3fd6d592a8a5c6684f4a18bc74f00e91e2488c228a24c1d4e", # darwin_arm64
+        "aeaf7be02fb25495f0c4e142a5adb20ce08a2bb988e7be6436562d03fbae83b0", # freebsd_amd64
+        "e09a689cebe9d9b27836c184e4955e8d6731c9453fe48124a37b6a173c6b04d6", # linux_amd64
+        "c3792853393ca692fd07bd2fbfdf1e1cf6e636090e4e622b8a77f03609c724a9", # linux_arm64
     ],
     visibility = ["PUBLIC"],
 )
