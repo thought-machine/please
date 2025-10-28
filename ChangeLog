@@ -1,3 +1,7 @@
+Version 17.23.0
+---------------
+    * Bump arcat to v1.3.0, adding the `--include` option to the `zip` command (#3441)
+
 Version 17.22.0
 ---------------
     * Add `--audit_log_dir` option for logging of Please invocations, build commands and remote file fetching (#3425)
