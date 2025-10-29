@@ -22,6 +22,7 @@ type BuildEnv map[string]string
 // on any specific target etc.
 func GeneralBuildEnvironment(state *BuildState) BuildEnv {
 	env := BuildEnv{
+		"PLZ_ENV": "1",
 		// Need this for certain tools, for example sass
 		"LANG": state.Config.Build.Lang,
 		// Need to know these for certain rules.
