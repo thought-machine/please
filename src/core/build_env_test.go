@@ -65,6 +65,7 @@ func TestExecEnvironment(t *testing.T) {
 
 	env := ExecEnvironment(NewDefaultBuildState(), target, "/path/to/runtime/dir")
 
+	assert.Equal(t, env["PLZ_ENV"], "1")
 	assert.Equal(t, env["DATA"], "pkg/data_file1")
 	assert.Equal(t, env["TMP_DIR"], "/path/to/runtime/dir")
 	assert.Equal(t, env["TMPDIR"], "/path/to/runtime/dir")
@@ -104,6 +105,7 @@ func TestExecEnvironmentTestTarget(t *testing.T) {
 
 	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir")
 
+	assert.Equal(t, env["PLZ_ENV"], "1")
 	assert.Equal(t, env["DATA"], "pkg/data_file1 pkg/data_file2")
 	assert.Equal(t, env["DATA_FILE2"], "pkg/data_file2")
 	assert.Equal(t, env["TOOLS"], "plz-out/bin/tool1 plz-out/bin/tool2")
@@ -138,6 +140,7 @@ func TestExecEnvironmentDebugTarget(t *testing.T) {
 
 	env := ExecEnvironment(state, target, "/path/to/runtime/dir")
 
+	assert.Equal(t, env["PLZ_ENV"], "1")
 	assert.Equal(t, env["DEBUG_DATA"], "pkg/data_file1")
 	assert.Equal(t, env["DEBUG_TOOLS"], "plz-out/bin/tool1")
 	assert.Equal(t, env["DEBUG_TOOLS_TOOL1"], "plz-out/bin/tool1")
@@ -173,6 +176,7 @@ func TestExecEnvironmentDebugTestTarget(t *testing.T) {
 
 	env := ExecEnvironment(state, testTarget, "/path/to/runtime/dir")
 
+	assert.Equal(t, env["PLZ_ENV"], "1")
 	assert.Equal(t, env["DEBUG_DATA"], "pkg/data_file1")
 	assert.Equal(t, env["DEBUG_TOOLS"], "plz-out/bin/tool1")
 	assert.Equal(t, env["DEBUG_TOOLS_TOOL1"], "plz-out/bin/tool1")
