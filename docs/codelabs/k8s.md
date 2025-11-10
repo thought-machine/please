@@ -107,7 +107,7 @@ go_binary(
 And test it works:
 
 ```bash
-plz run //hello_service:hello_service & curl localhost:8000
+plz run //hello_service:hello_service && curl localhost:8000
 pkill hello_service
 ```
 
@@ -380,7 +380,7 @@ plz run //hello_service/k8s:image_load && plz run //hello_service/k8s:k8s_push
 And check they're working as we expected:
 
 ```
-$ kubectl port-forward service/hello-svc 8000:8000 & curl localhost:8000
+$ kubectl port-forward service/hello-svc 8000:8000 && curl localhost:8000
 
 [1] 25986
 Hello world!
