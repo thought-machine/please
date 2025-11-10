@@ -107,8 +107,7 @@ go_binary(
 And test it works:
 
 ```bash
-plz run //hello_service:hello_service &
-curl localhost:8000
+plz run //hello_service:hello_service & curl localhost:8000
 pkill hello_service
 ```
 
