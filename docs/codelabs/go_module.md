@@ -1,6 +1,6 @@
 summary: Third-party dependencies with Puku
-description: Add, update, pin, and remove Go third-party dependencies using go get and plz puku (no go_module())
-id: go_module
+description: Add, update, pin, and remove Go third-party dependencies using go get and plz puku
+id: puku
 categories: beginner
 tags: medium
 status: Published
@@ -14,31 +14,23 @@ Duration: 2
 
 Notes: `go_module()` is deprecated in Core3. This codelab teaches a practical workflow that uses standard Go tooling (`go get` / `go mod`) together with Puku to generate and maintain third-party go targets (`go_repo`).
 
-### Goals
-- Add a new third‑party dependency with `go get`
-- Sync the dependency into Please with `plz puku sync`
-- Let puku update BUILD deps with `plz puku fmt`
-- Upgrade, pin/exclude, and remove modules safely
-- Diagnose missing import / missing subrepo issues
-
-You will not use `go_module()` in this guide.
+### Goals and what you'll learn
+- Add and upgrade third‑party dependencies using `go get`
+- Sync `go.mod` changes into Please with `plz puku sync`
+- Let Puku update BUILD deps with `plz puku fmt` (and use `plz puku watch` for live updates)
+- Pin or exclude dependency versions with `go mod edit`
+- Remove third‑party modules safely and tidy module state
+- Diagnose missing imports and missing subrepo issues
 
 ### Prerequisites
 - Please installed and configured: https://please.build/quickstart.html
 - Go 1.20+ installed and on PATH
 - Puku available in one of the following ways:
-  - Via Please alias: add an alias to `.plzconfig` (see below), or
-  - Installed locally (if the first doesn't work, try the second):
+  - Via a Please alias (guide in next step), or
+    - Installed locally with either:
     - `go install github.com/please-build/puku/cmd/puku@latest`
+        or
     - `go get github.com/please-build/puku/cmd/puku`
-
-### What you’ll learn
-- Add and upgrade dependencies with `go get`
-- Sync `go.mod` into `third_party/go/BUILD` with `plz puku sync`
-- Let `plz puku fmt` add third-party deps to your BUILD targets
-- Diagnose missing imports and missing subrepos
-- Pin or exclude dependency versions with `go mod edit`
-- Remove third-party modules safely
 
 ### What if I get stuck?
 
@@ -46,7 +38,7 @@ The final result of running through this codelab can be found
 [here](https://github.com/thought-machine/please-codelabs/tree/main/go_modules) for reference. If you really get stuck
 you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 
-## Initialising your project and running puku with please
+## Initialising your project and running Puku with Please
 Duration: 5
 
 The easiest way to get started is from an existing Go module:
@@ -177,7 +169,7 @@ func main() {
 Now add the dependency with `go get`:
 
 ```bash
-GOTOOLCHAIN=local go get github.com/google/uuid
+go get github.com/google/uuid
 ```
 
 Sync the changes to `third_party/go/BUILD`:
@@ -293,7 +285,7 @@ plz puku sync -w
 
 ### Example scenario
 
-Let's say a new version of `uuid` has a breaking change. Pin it to a working version:
+Let's say a new version of `uuid` has introduced a breaking change. Pin it to a working version:
 
 ```bash
 go mod edit -replace github.com/google/uuid=github.com/google/uuid@v1.3.0
@@ -330,25 +322,6 @@ go mod tidy
 4. **Sync the changes:**
 
 ```bash
-plz puku sync -w
-```
-
-**Note:** Puku does not currently automate module removal, so this process is manual.
-
-### Example
-
-Let's say we want to remove an unused module:
-
-```bash
-# Check for dependencies
-plz query revdeps //third_party/go:unused_module --level=-1 | grep -v //third_party/go
-
-# If safe, remove from go.mod
-go mod edit -droprequire github.com/unused/module
-go mod tidy
-
-# Manually delete the go_repo() rule from third_party/go/BUILD
-# Then sync
 plz puku sync -w
 ```
 
