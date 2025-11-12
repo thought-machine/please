@@ -1358,7 +1358,6 @@ func (state *BuildState) IterInputs(target *BuildTarget, test bool) iter.Seq[Bui
 			return
 		}
 		for runDep := range target.IterAllRuntimeDependencies(state.Graph) {
-			log.Debug("state.IterInputs: %s", runDep.String())
 			if !yield(runDep) {
 				return
 			}
@@ -1373,7 +1372,6 @@ func (state *BuildState) IterInputs(target *BuildTarget, test bool) iter.Seq[Bui
 				continue
 			}
 			for runDep := range state.Graph.TargetOrDie(label).IterAllRuntimeDependencies(state.Graph) {
-				log.Debug("state.IterInputs: data: %s", runDep.String())
 				if !yield(runDep) {
 					return
 				}
@@ -1389,7 +1387,6 @@ func (state *BuildState) IterInputs(target *BuildTarget, test bool) iter.Seq[Bui
 				continue
 			}
 			for runDep := range state.Graph.TargetOrDie(label).IterAllRuntimeDependencies(state.Graph) {
-				log.Debug("state.IterInputs: test_tools: %s", runDep.String())
 				if !yield(runDep) {
 					return
 				}
