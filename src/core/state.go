@@ -1353,17 +1353,46 @@ func (state *BuildState) IterInputs(target *BuildTarget, test bool) iter.Seq[Bui
 		return IterInputs(state, state.Graph, target, true, target.IsFilegroup)
 	}
 	return func(yield func(BuildInput) bool) {
+		// The target itself, plus its transitive run-time dependencies (since we're about to run the target):
 		if !yield(target.Label) {
 			return
 		}
+		for runDep := range target.IterAllRuntimeDependencies(state.Graph) {
+			log.Debug("state.IterInputs: %s", runDep.String())
+			if !yield(runDep) {
+				return
+			}
+		}
+		// The target's data, plus the transitive run-time dependencies for data that are also targets:
 		for _, datum := range target.AllData() {
 			if !yield(datum) {
 				return
 			}
+			label, ok := datum.Label()
+			if !ok {
+				continue
+			}
+			for runDep := range state.Graph.TargetOrDie(label).IterAllRuntimeDependencies(state.Graph) {
+				log.Debug("state.IterInputs: data: %s", runDep.String())
+				if !yield(runDep) {
+					return
+				}
+			}
 		}
+		// The target's test tools, plus the transitive run-time dependencies for test tools that are also targets:
 		for _, tool := range target.AllTestTools() {
 			if !yield(tool) {
 				return
+			}
+			label, ok := tool.Label()
+			if !ok {
+				continue
+			}
+			for runDep := range state.Graph.TargetOrDie(label).IterAllRuntimeDependencies(state.Graph) {
+				log.Debug("state.IterInputs: test_tools: %s", runDep.String())
+				if !yield(runDep) {
+					return
+				}
 			}
 		}
 	}

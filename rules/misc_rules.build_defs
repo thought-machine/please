@@ -2,7 +2,7 @@
 
 
 def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs:list|dict=None, deps:list=None,
-            exported_deps:list=None, labels:list&features&tags=None, visibility:list=None,
+            exported_deps:list=None, runtime_deps:list=None, labels:list&features&tags=None, visibility:list=None,
             building_description:str='Building...', data:list|dict=None, hashes:list=None, timeout:int=0, binary:bool=False,
             sandbox:bool=None, needs_transitive_deps:bool=False, output_is_complete:bool=True,
             test_only:bool&testonly=False, secrets:list|dict=None, requires:list=None, provides:dict=None,
@@ -34,6 +34,13 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                           names to lists, with similar semantics to those of srcs.
       deps (list): Dependencies of this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
+      runtime_deps (list): Run-time dependencies of this rule. If this rule is run (i.e. with 'plz run'),
+                           rules in this list, as well as those rules' transitive run-time dependencies,
+                           are guaranteed to be built before this rule runs. If this rule is declared as
+                           a dependency of another rule, the outputs of rules in this list, as well as
+                           the outputs of those rules' transitive run-time dependencies, will exist in
+                           the dependent rule's build environment. Requires the rule to produce a runnable
+                           output (i.e. binary = True).
       tools (str | list | dict): Tools used to build this rule; similar to srcs but are not copied to the
                            temporary build directory. Should be accessed via $(exe //path/to:tool)
                            or similar.
@@ -119,6 +126,7 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         cmd = ' && '.join(cmd) if isinstance(cmd, list) else cmd,
         deps = deps,
         exported_deps = exported_deps,
+        runtime_deps = runtime_deps,
         data = data,
         tools = tools,
         secrets = secrets,
@@ -147,11 +155,12 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
 
 
 def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cmd:str|list|dict=None, srcs:list|dict=None,
-            outs:list=None, deps:list=None, exported_deps:list=None, tools:str|list|dict=None, test_tools:str|list|dict=None,
-            data:list|dict=None, visibility:list=None, timeout:int=0, needs_transitive_deps:bool=False,
-            flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False, test_outputs:list=None,
-            output_is_complete:bool=True, requires:list=None, sandbox:bool=None, size:str=None, local:bool=False,
-            pass_env:list=None, env:dict=None, exit_on_error:bool=CONFIG.EXIT_ON_ERROR, no_test_coverage:bool=False):
+            outs:list=None, deps:list=None, exported_deps:list=None, runtime_deps:list=None, tools:str|list|dict=None,
+            test_tools:str|list|dict=None, data:list|dict=None, visibility:list=None, timeout:int=0,
+            needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
+            test_outputs:list=None, output_is_complete:bool=True, requires:list=None, sandbox:bool=None, size:str=None,
+            local:bool=False, pass_env:list=None, env:dict=None, exit_on_error:bool=CONFIG.EXIT_ON_ERROR,
+            no_test_coverage:bool=False):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -172,6 +181,10 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
       outs (list): Output files of this rule.
       deps (list): Dependencies of this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
+      runtime_deps (list): Run-time dependencies of this rule. When the test command runs, rules in this
+                           list, as well as those rules' transitive run-time dependencies, will exist in
+                           the test environment. Requires the rule to produce a runnable output (i.e.
+                           binary = True).
       tools (str | list | dict): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory.
       test_tools (str | list | dict): Like tools but available to test_cmd instead.
@@ -210,6 +223,7 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
         outs = outs,
         deps = deps,
         exported_deps = exported_deps,
+        runtime_deps = runtime_deps,
         data = data,
         tools = tools,
         test_tools = test_tools,
@@ -256,7 +270,7 @@ def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test
     )
 
 
-def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_deps:list=None,
+def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_deps:list=None, runtime_deps:list=None,
               visibility:list=None, labels:list&features&tags=None, binary:bool=False, output_is_complete:bool=True,
               requires:list=None, provides:dict=None, hashes:list=None, test_only:bool&testonly=False):
     """Defines a collection of files which other rules can depend on.
@@ -271,6 +285,8 @@ def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_dep
       srcs (list): Source files for the rule.
       deps (list): Dependencies of the rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
+      runtime_deps (list): Run-time dependencies of this rule. Requires the rule to produce a runnable
+                           output (i.e. binary = True).
       visibility (list): Visibility declaration
       labels (list): Labels to apply to this rule
       binary (bool): True to mark the rule outputs as binary
@@ -289,6 +305,7 @@ def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_dep
         srcs=srcs,
         deps=deps,
         exported_deps=exported_deps,
+        runtime_deps=runtime_deps,
         visibility=visibility,
         building_description='Copying...',
         output_is_complete=output_is_complete,
@@ -373,7 +390,7 @@ def system_library(name:str, srcs:list, deps:list=None, hashes:list=None,
 
 def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:bool=False,
                 visibility:list=None, licences:list=None, test_only:bool&testonly=False,
-                labels:list=[], deps:list=None, exported_deps:list=None,
+                labels:list=[], deps:list=None, exported_deps:list=None, runtime_deps:list=None,
                 extract:bool=False, strip_prefix:str='', _tag:str='',exported_files=[],
                 entry_points:dict={}, username:str=None, password_file:str=None,
                 headers:dict={}, secret_headers:dict={}, pass_env:list=[]):
@@ -392,6 +409,8 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
       labels (list): Labels to apply to this rule.
       deps (list): List of extra dependencies for this rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
+      runtime_deps (list): Run-time dependencies of this rule. Requires the rule to produce a runnable
+                           output (i.e. binary = True).
       extract (bool): Extracts the contents of the downloaded file. It must be either zip or
                       tar format.
       strip_prefix (str): When extracting, strip this prefix from the extracted files.
@@ -454,6 +473,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
             building_description = 'Extracting...',
             deps = deps,
             exported_deps = exported_deps,
+            runtime_deps = runtime_deps,
             entry_points = entry_points,
         )
 
@@ -484,6 +504,7 @@ def remote_file(name:str, url:str|list, hashes:list=None, out:str=None, binary:b
         building_description = 'Fetching...',
         deps = deps,
         exported_deps = exported_deps,
+        runtime_deps = runtime_deps,
         test_only = test_only,
         labels = labels,
         sandbox = False,

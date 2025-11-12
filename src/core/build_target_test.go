@@ -4,6 +4,7 @@ package core
 import (
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -263,7 +264,7 @@ func TestAddDatum(t *testing.T) {
 	assert.Equal(t, target1.Data, []BuildInput{target2.Label})
 	assert.True(t, target1.dependencies[0].data)
 	// Now we add it as a dependency too, which unsets the data label
-	target1.AddMaybeExportedDependency(target2.Label, false, false, false)
+	target1.AddMaybeExportedDependency(target2.Label, false, false, false, false)
 	assert.False(t, target1.dependencies[0].data)
 }
 
@@ -427,20 +428,64 @@ func TestBuildDependencies(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
 	target3 := makeTarget1("//src/core:target3", "", target2)
+	target4 := makeTarget1("//src/core:target4", "")
+	target5 := makeTarget1("//src/core:target5", "")
 	target3.AddDatum(target1.Label)
+	// BuildDependencies shouldn't return run-time dependencies:
+	target5.IsBinary = true
+	target5.AddMaybeExportedDependency(target4.Label, false, false, false, true) // runtime
 	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies())
 	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies())
 	assert.Equal(t, []*BuildTarget{target2}, target3.BuildDependencies())
+	assert.Equal(t, []*BuildTarget{}, target5.BuildDependencies())
 }
 
 func TestDeclaredDependenciesStrict(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
 	target3 := makeTarget1("//src/core:target3", "", target2)
-	target3.AddMaybeExportedDependency(target1.Label, true, false, false)
+	target4 := makeTarget1("//src/core:target4", "")
+	target5 := makeTarget1("//src/core:target5", "")
+	target3.AddMaybeExportedDependency(target1.Label, true, false, false, false)
+	// DeclaredDependenciesStrict shouldn't return run-time dependencies:
+	target5.IsBinary = true
+	target5.AddMaybeExportedDependency(target4.Label, false, false, false, true) // runtime
 	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependenciesStrict())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependenciesStrict())
 	assert.Equal(t, []BuildLabel{target2.Label}, target3.DeclaredDependenciesStrict())
+	assert.Equal(t, []*BuildTarget{}, target5.BuildDependencies())
+}
+
+func TestRuntimeDependencies(t *testing.T) {
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "")
+	target3 := makeTarget1("//src/core:target3", "")
+	target2.IsBinary = true
+	target2.AddMaybeExportedDependency(target1.Label, false, false, false, true) // runtime
+	target3.IsBinary = true
+	target3.AddMaybeExportedDependency(target2.Label, false, false, false, true) // runtime
+	// RuntimeDependencies shouldn't return transitive run-time dependencies.
+	assert.Equal(t, []BuildLabel{}, target1.RuntimeDependencies())
+	assert.Equal(t, []BuildLabel{target1.Label}, target2.RuntimeDependencies())
+	assert.Equal(t, []BuildLabel{target2.Label}, target3.RuntimeDependencies())
+}
+
+func TestIterAllRuntimeDependencies(t *testing.T) {
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "")
+	target3 := makeTarget1("//src/core:target3", "")
+	target2.IsBinary = true
+	target2.AddMaybeExportedDependency(target1.Label, false, false, false, true) // runtime
+	target3.IsBinary = true
+	target3.AddMaybeExportedDependency(target2.Label, false, false, false, true) // runtime
+	graph := NewGraph()
+	graph.AddTarget(target1)
+	graph.AddTarget(target2)
+	graph.AddTarget(target3)
+	// IterAllRuntimeDependencies should yield transitive run-time dependencies.
+	assert.Nil(t, slices.Collect(target1.IterAllRuntimeDependencies(graph)))
+	assert.ElementsMatch(t, []BuildLabel{target1.Label}, slices.Collect(target2.IterAllRuntimeDependencies(graph)))
+	assert.ElementsMatch(t, []BuildLabel{target1.Label, target2.Label}, slices.Collect(target3.IterAllRuntimeDependencies(graph)))
 }
 
 func TestAddDependency(t *testing.T) {
@@ -451,7 +496,7 @@ func TestAddDependency(t *testing.T) {
 	target2.AddDependency(target1.Label)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
-	target2.AddMaybeExportedDependency(target1.Label, true, false, false)
+	target2.AddMaybeExportedDependency(target1.Label, true, false, false, false)
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
 	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
 	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
@@ -459,13 +504,25 @@ func TestAddDependency(t *testing.T) {
 	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
 }
 
+func TestAddRuntimeDependency(t *testing.T) {
+	target1 := makeTarget1("//src/core:target1", "PUBLIC")
+	target2 := makeTarget1("//src/core:target2", "PUBLIC")
+	target1.IsBinary = true
+	target1.AddMaybeExportedDependency(target2.Label, false, false, false, true) // runtime
+	assert.Equal(t, target1.runtimeDependencies, []BuildLabel{target2.Label})
+	assert.True(t, target1.dependencies[0].runtime)
+	// Now we add it as a build-time dependency too, which should unset the runtime flag.
+	target1.AddMaybeExportedDependency(target2.Label, false, false, false, false)
+	assert.False(t, target1.dependencies[0].runtime)
+}
+
 func TestAddDependencySource(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "")
-	target2.AddMaybeExportedDependency(target1.Label, true, true, false)
+	target2.AddMaybeExportedDependency(target1.Label, true, true, false, false)
 	assert.True(t, target2.IsSourceOnlyDep(target1.Label))
 	// N.B. It's important that calling this again cancels the source flag.
-	target2.AddMaybeExportedDependency(target1.Label, true, false, false)
+	target2.AddMaybeExportedDependency(target1.Label, true, false, false, false)
 	assert.False(t, target2.IsSourceOnlyDep(target1.Label))
 }
 

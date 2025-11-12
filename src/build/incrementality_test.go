@@ -81,9 +81,10 @@ var KnownFields = map[string]bool{
 	"Debug.namedTools": true,
 
 	// These only contribute to the runtime hash, not at build time.
-	"Data":              true,
-	"NamedData":         true,
-	"ContainerSettings": true,
+	"runtimeDependencies": true,
+	"Data":                true,
+	"NamedData":           true,
+	"ContainerSettings":   true,
 
 	// These would ideally not contribute to the hash, but we need that at present
 	// because we don't have a good way to force a recheck of its reverse dependencies.
