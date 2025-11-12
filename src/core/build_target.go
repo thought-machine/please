@@ -115,7 +115,7 @@ type BuildTarget struct {
 	// Maps the original declaration to whatever dependencies actually got attached,
 	// which may be more than one in some cases. Also contains info about exporting etc.
 	dependencies []depInfo `name:"deps"`
-	// The (transitive) run-time dependencies of this target.
+	// The run-time dependencies of this target.
 	runtimeDependencies []BuildLabel `name:"runtime_deps"`
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
