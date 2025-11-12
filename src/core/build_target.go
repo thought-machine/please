@@ -712,9 +712,9 @@ func (target *BuildTarget) RuntimeDependencies() []BuildLabel {
 	target.mutex.RLock()
 	defer target.mutex.RUnlock()
 	ret := make(BuildLabels, 0, len(target.dependencies))
-	for _, info := range target.dependencies {
-		if info.runtime {
-			ret = append(ret, *info.declared)
+	for _, deps := range target.dependencies {
+		if deps.runtime {
+			ret = append(ret, *deps.declared)
 		}
 	}
 	return ret
