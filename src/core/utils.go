@@ -147,7 +147,6 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 						return false
 					}
 					for runDep := range graph.TargetOrDie(p).IterAllRuntimeDependencies(graph) {
-						log.Debug("core.IterInputs: recursivelyProvideSource: %s", runDep.String())
 						if !yield(runDep) {
 							return false
 						}
@@ -164,7 +163,6 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 					return false
 				}
 				for runDep := range graph.TargetOrDie(dependency.Label).IterAllRuntimeDependencies(graph) {
-					log.Debug("core.IterInputs: inner: %s", runDep.String())
 					if !yield(runDep) {
 						return false
 					}
@@ -270,7 +268,6 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 		}
 
 		for runDep := range target.IterAllRuntimeDependencies(graph) {
-			log.Debug("core.IterRuntimeFiles: %s", runDep.String())
 			fullPaths := runDep.FullPaths(graph)
 			for i, depPath := range runDep.Paths(graph) {
 				if !pushOut(fullPaths[i], depPath) {
@@ -291,7 +288,6 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 				continue
 			}
 			for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
-				log.Debug("core.IterRuntimeFiles: data: %s", runDep.String())
 				fullPaths := runDep.FullPaths(graph)
 				for i, depPath := range runDep.Paths(graph) {
 					if !pushOut(fullPaths[i], depPath) {
@@ -314,7 +310,6 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 					continue
 				}
 				for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
-					log.Debug("core.IterRuntimeFiles: test_tools: %s", runDep.String())
 					fullPaths := runDep.FullPaths(graph)
 					for i, depPath := range runDep.Paths(graph) {
 						if !pushOut(fullPaths[i], depPath) {
@@ -338,7 +333,6 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 					continue
 				}
 				for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
-					log.Debug("core.IterRuntimeFiles: debug_data: %s", runDep.String())
 					fullPaths := runDep.FullPaths(graph)
 					for i, depPath := range runDep.Paths(graph) {
 						if !pushOut(fullPaths[i], depPath) {
@@ -359,7 +353,6 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 					continue
 				}
 				for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
-					log.Debug("core.IterRuntimeFiles: debug_tools: %s", runDep.String())
 					fullPaths := runDep.FullPaths(graph)
 					for i, depPath := range runDep.Paths(graph) {
 						if !pushOut(fullPaths[i], depPath) {
