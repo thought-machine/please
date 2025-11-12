@@ -357,7 +357,7 @@ go_library(
 
 The subrepo format is: `///third_party/go/<module_path_with_underscores>//<package_path>`
 
-**2. Install list (go_module style):**
+**2. Install list:**
 
 Add packages to the `install` list on the `go_repo()` target:
 
