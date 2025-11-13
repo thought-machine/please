@@ -1,3 +1,9 @@
+Version 17.24.0
+---------------
+    * Define `PLZ_ENV` environment variable in build environments (#3444)
+    * Strip symbols from please_sandbox release binaries (#3450)
+    * Implement run-time dependencies for binary targets via the `runtime_deps` parameter (#3451)
+
 Version 17.23.0
 ---------------
     * Bump arcat to v1.3.0, adding the `--include` option to the `zip` command (#3441)
