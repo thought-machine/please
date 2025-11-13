@@ -3,9 +3,9 @@
 
 # Do not change the order of arguments to this function without updating the iota in targets.go to match it.
 def build_rule(name:str, cmd:str|dict='', test_cmd:str|dict='', debug_cmd:str='', srcs:list|dict=None, data:list|dict=None,
-               debug_data:list|dict=None, outs:list|dict=None, deps:list=None, exported_deps:list=None, secrets:list|dict=None,
-               tools:str|list|dict=None, test_tools:str|list|dict=None, debug_tools:str|list|dict=None, labels:list=None,
-               visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
+               debug_data:list|dict=None, outs:list|dict=None, deps:list=None, exported_deps:list=None, runtime_deps:list=None,
+               secrets:list|dict=None, tools:str|list|dict=None, test_tools:str|list|dict=None, debug_tools:str|list|dict=None,
+               labels:list=None, visibility:list=CONFIG.DEFAULT_VISIBILITY, hashes:list=None, binary:bool=False, test:bool=False,
                test_only:bool=CONFIG.DEFAULT_TESTONLY, building_description:str=None, needs_transitive_deps:bool=False,
                output_is_complete:bool=False, sandbox:bool=CONFIG.BUILD_SANDBOX, test_sandbox:bool=CONFIG.TEST_SANDBOX,
                no_test_output:bool=False, flaky:bool|int=0, build_timeout:int|str=0, test_timeout:int|str=0, pre_build:function=None,
@@ -249,10 +249,12 @@ def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0
 def add_label(name:str, label:str):
     pass
-def add_dep(target:str, dep:str, exported:bool=False):
+def add_dep(target:str, dep:str, exported:bool=False, runtime:bool=False):
     pass
 def add_exported_dep(target:str, dep:str):
-    add_dep(target, dep, True)
+    add_dep(target, dep, exported=True)
+def add_runtime_dep(target:str, dep:str):
+    add_dep(target, dep, runtime=True)
 def add_data(target:str, datum:str|list|dict):
     pass
 def add_out(target:str, name:str, out:str=''):

@@ -137,6 +137,9 @@ func specialFields() specialFieldsMap {
 		"exported_deps": func(target *core.BuildTarget) interface{} {
 			return target.ExportedDependencies()
 		},
+		"runtime_deps": func(target *core.BuildTarget) interface{} {
+			return target.RuntimeDependencies()
+		},
 		"visibility": func(target *core.BuildTarget) interface{} {
 			if len(target.Visibility) == 1 && target.Visibility[0] == core.WholeGraph[0] {
 				return []string{"PUBLIC"}

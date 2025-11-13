@@ -146,6 +146,11 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 					if !yield(p) {
 						return false
 					}
+					for runDep := range graph.TargetOrDie(p).IterAllRuntimeDependencies(graph) {
+						if !yield(runDep) {
+							return false
+						}
+					}
 				}
 				return true
 			}
@@ -156,6 +161,11 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 			if dependency != target {
 				if !yield(dependency.Label) {
 					return false
+				}
+				for runDep := range graph.TargetOrDie(dependency.Label).IterAllRuntimeDependencies(graph) {
+					if !yield(runDep) {
+						return false
+					}
 				}
 			}
 
@@ -257,11 +267,32 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 			}
 		}
 
+		for runDep := range target.IterAllRuntimeDependencies(graph) {
+			fullPaths := runDep.FullPaths(graph)
+			for i, depPath := range runDep.Paths(graph) {
+				if !pushOut(fullPaths[i], depPath) {
+					return
+				}
+			}
+		}
+
 		for _, data := range target.AllData() {
 			fullPaths := data.FullPaths(graph)
 			for i, dataPath := range data.Paths(graph) {
 				if !pushOut(fullPaths[i], dataPath) {
 					return
+				}
+			}
+			label, ok := data.Label()
+			if !ok {
+				continue
+			}
+			for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
+				fullPaths := runDep.FullPaths(graph)
+				for i, depPath := range runDep.Paths(graph) {
+					if !pushOut(fullPaths[i], depPath) {
+						return
+					}
 				}
 			}
 		}
@@ -272,6 +303,18 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 				for i, toolPath := range tool.Paths(graph) {
 					if !pushOut(fullPaths[i], toolPath) {
 						return
+					}
+				}
+				label, ok := tool.Label()
+				if !ok {
+					continue
+				}
+				for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
+					fullPaths := runDep.FullPaths(graph)
+					for i, depPath := range runDep.Paths(graph) {
+						if !pushOut(fullPaths[i], depPath) {
+							return
+						}
 					}
 				}
 			}
@@ -285,12 +328,36 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 						return
 					}
 				}
+				label, ok := data.Label()
+				if !ok {
+					continue
+				}
+				for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
+					fullPaths := runDep.FullPaths(graph)
+					for i, depPath := range runDep.Paths(graph) {
+						if !pushOut(fullPaths[i], depPath) {
+							return
+						}
+					}
+				}
 			}
 			for _, tool := range target.AllDebugTools() {
 				fullPaths := tool.FullPaths(graph)
 				for i, toolPath := range tool.Paths(graph) {
 					if !pushOut(fullPaths[i], toolPath) {
 						return
+					}
+				}
+				label, ok := tool.Label()
+				if !ok {
+					continue
+				}
+				for runDep := range graph.TargetOrDie(label).IterAllRuntimeDependencies(graph) {
+					fullPaths := runDep.FullPaths(graph)
+					for i, depPath := range runDep.Paths(graph) {
+						if !pushOut(fullPaths[i], depPath) {
+							return
+						}
 					}
 				}
 			}

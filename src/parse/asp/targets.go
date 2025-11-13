@@ -30,6 +30,7 @@ const (
 	outsBuildRuleArgIdx
 	depsBuildRuleArgIdx
 	exportedDepsBuildRuleArgIdx
+	runtimeDepsBuildRuleArgIdx
 	secretsBuildRuleArgIdx
 	toolsBuildRuleArgIdx
 	testToolsBuildRuleArgIdx
@@ -270,9 +271,10 @@ func populateTarget(s *scope, t *core.BuildTarget, args []pyObject) {
 	addMaybeNamedOutput(s, "outs", args[outsBuildRuleArgIdx], t.AddOutput, t.AddNamedOutput, t, false)
 	addMaybeNamedOutput(s, "optional_outs", args[optionalOutsBuildRuleArgIdx], t.AddOptionalOutput, nil, t, true)
 	t.HintDependencies(depLen(args[depsBuildRuleArgIdx]) + depLen(args[exportedDepsBuildRuleArgIdx]) + depLen(args[internalDepsBuildRuleArgIdx]))
-	addDependencies(s, "deps", args[depsBuildRuleArgIdx], t, false, false)
-	addDependencies(s, "exported_deps", args[exportedDepsBuildRuleArgIdx], t, true, false)
-	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true)
+	addDependencies(s, "deps", args[depsBuildRuleArgIdx], t, false, false, false)
+	addDependencies(s, "exported_deps", args[exportedDepsBuildRuleArgIdx], t, true, false, false)
+	addDependencies(s, "internal_deps", args[internalDepsBuildRuleArgIdx], t, false, true, false)
+	addDependencies(s, "runtime_deps", args[runtimeDepsBuildRuleArgIdx], t, false, false, true)
 	addStrings(s, "labels", args[labelsBuildRuleArgIdx], t.AddLabel)
 	addStrings(s, "hashes", args[hashesBuildRuleArgIdx], t.AddHash)
 	addStrings(s, "licences", args[licencesBuildRuleArgIdx], t.AddLicence)
@@ -472,13 +474,13 @@ func addMaybeNamedSecret(s *scope, name string, obj pyObject, anon func(string),
 }
 
 // addDependencies adds dependencies to a target, which may or may not be exported.
-func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarget, exported, internal bool) {
+func addDependencies(s *scope, name string, obj pyObject, target *core.BuildTarget, exported, internal, runtime bool) {
 	addStrings(s, name, obj, func(str string) {
 		if s.state.Config.Bazel.Compatibility && !core.LooksLikeABuildLabel(str) && !strings.HasPrefix(str, "@") {
 			// *sigh*... Bazel seems to allow an implicit : on the start of dependencies
 			str = ":" + str
 		}
-		target.AddMaybeExportedDependency(assertNotPseudoLabel(s, s.parseLabelInPackage(str, s.pkg)), exported, false, internal)
+		target.AddMaybeExportedDependency(assertNotPseudoLabel(s, s.parseLabelInPackage(str, s.pkg)), exported, false, internal, runtime)
 	})
 }
 
