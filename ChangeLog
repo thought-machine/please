@@ -1,3 +1,7 @@
+Version 17.24.1
+---------------
+    * Download run-time dependencies when running a target remotely (#3453)
+
 Version 17.24.0
 ---------------
     * Define `PLZ_ENV` environment variable in build environments (#3444)
