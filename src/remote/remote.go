@@ -351,8 +351,11 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 		if err := c.Download(target); err != nil {
 			return metadata, err
 		}
-		// TODO(peterebden): Should this not just be part of Download()?
+		// TODO(peterebden): Should these not just be part of Download()?
 		if err := c.downloadData(target); err != nil {
+			return metadata, err
+		}
+		if err := c.downloadRuntimeDependencies(target); err != nil {
 			return metadata, err
 		}
 	}
@@ -372,6 +375,22 @@ func (c *Client) downloadData(target *core.BuildTarget) error {
 				return c.downloadData(t)
 			})
 		}
+	}
+	return g.Wait()
+}
+
+// downloadRuntimeDependencies downloads all the runtime dependencies for a target.
+func (c *Client) downloadRuntimeDependencies(target *core.BuildTarget) error {
+	var g errgroup.Group
+	for runDep := range target.IterAllRuntimeDependencies(c.state.Graph) {
+		l, _ := runDep.Label()
+		t := c.state.Graph.TargetOrDie(l)
+		g.Go(func() error {
+			if err := c.Download(t); err != nil {
+				return err
+			}
+			return nil
+		})
 	}
 	return g.Wait()
 }
