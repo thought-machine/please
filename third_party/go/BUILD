@@ -35,12 +35,12 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/text",
-    version = "v0.23.0",
+    version = "v0.31.0",
 )
 
 go_repo(
     module = "golang.org/x/tools",
-    version = "v0.21.1-0.20240508182429-e35e4ccd0d2d",
+    version = "v0.38.0",
 )
 
 go_repo(
@@ -116,7 +116,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/net",
-    version = "v0.38.0",
+    version = "v0.47.0",
 )
 
 go_repo(
@@ -211,7 +211,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/term",
-    version = "v0.30.0",
+    version = "v0.37.0",
 )
 
 go_repo(
@@ -271,7 +271,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sync",
-    version = "v0.12.0",
+    version = "v0.18.0",
 )
 
 go_repo(
@@ -331,7 +331,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sys",
-    version = "v0.31.0",
+    version = "v0.38.0",
 )
 
 go_repo(
@@ -401,7 +401,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.36.0",
+    version = "v0.45.0",
 )
 
 go_repo(
