@@ -31,8 +31,7 @@ stuck you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 ## GitHub Actions
 Duration: 5
 
-GitHub Actions is an extensible CI/CD platform provided by GitHub.
-Compared to other CI/CD solutions, GitHub Actions allows you to build all kinds automations (called workflows) triggered by various events (eg. pushing code to a branch).
+GitHub Actions is GitHub's built-in automation platform for CI/CD and other workflows. It runs workflows defined as YAML files in the .github/workflows directory, triggered by events (push, pull_request, schedule, manual, etc.). Workflows consist of jobs (run on hosted or self‑hosted runners) and steps that execute shell commands or reusable actions from the marketplace. Key benefits include tight GitHub integration, flexible triggers and matrices, a large action marketplace, and caching for faster builds.
 
 ### Setting up GitHub Actions
 
