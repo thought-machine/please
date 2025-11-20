@@ -5,14 +5,14 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "addbfce2056744962e2d7436313ab93486660cf7a2e066d171b9d6f2da7c7abe",  # go1.24.1.darwin-amd64.tar.gz
-        "295581b5619acc92f5106e5bcb05c51869337eb19742fdfa6c8346c18e78ff88",  # go1.24.1.darwin-arm64.tar.gz
-        "47d7de8bb64d5c3ee7b6723aa62d5ecb11e3568ef2249bbe1d4bbd432d37c00c",  # go1.24.1.freebsd-amd64.tar.gz
-        "cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073",  # go1.24.1.linux-amd64.tar.gz
-        "8df5750ffc0281017fb6070fba450f5d22b600a02081dceef47966ffaf36a3af",  # go1.24.1.linux-arm64.tar.gz
+        "fde05d84f7f64c8d01564f299ea1897fe94457d20d8d9054200ac1f8ae1c2bc3",  # go1.24.10.darwin-amd64.tar.gz
+        "71c70841bcdadf4b5d2f7c0f099952907969f25235663622a47d6f2233ad39aa",  # go1.24.10.darwin-arm64.tar.gz
+        "cb917b64aa4a407ed3310b397cc4dca10f0a3e2b0dd184ed74164ceaeab2625e",  # go1.24.10.freebsd-amd64.tar.gz
+        "dd52b974e3d9c5a7bbfb222c685806def6be5d6f7efd10f9caa9ca1fa2f47955",  # go1.24.10.linux-amd64.tar.gz
+        "94a99dae43dab8a3fe337485bbb89214b524285ec53ea02040514b0c2a9c3f94",  # go1.24.10.linux-arm64.tar.gz
     ],
     install_std = False,
-    version = "1.24.1",
+    version = "1.24.10",
 )
 
 go_stdlib(
