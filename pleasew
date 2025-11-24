@@ -17,24 +17,44 @@ else
     RESET=''
 fi
 
+OS=""
+ARCH=""
 
-DEFAULT_URL_BASE='https://get.please.build'
+case "$(uname)" in
+    Linux)
+        OS=linux
+        case "$(uname -m)" in
+            x86_64) ARCH=amd64 ;;
+            aarch64*) ARCH=arm64 ;;
+        esac
+        ;;
+    Darwin)
+        OS=darwin
+        case "$(uname -m)" in
+            x86_64) ARCH=amd64 ;;
+            arm64) ARCH=arm64 ;;
+        esac
+        ;;
+    FreeBSD)
+        OS=freebsd
+        case "$(uname -m)" in
+            aarch64*) ARCH=arm64 ;;
+        esac
+        ;;
+    *)
+        printf >&2 '%bPlease does not support the %s operating system.%b\n' \
+            "${RED}" "$(uname)" "${RESET}"
+        exit 1
+        ;;
+esac
 
-OS="$(uname)"
-
-if [ "${OS}" = 'Darwin' ]; then
-    # switch between mac amd64/arm64
-    ARCH="$(uname -m)"
-else
-    # default to amd64 on other operating systems
-    # because we only build intel binaries
-    ARCH='amd64'
+if [ -z "$ARCH" ]; then
+    printf >&2 '%bPlease does not support the %s architecture on %s.%b\n' \
+        "${RED}" "$(uname -m)" "$(uname)" "${RESET}"
+    exit 1
 fi
 
-case "${ARCH}" in
-    aarch64_be|aarch64|armv8b|armv8l) ARCH='arm64' ;;
-    x86_64) ARCH='amd64' ;;
-esac
+DEFAULT_URL_BASE='https://get.please.build'
 
 has_command () {
     command -v "${1}" > /dev/null 2>&1
@@ -141,20 +161,7 @@ if [ "${VERSION:+x}" != 'x' ]; then
     VERSION=$(${TRANSFER_TOOL} ${TRANSFER_SILENT_OPTS} "${URL_BASE}"/latest_version)
 fi
 
-# Find the os / arch to download. You can do this quite nicely with go env
-# but we use this script on machines that don't necessarily have Go itself.
-if [ "${OS}" = 'Linux' ]; then
-    GOOS='linux'
-elif [ "${OS}" = 'Darwin' ]; then
-    GOOS='darwin'
-elif [ "${OS}" = 'FreeBSD' ]; then
-    GOOS='freebsd'
-else
-    printf >&2 '%bUnknown operating system %s%b\n' "${RED}" "${OS}" "${RESET}"
-    exit 1
-fi
-
-PLEASE_URL="${URL_BASE}/${GOOS}_${ARCH}/${VERSION}/please_${VERSION}.tar.xz"
+PLEASE_URL="${URL_BASE}/${OS}_${ARCH}/${VERSION}/please_${VERSION}.tar.xz"
 DIR="${LOCATION}/${VERSION}"
 
 # Potentially we could reuse this but it's easier not to really.
