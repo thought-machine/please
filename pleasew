@@ -25,7 +25,7 @@ case "$(uname)" in
         OS=linux
         case "$(uname -m)" in
             x86_64) ARCH=amd64 ;;
-            aarch64*) ARCH=arm64 ;;
+            aarch64*|armv8b|armv8l) ARCH=arm64 ;;
         esac
         ;;
     Darwin)
