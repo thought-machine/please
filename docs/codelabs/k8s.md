@@ -38,20 +38,20 @@ you can find us on [gitter](https://gitter.im/please-build/Lobby)!
 ## Creating a service
 Duration: 5
 
-First up, let create a service to deploy. It's not really important what it does or what language we implement it in. 
-For the sake of this codelabs, we'll make a simple hello world HTTP service in Python.
+First up, let's create a service to deploy. It's not really important what it does or what language we implement it in. 
+For this codelab, we'll make a simple hello world HTTP service in go.
 
 ### Initialising the project
-```
-$ plz init 
-$ go mod init github.com/example/module
-$ plz init plugin go
+```bash
+plz init 
+go mod init github.com/example/module
+plz init plugin go
 ```
 
 ### Set up the Go plugin
 
 Add a go toolchain to `third_party/go/BUILD`
-```python
+```go
 go_toolchain(
     name = "toolchain",
     version = "1.20",
@@ -75,24 +75,23 @@ Create a file `hello_service/service.go`:
 package main
 
 import (
-  "fmt"
-  "log"
-  "net/http"
+	"fmt"
+	"log"
+	"net/http"
 )
 
 func main() {
-  http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintln(w, "This is my website!")
-  })
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "This is my website!")
+	})
 
-  http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintln(w, "Hello, HTTP!")
-  })
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, HTTP!")
+	})
 
-  err := http.ListenAndServe(":8000", nil)
-  if err != nil {
-    log.Fatal("Error starting the server: ", err)
-  }
+	if err := http.ListenAndServe(":8000", nil); err != nil {
+		log.Fatal("Error starting the server: ", err)
+	}
 }
 ```
 
@@ -107,14 +106,15 @@ go_binary(
 
 And test it works:
 
+```bash
+plz run //hello_service:hello_service && curl localhost:8000
+pkill hello_service
 ```
-$ plz run //hello_service &
+
+The output should look like this:
+```bash
 [1] 28694
-
-$ curl localhost:8000
 Hello, world!
-
-$ pkill hello_service
 [1]+  Terminated              plz run //hello_service
 ```
 
@@ -136,9 +136,11 @@ RUN apt update -y && apt upgrade -y
 
 To use the docker build rules, we need to install the docker plugin, as well as the shell plugin which it requires:
 
-`$ plz init plugin shell && plz init plugin docker`
+```bash
+plz init plugin shell && plz init plugin docker
+```
 
-We can then build a set of scripts that help us build, and push our docker images:
+We can then build a set of scripts that help us build, and push our docker images. Add the following to `common/docker/BUILD`:
 
 ```python
 docker_image(
@@ -160,7 +162,7 @@ Build finished; total time 80ms, incrementality 40.0%. Outputs:
 As promised, the output of the docker image rule is a script that can build the docker image for you. We can have a 
 look at what the script is doing:
 
-```
+```bash
 $ cat plz-out/bin/common/docker/base.sh
 #!/bin/sh
 docker build -t please-examples/base:0d45575ad71adea9861b079e5d56ff0bdc179a1868d06d6b3d102721824c1538 \
@@ -173,8 +175,8 @@ back to this specific version of this image.
 - It's generated us a `tar.gz` containing all the other files we might need to build the Docker image. 
 
 We can run this script to build the image and push it to the docker daemon as set in our docker env:
-```
-$ plz run //common/docker:base
+```bash
+plz run //common/docker:base
 ```
 
 ## Using our base image
@@ -357,31 +359,30 @@ remote_file (
 ```
 
 And then we can start the cluster like so:
-```
-$ plz run //third_party/binary:minikube -- start
+```bash
+plz run //third_party/binary:minikube -- start
 ```
 
 ### Deploying our service 
 
 First we need to push our images to minikube's docker. To do this we need to point `docker` at minikube:
 
-```
-$ eval $(plz run //third_party/binary:minikube -- docker-env)
+```bash
+eval $(plz run //third_party/binary:minikube -- docker-env)
 ```
 
 Then we can run our deployment scripts:
 
-```
-$ plz run //hello_service/k8s:image_load && plz run //hello_service/k8s:k8s_push
+```bash
+plz run //hello_service/k8s:image_load && plz run //hello_service/k8s:k8s_push
 ```
 
 And check they're working as we expected:
 
 ```
-$ kubectl port-forward service/hello-svc 8000:8000 &
-[1] 25986
+$ kubectl port-forward service/hello-svc 8000:8000 && curl localhost:8000
 
-$ curl localhost:8000
+[1] 25986
 Hello world!
 
 $ pkill kubectl 
@@ -395,8 +396,8 @@ Here we have learnt about the provided targets we need to run to get our changes
 bit of a ritual. Let's look at consolidating this into a single command. Luckily the generated targets are labeled so 
 this is as simple as: 
 
-```
-$ plz run sequential --include docker-build --include k8s-push //hello_service/... 
+```bash
+plz run sequential --include docker-build --include k8s-push //hello_service/... 
 ```
 
 We can then set up an alias for this in `.plzconfig`:
@@ -410,8 +411,8 @@ positionallabels = true
 
 This is used like: 
 
-```
-$ plz deploy //hello_service/...
+```bash
+plz deploy //hello_service/...
 ```
 
 ## Docker build and build systems
@@ -451,4 +452,4 @@ There are two ways we anticipate these targets to be used as part of a CI/CD pip
 - The build server can be given access to the docker registry, and the images can be loaded directly with `:image_push`.
 - The build server can save the images out to an offline image tarball with `:image_save`. These can be exported as 
 artifacts from the build server. Another stage of the CI/CD pipeline can then push these to the docker registry via 
-`docker load`.  
+`docker load`.
