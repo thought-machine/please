@@ -38,7 +38,7 @@ case "$(uname)" in
     FreeBSD)
         OS=freebsd
         case "$(uname -m)" in
-            aarch64*) ARCH=arm64 ;;
+            amd64) ARCH=amd64 ;;
         esac
         ;;
     *)
