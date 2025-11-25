@@ -1,3 +1,7 @@
+Version 17.24.2
+---------------
+    * Improve platform detection logic in `plz init`'s `pleasew` script (#3458)
+
 Version 17.24.1
 ---------------
     * Download run-time dependencies when running a target remotely (#3453)
