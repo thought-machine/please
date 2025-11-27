@@ -1,3 +1,7 @@
+Version 17.25.0
+---------------
+    * Add `maxdepth` parameter to `get_labels` built-in, allowing for recursive dependency searches to be depth-limited (#3460)
+
 Version 17.24.2
 ---------------
     * Improve platform detection logic in `plz init`'s `pleasew` script (#3458)
