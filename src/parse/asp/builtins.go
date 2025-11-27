@@ -1148,7 +1148,7 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 		if !t.OutputIsComplete || t == target || all {
 			for _, dep := range t.Dependencies() {
 				if !done[dep] {
-					getLabels(dep, max(depth - 1, -1))
+					getLabels(dep, max(depth-1, -1))
 				}
 			}
 		}
