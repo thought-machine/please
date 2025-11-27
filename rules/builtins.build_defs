@@ -243,7 +243,7 @@ def dirname(p:str) -> str:
 
 
 # Post-build callback functions.
-def get_labels(name:str, prefix:str, all:bool=False, transitive=True) -> list:
+def get_labels(name:str, prefix:str, all:bool=False, transitive=True, maxdepth:int=-1) -> list:
     pass
 def has_label(name:str, prefix:str, all:bool=False) -> bool:
     return len(get_labels(name, prefix, all)) > 0

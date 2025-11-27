@@ -47,8 +47,8 @@ func registerBuiltins(s *scope) {
 	setNativeCode(s, "zip", zip, varargs)
 	setNativeCode(s, "any", anyFunc)
 	setNativeCode(s, "all", allFunc)
-	setNativeCode(s, "min", min)
-	setNativeCode(s, "max", max)
+	setNativeCode(s, "min", minFunc)
+	setNativeCode(s, "max", maxFunc)
 	setNativeCode(s, "chr", chr)
 	setNativeCode(s, "ord", ord)
 	setNativeCode(s, "len", lenFunc)
@@ -1030,11 +1030,11 @@ func allFunc(s *scope, args []pyObject) pyObject {
 	return True
 }
 
-func min(s *scope, args []pyObject) pyObject {
+func minFunc(s *scope, args []pyObject) pyObject {
 	return extreme(s, args, LessThan)
 }
 
-func max(s *scope, args []pyObject) pyObject {
+func maxFunc(s *scope, args []pyObject) pyObject {
 	return extreme(s, args, GreaterThan)
 }
 
@@ -1094,12 +1094,18 @@ func getLabels(s *scope, args []pyObject) pyObject {
 	prefix := string(args[1].(pyString))
 	all := args[2].IsTruthy()
 	transitive := args[3].IsTruthy()
+	maxDepth := int(args[4].(pyInt))
+	if transitive {
+		s.Assert(maxDepth >= -1, "get_labels: maxdepth must be at least -1")
+	} else {
+		maxDepth = 0
+	}
 	if core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
-		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all, transitive)
+		return getLabelsInternal(s.state.Graph.TargetOrDie(label), prefix, core.Built, all, maxDepth)
 	}
 	target := getTargetPost(s, name)
-	return getLabelsInternal(target, prefix, core.Building, all, transitive)
+	return getLabelsInternal(target, prefix, core.Building, all, maxDepth)
 }
 
 // addLabel adds a set of labels to the named rule
@@ -1119,35 +1125,35 @@ func addLabel(s *scope, args []pyObject) pyObject {
 	return None
 }
 
-func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all, transitive bool) pyObject {
+func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.BuildTargetState, all bool, maxDepth int) pyObject {
 	if target.State() < minState {
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
 	}
-	if all && !transitive {
-		log.Fatalf("get_labels can't be called with all set to true when transitive is set to False")
+	if all && maxDepth != -1 {
+		log.Fatalf("get_labels can't be called with all set to True when transitive is set to False")
 	}
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}
-	var getLabels func(*core.BuildTarget)
-	getLabels = func(t *core.BuildTarget) {
+	var getLabels func(*core.BuildTarget, int)
+	getLabels = func(t *core.BuildTarget, depth int) {
 		for _, label := range t.Labels {
 			if strings.HasPrefix(label, prefix) {
 				labels[strings.TrimSpace(strings.TrimPrefix(label, prefix))] = true
 			}
 		}
-		if !transitive {
+		done[t] = true
+		if depth == 0 {
 			return
 		}
-		done[t] = true
 		if !t.OutputIsComplete || t == target || all {
 			for _, dep := range t.Dependencies() {
 				if !done[dep] {
-					getLabels(dep)
+					getLabels(dep, max(depth - 1, -1))
 				}
 			}
 		}
 	}
-	getLabels(target)
+	getLabels(target, maxDepth)
 	ret := make([]string, len(labels))
 	i := 0
 	for label := range labels {

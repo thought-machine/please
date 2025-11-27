@@ -37,10 +37,10 @@ func TestGetLabels(t *testing.T) {
 	require.NoError(t, err)
 
 	s := &scope{state: state, pkg: core.NewPackage("pkg")}
-	ls := getLabels(s, []pyObject{pyString(":bar"), pyString("cc:ld:"), False, True}).(pyList)
+	ls := getLabels(s, []pyObject{pyString(":bar"), pyString("cc:ld:"), False, True, pyInt(-1)}).(pyList)
 	assert.Len(t, ls, 2)
 
-	ls = getLabels(s, []pyObject{pyString(":bar"), pyString("cc:ld:"), False, False}).(pyList)
+	ls = getLabels(s, []pyObject{pyString(":bar"), pyString("cc:ld:"), False, False, pyInt(-1)}).(pyList)
 	assert.Len(t, ls, 1)
 	assert.Equal(t, pyString("-pthread"), ls[0])
 }
