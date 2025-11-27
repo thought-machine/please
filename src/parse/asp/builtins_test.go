@@ -21,28 +21,43 @@ func TestPackageName(t *testing.T) {
 
 func TestGetLabels(t *testing.T) {
 	state := core.NewBuildState(core.DefaultConfiguration())
-	foo := core.NewBuildTarget(core.NewBuildLabel("pkg", "foo"))
-	foo.AddLabel("cc:ld:-ldl")
-	foo.SetState(core.Built)
 
-	bar := core.NewBuildTarget(core.NewBuildLabel("pkg", "bar"))
-	bar.AddDependency(foo.Label)
-	bar.AddLabel("cc:ld:-pthread")
-	bar.SetState(core.Built)
+	bottom := core.NewBuildTarget(core.NewBuildLabel("pkg", "bottom"))
+	bottom.AddLabel("target:bottom")
+	bottom.SetState(core.Built)
 
-	state.Graph.AddTarget(foo)
-	state.Graph.AddTarget(bar)
+	middle := core.NewBuildTarget(core.NewBuildLabel("pkg", "middle"))
+	middle.AddDependency(bottom.Label)
+	middle.AddLabel("target:middle")
+	middle.SetState(core.Built)
 
-	err := bar.ResolveDependencies(state.Graph)
+	top := core.NewBuildTarget(core.NewBuildLabel("pkg", "top"))
+	top.AddDependency(middle.Label)
+	top.AddLabel("target:top")
+	top.SetState(core.Built)
+
+	state.Graph.AddTarget(bottom)
+	state.Graph.AddTarget(middle)
+	state.Graph.AddTarget(top)
+
+	err := middle.ResolveDependencies(state.Graph)
+	require.NoError(t, err)
+	err = top.ResolveDependencies(state.Graph)
 	require.NoError(t, err)
 
 	s := &scope{state: state, pkg: core.NewPackage("pkg")}
-	ls := getLabels(s, []pyObject{pyString(":bar"), pyString("cc:ld:"), False, True, pyInt(-1)}).(pyList)
-	assert.Len(t, ls, 2)
+	ls := getLabels(s, []pyObject{pyString(":top"), pyString("target:"), False, True, pyInt(-1)}).(pyList) // transitive=True
+	assert.Equal(t, pyList{pyString("bottom"), pyString("middle"), pyString("top")}, ls)
+	ls = getLabels(s, []pyObject{pyString(":top"), pyString("target:"), False, None, pyInt(-1)}).(pyList) // maxdepth=-1 (equivalent to above)
+	assert.Equal(t, pyList{pyString("bottom"), pyString("middle"), pyString("top")}, ls)
 
-	ls = getLabels(s, []pyObject{pyString(":bar"), pyString("cc:ld:"), False, False, pyInt(-1)}).(pyList)
-	assert.Len(t, ls, 1)
-	assert.Equal(t, pyString("-pthread"), ls[0])
+	ls = getLabels(s, []pyObject{pyString(":top"), pyString("target:"), False, False, pyInt(-1)}).(pyList) // transitive=False
+	assert.Equal(t, pyList{pyString("top")}, ls)
+	ls = getLabels(s, []pyObject{pyString(":top"), pyString("target:"), False, None, pyInt(0)}).(pyList) // maxdepth=0 (equivalent to above)
+	assert.Equal(t, pyList{pyString("top")}, ls)
+
+	ls = getLabels(s, []pyObject{pyString(":top"), pyString("target:"), False, None, pyInt(1)}).(pyList) // maxdepth=1
+	assert.Equal(t, pyList{pyString("middle"), pyString("top")}, ls)
 }
 
 func TestTag(t *testing.T) {

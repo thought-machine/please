@@ -41,7 +41,7 @@ def dep(name:str, deps:list=None):
 
 def echo_name_labels_up_to(maxdepth:int):
     def echo(name:str):
-        labels = get_labels(name, "name:", transitive=True, maxdepth=maxdepth)
+        labels = get_labels(name, "name:", maxdepth=maxdepth)
         set_command(name, "opt", " && ".join([get_command(name, "opt")] + [f"echo 'echo {l}' >> $OUTS" for l in labels]))
     return echo
 
@@ -80,6 +80,7 @@ maxdepth_test(
     deps = [
         ":dep1",
         ":dep2",
+        ":dep3",
     ],
     maxdepth = 2,
     expected = [

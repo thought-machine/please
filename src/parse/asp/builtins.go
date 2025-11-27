@@ -1093,12 +1093,13 @@ func getLabels(s *scope, args []pyObject) pyObject {
 	name := string(args[0].(pyString))
 	prefix := string(args[1].(pyString))
 	all := args[2].IsTruthy()
-	transitive := args[3].IsTruthy()
+	transitive := args[3]
 	maxDepth := int(args[4].(pyInt))
-	if transitive {
-		s.Assert(maxDepth >= -1, "get_labels: maxdepth must be at least -1")
-	} else {
-		maxDepth = 0
+	if transitiveBool, ok := transitive.(pyBool); ok {
+		s.Assert(maxDepth == -1, "get_labels: only one of transitive and maxdepth may be specified, not both")
+		if !transitiveBool.IsTruthy() {
+			maxDepth = 0
+		}
 	}
 	if core.LooksLikeABuildLabel(name) {
 		label := core.ParseBuildLabel(name, s.pkg.Name)
@@ -1130,7 +1131,7 @@ func getLabelsInternal(target *core.BuildTarget, prefix string, minState core.Bu
 		log.Fatalf("get_labels called on a target that is not yet built: %s", target.Label)
 	}
 	if all && maxDepth != -1 {
-		log.Fatalf("get_labels can't be called with all set to True when transitive is set to False")
+		log.Fatalf("get_labels: if all is True, transitive must be True or maxdepth must be -1")
 	}
 	labels := map[string]bool{}
 	done := map[*core.BuildTarget]bool{}
