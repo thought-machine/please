@@ -1,3 +1,7 @@
+Version 17.25.1
+---------------
+    * Bump arcat to v1.3.1, fixing a bug relating to symbol table stripping on Darwin and FreeBSD (#3462)
+
 Version 17.25.0
 ---------------
     * Add `maxdepth` parameter to `get_labels` built-in, allowing for recursive dependency searches to be depth-limited (#3460)
