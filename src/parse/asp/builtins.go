@@ -589,24 +589,66 @@ func strFormat(s *scope, args []pyObject) pyObject {
 
 	arg := 1 // what arg index are we up to for positional args
 	for {
-		start := strings.IndexByte(self, '{')
-		if start == -1 {
+		// Look for either { or }
+		openIdx := strings.IndexByte(self, '{')
+		closeIdx := strings.IndexByte(self, '}')
+
+		// If neither found, write rest and break
+		if openIdx == -1 && closeIdx == -1 {
 			buf.WriteString(self)
 			break
 		}
+
+		// Check for escaped closing brace }} (when no { or { comes after)
+		if closeIdx != -1 && (openIdx == -1 || closeIdx < openIdx) {
+			if closeIdx+1 < len(self) && self[closeIdx+1] == '}' {
+				buf.WriteString(self[:closeIdx])
+				buf.WriteByte('}')
+				self = self[closeIdx+2:]
+				continue
+			}
+			// Unmatched }, just write up to and including it
+			buf.WriteString(self[:closeIdx+1])
+			self = self[closeIdx+1:]
+			continue
+		}
+
+		start := openIdx
+
+		// Handle ${{X}} -> ${X} before checking for escaped braces
+		if start > 0 && self[start-1] == '$' && start+1 < len(self) && self[start+1] == '{' {
+			end := strings.IndexByte(self[start:], '}')
+			if end == -1 {
+				buf.WriteString(self)
+				break
+			}
+			end = start + end
+			buf.WriteString(self[:start])
+			buf.WriteString(self[start+1 : end])
+			self = self[end+1:]
+			continue
+		}
+
+		// Check for escaped opening brace {{
+		if start+1 < len(self) && self[start+1] == '{' {
+			buf.WriteString(self[:start])
+			buf.WriteByte('{')
+			self = self[start+2:]
+			continue
+		}
+
 		end := strings.IndexByte(self[start:], '}')
 		if end == -1 {
 			// We may want to error here in some future revision
 			buf.WriteString(self)
 			break
 		}
-		buf.WriteString(self[:start])
 		end = start + end
+
+		buf.WriteString(self[:start])
 		if start > 0 && self[start-1] == '$' {
-			// Don't interpolate ${X} (but ${{X}} -> ${X})
-			if self[start+1] == '{' {
-				buf.WriteString(self[start+1 : end])
-			} else if start == end-1 {
+			// Don't interpolate ${X}
+			if start == end-1 {
 				// ${} interpolates as $ + positional arg
 				s.Assert(arg < len(args), "format string specifies at least %d positional arguments, but only %d were supplied", arg, len(args)-1)
 				buf.WriteString(args[arg].String())
