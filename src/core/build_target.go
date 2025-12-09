@@ -750,6 +750,32 @@ func (target *BuildTarget) IterAllRuntimeDependencies(graph *BuildGraph) iter.Se
 				}
 			}
 		}
+		// Include the run-time dependencies of data targets, but not the data targets themselves. (We needn't worry
+		// about data files here - they can't have run-time dependencies of their own.)
+		for _, data := range t.AllData() {
+			dataLabel, ok := data.Label()
+			if !ok {
+				continue
+			}
+			for _, providedDep := range graph.TargetOrDie(dataLabel).ProvideFor(t) {
+				if !push(graph.TargetOrDie(providedDep), yield) {
+					return false
+				}
+			}
+		}
+		if t.Debug != nil {
+			for _, data := range t.AllDebugData() {
+				dataLabel, ok := data.Label()
+				if !ok {
+					continue
+				}
+				for _, providedDep := range graph.TargetOrDie(dataLabel).ProvideFor(t) {
+					if !push(graph.TargetOrDie(providedDep), yield) {
+						return false
+					}
+				}
+			}
+		}
 		if t.RuntimeDependenciesFromSources || t.RuntimeDependenciesFromDependencies {
 			for _, dep := range t.dependencies {
 				// If required, include the run-time dependencies of sources, but not the sources themselves.

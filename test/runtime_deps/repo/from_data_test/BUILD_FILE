@@ -1,0 +1,42 @@
+subinclude("//build_defs:test")
+
+target(
+    name = "runtime_deps_from_data",
+    data = [":data_with_runtime_dep"],
+    debug_data = [":debug_data_with_runtime_dep"],
+)
+
+target(
+    name = "data_with_runtime_dep",
+    runtime_deps = [":data_runtime_dep"],
+)
+
+target(
+    name = "debug_data_with_runtime_dep",
+    runtime_deps = [":debug_data_runtime_dep"],
+)
+
+runtime_dep("data_runtime_dep")
+runtime_dep("debug_data_runtime_dep")
+
+gentest(
+    name = "runtime_deps_from_data_test_case",
+    outs = ["runtime_deps_from_data_test_case"],
+    cmd = [
+        not_exists("data_runtime_dep"),
+        not_exists("debug_data_runtime_dep"),
+        "touch $OUTS",
+    ],
+    data = [":runtime_deps_from_data"],
+    no_test_output = True,
+    test_cmd = {
+        "opt": " && ".join([
+            exists("data_runtime_dep"),
+            not_exists("debug_data_runtime_dep"),
+        ]),
+        "dbg": " && ".join([
+            exists("data_runtime_dep"),
+            exists("debug_data_runtime_dep"),
+        ]),
+    },
+)

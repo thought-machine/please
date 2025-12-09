@@ -6,9 +6,9 @@ def not_exists(file:str):
     path = join_path(package_name(), file)
     return f"echo -n '{path} does not exist: '; if [ -f '{path}' ]; then echo FAIL; exit 1; else echo OK; fi"
 
-def target(name:str, srcs:list=[], build_tests:list=[], post_build:function=None, requires:list=None,
-           provides:dict=None, runtime_deps:list=[], runtime_deps_from_srcs:bool=False, runtime_deps_from_deps:bool=False,
-           exported_deps:list=[], deps:list=[]):
+def target(name:str, srcs:list=[], build_tests:list=[], data:list=[], debug_data:list=[], post_build:function=None,
+           requires:list=None, provides:dict=None, runtime_deps:list=[], runtime_deps_from_srcs:bool=False,
+           runtime_deps_from_deps:bool=False, exported_deps:list=[], deps:list=[]):
     # Ensure that run-time dependencies are not present at build time, unless they are also
     # explicitly given as build-time dependencies. (The lstrips here turn build target names
     # into the names of files they output - they're slightly grungy, but they allow us to
@@ -17,14 +17,16 @@ def target(name:str, srcs:list=[], build_tests:list=[], post_build:function=None
     # target's.)
     cmd = [not_exists(r.lstrip(":")) for r in runtime_deps if r not in deps]
     cmd += [exists(d.lstrip(":")) for d in deps]
-    return genrule(
+    return build_rule(
         name = name,
         srcs = srcs,
         outs = [name],
         # Assume that if a post-build function is defined, it dynamically adds a run-time
         # dependency, which requires this target to be marked as binary.
         binary = len(runtime_deps) > 0 or post_build is not None,
-        cmd = cmd + build_tests + ["touch $OUTS"],
+        cmd = " && ".join(cmd + build_tests + ["touch $OUTS"]),
+        data = data,
+        debug_data = debug_data,
         post_build = post_build,
         requires = requires,
         provides = provides,
