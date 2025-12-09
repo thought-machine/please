@@ -1,3 +1,7 @@
+Version 17.27.0
+---------------
+    * Traverse `data` and `debug_data` for run-time dependencies (#3469)
+
 Version 17.26.0
 ---------------
     * Optionally traverse `srcs` and `deps` for run-time dependencies (#3466)
