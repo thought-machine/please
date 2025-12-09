@@ -752,15 +752,16 @@ func (target *BuildTarget) IterAllRuntimeDependencies(graph *BuildGraph) iter.Se
 		}
 		for _, dep := range t.dependencies {
 			// If required, include the run-time dependencies of sources, but not the sources themselves.
-			if dep.source && t.RuntimeDependenciesFromSources {
+			if t.RuntimeDependenciesFromSources && dep.source {
 				depLabel, _ := dep.declared.Label()
 				for _, providedDep := range graph.TargetOrDie(depLabel).ProvideFor(t) {
 					if !push(graph.TargetOrDie(providedDep), yield) {
 						return false
 					}
 				}
+			}
 			// If required, include the run-time dependencies of dependencies, but not the dependencies themselves.
-			} else if t.RuntimeDependenciesFromDependencies && !dep.exported && !dep.source && !dep.internal && !dep.runtime {
+			if t.RuntimeDependenciesFromDependencies && !dep.exported && !dep.source && !dep.internal && !dep.runtime {
 				depLabel, _ := dep.declared.Label()
 				depTarget := graph.TargetOrDie(depLabel)
 				for _, providedDep := range depTarget.ProvideFor(t) {
