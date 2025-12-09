@@ -1,0 +1,28 @@
+subinclude("//build_defs:test")
+
+target(
+    name = "runtime_deps_from_srcs",
+    srcs = [":src"],
+    runtime_deps_from_srcs = True,
+)
+
+target(
+    name = "src",
+    runtime_deps = [":src_runtime_dep"],
+)
+
+runtime_dep("src_runtime_dep")
+
+gentest(
+    name = "runtime_deps_from_srcs_test_case",
+    outs = ["runtime_deps_from_srcs_test_case"],
+    cmd = [
+        not_exists("src_runtime_dep"),
+        "touch $OUTS",
+    ],
+    data = [":runtime_deps_from_srcs"],
+    no_test_output = True,
+    test_cmd = [
+        exists("src_runtime_dep"),
+    ],
+)

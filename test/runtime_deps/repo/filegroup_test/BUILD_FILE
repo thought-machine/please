@@ -1,0 +1,27 @@
+subinclude("//build_defs:test")
+
+filegroup(
+    name = "filegroup",
+    srcs = [":filegroup_src"],
+)
+
+target(
+    name = "filegroup_src",
+    runtime_deps = [":filegroup_src_runtime_dep"],
+)
+
+runtime_dep("filegroup_src_runtime_dep")
+
+gentest(
+    name = "filegroup_test_case",
+    outs = ["filegroup_test_case"],
+    cmd = [
+        not_exists("filegroup_src_runtime_dep"),
+        "touch $OUTS",
+    ],
+    data = [":filegroup"],
+    no_test_output = True,
+    test_cmd = [
+        exists("filegroup_src_runtime_dep"),
+    ],
+)

@@ -31,6 +31,8 @@ const (
 	depsBuildRuleArgIdx
 	exportedDepsBuildRuleArgIdx
 	runtimeDepsBuildRuleArgIdx
+	runtimeDepsFromSrcsBuildRuleArgIdx
+	runtimeDepsFromDepsBuildRuleArgIdx
 	secretsBuildRuleArgIdx
 	toolsBuildRuleArgIdx
 	testToolsBuildRuleArgIdx
@@ -142,6 +144,11 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	if target.IsRemoteFile {
 		target.AddLabel("remote")
 	}
+	// filegroups don't really produce any outputs of their own - they're just the filegroup's own sources.
+	// The run-time dependencies of a filegroup's sources should therefore be treated as the filegroup's own
+	// run-time dependencies.
+	target.RuntimeDependenciesFromSources = target.IsFilegroup || isTruthy(runtimeDepsFromSrcsBuildRuleArgIdx)
+	target.RuntimeDependenciesFromDependencies = isTruthy(runtimeDepsFromDepsBuildRuleArgIdx)
 	target.Command, target.Commands = decodeCommands(s, args[cmdBuildRuleArgIdx])
 	if test {
 		target.Test = new(core.TestFields)
