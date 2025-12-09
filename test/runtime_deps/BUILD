@@ -74,6 +74,15 @@ please_repo_e2e_test(
 )
 
 please_repo_e2e_test(
+    name = "runtime_deps_from_data_test",
+    plz_command = " && ".join([
+        "plz test //from_data_test:runtime_deps_from_data_test_case",
+        "plz -c dbg test //from_data_test:runtime_deps_from_data_test_case",
+    ]),
+    repo = "repo",
+)
+
+please_repo_e2e_test(
     name = "runtime_deps_from_deps_test",
     plz_command = "plz test //from_deps_test:runtime_deps_from_deps_test_case",
     repo = "repo",
