@@ -1,0 +1,28 @@
+subinclude("//build_defs:test")
+
+target(
+    name = "runtime_deps_from_deps",
+    runtime_deps_from_deps = True,
+    deps = [":dep"],
+)
+
+target(
+    name = "dep",
+    runtime_deps = [":dep_runtime_dep"],
+)
+
+runtime_dep("dep_runtime_dep")
+
+gentest(
+    name = "runtime_deps_from_deps_test_case",
+    outs = ["runtime_deps_from_deps_test_case"],
+    cmd = [
+        not_exists("dep_runtime_dep"),
+        "touch $OUTS",
+    ],
+    data = [":runtime_deps_from_deps"],
+    no_test_output = True,
+    test_cmd = [
+        exists("dep_runtime_dep"),
+    ],
+)

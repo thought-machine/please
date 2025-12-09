@@ -66,3 +66,27 @@ please_repo_e2e_test(
     },
     repo = "repo",
 )
+
+please_repo_e2e_test(
+    name = "runtime_deps_from_srcs_test",
+    plz_command = "plz test //from_srcs_test:runtime_deps_from_srcs_test_case",
+    repo = "repo",
+)
+
+please_repo_e2e_test(
+    name = "runtime_deps_from_deps_test",
+    plz_command = "plz test //from_deps_test:runtime_deps_from_deps_test_case",
+    repo = "repo",
+)
+
+please_repo_e2e_test(
+    name = "runtime_deps_from_exported_deps_test",
+    plz_command = "plz test //from_exported_deps_test:runtime_deps_from_exported_deps_test_case",
+    repo = "repo",
+)
+
+please_repo_e2e_test(
+    name = "filegroup_test",
+    plz_command = "plz test //filegroup_test:filegroup_test_case",
+    repo = "repo",
+)

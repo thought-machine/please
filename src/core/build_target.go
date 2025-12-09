@@ -117,6 +117,13 @@ type BuildTarget struct {
 	dependencies []depInfo `name:"deps"`
 	// The run-time dependencies of this target.
 	runtimeDependencies []BuildLabel `name:"runtime_deps"`
+	// Whether to consider the run-time dependencies of this target's sources to be additional
+	// run-time dependencies of this target.
+	RuntimeDependenciesFromSources bool `name:"runtime_deps_from_srcs"`
+	// Whether to consider the run-time dependencies of this target's build-time dependencies
+	// (and exported dependencies of those targets) to be additional run-time dependencies of
+	// this target.
+	RuntimeDependenciesFromDependencies bool `name:"runtime_deps_from_deps"`
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
@@ -732,14 +739,43 @@ func (target *BuildTarget) IterAllRuntimeDependencies(graph *BuildGraph) iter.Se
 			return true
 		}
 		done[t.String()] = true
-		for _, runDep := range t.runtimeDependencies {
-			runDepLabel, _ := runDep.Label()
-			for _, providedDep := range graph.TargetOrDie(runDepLabel).ProvideFor(t) {
+		for _, dep := range t.runtimeDependencies {
+			depLabel, _ := dep.Label()
+			for _, providedDep := range graph.TargetOrDie(depLabel).ProvideFor(t) {
 				if !yield(providedDep) {
 					return false
 				}
 				if !push(graph.TargetOrDie(providedDep), yield) {
 					return false
+				}
+			}
+		}
+		for _, dep := range t.dependencies {
+			// If required, include the run-time dependencies of sources, but not the sources themselves.
+			if dep.source && t.RuntimeDependenciesFromSources {
+				depLabel, _ := dep.declared.Label()
+				for _, providedDep := range graph.TargetOrDie(depLabel).ProvideFor(t) {
+					if !push(graph.TargetOrDie(providedDep), yield) {
+						return false
+					}
+				}
+			// If required, include the run-time dependencies of dependencies, but not the dependencies themselves.
+			} else if t.RuntimeDependenciesFromDependencies && !dep.exported && !dep.source && !dep.internal && !dep.runtime {
+				depLabel, _ := dep.declared.Label()
+				depTarget := graph.TargetOrDie(depLabel)
+				for _, providedDep := range depTarget.ProvideFor(t) {
+					if !push(graph.TargetOrDie(providedDep), yield) {
+						return false
+					}
+				}
+				// Also include the run-time dependencies of the target's exported dependencies, but not the
+				// exported dependencies themselves.
+				for _, exportedDep := range depTarget.ExportedDependencies() {
+					for _, providedDep := range graph.TargetOrDie(exportedDep).ProvideFor(t) {
+						if !push(graph.TargetOrDie(providedDep), yield) {
+							return false
+						}
+					}
 				}
 			}
 		}

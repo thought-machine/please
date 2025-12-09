@@ -1,14 +1,42 @@
 """Miscellaneous rules that aren't language-specific."""
 
 
-def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs:list|dict=None, deps:list=None,
-            exported_deps:list=None, runtime_deps:list=None, labels:list&features&tags=None, visibility:list=None,
-            building_description:str='Building...', data:list|dict=None, hashes:list=None, timeout:int=0, binary:bool=False,
-            sandbox:bool=None, needs_transitive_deps:bool=False, output_is_complete:bool=True,
-            test_only:bool&testonly=False, secrets:list|dict=None, requires:list=None, provides:dict=None,
-            pre_build:function=None, post_build:function=None, tools:str|list|dict=None, pass_env:list=None,
-            local:bool=False, output_dirs:list=[], exit_on_error:bool=CONFIG.EXIT_ON_ERROR, entry_points:dict={},
-            env:dict={}, optional_outs:list=[]):
+def genrule(
+    name:str,
+    cmd:str|list|dict,
+    srcs:list|dict=None,
+    out:str=None,
+    outs:list|dict=None,
+    deps:list=None,
+    exported_deps:list=None,
+    runtime_deps:list=None,
+    runtime_deps_from_srcs:bool=False,
+    runtime_deps_from_deps:bool=False,
+    labels:list&features&tags=None,
+    visibility:list=None,
+    building_description:str="Building...",
+    data:list|dict=None,
+    hashes:list=None,
+    timeout:int=0,
+    binary:bool=False,
+    sandbox:bool=None,
+    needs_transitive_deps:bool=False,
+    output_is_complete:bool=True,
+    test_only:bool&testonly=False,
+    secrets:list|dict=None,
+    requires:list=None,
+    provides:dict=None,
+    pre_build:function=None,
+    post_build:function=None,
+    tools:str|list|dict=None,
+    pass_env:list=None,
+    local:bool=False,
+    output_dirs:list=[],
+    exit_on_error:bool=CONFIG.EXIT_ON_ERROR,
+    entry_points:dict={},
+    env:dict={},
+    optional_outs:list=[],
+):
     """A general build rule which allows the user to specify a command.
 
     Args:
@@ -41,6 +69,14 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
                            the outputs of those rules' transitive run-time dependencies, will exist in
                            the dependent rule's build environment. Requires the rule to produce a runnable
                            output (i.e. binary = True).
+      runtime_deps_from_srcs (bool): If true, additionally collect run-time dependencies from this target's
+                                     sources. This is useful if the target's output simply collects its
+                                     sources in some way without eliminating their own run-time dependencies.
+      runtime_deps_from_deps (bool): If true, additionally collect run-time dependencies from this target's
+                                     build-time dependencies (and those targets' exported dependencies).
+                                     This is useful if the target's output includes its dependencies without
+                                     eliminating their own run-time dependencies, e.g. for targets generated
+                                     by the shell-rules plugin's sh_binary rule.
       tools (str | list | dict): Tools used to build this rule; similar to srcs but are not copied to the
                            temporary build directory. Should be accessed via $(exe //path/to:tool)
                            or similar.
@@ -127,6 +163,8 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
         deps = deps,
         exported_deps = exported_deps,
         runtime_deps = runtime_deps,
+        runtime_deps_from_srcs = runtime_deps_from_srcs,
+        runtime_deps_from_deps = runtime_deps_from_deps,
         data = data,
         tools = tools,
         secrets = secrets,
@@ -154,13 +192,38 @@ def genrule(name:str, cmd:str|list|dict, srcs:list|dict=None, out:str=None, outs
     )
 
 
-def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cmd:str|list|dict=None, srcs:list|dict=None,
-            outs:list=None, deps:list=None, exported_deps:list=None, runtime_deps:list=None, tools:str|list|dict=None,
-            test_tools:str|list|dict=None, data:list|dict=None, visibility:list=None, timeout:int=0,
-            needs_transitive_deps:bool=False, flaky:bool|int=0, secrets:list|dict=None, no_test_output:bool=False,
-            test_outputs:list=None, output_is_complete:bool=True, requires:list=None, sandbox:bool=None, size:str=None,
-            local:bool=False, pass_env:list=None, env:dict=None, exit_on_error:bool=CONFIG.EXIT_ON_ERROR,
-            no_test_coverage:bool=False):
+def gentest(
+    name:str,
+    test_cmd:str|list|dict,
+    labels:list&features&tags=None,
+    cmd:str|list|dict=None,
+    srcs:list|dict=None,
+    outs:list=None,
+    deps:list=None,
+    exported_deps:list=None,
+    runtime_deps:list=None,
+    runtime_deps_from_srcs:bool=False,
+    runtime_deps_from_deps:bool=False,
+    tools:str|list|dict=None,
+    test_tools:str|list|dict=None,
+    data:list|dict=None,
+    visibility:list=None,
+    timeout:int=0,
+    needs_transitive_deps:bool=False,
+    flaky:bool|int=0,
+    secrets:list|dict=None,
+    no_test_output:bool=False,
+    test_outputs:list=None,
+    output_is_complete:bool=True,
+    requires:list=None,
+    sandbox:bool=None,
+    size:str=None,
+    local:bool=False,
+    pass_env:list=None,
+    env:dict=None,
+    exit_on_error:bool=CONFIG.EXIT_ON_ERROR,
+    no_test_coverage:bool=False,
+):
     """A rule which creates a test with an arbitrary command.
 
     The command must return zero on success and nonzero on failure. Test results are written
@@ -185,6 +248,14 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
                            list, as well as those rules' transitive run-time dependencies, will exist in
                            the test environment. Requires the rule to produce a runnable output (i.e.
                            binary = True).
+      runtime_deps_from_srcs (bool): If true, additionally collect run-time dependencies from this target's
+                                     sources. This is useful if the target's output simply collects its
+                                     sources in some way without eliminating their own run-time dependencies.
+      runtime_deps_from_deps (bool): If true, additionally collect run-time dependencies from this target's
+                                     build-time dependencies (and those targets' exported dependencies).
+                                     This is useful if the target's output includes its dependencies without
+                                     eliminating their own run-time dependencies, e.g. for targets generated
+                                     by the shell-rules plugin's sh_binary rule.
       tools (str | list | dict): Tools used to build this rule; similar to srcs but are not copied to the temporary
                     build directory.
       test_tools (str | list | dict): Like tools but available to test_cmd instead.
@@ -224,6 +295,8 @@ def gentest(name:str, test_cmd:str|list|dict, labels:list&features&tags=None, cm
         deps = deps,
         exported_deps = exported_deps,
         runtime_deps = runtime_deps,
+        runtime_deps_from_srcs = runtime_deps_from_srcs,
+        runtime_deps_from_deps = runtime_deps_from_deps,
         data = data,
         tools = tools,
         test_tools = test_tools,
@@ -270,7 +343,7 @@ def export_file(name:str, src:str, visibility:list=None, binary:bool=False, test
     )
 
 
-def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_deps:list=None, runtime_deps:list=None,
+def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_deps:list=None,
               visibility:list=None, labels:list&features&tags=None, binary:bool=False, output_is_complete:bool=True,
               requires:list=None, provides:dict=None, hashes:list=None, test_only:bool&testonly=False):
     """Defines a collection of files which other rules can depend on.
@@ -285,8 +358,6 @@ def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_dep
       srcs (list): Source files for the rule.
       deps (list): Dependencies of the rule.
       exported_deps (list): Dependencies that will become visible to any rules that depend on this rule.
-      runtime_deps (list): Run-time dependencies of this rule. Requires the rule to produce a runnable
-                           output (i.e. binary = True).
       visibility (list): Visibility declaration
       labels (list): Labels to apply to this rule
       binary (bool): True to mark the rule outputs as binary
@@ -305,7 +376,6 @@ def filegroup(name:str, tag:str='', srcs:list=None, deps:list=None, exported_dep
         srcs=srcs,
         deps=deps,
         exported_deps=exported_deps,
-        runtime_deps=runtime_deps,
         visibility=visibility,
         building_description='Copying...',
         output_is_complete=output_is_complete,
