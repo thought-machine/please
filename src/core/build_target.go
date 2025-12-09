@@ -750,31 +750,33 @@ func (target *BuildTarget) IterAllRuntimeDependencies(graph *BuildGraph) iter.Se
 				}
 			}
 		}
-		for _, dep := range t.dependencies {
-			// If required, include the run-time dependencies of sources, but not the sources themselves.
-			if t.RuntimeDependenciesFromSources && dep.source {
-				depLabel, _ := dep.declared.Label()
-				for _, providedDep := range graph.TargetOrDie(depLabel).ProvideFor(t) {
-					if !push(graph.TargetOrDie(providedDep), yield) {
-						return false
-					}
-				}
-			}
-			// If required, include the run-time dependencies of dependencies, but not the dependencies themselves.
-			if t.RuntimeDependenciesFromDependencies && !dep.exported && !dep.source && !dep.internal && !dep.runtime {
-				depLabel, _ := dep.declared.Label()
-				depTarget := graph.TargetOrDie(depLabel)
-				for _, providedDep := range depTarget.ProvideFor(t) {
-					if !push(graph.TargetOrDie(providedDep), yield) {
-						return false
-					}
-				}
-				// Also include the run-time dependencies of the target's exported dependencies, but not the
-				// exported dependencies themselves.
-				for _, exportedDep := range depTarget.ExportedDependencies() {
-					for _, providedDep := range graph.TargetOrDie(exportedDep).ProvideFor(t) {
+		if t.RuntimeDependenciesFromSources || t.RuntimeDependenciesFromDependencies {
+			for _, dep := range t.dependencies {
+				// If required, include the run-time dependencies of sources, but not the sources themselves.
+				if t.RuntimeDependenciesFromSources && dep.source {
+					depLabel, _ := dep.declared.Label()
+					for _, providedDep := range graph.TargetOrDie(depLabel).ProvideFor(t) {
 						if !push(graph.TargetOrDie(providedDep), yield) {
 							return false
+						}
+					}
+				}
+				// If required, include the run-time dependencies of dependencies, but not the dependencies themselves.
+				if t.RuntimeDependenciesFromDependencies && !dep.exported && !dep.source && !dep.internal && !dep.runtime {
+					depLabel, _ := dep.declared.Label()
+					depTarget := graph.TargetOrDie(depLabel)
+					for _, providedDep := range depTarget.ProvideFor(t) {
+						if !push(graph.TargetOrDie(providedDep), yield) {
+							return false
+						}
+					}
+					// Also include the run-time dependencies of the target's exported dependencies, but not the
+					// exported dependencies themselves.
+					for _, exportedDep := range depTarget.ExportedDependencies() {
+						for _, providedDep := range graph.TargetOrDie(exportedDep).ProvideFor(t) {
+							if !push(graph.TargetOrDie(providedDep), yield) {
+								return false
+							}
 						}
 					}
 				}
