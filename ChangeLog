@@ -1,3 +1,7 @@
+Version 17.26.0
+---------------
+    * Optionally traverse `srcs` and `deps` for run-time dependencies (#3466)
+
 Version 17.25.1
 ---------------
     * Bump arcat to v1.3.1, fixing a bug relating to symbol table stripping on Darwin and FreeBSD (#3462)
