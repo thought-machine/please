@@ -4,11 +4,7 @@ remote_file(
     out = "arcat",
     binary = True,
     hashes = [
-        "6af2cf108592535701aa9395f3a5deeb48a5dfbe8174a8ebe3d56bb93de2c255", # darwin_amd64
-        "5070ef05d14c66a85d438f400c6ff734a23833929775d6824b69207b704034bf", # darwin_arm64
-        "05ad6ac45be3a4ca1238bb1bd09207a596f8ff5f885415f8df4ff2dc849fa04e", # freebsd_amd64
-        "aec85425355291e515cd10ac0addec3a5bc9e05c9d07af01aca8c34aaf0f1222", # linux_amd64
-        "8266cb95cc84b23642bca6567f8b4bd18de399c887cb5845ab6a901d0dba54d2", # linux_arm64
+        "{{ .ArcatHash }}",
     ],
     visibility = ["PUBLIC"],
 )
@@ -29,3 +25,4 @@ genrule(
     binary = True,
 )
 {{ end }}
+
