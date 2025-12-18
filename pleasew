@@ -79,9 +79,8 @@ find_repo_root() {
     dir="$PWD"
     while true; do
         [ -f "$dir/.plzconfig" ] && echo "$dir" && return 0
-        [ "$dir" = "/" ] && return 1
-        dir="${dir%/*}"
-        [ -z "$dir" ] && dir="/"
+        [ "$dir" = "/" ] && return 0
+        dir="$(dirname "$dir")"
     done
 }
 
