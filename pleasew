@@ -74,12 +74,24 @@ get_profile () {
 # Check `PLZ_CONFIG_PROFILE` or fall back to arguments for a profile.
 PROFILE="${PLZ_CONFIG_PROFILE:-$(get_profile "${@}")}"
 
+# Find repo root by traversing up until we find .plzconfig
+find_repo_root() {
+    dir="$PWD"
+    while true; do
+        [ -f "$dir/.plzconfig" ] && echo "$dir" && return 0
+        [ "$dir" = "/" ] && return 0
+        dir="$(dirname "$dir")"
+    done
+}
+
+REPO_ROOT="$(find_repo_root)"
+
 # Config files on order of precedence high to low.
 CONFIGS="$(cat <<- EOS
-	.plzconfig.local
-	${PROFILE:+.plzconfig.${PROFILE}}
-	.plzconfig_${OS}_${ARCH}
-	.plzconfig
+	${REPO_ROOT:+${REPO_ROOT}/.plzconfig.local}
+	${REPO_ROOT:+${PROFILE:+${REPO_ROOT}/.plzconfig.${PROFILE}}}
+	${REPO_ROOT:+${REPO_ROOT}/.plzconfig_${OS}_${ARCH}}
+	${REPO_ROOT:+${REPO_ROOT}/.plzconfig}
 	${HOME}/.config/please/plzconfig
 	/etc/please/plzconfig
 EOS
