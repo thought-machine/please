@@ -38,7 +38,7 @@ func ToDir(state *core.BuildState, dir string, noTrim bool, targets []core.Build
 	}
 
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
-		log.Fatalf("failed to create export dir: %v", dir)
+		log.Fatalf("failed to create export directory %s: %v", dir, err)
 	}
 
 	e.exportPlzConf()
