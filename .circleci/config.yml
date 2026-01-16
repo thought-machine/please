@@ -125,7 +125,7 @@ jobs:
      working_directory: ~/please
      macos:
        xcode: "16.4.0"
-     resource_class: macos.m1.medium.gen1
+     resource_class: m4pro.medium
      steps:
        - checkout
        - attach_workspace:
@@ -206,7 +206,7 @@ jobs:
    build-darwin:
       macos:
         xcode: "16.4.0"
-      resource_class: macos.m1.medium.gen1
+      resource_class: m4pro.medium
       environment:
         PLZ_ARGS: "--profile ci --exclude pip --exclude embed"
       steps:
