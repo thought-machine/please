@@ -4,7 +4,7 @@ remote_file(
     out = "arcat",
     binary = True,
     hashes = [
-        "{{ .ArcatHash }}",
+        "{{ .ArcatHash }}", # defined in internal_package.go
     ],
     visibility = ["PUBLIC"],
 )

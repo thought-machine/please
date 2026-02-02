@@ -39,9 +39,7 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		arcatHash = "aec85425355291e515cd10ac0addec3a5bc9e05c9d07af01aca8c34aaf0f1222"
 	case "linux_arm64":
 		arcatHash = "8266cb95cc84b23642bca6567f8b4bd18de399c887cb5845ab6a901d0dba54d2"
-	}
-
-	if arcatHash == "" {
+	default:
 		return "", fmt.Errorf("arcat tool not supported for platform: %s_%s", runtime.GOOS, runtime.GOARCH)
 	}
 
