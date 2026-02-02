@@ -28,7 +28,7 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 	}
 
 	arcatHash := ""
-	switch fmt.Sprintf("%s_%s", config.Build.Arch.OS, config.Build.Arch.Arch) {
+	switch fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH) {
 	case "darwin_amd64":
 		arcatHash = "6af2cf108592535701aa9395f3a5deeb48a5dfbe8174a8ebe3d56bb93de2c255"
 	case "darwin_arm64":
@@ -39,6 +39,10 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		arcatHash = "aec85425355291e515cd10ac0addec3a5bc9e05c9d07af01aca8c34aaf0f1222"
 	case "linux_arm64":
 		arcatHash = "8266cb95cc84b23642bca6567f8b4bd18de399c887cb5845ab6a901d0dba54d2"
+	}
+
+	if arcatHash == "" {
+		return "", fmt.Errorf("arcat tool not supported for platform: %s_%s", runtime.GOOS, runtime.GOARCH)
 	}
 
 	data := struct {
@@ -60,4 +64,3 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 	}
 	return buf.String(), nil
 }
-
