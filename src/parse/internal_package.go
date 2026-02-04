@@ -27,7 +27,7 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 		url = fmt.Sprintf("%s/%s_%s/%s/please_tools_%s.tar.xz", config.Please.DownloadLocation, runtime.GOOS, runtime.GOARCH, version.PleaseVersion, version.PleaseVersion)
 	}
 
-	var String arcatHash 
+	var arcatHash string
 	switch fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH) {
 	case "darwin_amd64":
 		arcatHash = "6af2cf108592535701aa9395f3a5deeb48a5dfbe8174a8ebe3d56bb93de2c255"
