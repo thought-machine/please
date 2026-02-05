@@ -174,6 +174,12 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
 		return h.definition(positionParams)
+	case "textDocument/references":
+		referenceParams := &lsp.ReferenceParams{}
+		if err := json.Unmarshal(*params, referenceParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.references(referenceParams)
 	default:
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
@@ -244,6 +250,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 			DocumentFormattingProvider: true,
 			DocumentSymbolProvider:     true,
 			DefinitionProvider:         true,
+			ReferencesProvider:         true,
 			CompletionProvider: &lsp.CompletionOptions{
 				TriggerCharacters: []string{"/", ":"},
 			},

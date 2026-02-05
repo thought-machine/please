@@ -5,6 +5,7 @@ go_library(
         "definition.go",
         "diagnostics.go",
         "lsp.go",
+        "references.go",
         "symbols.go",
         "text.go",
     ],
@@ -20,6 +21,7 @@ go_library(
         "//src/parse",
         "//src/parse/asp",
         "//src/plz",
+        "//src/query",
         "//tools/build_langserver/lsp/astutils",
     ],
 )
