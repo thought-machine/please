@@ -39,6 +39,24 @@ func (h *Handler) references(params *lsp.ReferenceParams) ([]lsp.Location, error
 		return h.findFunctionReferences(funcName, params.Context.IncludeDeclaration)
 	}
 
+	// Check if cursor is on a function call (e.g., go_library(...))
+	asp.WalkAST(ast, func(stmt *asp.Statement) bool {
+		if stmt.Ident != nil {
+			stmtStart := f.Pos(stmt.Pos)
+			nameEnd := stmtStart
+			nameEnd.Column += len(stmt.Ident.Name)
+			if asp.WithinRange(pos, stmtStart, nameEnd) {
+				funcName = stmt.Ident.Name
+				return false
+			}
+		}
+		return true
+	})
+
+	if funcName != "" {
+		return h.findFunctionReferences(funcName, params.Context.IncludeDeclaration)
+	}
+
 	// Otherwise, look for build label references
 	return h.findLabelReferences(doc, ast, f, pos, params.Context.IncludeDeclaration)
 }
@@ -152,6 +170,13 @@ func (h *Handler) findLabelReferences(doc *doc, ast []*asp.Statement, f *asp.Fil
 	}
 
 	if targetLabel.IsEmpty() {
+		return []lsp.Location{}, nil
+	}
+
+	// Verify the target exists in the graph before querying revdeps
+	// This prevents panics when the label has an invalid package name
+	if h.state.Graph.Package(targetLabel.PackageName, "") == nil {
+		log.Warning("references: package %q not found in build graph for label %s", targetLabel.PackageName, targetLabel)
 		return []lsp.Location{}, nil
 	}
 

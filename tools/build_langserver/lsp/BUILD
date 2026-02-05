@@ -32,6 +32,7 @@ go_test(
     srcs = [
         "definition_test.go",
         "lsp_test.go",
+        "references_test.go",
         "symbols_test.go",
     ],
     data = ["test_data"],
@@ -41,6 +42,7 @@ go_test(
         "///third_party/go/github.com_sourcegraph_go-lsp//:go-lsp",
         "///third_party/go/github.com_sourcegraph_jsonrpc2//:jsonrpc2",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/cli",
         "//src/core",
     ],
