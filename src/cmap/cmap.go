@@ -94,6 +94,17 @@ func (m *Map[K, V]) Values() []V {
 	return ret
 }
 
+// Range calls f for each key-value pair in the map.
+// If f returns false, iteration stops.
+// No particular consistency guarantees are made during iteration.
+func (m *Map[K, V]) Range(f func(key K, val V) bool) {
+	for i := 0; i < len(m.shards); i++ {
+		if !m.shards[i].Range(f) {
+			return
+		}
+	}
+}
+
 // An awaitableValue represents a value in the map & an awaitable channel for it to exist.
 type awaitableValue[V any] struct {
 	Val  V
@@ -194,4 +205,19 @@ func (s *shard[K, V]) Contains(key K) bool {
 
 	_, ok := s.m[key]
 	return ok
+}
+
+// Range calls f for each key-value pair in this shard.
+// Returns false if iteration was stopped early.
+func (s *shard[K, V]) Range(f func(key K, val V) bool) bool {
+	s.l.RLock()
+	defer s.l.RUnlock()
+	for k, v := range s.m {
+		if v.Wait == nil { // Only include completed values
+			if !f(k, v.Val) {
+				return false
+			}
+		}
+	}
+	return true
 }
