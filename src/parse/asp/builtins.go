@@ -650,9 +650,14 @@ func strLower(s *scope, args []pyObject) pyObject {
 func strMatches(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	pattern := string(args[1].(pyString))
-	res, err := regexp.MatchString(pattern, self)
-	s.Assert(err == nil, "%s", err)
-	return newPyBool(res)
+	compiledRegex, found := s.interpreter.regexCache[pattern]
+	if !found {
+		compiled, err := regexp.Compile(pattern)
+		s.Assert(err == nil, "%s", err)
+		s.interpreter.regexCache[pattern] = compiled
+		compiledRegex = compiled
+	}
+	return newPyBool(compiledRegex.MatchString(self))
 }
 
 func boolType(s *scope, args []pyObject) pyObject {
