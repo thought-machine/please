@@ -7,6 +7,7 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -98,6 +99,7 @@ func registerBuiltins(s *scope) {
 		"count":        setNativeCode(s, "count", strCount),
 		"upper":        setNativeCode(s, "upper", strUpper),
 		"lower":        setNativeCode(s, "lower", strLower),
+		"matches":      setNativeCode(s, "matches", strMatches),
 	}
 	s.interpreter.stringMethods["format"].kwargs = true
 	s.interpreter.dictMethods = map[string]*pyFunc{
@@ -643,6 +645,20 @@ func strUpper(s *scope, args []pyObject) pyObject {
 func strLower(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	return pyString(strings.ToLower(self))
+}
+
+func strMatches(s *scope, args []pyObject) pyObject {
+	self := string(args[0].(pyString))
+	pattern := string(args[1].(pyString))
+	compiledRegex := s.interpreter.regexCache.Get(pattern)
+	if compiledRegex == nil {
+		compiled, err := regexp.Compile(pattern)
+		s.Assert(err == nil, "%s", err)
+		// We don't need to check if another task inserted the regex first, as it will be an identical result.
+		s.interpreter.regexCache.Add(pattern, compiled)
+		compiledRegex = compiled
+	}
+	return newPyBool(compiledRegex.MatchString(self))
 }
 
 func boolType(s *scope, args []pyObject) pyObject {
