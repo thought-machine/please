@@ -15,11 +15,11 @@ assert "abc".startswith("ab") == True
 
 assert "abc".endswith("bc") == True
 
-assert "a{var1},b{var2},c{var3}".format(var1="a", var2=2, var3=3)
+assert "a{var1},b{var2},c{var3}".format(var1="a", var2=2, var3=[3]) == "aa,b2,c[3]"
 
-assert "abc".lstrip("a") == "bc"
+assert "abcba".lstrip("a") == "bcba"
 
-assert "abc".rstrip("c") == "ab"
+assert "abcba".rstrip("a") == "abcb"
 
 assert "abcba".strip("a") == "bcb"
 
