@@ -582,12 +582,13 @@ func removeOutputs(target *core.BuildTarget) error {
 }
 
 // subresourceIntegrity returns a string corresponding to a target's hashes in the Subresource Integrity format.
+// When multiple hashes are specified (e.g., one per platform), we return an empty string
+// since we cannot determine which hash corresponds to the remote execution platform.
 func subresourceIntegrity(target *core.BuildTarget) string {
-	ret := make([]string, len(target.Hashes))
-	for i, h := range target.Hashes {
-		ret[i] = reencodeSRI(target, h)
+	if len(target.Hashes) != 1 {
+		return ""
 	}
-	return strings.Join(ret, " ")
+	return reencodeSRI(target, target.Hashes[0])
 }
 
 // reencodeSRI re-encodes a hash from the hex format we use to base64-encoded.
