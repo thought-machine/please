@@ -349,7 +349,3 @@ determine files changes since master, watch rules and build them automatically a
 `plz help`, and explore this rich set of commands!
 
 Otherwise, why not try one of the other codelabs!
-, watch rules and build them automatically as things change and much more! Use
-`plz help`, and explore this rich set of commands!
-
-Otherwise, why not try one of the other codelabs!
