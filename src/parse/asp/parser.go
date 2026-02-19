@@ -257,6 +257,25 @@ func (p *Parser) optimiseBuiltinCalls(stmts []*Statement) {
 	}
 }
 
+// AllFunctionsByFile returns all function definitions grouped by filename.
+// This includes functions from builtins, plugins, and subincludes.
+// It iterates over the ASTs stored by the interpreter.
+func (p *Parser) AllFunctionsByFile() map[string][]*Statement {
+	if p.interpreter == nil || p.interpreter.asts == nil {
+		return nil
+	}
+	result := make(map[string][]*Statement)
+	p.interpreter.asts.Range(func(filename string, stmts []*Statement) bool {
+		for _, stmt := range stmts {
+			if stmt.FuncDef != nil {
+				result[filename] = append(result[filename], stmt)
+			}
+		}
+		return true
+	})
+	return result
+}
+
 // whitelistedKwargs returns true if the given built-in function name is allowed to
 // be called as non-kwargs.
 // TODO(peterebden): Come up with a syntax that exposes this directly in the file.

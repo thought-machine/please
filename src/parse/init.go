@@ -25,6 +25,19 @@ func InitParser(state *core.BuildState) *core.BuildState {
 	return state
 }
 
+// GetAspParser returns the underlying asp.Parser from the state's parser.
+// This is useful for tools like the language server that need direct access to AST information.
+// Returns nil if the state's parser is not set or is not an aspParser.
+func GetAspParser(state *core.BuildState) *asp.Parser {
+	if state.Parser == nil {
+		return nil
+	}
+	if ap, ok := state.Parser.(*aspParser); ok {
+		return ap.parser
+	}
+	return nil
+}
+
 // aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
 	parser *asp.Parser
