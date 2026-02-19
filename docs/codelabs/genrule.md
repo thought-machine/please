@@ -36,9 +36,9 @@ Duration: 3
 
 Before we jump into writing custom build definitions, let me introduce you to `genrule()`, the generic build rule. Let's
 just create a new project and initialise Please in it:
-```
-$ mkdir custom_rules && cd custom_rules
-$ plz init --no_prompt
+```bash
+mkdir custom_rules && cd custom_rules
+plz init --no_prompt
 ```
 
 Then create a `BUILD` file in the root of the repository like so:
@@ -54,13 +54,13 @@ genrule(
 ```
 
 Then create file.txt:
-```
-$ echo "the quick brown fox jumped over the lazy dog" > file.txt
+```bash
+echo "the quick brown fox jumped over the lazy dog" > file.txt
 ```
 
 and build it:
 
-```
+```bash
 $ plz build //:word_count
 Build finished; total time 70ms, incrementality 0.0%. Outputs:
 //:word_count:
@@ -69,6 +69,14 @@ Build finished; total time 70ms, incrementality 0.0%. Outputs:
 $ cat plz-out/gen/file.wc
  1  9 45 file.txt
 ```
+
+### Troubleshooting: "can't store data at section "scm""
+
+This message means the runner is using an older Please release that doesn’t understand the `[scm]` section in your `.plzconfig`, so parsing fails before any build work begins.
+
+**How to fix**
+- Upgrade the Please version invoked in CI (pin the same version locally via `pleasew`, `setup-please`, or `PLZ_VERSION`).
+- If upgrading immediately is impractical, temporarily remove or comment the `[scm]` block until the runner is updated.
 
 ### So what's going on?
 Here we've used one of the built-in rules, `genrule()`, to run a custom command. `genrule()` can take a number of
@@ -199,8 +207,12 @@ word_count(
 
 And check it still works:
 
+```bash
+plz build //:word_count
 ```
-$ plz build //:word_count
+The output:
+
+```
 Build finished; total time 30ms, incrementality 100.0%. Outputs:
 //:word_count:
   plz-out/gen/word_count.wc
@@ -261,9 +273,10 @@ wc -w $@
 
 ### `tools/BUILD`
 ```python
-sh_binary(
+filegroup(
     name = "wc",
-    main = "wc.sh",
+    srcs = ["wc.sh"],
+    binary = True,
     visibility = ["PUBLIC"],
 )
 ```
@@ -392,3 +405,4 @@ If you create something you believe will be useful to the wider world, we might 
 [pleasings](https://github.com/thought-machine/pleasings) repo!
 
 If you get stuck, jump on [gitter](https://gitter.im/please-build/Lobby) and we'll do our best to help you!
+
