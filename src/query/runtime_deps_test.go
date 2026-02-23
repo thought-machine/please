@@ -13,7 +13,7 @@ import (
 func TestRuntimeDeps(t *testing.T) {
 	var addTarget func(string, bool, bool, []*core.BuildTarget, []*core.BuildTarget, []*core.BuildTarget) *core.BuildTarget
 
-	for _, test := range []struct{
+	for _, test := range []struct {
 		Description string
 		GraphFunc   func() *core.BuildTarget
 		Expected    []string
