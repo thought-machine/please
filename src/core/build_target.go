@@ -342,20 +342,22 @@ func (o OutputDirectory) ShouldAddFiles() bool {
 // or not. Targets only move forwards through this (i.e. the state of a target only ever increases).
 type BuildTargetState uint8
 
-// The available states for a target.
+// The available states for a target. States with higher integer values are always later on, or at the same point in the
+// target lifecycle. This property is used to make sure we never transition a target backwards i.e. you can't go back
+// to Active from Built.
 const (
 	Inactive         BuildTargetState = iota // Target isn't used in current build
 	Semiactive                               // Target would be active if we needed a build
-	Active                                   // Target is going to be used in current build
-	Pending                                  // Target is ready to be built but not yet started.
+	Active                                   // Target is going to be used in current build, but we're waiting for its dependencies to build
+	Pending                                  // Target has been added to the build queue built but not yet started.
 	Building                                 // Target is currently being built
-	Stopped                                  // We stopped building the target because we'd gone as far as needed.
-	Built                                    // Target has been successfully built
-	Cached                                   // Target has been retrieved from the cache
-	Unchanged                                // Target has been built but hasn't changed since last build
-	Reused                                   // Outputs of previous build have been reused.
+	Stopped                                  // We stopped building the target because we'd gone as far as needed i.e. because we're only preparing the build dir for --shell
+	Built                                    // Target has been successfully built. The target wasn't cached in any way.
+	Cached                                   // Target has been retrieved from the build cache, but was not found in plz-out
+	Unchanged                                // Target has been re-built (e.g. because the input or rule hash changed) but the outputs didn't change since last build
+	Reused                                   // Outputs of previous build have been reused i.e. the outputs in plz-out were up-to-date
 	BuiltRemotely                            // Target has been built but outputs are not necessarily local.
-	ReusedRemotely                           // Outputs of previous remote action have been reused.
+	ReusedRemotely                           // Outputs of previous remote action have been reused. This could be locally or remotely cached.
 	DependencyFailed                         // At least one dependency of this target has failed.
 	Failed                                   // Target failed for some reason
 )
