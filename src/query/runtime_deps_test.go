@@ -20,7 +20,7 @@ func TestRuntimeDeps(t *testing.T) {
 	}{
 		{
 			Description: "Explicit run-time deps",
-			GraphFunc:   func() *core.BuildTarget {
+			GraphFunc: func() *core.BuildTarget {
 				run1 := addTarget("runtime_dep_1", false, false, nil, nil, nil)
 				run2 := addTarget("runtime_dep_2", false, false, nil, nil, []*core.BuildTarget{run1})
 				root := addTarget("root", false, false, nil, nil, []*core.BuildTarget{run2})
@@ -33,7 +33,7 @@ func TestRuntimeDeps(t *testing.T) {
 		},
 		{
 			Description: "Run-time deps from srcs but not deps",
-			GraphFunc:   func() *core.BuildTarget {
+			GraphFunc: func() *core.BuildTarget {
 				run1 := addTarget("runtime_dep_1", false, false, nil, nil, nil)
 				run2 := addTarget("runtime_dep_2", false, false, nil, nil, []*core.BuildTarget{run1})
 				src := addTarget("src", false, false, nil, nil, []*core.BuildTarget{run2})
@@ -50,7 +50,7 @@ func TestRuntimeDeps(t *testing.T) {
 		},
 		{
 			Description: "Run-time deps from deps but not srcs",
-			GraphFunc:   func() *core.BuildTarget {
+			GraphFunc: func() *core.BuildTarget {
 				run1 := addTarget("runtime_dep_1", false, false, nil, nil, nil)
 				run2 := addTarget("runtime_dep_2", false, false, nil, nil, []*core.BuildTarget{run1})
 				src := addTarget("src", false, false, nil, nil, []*core.BuildTarget{run2})
@@ -67,7 +67,7 @@ func TestRuntimeDeps(t *testing.T) {
 		},
 		{
 			Description: "Run-time deps from both srcs and deps",
-			GraphFunc:   func() *core.BuildTarget {
+			GraphFunc: func() *core.BuildTarget {
 				run1 := addTarget("runtime_dep_1", false, false, nil, nil, nil)
 				run2 := addTarget("runtime_dep_2", false, false, nil, nil, []*core.BuildTarget{run1})
 				src := addTarget("src", false, false, nil, nil, []*core.BuildTarget{run2})
