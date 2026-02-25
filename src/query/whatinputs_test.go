@@ -88,3 +88,16 @@ func TestWhatInputsSourceBothTargetsHidden(t *testing.T) {
 	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", true)
 	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "_target1#srcs"}, {PackageName: "package1", Name: "target1"}}, inputLabels)
 }
+
+func TestWhatInputsSingleTargetParentUnderscore(t *testing.T) {
+	graph := core.NewGraph()
+	pkg := core.NewPackage("package1")
+	fileSource := core.FileLabel{File: "file1.txt", Package: pkg.Name}
+	internalTarget := addNewTarget(graph, pkg, "__target1#srcs", []core.BuildInput{fileSource})
+	addNewTarget(graph, pkg, "_target1", []core.BuildInput{fileSource, internalTarget.Label})
+	graph.AddPackage(pkg)
+
+	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", false)
+	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "_target1"}}, inputLabels)
+}
+
