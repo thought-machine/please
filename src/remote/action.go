@@ -28,6 +28,9 @@ import (
 	remotefs "github.com/thought-machine/please/src/remote/fs"
 )
 
+// remoteSandboxToolName is the name used for the sandbox tool when uploaded to remote execution.
+const remoteSandboxToolName = ".plz_sandbox"
+
 // uploadAction uploads a build action for a target and returns its digest.
 func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool, run int) (*pb.Command, *pb.Digest, error) {
 	var command *pb.Command
@@ -37,6 +40,22 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool, run 
 		inputRoot, err := c.uploadInputs(ch, target, isTest || isRun)
 		if err != nil {
 			return err
+		}
+		// Upload sandbox tool if needed for this target
+		if c.needsSandbox(target, isTest) {
+			sandboxEntry, err := c.sandboxToolEntry()
+			if err != nil {
+				return err
+			}
+			if sandboxEntry != nil {
+				ch <- sandboxEntry
+				// Add the sandbox tool to the input root
+				inputRoot.Files = append(inputRoot.Files, &pb.FileNode{
+					Name:         remoteSandboxToolName,
+					Digest:       sandboxEntry.Digest.ToProto(),
+					IsExecutable: true,
+				})
+			}
 		}
 		inputRootEntry, inputRootDigest := c.protoEntry(inputRoot)
 		ch <- inputRootEntry
@@ -59,11 +78,68 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool, run 
 	return command, digest, err
 }
 
+// needsSandbox returns true if the target needs to be sandboxed for remote execution.
+func (c *Client) needsSandbox(target *core.BuildTarget, isTest bool) bool {
+	if c.state.Config.Sandbox.Tool == "" {
+		return false // No sandbox tool configured
+	}
+	if isTest {
+		return target.Test != nil && target.Test.Sandbox
+	}
+	return target.Sandbox
+}
+
+// sandboxToolEntry returns an upload entry for the sandbox tool, or nil if not configured.
+func (c *Client) sandboxToolEntry() (*uploadinfo.Entry, error) {
+	toolPath := c.state.Config.Sandbox.Tool
+	if toolPath == "" {
+		return nil, nil
+	}
+	// Resolve the tool path if it's not absolute
+	if !filepath.IsAbs(toolPath) {
+		var err error
+		toolPath, err = core.LookBuildPath(toolPath, c.state.Config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find sandbox tool %q: %w", c.state.Config.Sandbox.Tool, err)
+		}
+	}
+	if !fs.FileExists(toolPath) {
+		return nil, fmt.Errorf("sandbox tool does not exist: %s", toolPath)
+	}
+	info, err := os.Stat(toolPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat sandbox tool: %w", err)
+	}
+	h, err := c.state.PathHasher.Hash(toolPath, false, true, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash sandbox tool: %w", err)
+	}
+	dg := digest.Digest{
+		Hash: hex.EncodeToString(h),
+		Size: info.Size(),
+	}
+	return uploadinfo.EntryFromFile(dg, toolPath), nil
+}
+
 // buildAction creates a build action for a target and returns the command and the action digest. No uploading is done.
 func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool, run int) (*pb.Command, *pb.Digest, error) {
 	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err
+	}
+	// Add sandbox tool to input root hash if needed (for cache consistency)
+	if c.needsSandbox(target, isTest) {
+		sandboxEntry, err := c.sandboxToolEntry()
+		if err != nil {
+			return nil, nil, err
+		}
+		if sandboxEntry != nil {
+			inputRoot.Files = append(inputRoot.Files, &pb.FileNode{
+				Name:         remoteSandboxToolName,
+				Digest:       sandboxEntry.Digest.ToProto(),
+				IsExecutable: true,
+			})
+		}
 	}
 	inputRootDigest := c.digestMessage(inputRoot)
 	command, err := c.buildCommand(target, inputRoot, isTest, false, stamp, run)
@@ -125,10 +201,16 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		cmd = "true"
 	}
 	cmd, err := core.ReplaceSequences(state, target, cmd)
+	args := process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError)
+	env := c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox)
+	// Wrap with sandbox tool if needed
+	if c.needsSandbox(target, false) {
+		args, env = c.wrapWithSandbox(args, env, target.Sandbox, target.Sandbox)
+	}
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target),
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
+		Arguments:            args,
+		EnvironmentVariables: env,
 		OutputPaths:          outs,
 	}, err
 }
@@ -158,6 +240,12 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
 	}
 	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	args := process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError)
+	env := c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox)
+	// Wrap with sandbox tool if needed
+	if c.needsSandbox(target, true) {
+		args, env = c.wrapWithSandbox(args, env, target.Test.Sandbox, target.Test.Sandbox)
+	}
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -167,8 +255,8 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 				},
 			},
 		},
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
+		Arguments:            args,
+		EnvironmentVariables: env,
 		OutputPaths:          paths,
 	}, err
 }
@@ -521,10 +609,11 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	// At this point it's verified all the directories, but not the files themselves.
 	digests := make([]digest.Digest, 0, len(outputs))
 	for _, output := range outputs {
-		// FlattenTree doesn't populate the digest in for empty dirs... we don't need to check them anyway
-		if !output.IsEmptyDirectory {
-			digests = append(digests, output.Digest)
+		// Skip empty directories and symlinks - they don't have digests to verify
+		if output.IsEmptyDirectory || output.SymlinkTarget != "" {
+			continue
 		}
+		digests = append(digests, output.Digest)
 	}
 	if missing, err := c.client.MissingBlobs(context.Background(), digests); err != nil {
 		return fmt.Errorf("Failed to verify action result outputs: %s", err)
@@ -603,6 +692,53 @@ func (c *Client) buildEnv(target *core.BuildTarget, env core.BuildEnv, sandbox b
 		return strings.Compare(a.Name, b.Name)
 	})
 	return vars
+}
+
+// wrapWithSandbox wraps the given command arguments with the sandbox tool.
+// It prepends the sandbox tool to the arguments and adds the appropriate
+// environment variables to control sandboxing behavior.
+func (c *Client) wrapWithSandbox(args []string, env []*pb.Command_EnvironmentVariable, sandboxNetwork, sandboxMount bool) ([]string, []*pb.Command_EnvironmentVariable) {
+	// Prepend the sandbox tool to the arguments
+	// The sandbox tool is uploaded to the root as .plz_sandbox
+	sandboxArgs := append([]string{"./" + remoteSandboxToolName}, args...)
+
+	// Add sandbox environment variables
+	// SHARE_NETWORK=0 means isolate network (sandbox it)
+	// SHARE_MOUNT=0 means isolate mount namespace (sandbox it)
+	sandboxEnv := append(env,
+		&pb.Command_EnvironmentVariable{
+			Name:  "SHARE_NETWORK",
+			Value: boolToShareEnv(!sandboxNetwork),
+		},
+		&pb.Command_EnvironmentVariable{
+			Name:  "SHARE_MOUNT",
+			Value: boolToShareEnv(!sandboxMount),
+		},
+	)
+
+	// Add SANDBOX_DIRS if configured
+	if len(c.state.Config.Sandbox.Dir) > 0 {
+		sandboxEnv = append(sandboxEnv, &pb.Command_EnvironmentVariable{
+			Name:  "SANDBOX_DIRS",
+			Value: strings.Join(c.state.Config.Sandbox.Dir, ","),
+		})
+	}
+
+	// Re-sort after adding new variables
+	slices.SortFunc(sandboxEnv, func(a, b *pb.Command_EnvironmentVariable) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	return sandboxArgs, sandboxEnv
+}
+
+// boolToShareEnv converts a boolean to the environment variable value for SHARE_* variables.
+// "1" means share (don't sandbox), "0" means isolate (sandbox).
+func boolToShareEnv(share bool) string {
+	if share {
+		return "1"
+	}
+	return "0"
 }
 
 func (c *Client) protoEntry(msg proto.Message) (*uploadinfo.Entry, *pb.Digest) {
