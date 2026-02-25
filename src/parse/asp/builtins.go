@@ -26,6 +26,24 @@ import (
 // A nativeFunc is a function that implements a builtin function natively.
 type nativeFunc func(*scope, []pyObject) pyObject
 
+// A strFormatRefMode is a mode by which the replacement fields in a str.format format string may refer to the remaining
+// arguments passed to str.format.
+type strFormatRefMode int
+
+const (
+	// strFormatByOrder indicates that replacement fields refer to positional arguments in the order in which they were
+	// given to str.format. Fields are numbered automatically; the field names themselves are therefore empty (i.e. `{}`).
+	strFormatByOrder strFormatRefMode = iota
+
+	// strFormatByPosition indicates that replacement fields refer to positional arguments in an arbitrary order. Field
+	// names are numerical and zero-indexed (e.g. `{0}`, `{1}`).
+	strFormatByPosition
+
+	// strFormatByName indicates that replacement fields refer to the names of keyword arguments. Field names are therefore
+	// function parameters (e.g. `{name}`, `{id}`).
+	strFormatByName
+)
+
 // registerBuiltins sets up the "special" builtins that map to native code.
 func registerBuiltins(s *scope) {
 	const varargs = true
@@ -584,48 +602,97 @@ func strRFind(s *scope, args []pyObject) pyObject {
 	return newPyInt(strings.LastIndex(string(self), string(needle)))
 }
 
+// strFormat implements the str.format function. It interpolates a format string using the arguments passed to
+// str.format and returns the interpolated string.
+//
+// Format strings may contain literal text or replacement fields delimited by `{` and `}` characters. The string between
+// these delimiters - the "field name" - denotes which argument to str.format should be substituted in place of the
+// field. strFormat supports three reference modes within field names - see [strFormatByOrder], [strFormatByPosition]
+// and [strFormatByName]. Only one reference mode may be used per format string. `{{` and `}}` are treated as the
+// literal characters `{` and `}` respectively.
 func strFormat(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	var buf strings.Builder
-	buf.Grow(len(self)) // most reasonable guess available as to how big it might be
+	buf.Grow(len(self)) // This is our best possible guess as to how big the output might be.
 
-	arg := 1 // what arg index are we up to for positional args
+	// Decide initially whether to parse replacement field names as numbers (which is only permitted if str.format is
+	// called with positional arguments) or as names (which is only permitted if it is called with keyword arguments).
+	//
+	// Although we also support automatic field numbering, both that and numerical replacement fields require str.format to
+	// be called with positional arguments, so it is impossible to tell whether we should use automatic field numbering
+	// until we parse the first field name in the format string. args will always contain at least one element (the format
+	// string). For now, assume we're using numerical replacement fields if it contains more than one element; otherwise,
+	// assume we're using named replacement fields.
+	mode := strFormatByPosition
+	if len(args) == 1 {
+		mode = strFormatByName
+	}
+
+	posArgs := len(args) - 1
+	nextPosIndex := 0
+
+	// This loop consumes the format string from left to right:
 	for {
-		start := strings.IndexByte(self, '{')
+		// Locate the first (opening or closing) delimiter in the remainder of the format string.
+		start := strings.IndexAny(self, "{}")
+		// If there are no more delimiters remaining in the format string, output the rest of the format string and end
+		// processing of the format string.
 		if start == -1 {
 			buf.WriteString(self)
 			break
 		}
-		end := strings.IndexByte(self[start:], '}')
-		if end == -1 {
-			// We may want to error here in some future revision
-			buf.WriteString(self)
-			break
+		// If this delimiter is an escape character for a delimiter that immediately follows it, output only one of them and
+		// return to the start of the loop to continue processing the format string.
+		if start < len(self)-1 && self[start] == self[start+1] {
+			buf.WriteString(self[:start+1])
+			self = self[start+2:]
+			continue
 		}
+		// We now know we're about to begin parsing a field name, which means this character must be the "{" delimiter.
+		s.Assert(self[start] == '{', "single '}' encountered in format string")
+		// Find the corresponding "}" delimiter...
+		end := strings.IndexByte(self[start+1:], '}')
+		// ...and if there isn't one, this must be a malformed format string.
+		s.Assert(end != -1, "single '{' encountered in format string")
+		// Locate the "}" delimiter relative to the start of the format string, rather than to the first "{" delimiter.
+		end = start + end + 1
+		// Output everything in the format string up to, but not including, the first "{" delimiter.
 		buf.WriteString(self[:start])
-		end = start + end
-		if start > 0 && self[start-1] == '$' {
-			// Don't interpolate ${X} (but ${{X}} -> ${X})
-			if self[start+1] == '{' {
-				buf.WriteString(self[start+1 : end])
-			} else if start == end-1 {
-				// ${} interpolates as $ + positional arg
-				s.Assert(arg < len(args), "format string specifies at least %d positional arguments, but only %d were supplied", arg, len(args)-1)
-				buf.WriteString(args[arg].String())
-				arg++
-			} else {
-				buf.WriteString(self[start : end+1])
-			}
-		} else if key := self[start+1 : end]; key == "" {
-			s.Assert(arg < len(args), "format string specifies at least %d positional arguments, but only %d were supplied", arg, len(args)-1)
-			buf.WriteString(args[arg].String())
-			arg++
-		} else if val, present := s.locals[key]; present {
-			buf.WriteString(val.String())
-		} else {
-			// We may want to error here in some future revision
-			buf.WriteString(self[start : end+1])
+		// Extract the replacement field's name, excluding the delimiters.
+		fieldName := self[start+1 : end]
+		// Now we can decide whether to rely on automatic field numbering. This is a one-time decision that is only taken if
+		// str.format was called with positional arguments and the first field name we encounter is empty; after this, empty
+		// field names are otherwise format string errors.
+		if fieldName == "" && mode == strFormatByPosition && nextPosIndex == 0 {
+			mode = strFormatByOrder
 		}
+		// Decide how to interpret this field name:
+		switch mode {
+		case strFormatByOrder:
+			// With automatic field numbering, output the next positional argument. Field names must be empty, and there cannot
+			// be more of them than there are positional arguments (although there may ultimately be fewer). Internally, the
+			// first positional argument is the format string - the positional arguments from the caller's perspective are
+			// shifted one to the right in args.
+			s.Assert(fieldName == "", "cannot switch from automatic field numbering to manual field specification")
+			s.Assert(nextPosIndex < posArgs, "replacement index %d out of range for positional arguments", nextPosIndex)
+			buf.WriteString(args[nextPosIndex+1].String())
+			nextPosIndex++
+		case strFormatByPosition:
+			// With numerical replacement fields, parse the field name as an integer i and output the string value of the
+			// (zero-indexed) i'th positional argument. Internally, the first positional argument is the format string - the
+			// positional arguments from the caller's perspective are shifted one to the right in args.
+			i, err := strconv.Atoi(fieldName)
+			s.Assert(err == nil, "must use numerical replacement fields with positional arguments")
+			s.Assert(0 <= i && i < posArgs, "replacement index %d out of range for positional arguments", i)
+			buf.WriteString(args[i+1].String())
+		case strFormatByName:
+			// With named replacement fields, output the string value of the keyword argument with the given name.
+			s.Assert(fieldName != "", "must use named replacement fields with keyword arguments")
+			val, exists := s.locals[fieldName]
+			s.Assert(exists, "unspecified keyword argument '%s'", fieldName)
+			buf.WriteString(val.String())
+		}
+		// Advance beyond the closing delimiter for this field, and parse what remains in the format string.
 		self = self[end+1:]
 	}
 	return pyString(buf.String())
