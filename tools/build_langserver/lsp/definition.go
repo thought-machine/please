@@ -18,20 +18,20 @@ func (h *Handler) definition(params *lsp.TextDocumentPositionParams) ([]lsp.Loca
 	ast := h.parseIfNeeded(doc)
 	f := doc.AspFile()
 
-	locs := []lsp.Location{}
+	var locs []lsp.Location
 	pos := aspPos(params.Position)
 	asp.WalkAST(ast, func(expr *asp.Expression) bool {
-		exprStart := f.Pos(expr.Pos)
-		exprEnd := f.Pos(expr.EndPos)
-		if !asp.WithinRange(pos, exprStart, exprEnd) {
+		if !asp.WithinRange(pos, f.Pos(expr.Pos), f.Pos(expr.EndPos)) {
 			return false
 		}
+
 		if expr.Val.Ident != nil {
 			if loc := h.findGlobal(expr.Val.Ident.Name); loc.URI != "" {
 				locs = append(locs, loc)
 			}
 			return false
 		}
+
 		if expr.Val.String != "" {
 			label := astutils.TrimStrLit(expr.Val.String)
 			if loc := h.findLabel(doc.PkgName, label); loc.URI != "" {
@@ -39,6 +39,7 @@ func (h *Handler) definition(params *lsp.TextDocumentPositionParams) ([]lsp.Loca
 			}
 			return false
 		}
+
 		return true
 	})
 	// It might also be a statement (e.g. a function call like go_library(...))
@@ -52,6 +53,7 @@ func (h *Handler) definition(params *lsp.TextDocumentPositionParams) ([]lsp.Loca
 			if !asp.WithinRange(pos, stmtStart, endPos) {
 				return true // continue to other statements
 			}
+
 			if loc := h.findGlobal(stmt.Ident.Name); loc.URI != "" {
 				locs = append(locs, loc)
 			}
