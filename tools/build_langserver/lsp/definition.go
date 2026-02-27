@@ -140,9 +140,10 @@ func findName(args []asp.CallArgument) string {
 // findGlobal returns the location of a global of the given name.
 func (h *Handler) findGlobal(name string) lsp.Location {
 	h.mutex.Lock()
-	f, present := h.builtins[name]
+	builtins := h.builtins[name]
 	h.mutex.Unlock()
-	if present {
+	if len(builtins) > 0 {
+		f := builtins[0]
 		filename := f.Pos.Filename
 		// Make path absolute if it's relative
 		if !filepath.IsAbs(filename) {

@@ -34,7 +34,7 @@ type Handler struct {
 	mutex    sync.Mutex // guards docs
 	state    *core.BuildState
 	parser   *asp.Parser
-	builtins map[string]builtin
+	builtins map[string][]builtin
 	pkgs     *pkg
 	root     string
 }
@@ -56,7 +56,7 @@ func NewHandler() *Handler {
 	return &Handler{
 		docs:     map[string]*doc{},
 		pkgs:     &pkg{},
-		builtins: map[string]builtin{},
+		builtins: map[string][]builtin{},
 	}
 }
 
@@ -216,6 +216,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 			for {
 				select {
 				case <-done:
+					h.loadParserFunctions()
 					return
 				case <-ticker.C:
 					h.loadParserFunctions()
@@ -227,7 +228,6 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 		log.Debug("initial parse complete")
 		h.buildPackageTree()
 		log.Debug("built completion package tree")
-		h.loadParserFunctions()
 	}()
 	// Record all the builtin functions now
 	if err := h.loadBuiltins(); err != nil {
@@ -279,11 +279,11 @@ func (h *Handler) loadBuiltins() error {
 		f := asp.NewFile(dest, data)
 		for _, stmt := range stmts {
 			if stmt.FuncDef != nil {
-				h.builtins[stmt.FuncDef.Name] = builtin{
+				h.builtins[stmt.FuncDef.Name] = append(h.builtins[stmt.FuncDef.Name], builtin{
 					Stmt:   stmt,
 					Pos:    f.Pos(stmt.Pos),
 					EndPos: f.Pos(stmt.EndPos),
-				}
+				})
 			}
 		}
 	}
@@ -310,14 +310,11 @@ func (h *Handler) loadParserFunctions() {
 		file := asp.NewFile(filename, data)
 		for _, stmt := range stmts {
 			name := stmt.FuncDef.Name
-			// Only add if not already present (don't override core builtins)
-			if _, present := h.builtins[name]; !present {
-				h.builtins[name] = builtin{
-					Stmt:   stmt,
-					Pos:    file.Pos(stmt.Pos),
-					EndPos: file.Pos(stmt.EndPos),
-				}
-			}
+			h.builtins[name] = append(h.builtins[name], builtin{
+				Stmt:   stmt,
+				Pos:    file.Pos(stmt.Pos),
+				EndPos: file.Pos(stmt.EndPos),
+			})
 		}
 	}
 }
