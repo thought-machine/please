@@ -18,20 +18,20 @@ func (h *Handler) definition(params *lsp.TextDocumentPositionParams) ([]lsp.Loca
 	ast := h.parseIfNeeded(doc)
 	f := doc.AspFile()
 
-	var locs []lsp.Location
+	locs := []lsp.Location{}
 	pos := aspPos(params.Position)
 	asp.WalkAST(ast, func(expr *asp.Expression) bool {
-		if !asp.WithinRange(pos, f.Pos(expr.Pos), f.Pos(expr.EndPos)) {
+		exprStart := f.Pos(expr.Pos)
+		exprEnd := f.Pos(expr.EndPos)
+		if !asp.WithinRange(pos, exprStart, exprEnd) {
 			return false
 		}
-
 		if expr.Val.Ident != nil {
 			if loc := h.findGlobal(expr.Val.Ident.Name); loc.URI != "" {
 				locs = append(locs, loc)
 			}
 			return false
 		}
-
 		if expr.Val.String != "" {
 			label := astutils.TrimStrLit(expr.Val.String)
 			if loc := h.findLabel(doc.PkgName, label); loc.URI != "" {
@@ -39,20 +39,19 @@ func (h *Handler) definition(params *lsp.TextDocumentPositionParams) ([]lsp.Loca
 			}
 			return false
 		}
-
 		return true
 	})
-	// It might also be a statement.
+	// It might also be a statement (e.g. a function call like go_library(...))
 	asp.WalkAST(ast, func(stmt *asp.Statement) bool {
 		if stmt.Ident != nil {
-			endPos := f.Pos(stmt.Pos)
+			stmtStart := f.Pos(stmt.Pos)
+			endPos := stmtStart
 			// TODO(jpoole): The AST should probably just have this information
 			endPos.Column += len(stmt.Ident.Name)
 
-			if !asp.WithinRange(pos, f.Pos(stmt.Pos), endPos) {
-				return false
+			if !asp.WithinRange(pos, stmtStart, endPos) {
+				return true // continue to other statements
 			}
-
 			if loc := h.findGlobal(stmt.Ident.Name); loc.URI != "" {
 				locs = append(locs, loc)
 			}
@@ -78,6 +77,9 @@ func (h *Handler) findLabel(currentPath, label string) lsp.Location {
 	}
 
 	pkg := h.state.Graph.PackageByLabel(l)
+	if pkg == nil {
+		return lsp.Location{}
+	}
 	uri := lsp.DocumentURI("file://" + filepath.Join(h.root, pkg.Filename))
 	loc := lsp.Location{URI: uri}
 	doc, err := h.maybeOpenDoc(uri)
@@ -137,9 +139,18 @@ func findName(args []asp.CallArgument) string {
 
 // findGlobal returns the location of a global of the given name.
 func (h *Handler) findGlobal(name string) lsp.Location {
-	if f, present := h.builtins[name]; present {
+	h.mutex.Lock()
+	builtins := h.builtins[name]
+	h.mutex.Unlock()
+	if len(builtins) > 0 {
+		f := builtins[0]
+		filename := f.Pos.Filename
+		// Make path absolute if it's relative
+		if !filepath.IsAbs(filename) {
+			filename = filepath.Join(h.root, filename)
+		}
 		return lsp.Location{
-			URI:   lsp.DocumentURI("file://" + f.Pos.Filename),
+			URI:   lsp.DocumentURI("file://" + filename),
 			Range: rng(f.Pos, f.EndPos),
 		}
 	}

@@ -109,10 +109,10 @@ func (h *Handler) completeString(doc *doc, s string, line, col int) (*lsp.Comple
 // completeIdent completes an arbitrary identifier
 func (h *Handler) completeIdent(doc *doc, s string, line, col int) (*lsp.CompletionList, error) {
 	list := &lsp.CompletionList{}
-	for name, f := range h.builtins {
-		if strings.HasPrefix(name, s) {
+	for name, builtins := range h.builtins {
+		if strings.HasPrefix(name, s) && len(builtins) > 0 {
 			item := completionItem(name, "", line, col)
-			item.Documentation = f.Stmt.FuncDef.Docstring
+			item.Documentation = builtins[0].Stmt.FuncDef.Docstring
 			item.Kind = lsp.CIKFunction
 			list.Items = append(list.Items, item)
 		}
