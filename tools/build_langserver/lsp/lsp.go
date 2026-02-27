@@ -20,6 +20,7 @@ import (
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/plz"
 )
@@ -173,6 +174,12 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
 		return h.definition(positionParams)
+	case "textDocument/references":
+		referenceParams := &lsp.ReferenceParams{}
+		if err := json.Unmarshal(*params, referenceParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.references(referenceParams)
 	default:
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
@@ -195,16 +202,38 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 	}
 	h.state = core.NewBuildState(config)
 	h.state.NeedBuild = false
-	// We need an unwrapped parser instance as well for raw access.
-	h.parser = asp.NewParser(h.state)
+	// Initialize the parser on state first, so that plz.RunHost uses the same parser.
+	// This ensures plugin subincludes are stored in the same AST cache we use.
+	parse.InitParser(h.state)
+	h.parser = parse.GetAspParser(h.state)
+	if h.parser == nil {
+		return nil, fmt.Errorf("failed to get asp parser from state")
+	}
 	// Parse everything in the repo up front.
 	// This is a lot easier than trying to do clever partial parses later on, although
 	// eventually we may want that if we start dealing with truly large repos.
 	go func() {
+		// Start a goroutine to periodically load parser functions as they become available.
+		// This allows go-to-definition to work progressively while the full parse runs.
+		done := make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(2 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					h.loadParserFunctions()
+				}
+			}
+		}()
 		plz.RunHost(core.WholeGraph, h.state)
+		close(done)
 		log.Debug("initial parse complete")
 		h.buildPackageTree()
 		log.Debug("built completion package tree")
+		h.loadParserFunctions()
 	}()
 	// Record all the builtin functions now
 	if err := h.loadBuiltins(); err != nil {
@@ -221,6 +250,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 			DocumentFormattingProvider: true,
 			DocumentSymbolProvider:     true,
 			DefinitionProvider:         true,
+			ReferencesProvider:         true,
 			CompletionProvider: &lsp.CompletionOptions{
 				TriggerCharacters: []string{"/", ":"},
 			},
@@ -266,6 +296,37 @@ func (h *Handler) loadBuiltins() error {
 	}
 	log.Debug("loaded builtin function information")
 	return nil
+}
+
+// loadParserFunctions loads function definitions from the parser's ASTs.
+// This includes plugin-defined functions like go_library, python_library, etc.
+func (h *Handler) loadParserFunctions() {
+	funcsByFile := h.parser.AllFunctionsByFile()
+	if funcsByFile == nil {
+		return
+	}
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	for filename, stmts := range funcsByFile {
+		// Read the file to create a File object for position conversion
+		data, err := os.ReadFile(filename)
+		if err != nil {
+			log.Warning("failed to read file %s: %v", filename, err)
+			continue
+		}
+		file := asp.NewFile(filename, data)
+		for _, stmt := range stmts {
+			name := stmt.FuncDef.Name
+			// Only add if not already present (don't override core builtins)
+			if _, present := h.builtins[name]; !present {
+				h.builtins[name] = builtin{
+					Stmt:   stmt,
+					Pos:    file.Pos(stmt.Pos),
+					EndPos: file.Pos(stmt.EndPos),
+				}
+			}
+		}
+	}
 }
 
 // fromURI converts a DocumentURI to a path.
