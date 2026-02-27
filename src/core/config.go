@@ -546,6 +546,9 @@ type Configuration struct {
 		StoreCommand               string       `help:"Use a custom command to store cache entries."`
 		RetrieveCommand            string       `help:"Use a custom command to retrieve cache entries."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
+	Format struct {
+		ShortenAbsoluteLabelsToRelative bool `help:"Shortens absolute labels to relative if the label is in the same package as the associated target."`
+	} `help:"A config section describing settings related to the 'format' sub command."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
 		DisableCoverage          []string     `help:"Disables coverage for tests that have any of these labels spcified."`
