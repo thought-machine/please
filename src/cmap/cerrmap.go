@@ -80,13 +80,12 @@ func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 }
 
 // Range calls f for each key-value pair in the map.
-// If f returns false, iteration stops.
 // No particular consistency guarantees are made during iteration.
-func (m *ErrMap[K, V]) Range(f func(key K, val V) bool) {
-	m.m.Range(func(key K, val errV[V]) bool {
+func (m *ErrMap[K, V]) Range(f func(key K, val V)) {
+	m.m.Range(func(key K, val errV[V]) {
 		if val.Err != nil {
-			return true // skip errors
+			return // skip errors
 		}
-		return f(key, val.Val)
+		f(key, val.Val)
 	})
 }

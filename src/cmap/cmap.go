@@ -95,13 +95,10 @@ func (m *Map[K, V]) Values() []V {
 }
 
 // Range calls f for each key-value pair in the map.
-// If f returns false, iteration stops.
 // No particular consistency guarantees are made during iteration.
-func (m *Map[K, V]) Range(f func(key K, val V) bool) {
+func (m *Map[K, V]) Range(f func(key K, val V)) {
 	for i := 0; i < len(m.shards); i++ {
-		if !m.shards[i].Range(f) {
-			return
-		}
+		m.shards[i].Range(f)
 	}
 }
 
@@ -208,16 +205,12 @@ func (s *shard[K, V]) Contains(key K) bool {
 }
 
 // Range calls f for each key-value pair in this shard.
-// Returns false if iteration was stopped early.
-func (s *shard[K, V]) Range(f func(key K, val V) bool) bool {
+func (s *shard[K, V]) Range(f func(key K, val V)) {
 	s.l.RLock()
 	defer s.l.RUnlock()
 	for k, v := range s.m {
 		if v.Wait == nil { // Only include completed values
-			if !f(k, v.Val) {
-				return false
-			}
+			f(k, v.Val)
 		}
 	}
-	return true
 }
