@@ -1,0 +1,14 @@
+go_library(
+    name = "name",
+    srcs = [
+        "src.go",
+    ],
+    deps = [
+        "//src/format/test_data:test_data",
+        "//src/format/test_data:test_data",
+        "//src/format/test_data",
+        "//src/format/test_data",
+        ":test_data",
+        ":test_data",
+    ],
+)
