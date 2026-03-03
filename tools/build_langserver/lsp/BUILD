@@ -35,7 +35,10 @@ go_test(
         "references_test.go",
         "symbols_test.go",
     ],
-    data = ["test_data"],
+    data = [
+        "test_data",
+        "test_data_find_references",
+    ],
     deps = [
         ":lsp",
         "///third_party/go/github.com_please-build_buildtools//build",

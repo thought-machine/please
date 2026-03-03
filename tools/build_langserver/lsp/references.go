@@ -2,6 +2,8 @@ package lsp
 
 import (
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/sourcegraph/go-lsp"
 
@@ -36,7 +38,8 @@ func (h *Handler) references(params *lsp.ReferenceParams) ([]lsp.Location, error
 
 	// If we found a function definition, find all calls to it
 	if funcName != "" {
-		return h.findFunctionReferences(funcName, params.Context.IncludeDeclaration)
+		// Pass the current filename so we can find the labels for THIS definition
+		return h.findFunctionReferences(funcName, f.Name, params.Context.IncludeDeclaration)
 	}
 
 	// Check if cursor is on a function call (e.g., go_library(...))
@@ -54,7 +57,8 @@ func (h *Handler) references(params *lsp.ReferenceParams) ([]lsp.Location, error
 	})
 
 	if funcName != "" {
-		return h.findFunctionReferences(funcName, params.Context.IncludeDeclaration)
+		// For function calls, we don't have a specific definition file - use empty string
+		return h.findFunctionReferences(funcName, "", params.Context.IncludeDeclaration)
 	}
 
 	// Otherwise, look for build label references
@@ -62,11 +66,45 @@ func (h *Handler) references(params *lsp.ReferenceParams) ([]lsp.Location, error
 }
 
 // findFunctionReferences finds all calls to a function across all BUILD files.
-func (h *Handler) findFunctionReferences(funcName string, includeDeclaration bool) ([]lsp.Location, error) {
+// sourceFile is the file where the definition we're searching from is located (empty if from a call site).
+func (h *Handler) findFunctionReferences(funcName string, sourceFile string, includeDeclaration bool) ([]lsp.Location, error) {
 	locs := []lsp.Location{}
+
+	// Get the labels that can provide this function (a file may be exposed by multiple targets)
+	h.mutex.Lock()
+	builtins := h.builtins[funcName]
+	var defLabels []core.BuildLabel
+	// If we know the source file, find the labels for THAT specific definition
+	// This prevents false positives when multiple files define functions with the same name
+	for _, b := range builtins {
+		if sourceFile != "" && pathsMatch(sourceFile, b.Pos.Filename, h.root) {
+			defLabels = b.Labels
+			break
+		}
+	}
+	// If no source file specified or not found, fall back to first definition's labels
+	if len(defLabels) == 0 && len(builtins) > 0 {
+		defLabels = builtins[0].Labels
+	}
+	h.mutex.Unlock()
 
 	// Search all packages for calls to this function
 	for _, pkg := range h.state.Graph.PackageMap() {
+		// If we know which labels define this function, only search packages that subinclude at least one
+		if len(defLabels) > 0 {
+			allSubincludes := pkg.AllSubincludes(h.state.Graph)
+			hasSubinclude := false
+			for _, defLabel := range defLabels {
+				if slices.Contains(allSubincludes, defLabel) {
+					hasSubinclude = true
+					break
+				}
+			}
+			if !hasSubinclude {
+				continue
+			}
+		}
+
 		uri := lsp.DocumentURI("file://" + filepath.Join(h.root, pkg.Filename))
 		refDoc, err := h.maybeOpenDoc(uri)
 		if err != nil {
@@ -113,14 +151,15 @@ func (h *Handler) findFunctionReferences(funcName string, includeDeclaration boo
 	// Include the definition itself if requested
 	if includeDeclaration {
 		h.mutex.Lock()
-		if builtin, ok := h.builtins[funcName]; ok {
-			filename := builtin.Pos.Filename
+		if builtins, ok := h.builtins[funcName]; ok && len(builtins) > 0 {
+			b := builtins[0]
+			filename := b.Pos.Filename
 			if !filepath.IsAbs(filename) {
 				filename = filepath.Join(h.root, filename)
 			}
 			locs = append(locs, lsp.Location{
 				URI:   lsp.DocumentURI("file://" + filename),
-				Range: rng(builtin.Pos, builtin.EndPos),
+				Range: rng(b.Pos, b.EndPos),
 			})
 		}
 		h.mutex.Unlock()
@@ -236,4 +275,13 @@ func (h *Handler) findLabelReferences(doc *doc, ast []*asp.Statement, f *asp.Fil
 	}
 
 	return locs, nil
+}
+
+// pathsMatch checks if two file paths refer to the same file, handling plz-out/gen paths.
+func pathsMatch(path1, path2, root string) bool {
+	// Strip plz-out/gen/ prefix if present
+	norm1 := strings.TrimPrefix(path1, "plz-out/gen/")
+	norm2 := strings.TrimPrefix(path2, "plz-out/gen/")
+
+	return norm1 == norm2
 }
