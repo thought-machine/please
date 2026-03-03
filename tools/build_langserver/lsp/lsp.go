@@ -20,6 +20,7 @@ import (
 	"github.com/thought-machine/please/rules"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/parse"
 	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/plz"
 )
@@ -33,7 +34,7 @@ type Handler struct {
 	mutex    sync.Mutex // guards docs
 	state    *core.BuildState
 	parser   *asp.Parser
-	builtins map[string]builtin
+	builtins map[string][]builtin
 	pkgs     *pkg
 	root     string
 }
@@ -41,6 +42,7 @@ type Handler struct {
 type builtin struct {
 	Stmt        *asp.Statement
 	Pos, EndPos asp.FilePosition
+	Labels      []core.BuildLabel // which subinclude targets can provide this (empty for core builtins)
 }
 
 // A Conn is a minimal set of the jsonrpc2.Conn that we need.
@@ -55,7 +57,7 @@ func NewHandler() *Handler {
 	return &Handler{
 		docs:     map[string]*doc{},
 		pkgs:     &pkg{},
-		builtins: map[string]builtin{},
+		builtins: map[string][]builtin{},
 	}
 }
 
@@ -173,6 +175,12 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
 		return h.definition(positionParams)
+	case "textDocument/references":
+		referenceParams := &lsp.ReferenceParams{}
+		if err := json.Unmarshal(*params, referenceParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.references(referenceParams)
 	default:
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
@@ -195,13 +203,35 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 	}
 	h.state = core.NewBuildState(config)
 	h.state.NeedBuild = false
-	// We need an unwrapped parser instance as well for raw access.
-	h.parser = asp.NewParser(h.state)
+	// Initialize the parser on state first, so that plz.RunHost uses the same parser.
+	// This ensures plugin subincludes are stored in the same AST cache we use.
+	parse.InitParser(h.state)
+	h.parser = parse.GetAspParser(h.state)
+	if h.parser == nil {
+		return nil, fmt.Errorf("failed to get asp parser from state")
+	}
 	// Parse everything in the repo up front.
 	// This is a lot easier than trying to do clever partial parses later on, although
 	// eventually we may want that if we start dealing with truly large repos.
 	go func() {
+		// Start a goroutine to periodically load parser functions as they become available.
+		// This allows go-to-definition to work progressively while the full parse runs.
+		done := make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(2 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-done:
+					h.loadParserFunctions()
+					return
+				case <-ticker.C:
+					h.loadParserFunctions()
+				}
+			}
+		}()
 		plz.RunHost(core.WholeGraph, h.state)
+		close(done)
 		log.Debug("initial parse complete")
 		h.buildPackageTree()
 		log.Debug("built completion package tree")
@@ -221,6 +251,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 			DocumentFormattingProvider: true,
 			DocumentSymbolProvider:     true,
 			DefinitionProvider:         true,
+			ReferencesProvider:         true,
 			CompletionProvider: &lsp.CompletionOptions{
 				TriggerCharacters: []string{"/", ":"},
 			},
@@ -256,16 +287,70 @@ func (h *Handler) loadBuiltins() error {
 		f := asp.NewFile(dest, data)
 		for _, stmt := range stmts {
 			if stmt.FuncDef != nil {
-				h.builtins[stmt.FuncDef.Name] = builtin{
+				h.builtins[stmt.FuncDef.Name] = append(h.builtins[stmt.FuncDef.Name], builtin{
 					Stmt:   stmt,
 					Pos:    f.Pos(stmt.Pos),
 					EndPos: f.Pos(stmt.EndPos),
-				}
+				})
 			}
 		}
 	}
 	log.Debug("loaded builtin function information")
 	return nil
+}
+
+// loadParserFunctions loads function definitions from the parser's ASTs.
+// This includes plugin-defined functions like go_library, python_library, etc.
+func (h *Handler) loadParserFunctions() {
+	funcsByFile := h.parser.AllFunctionsByFile()
+	if funcsByFile == nil {
+		return
+	}
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	for filename, stmts := range funcsByFile {
+		// Read the file to create a File object for position conversion
+		data, err := os.ReadFile(filename)
+		if err != nil {
+			log.Warning("failed to read file %s: %v", filename, err)
+			continue
+		}
+		file := asp.NewFile(filename, data)
+		labels := h.findLabelsForFile(filename)
+		for _, stmt := range stmts {
+			name := stmt.FuncDef.Name
+			h.builtins[name] = append(h.builtins[name], builtin{
+				Stmt:   stmt,
+				Pos:    file.Pos(stmt.Pos),
+				EndPos: file.Pos(stmt.EndPos),
+				Labels: labels,
+			})
+		}
+	}
+}
+
+// findLabelsForFile finds all build labels that produce the given output file.
+// A file can be exposed by multiple targets (e.g., multiple filegroups pointing to the same source).
+func (h *Handler) findLabelsForFile(filename string) []core.BuildLabel {
+	// Make the filename absolute for comparison
+	if !filepath.IsAbs(filename) {
+		filename = filepath.Join(h.root, filename)
+	}
+	var labels []core.BuildLabel
+	for _, pkg := range h.state.Graph.PackageMap() {
+		for _, target := range pkg.AllTargets() {
+			for _, out := range target.FullOutputs() {
+				absOut := out
+				if !filepath.IsAbs(out) {
+					absOut = filepath.Join(h.root, out)
+				}
+				if absOut == filename {
+					labels = append(labels, target.Label)
+				}
+			}
+		}
+	}
+	return labels
 }
 
 // fromURI converts a DocumentURI to a path.
