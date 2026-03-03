@@ -344,3 +344,32 @@ func TestReferencesNoFalsePositivesForSameNameDifferentFile(t *testing.T) {
 	// Should NOT find pkg_uses_defs2 (uses different definition from defs2)
 	assert.False(t, foundPkgUsesDefs2, "should NOT find reference in pkg_uses_defs2 - it uses a different definition")
 }
+
+// TestReferencesSurvivesBrokenParse verifies that find-references doesn't crash
+// when a document fails to parse.
+func TestReferencesSurvivesBrokenParse(t *testing.T) {
+	h := initHandler()
+
+	// Open a doc with syntactically broken content
+	brokenContent := "def broken_func(\n    # missing closing paren"
+	h.Request("textDocument/didOpen", &lsp.DidOpenTextDocumentParams{
+		TextDocument: lsp.TextDocumentItem{
+			URI:     "file:///tmp/broken.build",
+			Text:    brokenContent,
+			Version: 1,
+		},
+	}, nil)
+
+	// parseIfNeeded should handle the parse failure gracefully
+	doc := h.docs["/tmp/broken.build"]
+	if doc != nil {
+		ast := h.parseIfNeeded(doc)
+		// Should return empty/partial AST, not panic
+		t.Logf("parsed broken file, got %d statements", len(ast))
+	}
+
+	// Also verify find-references doesn't crash on a function that doesn't exist
+	locs, err := h.findFunctionReferences("broken_func", "", false)
+	assert.NoError(t, err)
+	t.Logf("found %d locations for non-existent func (expected: 0)", len(locs))
+}
