@@ -115,7 +115,7 @@ func (h *Handler) findFunctionReferences(funcName string, sourceFile string, inc
 
 		// Find all statement calls to the function (e.g., go_library(...))
 		asp.WalkAST(refAst, func(stmt *asp.Statement) bool {
-			if stmt.Ident != nil && stmt.Ident.Name == funcName {
+			if stmt.Ident != nil && stmt.Ident.Name == funcName && stmt.Ident.Action != nil && stmt.Ident.Action.Call != nil {
 				start := refFile.Pos(stmt.Pos)
 				end := start
 				end.Column += len(funcName)
