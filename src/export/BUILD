@@ -7,7 +7,6 @@ go_library(
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
-        "//src/gc",
         "//src/parse",
     ],
 )

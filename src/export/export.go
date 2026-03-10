@@ -7,11 +7,11 @@ import (
 	iofs "io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
-	"github.com/thought-machine/please/src/gc"
 	"github.com/thought-machine/please/src/parse"
 )
 
@@ -22,19 +22,21 @@ type export struct {
 	targetDir string
 	noTrim    bool
 
-	exportedTargets  map[core.BuildLabel]bool
-	exportedPackages map[string]bool
+	exportedTargets    map[core.BuildLabel]bool
+	exportedPackages   map[string]bool
+	selectedStatements map[string]map[core.BuildStatement]bool
 }
 
 // ToDir exports a set of targets to the given directory.
 // It dies on any errors.
 func ToDir(state *core.BuildState, dir string, noTrim bool, targets []core.BuildLabel) {
 	e := &export{
-		state:            state,
-		noTrim:           noTrim,
-		targetDir:        dir,
-		exportedPackages: map[string]bool{},
-		exportedTargets:  map[core.BuildLabel]bool{},
+		state:              state,
+		noTrim:             noTrim,
+		targetDir:          dir,
+		exportedPackages:   map[string]bool{},
+		exportedTargets:    map[core.BuildLabel]bool{},
+		selectedStatements: map[string]map[core.BuildStatement]bool{},
 	}
 
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
@@ -47,46 +49,17 @@ func ToDir(state *core.BuildState, dir string, noTrim bool, targets []core.Build
 			e.export(state.Graph.TargetOrDie(includeLabel))
 		}
 	}
+
 	for _, target := range targets {
 		e.export(state.Graph.TargetOrDie(target))
 	}
-	// Now write all the build files
-	packages := map[*core.Package]bool{}
-	for target := range e.exportedTargets {
-		packages[state.Graph.PackageOrDie(target)] = true
-	}
+
+	e.writeBuildStatements()
 
 	// Write any preloaded build defs as well; preloaded subincludes should be fine though.
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
 		if err := fs.RecursiveCopy(preload, filepath.Join(dir, preload), 0); err != nil {
 			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
-		}
-	}
-
-	if noTrim {
-		return // We have already exported the whole directory
-	}
-
-	for pkg := range packages {
-		if pkg.Name == parse.InternalPackageName {
-			continue // This isn't a real package to be copied
-		}
-		if pkg.Subrepo != nil {
-			continue // Don't copy subrepo BUILD files... they don't exist in our source tree
-		}
-		dest := filepath.Join(dir, pkg.Filename)
-		if err := fs.CopyFile(pkg.Filename, dest, 0); err != nil {
-			log.Fatalf("Failed to copy BUILD file %s: %s\n", pkg.Filename, err)
-		}
-		// Now rewrite the unused targets out of it
-		var victims []string
-		for _, target := range pkg.AllTargets() {
-			if !e.exportedTargets[target.Label] && !target.HasParent() {
-				victims = append(victims, target.Label.Name)
-			}
-		}
-		if err := gc.RewriteFile(state, dest, victims); err != nil {
-			log.Fatalf("Failed to rewrite BUILD file: %s\n", err)
 		}
 	}
 }
@@ -99,7 +72,7 @@ func (e *export) exportPlzConf() {
 	for _, file := range profiles {
 		path := filepath.Join(e.targetDir, file)
 		if err := os.RemoveAll(path); err != nil {
-			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
+			log.Fatalf("failed to remove .plzconfig file %s: %v", file, err)
 		}
 		if err := fs.CopyFile(file, path, 0); err != nil {
 			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
@@ -129,8 +102,8 @@ var ignoreDirectories = map[string]bool{
 	".hg":     true,
 }
 
-// exportPackage exports the package BUILD file containing the given target and all sources
-func (e *export) exportPackage(target *core.BuildTarget) {
+// exportEntirePackage exports the package BUILD file containing the given target and all sources
+func (e *export) exportEntirePackage(target *core.BuildTarget) {
 	pkgName := target.Label.PackageName
 	if pkgName == parse.InternalPackageName {
 		return
@@ -169,31 +142,113 @@ func (e *export) exportPackage(target *core.BuildTarget) {
 	}
 }
 
+// selectBuildStatements exports BUILD statements that generate the build target.
+func (e *export) selectBuildStatements(target *core.BuildTarget) {
+	if target.Label.PackageName == parse.InternalPackageName {
+		return
+	}
+
+	log.Infof("Selecting Build stmts of %s with callstack:\n", target.Label.String())
+	for _, frame := range target.ParseMetadata.CallStack {
+		log.Infof("\t%v", frame)
+		if frame.Statement.Start == 0 && frame.Statement.End == 0 {
+			continue
+		}
+
+		if frame.Filename != "" {
+			if _, ok := e.selectedStatements[frame.Filename]; !ok {
+				e.selectedStatements[frame.Filename] = map[core.BuildStatement]bool{}
+			}
+			e.selectedStatements[frame.Filename][frame.Statement] = true
+		}
+		if frame.Filename == "" {
+			log.Warning("Package without filename %v", frame)
+		}
+	}
+}
+
 // export implements the logic of ToDir, but prevents repeating targets.
 func (e *export) export(target *core.BuildTarget) {
 	if e.exportedTargets[target.Label] {
 		return
 	}
+	log.Warningf("Exporting %v.\n", target.Label)
+	e.exportedTargets[target.Label] = true
+
 	// We want to export the package that made this subrepo available, but we still need to walk the target deps
 	// as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
 		e.export(target.Subrepo.Target)
 	} else if e.noTrim {
 		// Export the whole package, rather than trying to trim the package down to only the targets we need
-		e.exportPackage(target)
+		e.exportEntirePackage(target)
 	} else {
+		e.selectBuildStatements(target)
 		e.exportSources(target)
 	}
 
-	e.exportedTargets[target.Label] = true
 	for _, dep := range target.Dependencies() {
 		e.export(dep)
 	}
 	for _, subinclude := range e.state.Graph.PackageOrDie(target.Label).AllSubincludes(e.state.Graph) {
 		e.export(e.state.Graph.TargetOrDie(subinclude))
 	}
+	// TODO handle parents from Callstack. How? Using the current label?
 	if parent := target.Parent(e.state.Graph); parent != nil && parent != target {
 		e.export(parent)
+	}
+}
+
+// writeBuildStatements writes the BUILD file statements to the export directory.
+func (e *export) writeBuildStatements() {
+	log.Infof("Selected Statements: %v", e.selectedStatements)
+
+	for filename, stmtMap := range e.selectedStatements {
+		stmts := make([]core.BuildStatement, 0, len(stmtMap))
+		for stmt := range stmtMap {
+			stmts = append(stmts, stmt)
+		}
+		// Sort statements by position to keep them in order
+		slices.SortFunc(stmts, func(a, b core.BuildStatement) int {
+			return int(a.Start)
+		})
+
+		e.writeBuildStatement(filename, stmts)
+	}
+}
+
+func (e *export) writeBuildStatement(filename string, stmts []core.BuildStatement) {
+	log.Infof("Writing file: %s", filename)
+	if err := fs.EnsureDir(filepath.Join(e.targetDir, filename)); err != nil {
+		log.Fatalf("failed to create directory for %s: %v", filename, err)
+	}
+	fw, err := os.Create(filepath.Join(e.targetDir, filename))
+	if err != nil {
+		log.Fatalf("failed to create BUILD file %s: %v", filename, err)
+	}
+	defer fw.Close()
+
+	fr, err := os.Open(filename)
+	if err != nil {
+		// TODO ensure only visiting correct files and move Warn to Fatal
+		log.Warningf("failed to open file %s: %v", filename, err)
+		return
+	}
+	defer fr.Close()
+
+	for _, s := range stmts {
+		buff := make([]byte, s.Len())
+		_, err := fr.ReadAt(buff, int64(s.Start))
+		if err != nil {
+			log.Fatalf("failed to read BUILD file %s: %v", filename, err)
+		}
+
+		if _, err := fw.Write(buff); err != nil {
+			log.Fatalf("failed to write statement to %s: %v", filename, err)
+		}
+		if _, err := fw.WriteString("\n\n"); err != nil {
+			log.Fatalf("failed to write newline to %s: %v", filename, err)
+		}
 	}
 }
 
