@@ -25,8 +25,15 @@ func TestWhatInputsSingleTarget(t *testing.T) {
 	addNewTarget(graph, pkg1, "target1", []core.BuildInput{fileSource})
 	graph.AddPackage(pkg1)
 
-	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", false)
-	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}}, inputLabels)
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt"}, false)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "target1"},
+			},
+		},
+		inputLabels,
+	)
 }
 
 func TestWhatInputsMultipleTargets(t *testing.T) {
@@ -37,8 +44,16 @@ func TestWhatInputsMultipleTargets(t *testing.T) {
 	addNewTarget(graph, pkg, "target2", []core.BuildInput{fileSource})
 	graph.AddPackage(pkg)
 
-	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", false)
-	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}, {PackageName: "package1", Name: "target2"}}, inputLabels)
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt"}, false)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "target1"},
+				{PackageName: "package1", Name: "target2"},
+			},
+		},
+		inputLabels,
+	)
 }
 
 func TestWhatInputsInternalTargetHidden(t *testing.T) {
@@ -49,8 +64,15 @@ func TestWhatInputsInternalTargetHidden(t *testing.T) {
 	addNewTarget(graph, pkg, "target1", []core.BuildInput{internalTarget.Label})
 	graph.AddPackage(pkg)
 
-	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", false)
-	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}}, inputLabels)
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt"}, false)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "target1"},
+			},
+		},
+		inputLabels,
+	)
 }
 
 func TestWhatInputsInternalTargetShown(t *testing.T) {
@@ -61,8 +83,15 @@ func TestWhatInputsInternalTargetShown(t *testing.T) {
 	addNewTarget(graph, pkg, "target1", []core.BuildInput{internalTarget.Label})
 	graph.AddPackage(pkg)
 
-	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", true)
-	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "_target1#srcs"}}, inputLabels)
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt"}, true)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "_target1#srcs"},
+			},
+		},
+		inputLabels,
+	)
 }
 
 func TestWhatInputsSourceBothTargets(t *testing.T) {
@@ -73,8 +102,15 @@ func TestWhatInputsSourceBothTargets(t *testing.T) {
 	addNewTarget(graph, pkg, "target1", []core.BuildInput{fileSource, internalTarget.Label})
 	graph.AddPackage(pkg)
 
-	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", false)
-	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}}, inputLabels)
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt"}, false)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "target1"},
+			},
+		},
+		inputLabels,
+	)
 }
 
 func TestWhatInputsSourceBothTargetsHidden(t *testing.T) {
@@ -85,6 +121,14 @@ func TestWhatInputsSourceBothTargetsHidden(t *testing.T) {
 	addNewTarget(graph, pkg, "target1", []core.BuildInput{fileSource, internalTarget.Label})
 	graph.AddPackage(pkg)
 
-	inputLabels := whatInputs(graph.AllTargets(), "package1/file1.txt", true)
-	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "_target1#srcs"}, {PackageName: "package1", Name: "target1"}}, inputLabels)
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt"}, true)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "_target1#srcs"},
+				{PackageName: "package1", Name: "target1"},
+			},
+		},
+		inputLabels,
+	)
 }
