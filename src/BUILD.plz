@@ -43,6 +43,7 @@ go_binary(
         "//src/version",
         "//src/watch",
     ],
+    strip = False, # Example change
 )
 
 # This is handy for things like plz plz --repo_root

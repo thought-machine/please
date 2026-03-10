@@ -34,7 +34,10 @@ type interpreter struct {
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
+	// callStack stores a stack of previous call statements.
+	callStack       core.CallStack
 }
+
 
 // newInterpreter creates and returns a new interpreter instance.
 // It loads all the builtin rules at this point.
@@ -163,6 +166,7 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, statements []*Statement) (*scope, error) {
+	log.Warning("Interpreting Package: %s", pkg.Label())
 	s := i.scope.NewPackagedScope(pkg, mode, 1)
 	s.config = i.getConfig(s.state).Copy()
 
@@ -310,6 +314,8 @@ type scope struct {
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 	mode     core.ParseMode
+	// points to the statement currently being interpreted
+	cursor   *Statement
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -514,6 +520,38 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	}
 }
 
+func (s *scope) PushCall(name string) {
+	stmt := core.BuildStatement{
+		Start: int(s.cursor.Pos),
+		End: int(s.cursor.EndPos),
+	}
+	var label core.BuildLabel
+	if s.parsingFor != nil {
+		label = s.parsingFor.label
+	}
+
+	s.interpreter.callStack.Push(core.CallFrame{MethodName: name, Filename: s.filename, Label: label, Statement: stmt})
+
+
+}
+
+func (s *scope) PopCall() {
+	s.interpreter.callStack.Pop()
+}
+
+func (s *scope) CallStackSnapshot() core.CallStack {
+	snapshot := make(core.CallStack, len(s.interpreter.callStack))
+	copy(snapshot, s.interpreter.callStack)
+
+	var stack string
+	for _,v := range s.interpreter.callStack {
+		stack += fmt.Sprintf("\n\t%v", v)
+	}
+	log.Info("CallStack Snapshot: %s", stack)
+
+	return snapshot
+}
+
 // interpretStatements interprets a series of statements in a particular scope.
 // Note that the return value is only non-nil if a return statement is encountered;
 // it is not implicitly the result of the last statement or anything like that.
@@ -525,6 +563,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 	}()
 	for _, stmt = range statements {
+		s.cursor = stmt
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -762,7 +801,7 @@ func (s *scope) interpretValueExpression(expr *ValueExpression) pyObject {
 	if expr.Property != nil {
 		obj = s.interpretIdent(s.property(obj, expr.Property.Name), expr.Property)
 	} else if expr.Call != nil {
-		obj = s.callObject("", obj, expr.Call)
+		obj = s.callObject("<anonymous>", obj, expr.Call)
 	}
 	return obj
 }
@@ -873,6 +912,7 @@ func (s *scope) interpretSliceExpression(obj pyObject, expr *Expression, def pyI
 
 func (s *scope) interpretIdent(obj pyObject, expr *IdentExpr) pyObject {
 	name := expr.Name
+	// log.Info("Iden Expression name: %s", name)
 	for _, action := range expr.Action {
 		if action.Property != nil {
 			name = action.Property.Name
