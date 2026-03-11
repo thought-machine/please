@@ -1,8 +1,10 @@
 package query
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -34,21 +36,18 @@ func whatInputs(targets []*core.BuildTarget, files []string, hidden bool) map[st
 	}
 	for _, target := range targets {
 		for _, source := range target.AllLocalSourcePaths() {
-			if _, ok := filesMap[source]; ok {
+			if labels, ok := filesMap[source]; ok {
 				label := target.Label
 				if !hidden {
 					label = target.Label.Parent()
 				}
-				filesMap[source][label] = struct{}{}
+				labels[label] = struct{}{}
 			}
 		}
 	}
 	ret := make(map[string]core.BuildLabels, len(filesMap))
 	for file, labels := range filesMap {
-		for label := range labels {
-			ret[file] = append(ret[file], label)
-		}
-		sort.Sort(ret[file])
+		ret[file] = slices.SortedFunc(maps.Keys(labels), func(a, b core.BuildLabel) int { return cmp.Compare(a.String(), b.String()) })
 	}
 	return ret
 }

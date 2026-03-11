@@ -56,6 +56,54 @@ func TestWhatInputsMultipleTargets(t *testing.T) {
 	)
 }
 
+func TestWhatInputsMultipleFiles(t *testing.T) {
+	graph := core.NewGraph()
+	pkg := core.NewPackage("package1")
+	fileSource1 := core.FileLabel{File: "file1.txt", Package: pkg.Name}
+	addNewTarget(graph, pkg, "target1", []core.BuildInput{fileSource1})
+	fileSource2 := core.FileLabel{File: "file2.txt", Package: pkg.Name}
+	addNewTarget(graph, pkg, "target2", []core.BuildInput{fileSource2})
+	graph.AddPackage(pkg)
+
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt", "package1/file2.txt"}, false)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "target1"},
+			},
+			"package1/file2.txt": {
+				{PackageName: "package1", Name: "target2"},
+			},
+		},
+		inputLabels,
+	)
+}
+
+func TestWhatInputsMultiplePackages(t *testing.T) {
+	graph := core.NewGraph()
+	pkg1 := core.NewPackage("package1")
+	fileSource1 := core.FileLabel{File: "file1.txt", Package: pkg1.Name}
+	addNewTarget(graph, pkg1, "target1", []core.BuildInput{fileSource1})
+	graph.AddPackage(pkg1)
+	pkg2 := core.NewPackage("package2")
+	fileSource2 := core.FileLabel{File: "file2.txt", Package: pkg2.Name}
+	addNewTarget(graph, pkg2, "target2", []core.BuildInput{fileSource2})
+	graph.AddPackage(pkg2)
+
+	inputLabels := whatInputs(graph.AllTargets(), []string{"package1/file1.txt", "package2/file2.txt"}, false)
+	assert.Equal(t,
+		map[string]core.BuildLabels{
+			"package1/file1.txt": {
+				{PackageName: "package1", Name: "target1"},
+			},
+			"package2/file2.txt": {
+				{PackageName: "package2", Name: "target2"},
+			},
+		},
+		inputLabels,
+	)
+}
+
 func TestWhatInputsInternalTargetHidden(t *testing.T) {
 	graph := core.NewGraph()
 	pkg := core.NewPackage("package1")
