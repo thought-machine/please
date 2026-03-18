@@ -1,6 +1,6 @@
 module github.com/thought-machine/please
 
-go 1.24.0
+go 1.26.1
 
 require (
 	cloud.google.com/go/longrunning v0.5.5
