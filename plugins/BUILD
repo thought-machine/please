@@ -1,7 +1,7 @@
 plugin_repo(
     name = "go",
     plugin = "go-rules",
-    revision = "v1.21.5",
+    revision = "v1.29.0",
 )
 
 plugin_repo(
@@ -13,11 +13,11 @@ plugin_repo(
 plugin_repo(
     name = "shell",
     plugin = "shell-rules",
-    revision = "v0.1.1",
+    revision = "v0.2.1",
 )
 
 plugin_repo(
     name = "python",
     plugin = "python-rules",
-    revision = "v1.7.4",
+    revision = "v1.14.0",
 )
