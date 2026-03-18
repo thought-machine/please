@@ -126,7 +126,7 @@ help [language]`.
 ```python
 plugin_repo(
   name = "go",
-  revision = "v1.17.2",
+  revision = "v1.29.0",
   plugin = "go-rules",
   owner = "please-build",
 )
