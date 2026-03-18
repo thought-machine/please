@@ -8,8 +8,8 @@ go_toolchain(
         "65773dab2f8cc4cd23d93ba6d0a805de150ca0b78378879292be0b903b8cdd08",  # go1.26.1.darwin-amd64.tar.gz
         "353df43a7811ce284c8938b5f3c7df40b7bfb6f56cb165b150bc40b5e2dd541f",  # go1.26.1.darwin-arm64.tar.gz
         "d89034a0b54fdc234815fecfb76d7d06a7d180d7a6124aa47715a4cacc9fe999",  # go1.26.1.freebsd-amd64.tar.gz
-        "ceb5e041bbc3893846bd1614d76cb4681c91dadee579426cf21a63f2d7e03be6",  # go1.26.1.linux-amd64.tar.gz
-        "7d137f59f66bb93f40a6b2b11e713adc2a9d0c8d9ae581718e3fad19e5295dc7",  # go1.26.1.linux-arm64.tar.gz
+        "031f088e5d955bab8657ede27ad4e3bc5b7c1ba281f05f245bcc304f327c987a",  # go1.26.1.linux-amd64.tar.gz
+        "a290581cfe4fe28ddd737dde3095f3dbeb7f2e4065cab4eae44dfc53b760c2f7",  # go1.26.1.linux-arm64.tar.gz
     ],
     install_std = False,
     version = "1.26.1",
