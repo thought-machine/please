@@ -156,13 +156,13 @@ func (e *export) selectBuildStatements(target *core.BuildTarget) {
 	for _, frame := range target.ParseMetadata.CallStack {
 		log.Infof("\t%v", frame)
 
-		if frame.Filename != "" && !strings.HasPrefix(frame.Filename, core.OutDir) {
-			if _, ok := e.selectedStatements[frame.Filename]; !ok {
-				e.selectedStatements[frame.Filename] = map[core.BuildStatement]bool{}
+		if frame.Statement.Filename != "" && !strings.HasPrefix(frame.Statement.Filename, core.OutDir) {
+			if _, ok := e.selectedStatements[frame.Statement.Filename]; !ok {
+				e.selectedStatements[frame.Statement.Filename] = map[core.BuildStatement]bool{}
 			}
-			e.selectedStatements[frame.Filename][frame.Statement] = true
+			e.selectedStatements[frame.Statement.Filename][frame.Statement] = true
 		}
-		if frame.Filename == "" {
+		if frame.Statement.Filename == "" {
 			log.Warning("Package without filename %v", frame)
 		}
 	}

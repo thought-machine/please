@@ -321,12 +321,12 @@ func (cs *CallStack) Pop() CallFrame {
 
 type CallFrame struct {
 	MethodName string
-	Filename   string
 	Label      BuildLabel
 	Statement  BuildStatement
 }
 
 type BuildStatement struct {
+	Filename   string
 	Start int
 	End int
 }
@@ -2025,7 +2025,7 @@ func (target *BuildTarget) RelatedTargets(graph *BuildGraph) BuildTargets {
 }
 
 func (target *BuildTarget) isRelated(other *BuildTarget) bool {
-	if len(target.ParseMetadata.CallStack) == 0 || len(target.ParseMetadata.CallStack) == 0 {
+	if len(target.ParseMetadata.CallStack) == 0 || len(other.ParseMetadata.CallStack) == 0 {
 		return false
 	}
 	return target.ParseMetadata.CallStack[0].Statement == other.ParseMetadata.CallStack[0].Statement

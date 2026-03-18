@@ -528,8 +528,9 @@ func (s *scope) PushCall(f *pyFunc) bool {
 	}
 
 	stmt := core.BuildStatement{
-		Start: int(s.cursor.Pos),
-		End: int(s.cursor.EndPos),
+		Filename: s.filename,
+		Start:    int(s.cursor.Pos),
+		End:      int(s.cursor.EndPos),
 	}
 	var label core.BuildLabel
 	if s.parsingFor != nil {
@@ -538,7 +539,7 @@ func (s *scope) PushCall(f *pyFunc) bool {
 
 	log.Debug("PushCall ", f.name, s.filename,label, stmt, s.cursor)
 
-	s.interpreter.callStack.Push(core.CallFrame{MethodName: f.name, Filename: s.filename, Label: label, Statement: stmt})
+	s.interpreter.callStack.Push(core.CallFrame{MethodName: f.name, Label: label, Statement: stmt})
 	return true
 }
 
