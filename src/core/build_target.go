@@ -322,7 +322,6 @@ func (cs *CallStack) Pop() CallFrame {
 type CallFrame struct {
 	MethodName string
 	Filename   string
-	Position   int
 	Label      BuildLabel
 	Statement  BuildStatement
 }
@@ -2011,6 +2010,25 @@ func (target *BuildTarget) NeedCoverage(state *BuildState) bool {
 		return false
 	}
 	return state.NeedCoverage && !target.Test.NoOutput && !target.Test.NoCoverage && !target.HasAnyLabel(state.Config.Test.DisableCoverage)
+}
+
+// RelatedTargets returns all the targets in the package that originate from the same Build Statement.
+func (target *BuildTarget) RelatedTargets(graph *BuildGraph) BuildTargets {
+	relatedTargets := make(BuildTargets, 0)
+	pkg := graph.PackageOrDie(target.Label)
+	for _, otherTarget := range pkg.AllTargets() {
+		if otherTarget.isRelated(target) {
+			relatedTargets = append(relatedTargets, otherTarget)
+		}
+	}
+	return relatedTargets
+}
+
+func (target *BuildTarget) isRelated(other *BuildTarget) bool {
+	if len(target.ParseMetadata.CallStack) == 0 || len(target.ParseMetadata.CallStack) == 0 {
+		return false
+	}
+	return target.ParseMetadata.CallStack[0].Statement == other.ParseMetadata.CallStack[0].Statement
 }
 
 // Parent finds the parent of a build target, or nil if the target is parentless.

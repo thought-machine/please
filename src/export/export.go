@@ -4,10 +4,12 @@
 package export
 
 import (
+	"fmt"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
@@ -50,6 +52,7 @@ func ToDir(state *core.BuildState, dir string, noTrim bool, targets []core.Build
 		}
 	}
 
+	log.Warningf("Exporting selected targets: %v", targets)
 	for _, target := range targets {
 		e.export(state.Graph.TargetOrDie(target))
 	}
@@ -89,6 +92,7 @@ func (e *export) exportSources(target *core.BuildTarget) {
 					if err := fs.RecursiveCopy(p, filepath.Join(e.targetDir, p), 0); err != nil {
 						log.Fatalf("Error copying file: %s\n", err)
 					}
+					log.Warning("Writing source file: %s", p)
 				}
 			}
 		}
@@ -151,11 +155,8 @@ func (e *export) selectBuildStatements(target *core.BuildTarget) {
 	log.Infof("Selecting Build stmts of %s with callstack:\n", target.Label.String())
 	for _, frame := range target.ParseMetadata.CallStack {
 		log.Infof("\t%v", frame)
-		if frame.Statement.Start == 0 && frame.Statement.End == 0 {
-			continue
-		}
 
-		if frame.Filename != "" {
+		if frame.Filename != "" && !strings.HasPrefix(frame.Filename, core.OutDir) {
 			if _, ok := e.selectedStatements[frame.Filename]; !ok {
 				e.selectedStatements[frame.Filename] = map[core.BuildStatement]bool{}
 			}
@@ -178,6 +179,7 @@ func (e *export) export(target *core.BuildTarget) {
 	// We want to export the package that made this subrepo available, but we still need to walk the target deps
 	// as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
+		log.Warningf("Subrepo: %v", target.Subrepo.Target)
 		e.export(target.Subrepo.Target)
 	} else if e.noTrim {
 		// Export the whole package, rather than trying to trim the package down to only the targets we need
@@ -187,21 +189,23 @@ func (e *export) export(target *core.BuildTarget) {
 		e.exportSources(target)
 	}
 
+
 	for _, dep := range target.Dependencies() {
 		e.export(dep)
 	}
 	for _, subinclude := range e.state.Graph.PackageOrDie(target.Label).AllSubincludes(e.state.Graph) {
 		e.export(e.state.Graph.TargetOrDie(subinclude))
 	}
-	// TODO handle parents from Callstack. How? Using the current label?
-	if parent := target.Parent(e.state.Graph); parent != nil && parent != target {
-		e.export(parent)
+
+	for _, otherTarget := range target.RelatedTargets(e.state.Graph) {
+		log.Warningf("Exporting Other %s", otherTarget)
+		e.export(otherTarget)
 	}
 }
 
 // writeBuildStatements writes the BUILD file statements to the export directory.
 func (e *export) writeBuildStatements() {
-	log.Infof("Selected Statements: %v", e.selectedStatements)
+	log.Warningf("Selected Statements: %v", e.selectedStatements)
 
 	for filename, stmtMap := range e.selectedStatements {
 		stmts := make([]core.BuildStatement, 0, len(stmtMap))
@@ -210,15 +214,15 @@ func (e *export) writeBuildStatements() {
 		}
 		// Sort statements by position to keep them in order
 		slices.SortFunc(stmts, func(a, b core.BuildStatement) int {
-			return int(a.Start)
+			return a.Start - b.Start
 		})
 
-		e.writeBuildStatement(filename, stmts)
+		e.writeBuildFile(filename, stmts)
 	}
 }
 
-func (e *export) writeBuildStatement(filename string, stmts []core.BuildStatement) {
-	log.Infof("Writing file: %s", filename)
+func (e *export) writeBuildFile(filename string, stmts []core.BuildStatement) {
+	log.Warningf("Writing file: %s", filename)
 	if err := fs.EnsureDir(filepath.Join(e.targetDir, filename)); err != nil {
 		log.Fatalf("failed to create directory for %s: %v", filename, err)
 	}
@@ -246,7 +250,7 @@ func (e *export) writeBuildStatement(filename string, stmts []core.BuildStatemen
 		if _, err := fw.Write(buff); err != nil {
 			log.Fatalf("failed to write statement to %s: %v", filename, err)
 		}
-		if _, err := fw.WriteString("\n\n"); err != nil {
+		if _, err := fmt.Fprintf(fw, "\n#%+v\n\n", s); err != nil {
 			log.Fatalf("failed to write newline to %s: %v", filename, err)
 		}
 	}

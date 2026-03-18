@@ -102,7 +102,7 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	label.Subrepo = s.pkg.SubrepoName
 
 	target := core.NewBuildTarget(label)
-	target.ParseMetadata.CallStack = s.CallStackSnapshot()
+	target.ParseMetadata.CallStack = s.CallStackSnapshot(name)
 	target.Subrepo = s.pkg.Subrepo
 	target.IsBinary = isTruthy(binaryBuildRuleArgIdx)
 	target.IsSubrepo = isTruthy(subrepoArgIdx)

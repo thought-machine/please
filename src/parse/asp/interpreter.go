@@ -190,6 +190,8 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 		}
 	}
 
+	log.Warning("Preload done for Package: %s", pkg.Label())
+
 	s.Set("CONFIG", s.config)
 	_, err := i.interpretStatements(s, statements)
 	if err == nil {
@@ -520,7 +522,11 @@ func (s *scope) LoadSingletons(state *core.BuildState) {
 	}
 }
 
-func (s *scope) PushCall(name string) {
+func (s *scope) PushCall(f *pyFunc) bool {
+	if s.cursor == nil {
+		return false	// skip builtin method calls (e.g. format)
+	}
+
 	stmt := core.BuildStatement{
 		Start: int(s.cursor.Pos),
 		End: int(s.cursor.EndPos),
@@ -530,16 +536,17 @@ func (s *scope) PushCall(name string) {
 		label = s.parsingFor.label
 	}
 
-	s.interpreter.callStack.Push(core.CallFrame{MethodName: name, Filename: s.filename, Label: label, Statement: stmt})
+	log.Debug("PushCall ", f.name, s.filename,label, stmt, s.cursor)
 
-
+	s.interpreter.callStack.Push(core.CallFrame{MethodName: f.name, Filename: s.filename, Label: label, Statement: stmt})
+	return true
 }
 
 func (s *scope) PopCall() {
 	s.interpreter.callStack.Pop()
 }
 
-func (s *scope) CallStackSnapshot() core.CallStack {
+func (s *scope) CallStackSnapshot(name string) core.CallStack {
 	snapshot := make(core.CallStack, len(s.interpreter.callStack))
 	copy(snapshot, s.interpreter.callStack)
 
@@ -547,7 +554,7 @@ func (s *scope) CallStackSnapshot() core.CallStack {
 	for _,v := range s.interpreter.callStack {
 		stack += fmt.Sprintf("\n\t%v", v)
 	}
-	log.Info("CallStack Snapshot: %s", stack)
+	log.Warningf("CallStack Snapshot for %s: %s", name, stack)
 
 	return snapshot
 }
@@ -564,6 +571,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 	}()
 	for _, stmt = range statements {
 		s.cursor = stmt
+		// log.Warningf("Cursor val (%s/%s): %v", s.filename, s.parsingFor, s.cursor)
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -1084,6 +1092,11 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	if !ok {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
+
+	if ok := s.PushCall(f); ok {
+		defer s.PopCall()
+	}
+
 	return f.Call(s, c)
 }
 
