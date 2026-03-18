@@ -12,7 +12,7 @@ go_toolchain(
         "94a99dae43dab8a3fe337485bbb89214b524285ec53ea02040514b0c2a9c3f94",  # go1.24.10.linux-arm64.tar.gz
     ],
     install_std = False,
-    version = "1.24.10",
+    version = "1.26.1",
 )
 
 go_stdlib(
