@@ -10,6 +10,7 @@ def please_repo_e2e_test(
         expected_output: dict = {},
         expect_output_contains: dict = {},
         expect_output_doesnt_contain: dict = {},
+        tool_content_checker = ["//test/build_defs:content_checker"],
         labels: list = [],
 ):
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
@@ -37,7 +38,7 @@ def please_repo_e2e_test(
     data["BASE_CONFIG"] = ["//test/build_defs:base_config"]
 
     tools["PLEASE"] = ["//package:installed_files|please"]
-    tools["CONTENT_CHECKER"] = ["//test/build_defs:content_checker"]
+    tools["CONTENT_CHECKER"] = tool_content_checker
 
     return gentest(
         name = name,
