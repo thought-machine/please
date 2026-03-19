@@ -5,12 +5,13 @@ def please_repo_e2e_test(
         repo: str,
         data: dict={},
         deps: list=[],
+        defer_cmd=[],
         tools: dict={},
+        tool_content_checker = ["//test/build_defs:content_checker"],
         expected_failure: bool = False,
         expected_output: dict = {},
         expect_output_contains: dict = {},
         expect_output_doesnt_contain: dict = {},
-        tool_content_checker = ["//test/build_defs:content_checker"],
         labels: list = [],
 ):
     plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
@@ -31,6 +32,10 @@ def please_repo_e2e_test(
 
     if expect_output_doesnt_contain:
         test_cmd += [f'_STR="$(cat {o})" _SUBSTR="{c}" && if [ -z "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi' for o, c in expect_output_doesnt_contain.items()]
+
+    # defer commands should be added last
+    if defer_cmd:
+        test_cmd += [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in defer_cmd]
 
     test_cmd = ' && '.join(test_cmd)
 
