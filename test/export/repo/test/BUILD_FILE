@@ -1,8 +1,8 @@
-# Start BStmt native_genrule
+# Start BUILDStmt native_genrule
 genrule(
     name = "native_genrule",
     srcs = ["file.txt"],
     outs = ["file.wordcount"],
     cmd = "wc $SRCS > $OUT",
 )
-# End BStmt
+# End BUILDStmt
