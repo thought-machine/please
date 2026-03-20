@@ -1,0 +1,11 @@
+# BUILD_STMT_START custom_target
+subinclude("//test_custom_defs/build_defs")
+# BUILD_STMT_END
+
+# BUILD_STMT_START custom_target
+simple_custom_target(
+    name = "custom_target",
+    srcs = ["file.txt"],
+    outs = ["file.out"],
+)
+# BUILD_STMT_END
