@@ -89,6 +89,10 @@ def endswith(self:str, s:str) -> bool:
     pass
 def format(self:str) -> str:
     pass
+def ljust(self:str, width:int, fillchar:str=' ') -> str:
+    pass
+def rjust(self:str, width:int, fillchar:str=' ') -> str:
+    pass
 def lstrip(self:str, cutset:str=' \n') -> str:
     pass
 def rstrip(self:str, cutset:str=' \n') -> str:
