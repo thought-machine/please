@@ -569,9 +569,9 @@ func strJust(s *scope, args []pyObject, left bool) pyObject {
 		return pyString(self)
 	}
 	if left {
-		return pyString(strings.Repeat(fillchar, count) + self)
+		return pyString(self + strings.Repeat(fillchar, count))
 	}
-	return pyString(self + strings.Repeat(fillchar, count))
+	return pyString(strings.Repeat(fillchar, count) + self)
 }
 
 func strLStrip(s *scope, args []pyObject) pyObject {
