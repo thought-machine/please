@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
@@ -88,6 +89,8 @@ func registerBuiltins(s *scope) {
 		"rpartition":   setNativeCode(s, "rpartition", strRPartition),
 		"startswith":   setNativeCode(s, "startswith", strStartsWith),
 		"endswith":     setNativeCode(s, "endswith", strEndsWith),
+		"ljust":        setNativeCode(s, "ljust", strLJust),
+		"rjust":        setNativeCode(s, "rjust", strRJust),
 		"lstrip":       setNativeCode(s, "lstrip", strLStrip),
 		"rstrip":       setNativeCode(s, "rstrip", strRStrip),
 		"removeprefix": setNativeCode(s, "removeprefix", strRemovePrefix),
@@ -540,6 +543,35 @@ func strEndsWith(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	x := args[1].(pyString)
 	return newPyBool(strings.HasSuffix(string(self), string(x)))
+}
+
+func strLJust(s *scope, args []pyObject) pyObject {
+	return strJust(s, args, true)
+}
+
+func strRJust(s *scope, args []pyObject) pyObject {
+	return strJust(s, args, false)
+}
+
+func strJust(s *scope, args []pyObject, left bool) pyObject {
+	self := string(args[0].(pyString))
+	width := int(args[1].(pyInt))
+	fillchar := string(args[2].(pyString))
+
+	// utf8.RuneCountInString rather than objLen, because objLen returns the length of a string in
+	// bytes rather than characters:
+	s.Assert(utf8.RuneCountInString(fillchar) == 1, "fillchar must be exactly one character long")
+
+	count := width - utf8.RuneCountInString(self)
+	// strings.Repeat's second operand must be non-negative, otherwise it panics. In that case, no
+	// changes need to be made to the input string anyway, so just return a copy of it.
+	if count <= 0 {
+		return pyString(self)
+	}
+	if left {
+		return pyString(strings.Repeat(fillchar, count) + self)
+	}
+	return pyString(self + strings.Repeat(fillchar, count))
 }
 
 func strLStrip(s *scope, args []pyObject) pyObject {

@@ -730,3 +730,43 @@ func TestBreakLoop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, pyString("ok"), s.Lookup("x"))
 }
+
+func TestStrLjust(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/str/ljust.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, pyString("   kittens"), s.Lookup("s1"))
+	assert.EqualValues(t, pyString("+++kittens"), s.Lookup("s2"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s3"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s4"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s5"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s6"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s7"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s8"))
+	assert.EqualValues(t, pyString("£££kittens"), s.Lookup("s9"))
+	assert.EqualValues(t, pyString("++++££kittens££"), s.Lookup("s10"))
+	// Make sure the original string wasn't modified:
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("orig"))
+
+	_, err = parseFile("src/parse/asp/test_data/interpreter/str/ljust_multiple_fillchars.build")
+	assert.Error(t, err, "fillchar must be exactly one character long")
+}
+
+func TestStrRjust(t *testing.T) {
+	s, err := parseFile("src/parse/asp/test_data/interpreter/str/rjust.build")
+	assert.NoError(t, err)
+	assert.EqualValues(t, pyString("kittens   "), s.Lookup("s1"))
+	assert.EqualValues(t, pyString("kittens+++"), s.Lookup("s2"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s3"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s4"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s5"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s6"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s7"))
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("s8"))
+	assert.EqualValues(t, pyString("kittens£££"), s.Lookup("s9"))
+	assert.EqualValues(t, pyString("££kittens££++++"), s.Lookup("s10"))
+	// Make sure the original string wasn't modified:
+	assert.EqualValues(t, pyString("kittens"), s.Lookup("orig"))
+
+	_, err = parseFile("src/parse/asp/test_data/interpreter/str/rjust_multiple_fillchars.build")
+	assert.Error(t, err, "fillchar must be exactly one character long")
+}

@@ -1,0 +1,16 @@
+orig = "kittens"
+
+s1 = orig.rjust(10)
+s2 = orig.rjust(10, "+")
+s3 = orig.rjust(len(orig))
+s4 = orig.rjust(len(orig), "+")
+s5 = orig.rjust(0)
+s6 = orig.rjust(0, "+")
+s7 = orig.rjust(-5)
+s8 = orig.rjust(-5, "+")
+
+# 1-character, 2-byte fillchar:
+s9 = orig.rjust(10, "£")
+
+# Input string containing a multi-byte character:
+s10 = "££kittens££".rjust(15, "+")
