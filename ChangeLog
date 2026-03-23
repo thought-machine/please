@@ -1,3 +1,8 @@
+Version 17.29.0
+---------------
+    * Improve performance of `query whatinputs` sub-command (#3495)
+    * Add `ljust` and `rjust` methods to `str` built-in type (#3502)
+
 Version 17.28.0
 ---------------
     * `export`: create the output directory if it doesn't already exist (#3345)
