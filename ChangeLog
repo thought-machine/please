@@ -1,3 +1,7 @@
+Version 17.29.1
+---------------
+    * Fix padding direction in `str.ljust` and `str.rjust` (#3504)
+
 Version 17.29.0
 ---------------
     * Improve performance of `query whatinputs` sub-command (#3495)
