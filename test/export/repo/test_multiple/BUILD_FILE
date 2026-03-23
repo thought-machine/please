@@ -1,0 +1,17 @@
+# BUILD_STMT_START target1
+genrule(
+    name = "target1",
+    srcs = ["file1.txt"],
+    outs = ["out1.txt"],
+    cmd = "cat $SRCS > $OUT",
+)
+# BUILD_STMT_END
+
+# BUILD_STMT_START target2
+genrule(
+    name = "target2",
+    srcs = ["file2.txt"],
+    outs = ["out2.txt"],
+    cmd = "cat $SRCS > $OUT",
+)
+# BUILD_STMT_END
