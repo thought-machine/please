@@ -7,7 +7,6 @@ genrule(
 )
 # BUILD_STMT_END
 
-
 # Du mmy target to be trimmed
 genrule(
     name = "dummy",

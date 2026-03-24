@@ -10,7 +10,6 @@ simple_custom_target(
 )
 # BUILD_STMT_END
 
-
 # BUILD_STMT_START standard_children_custom_target
 subinclude("//test_custom_defs/build_defs:standard_children_build_def")
 # BUILD_STMT_END
