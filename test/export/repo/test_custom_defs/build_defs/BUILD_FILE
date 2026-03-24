@@ -1,5 +1,11 @@
 filegroup(
-    name = "build_defs",
-    srcs = ["custom.build_defs"],
+    name = "simple_build_def",
+    srcs = ["simple.build_defs"],
+    visibility = ["//test_custom_defs/..."],
+)
+
+filegroup(
+    name = "standard_children_build_def",
+    srcs = ["standard_children.build_defs"],
     visibility = ["//test_custom_defs/..."],
 )
