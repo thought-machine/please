@@ -44,7 +44,6 @@ def please_export_e2e_test(
         defer_cmd += [f'$TOOLS_BUILD_STATEMENT_CHECKER {strict_opt} --exported "{EXPORT_DIR}/{build_file}" --original "{build_file}" --target "{target_name}"']
         tools["BUILD_STATEMENT_CHECKER"] = "//test/export:build_statement_checker"
 
-
     return please_repo_e2e_test(
         name = name,
         defer_cmd = defer_cmd,
@@ -89,6 +88,25 @@ please_export_e2e_test(
 please_export_e2e_test(
     name = "export_go_binary",
     export_targets = ["test_go_bin:dummy"],
+    repo = "repo_go",
+    include_go = True,
+    strict_check_build_stmt = True,
+)
+
+# Test native target with go third_party dependency.
+please_export_e2e_test(
+    name = "export_native_target_with_go_dep",
+    export_targets = ["test_go_dep:genrule_go_dep"],
+    repo = "repo_go",
+    include_go = True,
+    # TODO Enable strict check after after support for trimming subincludes #3496
+    # strict_check_build_stmt = True,
+)
+
+# Test go target with go third_party dependency.
+please_export_e2e_test(
+    name = "export_go_target_with_go_dep",
+    export_targets = ["test_go_dep:bin_go_dep"],
     repo = "repo_go",
     include_go = True,
     strict_check_build_stmt = True,
