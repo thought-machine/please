@@ -1,0 +1,10 @@
+# BUILD_STMT_START dummy
+subinclude("///go//build_defs:go")
+# BUILD_STMT_END
+
+# BUILD_STMT_START dummy
+go_binary(
+    name = "dummy",
+    srcs = ["main.go"],
+)
+# BUILD_STMT_END

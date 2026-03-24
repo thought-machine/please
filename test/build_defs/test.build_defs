@@ -1,7 +1,7 @@
 # Runs e2e tests against please in a specified repo
 def please_repo_e2e_test(
         name: str,
-        plz_command: str,
+        plz_command: str|list,
         repo: str,
         data: dict={},
         deps: list=[],
@@ -14,15 +14,19 @@ def please_repo_e2e_test(
         expect_output_doesnt_contain: dict = {},
         labels: list = [],
 ):
-    plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
-    if expected_failure:
-        plz_command += "; [ ! $? -eq 0 ]"
-
     test_cmd = [
         "cp $DATA_BASE_CONFIG $DATA_REPO",
         "cd $DATA_REPO",
-        plz_command,
     ]
+
+    if isinstance(plz_command, str):
+        plz_command = [plz_command]
+
+    for cmd in plz_command:
+        cmd.replace("plz ", "$TOOLS_PLEASE ")
+        if expected_failure:
+            cmd += "; [ ! $? -eq 0 ]"
+        test_cmd += [cmd]
 
     if expected_output:
         test_cmd += [f"$TOOLS_CONTENT_CHECKER '{o}' '{c}'" for o, c in expected_output.items()]
@@ -35,7 +39,7 @@ def please_repo_e2e_test(
 
     # defer commands should be added last
     if defer_cmd:
-        test_cmd += [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in defer_cmd]
+        test_cmd += defer_cmd
 
     test_cmd = ' && '.join(test_cmd)
 
