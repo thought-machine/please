@@ -23,7 +23,7 @@ def please_repo_e2e_test(
         plz_command = [plz_command]
 
     for cmd in plz_command:
-        cmd.replace("plz ", "$TOOLS_PLEASE ")
+        cmd = cmd.replace("plz ", "$TOOLS_PLEASE ")
         if expected_failure:
             cmd += "; [ ! $? -eq 0 ]"
         test_cmd += [cmd]
