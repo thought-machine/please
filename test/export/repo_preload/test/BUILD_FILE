@@ -1,0 +1,16 @@
+# BUILD_STMT_START native_not_including_preloaded
+genrule(
+    name = "native_not_including_preloaded",
+    outs = ["file_no_preload.out"],
+    cmd = "echo 'woosh' > $OUT",
+)
+# BUILD_STMT_END
+
+# BUILD_STMT_START use_preloaded_def
+preloaded_target(
+    name = "use_preloaded_def",
+    srcs = ["file.txt"],
+    outs = ["file_w_preload.out"],
+    cmd = "cat",
+)
+# BUILD_STMT_END
