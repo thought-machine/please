@@ -7,7 +7,7 @@ genrule(
 )
 # BUILD_STMT_END
 
-# Du mmy target to be trimmed
+# Dummy target to be trimmed
 genrule(
     name = "dummy",
     srcs = ["file.txt"],

@@ -7,7 +7,7 @@ def please_repo_e2e_test(
         deps: list=[],
         defer_cmd=[],
         tools: dict={},
-        tool_content_checker = ["//test/build_defs:content_checker"],
+        content_checker_tool = ["//test/build_defs:content_checker"],
         expected_failure: bool = False,
         expected_output: dict = {},
         expect_output_contains: dict = {},
@@ -47,7 +47,7 @@ def please_repo_e2e_test(
     data["BASE_CONFIG"] = ["//test/build_defs:base_config"]
 
     tools["PLEASE"] = ["//package:installed_files|please"]
-    tools["CONTENT_CHECKER"] = tool_content_checker
+    tools["CONTENT_CHECKER"] = content_checker_tool
 
     return gentest(
         name = name,
