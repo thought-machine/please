@@ -1,0 +1,6 @@
+genrule(
+    name = "other_target",
+    outs = ["other.txt"],
+    cmd = "echo 'other' > $OUT",
+    visibility = ["PUBLIC"],
+)

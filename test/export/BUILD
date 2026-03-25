@@ -39,12 +39,12 @@ please_export_e2e_test(
     dir = "test_custom_def_children",
 )
 
-# # Export a target that depends on another target.
-# please_export_e2e_test(
-#     name = "export_deps",
-#     export_targets = ["test_deps:dep2"],
-#     repo = "repo",
-# )
+# Export a target that depends on another target.
+please_export_e2e_test(
+    name = "export_deps",
+    export_targets = ["//:dep2"],
+    dir = "test_deps",
+)
 
 # # Test multiple targets.
 # please_export_e2e_test(
