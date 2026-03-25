@@ -1,0 +1,51 @@
+subinclude("//test/build_defs:build_defs")
+
+# Runs an export e2e test. It purposely tests for different aspect (e.g. BUILD files, sources)
+# within the same test to avoid the overhead of exporting multiple times.
+def please_export_e2e_test(
+        name:str,
+        export_targets:list,
+        dir:str,
+        cmd_on_export:list=[],
+        include_go:bool=False):
+    EXPORT_DIR="plz-out/plzexport"
+    test_repo = f"{dir}/test_repo"
+    expected_repo = f"{dir}/expected_repo"
+    exported_repo = f"$DATA_TEST_REPO/{EXPORT_DIR}"
+
+    please_targets = ["//" + t for t in export_targets]
+    plz_command_targets = " ".join(please_targets)
+
+    config_override = ""
+    if include_go:
+        config_override += "-o plugin.go.gotool:$TOOLS_GO"
+        tools["GO"] = [CONFIG.GO.GO_TOOL]
+
+    test_cmd = [
+        # Export
+        f'plz {config_override} --repo_root="$DATA_TEST_REPO" export --output "{EXPORT_DIR}" {plz_command_targets}',
+        # Golden-Master validation with expected repo. Done before any building to avoid plz-out
+        f'diff -r "{exported_repo}" "$DATA_EXPECTED_REPO"',
+        # Tests building the exported target which in turn ensures the sources are included
+        f'plz {config_override} --repo_root="{exported_repo}" build {plz_command_targets}',
+    ] + [f'plz {config_override} --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
+
+    test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
+    test_cmd = ' && '.join(test_cmd)
+
+    data = {}
+    data["TEST_REPO"] = [test_repo]
+    data["EXPECTED_REPO"] = [expected_repo]
+
+    tools = {}
+    tools["PLEASE"] = ["//package:installed_files|please"]
+
+    return gentest(
+        name = name,
+        test_cmd = test_cmd,
+        test_tools = tools,
+        data = data,
+        no_test_output = True,
+        labels = ["plz_e2e_test", "e2e"],
+        sandbox = False,
+    )

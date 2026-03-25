@@ -1,0 +1,13 @@
+genrule(
+    name = "native_genrule",
+    srcs = ["file.txt"],
+    outs = ["file.wordcount"],
+    cmd = "wc $SRCS > $OUT",
+)
+
+genrule(
+    name = "dummy_target_to_be_trimmed",
+    srcs = ["file.txt"],
+    outs = ["dummy"],
+    cmd = "cat $SRCS > $OUT",
+)
