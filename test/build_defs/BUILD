@@ -18,6 +18,12 @@ filegroup(
 )
 
 filegroup(
+    name = "test_export",
+    srcs = ["test_export.build_defs"],
+    visibility = ["//test/..."],
+)
+
+filegroup(
     name = "base_config",
     srcs = [
         ".plzconfig.e2e",

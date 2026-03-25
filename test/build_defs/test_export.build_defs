@@ -1,0 +1,55 @@
+subinclude("//test/build_defs:build_defs")
+
+# Runs an export e2e test. It purposely tests for different aspect (e.g. BUILD files, sources)
+# within the same test to avoid the overhead of exporting multiple times.
+def please_export_e2e_test(
+        name:str,
+        export_targets:list,
+        repo:str,
+        cmd_on_export:list=[],
+        expect_output_contains:dict={},
+        include_go:bool=False,
+        strict_check_build_stmt:bool=False,  # requires match for all BUILD statements in exported file
+        EXPORT_DIR="plz-out/plzexport",
+        BUILD_FILE="BUILD_FILE"):
+    please_targets = ["//" + t for t in export_targets]
+    plz_command_targets = " ".join(please_targets)
+    tools = {}
+    config_override = []
+    strict_opt = "--strict" if strict_check_build_stmt else ""
+
+    if include_go:
+        config_override += ["-o plugin.go.gotool:$TOOLS_GO"]
+        tools["GO"] = [CONFIG.GO.GO_TOOL]
+    config_override = " ".join(config_override)
+
+    plz_command = [
+        # Export command
+        f"plz {config_override} export --output {EXPORT_DIR} {plz_command_targets}",
+        # Tests building the exported target which in turn ensures the sources are included
+        f"plz {config_override} --repo_root=$(plz query reporoot)/{EXPORT_DIR} build {plz_command_targets}",
+    ] + [f"plz {config_override} --repo_root=$(plz query reporoot)/{EXPORT_DIR} {cmd}" for cmd in cmd_on_export]
+
+    defer_cmd = []
+    for export_target in export_targets:
+        file_path, target_name = export_target.split(":")
+        build_file = f"{file_path}/{BUILD_FILE}"
+
+        # Tests the contents of the exported BUILD file
+        defer_cmd += [f'$TOOLS_BUILD_STATEMENT_CHECKER {strict_opt} --exported "{EXPORT_DIR}/{build_file}" --original "{build_file}" --target "{target_name}"']
+        tools["BUILD_STATEMENT_CHECKER"] = "//test/export:build_statement_checker"
+
+    if expect_output_contains:
+        updated_expect_output = {}
+        for key, val in expect_output_contains.items():
+            updated_expect_output[f"{EXPORT_DIR}/{key}"] = val
+        expect_output_contains = updated_expect_output
+
+    return please_repo_e2e_test(
+        name = name,
+        defer_cmd = defer_cmd,
+        expect_output_contains = expect_output_contains,
+        plz_command = plz_command,
+        repo = repo,
+        tools = tools,
+    )
