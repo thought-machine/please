@@ -3,6 +3,7 @@ def please_repo_e2e_test(
         name: str,
         plz_command: str,
         repo: str,
+        defer_cmd: list = [],
         data: dict={},
         deps: list=[],
         tools: dict={},
@@ -12,7 +13,6 @@ def please_repo_e2e_test(
         expect_output_doesnt_contain: dict = {},
         labels: list = [],
 ):
-    plz_command = plz_command.replace("plz ", "$TOOLS_PLEASE ")
     if expected_failure:
         plz_command += "; [ ! $? -eq 0 ]"
 
@@ -31,7 +31,11 @@ def please_repo_e2e_test(
     if expect_output_doesnt_contain:
         test_cmd += [f'_STR="$(cat {o})" _SUBSTR="{c}" && if [ -z "${_STR##*$_SUBSTR*}" ]; then echo "$_STR"; exit 1; fi' for o, c in expect_output_doesnt_contain.items()]
 
+    # defer commands should be added last
+    test_cmd += defer_cmd
+
     test_cmd = ' && '.join(test_cmd)
+    test_cmd = test_cmd.replace("plz ", "$TOOLS_PLEASE ")
 
     data["REPO"] = [repo]
     data["BASE_CONFIG"] = ["//test/build_defs:base_config"]

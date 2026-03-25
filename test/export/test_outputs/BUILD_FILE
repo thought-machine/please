@@ -1,0 +1,5 @@
+genrule(
+    name = "out_target",
+    outs = ["some_output.txt"],
+    cmd = "echo 'hello world' > $OUT",
+)
