@@ -46,37 +46,30 @@ please_export_e2e_test(
     dir = "test_deps",
 )
 
-# # Test multiple targets.
-# please_export_e2e_test(
-#     name = "export_multiple",
-#     export_targets = [
-#         "test_multiple:target1",
-#         "test_multiple:target2",
-#     ],
-#     repo = "repo",
-# )
+# Test multiple targets.
+please_export_e2e_test(
+    name = "export_multiple_targets",
+    export_targets = [
+        "//:target1",
+        "//:target2",
+    ],
+    dir = "test_multiple_targets",
+)
 
-# # Export a target from a repo that preloads a build def.
-# # This test purposely doesn't use the custom def but checks that the source files are still included.
-# please_export_e2e_test(
-#     name = "export_preload_genrule",
-#     expect_output_contains = {
-#         # validating that export includes preloaded build def files
-#         "build_defs/preloaded.build_defs": "preloaded_target",
-#         "build_defs/BUILD_FILE": "preloaded_build_def",
-#     },
-#     export_targets = ["test:native_not_including_preloaded"],
-#     repo = "repo_preload",
-#     strict_check_build_stmt = True,
-# )
+# Export a target from a repo that preloads a build def.
+# This test purposely doesn't use the custom def but checks that the source files are still included.
+please_export_e2e_test(
+    name = "export_preload_genrule",
+    export_targets = ["//:native_target"],
+    dir = "test_preload",
+)
 
-# # Export a custom target from a repo that preloads the build def used.
-# please_export_e2e_test(
-#     name = "export_preload_use_preloaded_def",
-#     export_targets = ["test:use_preloaded_def"],
-#     repo = "repo_preload",
-#     strict_check_build_stmt = True,
-# )
+# Export a custom target from a repo that preloads the build def used.
+please_export_e2e_test(
+    name = "export_preload_use_preloaded_def",
+    export_targets = ["//:use_preloaded_def"],
+    dir = "test_use_preloaded",
+)
 
 # # Test go binary target.
 # please_export_e2e_test(

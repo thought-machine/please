@@ -1,0 +1,12 @@
+genrule(
+    name = "native_target",
+    outs = ["file_no_preload.out"],
+    cmd = "echo 'woosh' > $OUT",
+)
+
+preloaded_target(
+    name = "use_preloaded_def",
+    srcs = ["file.txt"],
+    outs = ["file_w_preload.out"],
+    cmd = "cat",
+)
