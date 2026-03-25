@@ -1,0 +1,5 @@
+filegroup(
+    name = "standard_children_build_def",
+    srcs = ["standard_children.build_defs"],
+    visibility = ["PUBLIC"],
+)

@@ -1,0 +1,8 @@
+subinclude("//build_defs:standard_children_build_def")
+
+standard_children_custom_target(
+    name = "standard_children_custom_target",
+    srcs = ["file.txt"],
+    outs = ["file_standard.out"],
+    outs_child = ["file_child.out"],
+)

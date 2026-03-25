@@ -1,0 +1,17 @@
+def standard_children_custom_target(
+        name:str,
+        srcs:list=[],
+        outs:list=[],
+        outs_child:list=[]):
+    genrule(
+        name = f"{name}#child",
+        srcs = srcs,
+        outs = outs_child,
+        cmd = "echo 'child' > $OUT && cat $SRCS >> $OUT ",
+    )
+    return genrule(
+        name = name,
+        srcs = srcs,
+        outs = outs,
+        cmd = "echo 'main' > $OUT && cat $SRCS >> $OUT ",
+    )
