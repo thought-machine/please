@@ -1,6 +1,0 @@
-[Parse]
-BuildFileName = BUILD # We override this in the e2e test profile and the subrepo has BUILD files not BUILD_FILE
-
-[Plugin "go"]
-Target = //plugins:go
-stdlib = //third_party/go:std

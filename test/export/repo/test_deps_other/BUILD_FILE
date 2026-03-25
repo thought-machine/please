@@ -1,8 +1,0 @@
-# BUILD_STMT_START other_target
-genrule(
-    name = "other_target",
-    outs = ["other.txt"],
-    cmd = "echo 'other' > $OUT",
-    visibility = ["PUBLIC"],
-)
-# BUILD_STMT_END
