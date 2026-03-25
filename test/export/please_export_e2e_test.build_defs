@@ -12,6 +12,8 @@ def please_export_e2e_test(
     test_repo = f"{dir}/test_repo"
     expected_repo = f"{dir}/expected_repo"
     exported_repo = f"$DATA_TEST_REPO/{EXPORT_DIR}"
+    data = {}
+    tools = {}
 
     targets = " ".join(export_targets)
 
@@ -32,11 +34,9 @@ def please_export_e2e_test(
     test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
     test_cmd = ' && '.join(test_cmd)
 
-    data = {}
     data["TEST_REPO"] = [test_repo]
     data["EXPECTED_REPO"] = [expected_repo]
 
-    tools = {}
     tools["PLEASE"] = ["//package:installed_files|please"]
 
     return gentest(

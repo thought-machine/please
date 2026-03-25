@@ -1,0 +1,7 @@
+subinclude("///go//build_defs:go")
+
+package(default_visibility = ["PUBLIC"])
+
+go_stdlib(
+    name = "std",
+)

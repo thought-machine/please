@@ -72,32 +72,28 @@ please_export_e2e_test(
 )
 
 # # Test go binary target.
-# please_export_e2e_test(
-#     name = "export_go_binary",
-#     export_targets = ["test_go_bin:dummy"],
-#     include_go = True,
-#     repo = "repo_go",
-#     strict_check_build_stmt = True,
-# )
+please_export_e2e_test(
+    name = "export_go_binary",
+    export_targets = ["//pkg:go_bin"],
+    include_go = True,
+    dir = "test_go_binary",
+)
 
-# # Test native target with go third_party dependency.
-# please_export_e2e_test(
-#     name = "export_native_target_with_go_dep",
-#     export_targets = ["test_go_dep:genrule_go_dep"],
-#     include_go = True,
-#     repo = "repo_go",
-#     # TODO Enable strict check after after support for trimming subincludes #3496
-#     # strict_check_build_stmt = True,
-# )
+# Test native target with go third_party dependency.
+please_export_e2e_test(
+    name = "export_native_target_with_go_dep",
+    export_targets = ["//:genrule_go_dep"],
+    include_go = True,
+    dir = "test_native_target_with_go_dep",
+)
 
-# # Test go target with go third_party dependency.
-# please_export_e2e_test(
-#     name = "export_go_target_with_go_dep",
-#     export_targets = ["test_go_dep:bin_go_dep"],
-#     include_go = True,
-#     repo = "repo_go",
-#     strict_check_build_stmt = True,
-# )
+# Test go target with go third_party dependency.
+please_export_e2e_test(
+    name = "export_go_target_with_go_dep",
+    export_targets = ["//:bin_go_dep"],
+    include_go = True,
+    dir = "test_go_bin_with_go_dep",
+)
 
 # # Generic catch-all test on internal repo.
 # plz_e2e_test(

@@ -1,0 +1,6 @@
+genrule(
+    name = "genrule_go_dep",
+    srcs = ["///third_party/go/github.com_google_go-cmp//cmp"],
+    outs = ["out.txt"],
+    cmd = "ls $SRCS > $OUT",
+)
