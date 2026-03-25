@@ -13,8 +13,7 @@ def please_export_e2e_test(
     expected_repo = f"{dir}/expected_repo"
     exported_repo = f"$DATA_TEST_REPO/{EXPORT_DIR}"
 
-    please_targets = ["//" + t for t in export_targets]
-    plz_command_targets = " ".join(please_targets)
+    targets = " ".join(export_targets)
 
     config_override = ""
     if include_go:
@@ -23,11 +22,11 @@ def please_export_e2e_test(
 
     test_cmd = [
         # Export
-        f'plz {config_override} --repo_root="$DATA_TEST_REPO" export --output "{EXPORT_DIR}" {plz_command_targets}',
+        f'plz {config_override} --repo_root="$DATA_TEST_REPO" export --output "{EXPORT_DIR}" {targets}',
         # Golden-Master validation with expected repo. Done before any building to avoid plz-out
         f'diff -r "{exported_repo}" "$DATA_EXPECTED_REPO"',
         # Tests building the exported target which in turn ensures the sources are included
-        f'plz {config_override} --repo_root="{exported_repo}" build {plz_command_targets}',
+        f'plz {config_override} --repo_root="{exported_repo}" build {targets}',
     ] + [f'plz {config_override} --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
 
     test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]

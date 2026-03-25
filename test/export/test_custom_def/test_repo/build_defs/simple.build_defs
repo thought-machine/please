@@ -1,0 +1,10 @@
+def simple_custom_target(
+        name:str,
+        srcs:list=[],
+        outs:list=[]):
+    return genrule(
+        name = name,
+        srcs = srcs,
+        outs = outs,
+        cmd = "cat $SRCS > $OUT",
+    )
