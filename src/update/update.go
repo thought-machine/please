@@ -63,8 +63,9 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 		clean(config, updateCommand)
 		return
 	}
+	newPlease := filepath.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
 	word := describe(config.Please.Version.Semver(), pleaseVersion(), true)
-	if !updateCommand {
+	if !updateCommand && !core.PathExists(newPlease) {
 		fmt.Fprintf(os.Stderr, "%s Please from version %s to %s\n", word, pleaseVersion(), config.Please.Version.VersionString())
 	}
 
@@ -84,7 +85,7 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	}
 
 	// Download it.
-	newPlease := downloadAndLinkPlease(config, verify, progress)
+	newPlease = downloadAndLinkPlease(config, verify, progress)
 
 	// Print update milestone message if we hit a milestone
 	printMilestoneMessage(config.Please.Version.VersionString())
