@@ -1022,6 +1022,8 @@ func (c *Client) logActionResult(target *core.BuildTarget, run int, message, wor
 }
 
 // A grpcLogMabob is an implementation of grpc's logging interface using our backend.
+// gRPC errors are downgraded to warnings because they represent remote-side errors
+// (e.g. cache misses) that the client handles gracefully by falling back to local execution.
 type grpcLogMabob struct{}
 
 func (g *grpcLogMabob) Info(args ...interface{})                    { log.Info("%s", args) }
@@ -1030,9 +1032,9 @@ func (g *grpcLogMabob) Infoln(args ...interface{})                  { log.Info("
 func (g *grpcLogMabob) Warning(args ...interface{})                 { log.Warning("%s", args) }
 func (g *grpcLogMabob) Warningf(format string, args ...interface{}) { log.Warning(format, args...) }
 func (g *grpcLogMabob) Warningln(args ...interface{})               { log.Warning("%s", args) }
-func (g *grpcLogMabob) Error(args ...interface{})                   { log.Error("", args...) }
-func (g *grpcLogMabob) Errorf(format string, args ...interface{})   { log.Errorf(format, args...) }
-func (g *grpcLogMabob) Errorln(args ...interface{})                 { log.Error("", args...) }
+func (g *grpcLogMabob) Error(args ...interface{})                   { log.Warning("%s", args) }
+func (g *grpcLogMabob) Errorf(format string, args ...interface{})   { log.Warning(format, args...) }
+func (g *grpcLogMabob) Errorln(args ...interface{})                 { log.Warning("%s", args) }
 func (g *grpcLogMabob) Fatal(args ...interface{})                   { log.Fatal(args...) }
 func (g *grpcLogMabob) Fatalf(format string, args ...interface{})   { log.Fatalf(format, args...) }
 func (g *grpcLogMabob) Fatalln(args ...interface{})                 { log.Fatal(args...) }
