@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/op/go-logging.v1"
 
 	"github.com/thought-machine/please/src/cli"
@@ -149,6 +150,43 @@ func TestFilterArgs(t *testing.T) {
 	assert.Equal(t, []string{"plz", "update"}, filterArgs(false, []string{"plz", "update"}))
 	assert.Equal(t, []string{"plz", "update", "--force"}, filterArgs(false, []string{"plz", "update", "--force"}))
 	assert.Equal(t, []string{"plz", "update"}, filterArgs(true, []string{"plz", "update", "--force"}))
+}
+
+func TestWarnIfNotInPath(t *testing.T) {
+	// Create a fake binary in a temp directory and put it on PATH.
+	tmpDir := t.TempDir()
+	fakeBin := filepath.Join(tmpDir, "fake_plz")
+	assert.NoError(t, os.WriteFile(fakeBin, []byte("#!/bin/sh\n"), 0o755))
+
+	oldPath := os.Getenv("PATH")
+	t.Setenv("PATH", tmpDir+string(os.PathListSeparator)+oldPath)
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+	os.Args = []string{"fake_plz"}
+
+	// When location matches the directory containing the binary, no warning expected.
+	c := makeConfig("warnpath")
+	c.Please.Location = tmpDir
+	warnIfNotInPath(c) // should not warn
+
+	// When location doesn't match, it should warn and create a symlink for the binary name.
+	symlinkDir := t.TempDir()
+	// Write a "please" binary so the symlink target exists.
+	assert.NoError(t, os.WriteFile(filepath.Join(symlinkDir, "please"), []byte("#!/bin/sh\n"), 0o755))
+	c.Please.Location = symlinkDir
+	warnIfNotInPath(c) // should warn but not panic
+	// Should have created a relative symlink: fake_plz -> please
+	link := filepath.Join(symlinkDir, "fake_plz")
+	target, err := os.Readlink(link)
+	require.NoError(t, err)
+	require.Equal(t, "please", target)
+
+	// Calling again should not fail (symlink already exists).
+	warnIfNotInPath(c)
+
+	// When the binary isn't in PATH at all, should silently return.
+	os.Args = []string{"not_in_path_at_all"}
+	warnIfNotInPath(c) // should not panic
 }
 
 func TestFullDistVersion(t *testing.T) {

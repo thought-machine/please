@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -90,6 +91,9 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 
 	// Clean out any old ones
 	clean(config, updateCommand)
+
+	// Warn if the binary in PATH isn't the one we just updated.
+	warnIfNotInPath(config)
 
 	// Now run the new one.
 	core.ReturnToInitialWorkingDir()
@@ -404,6 +408,36 @@ func writeTarFile(hdr *tar.Header, r io.Reader, destination string) error {
 	defer f.Close()
 	_, err = io.Copy(f, r)
 	return err
+}
+
+// warnIfNotInPath emits a warning if the binary found via PATH is not the one we just updated.
+// This catches the common case where e.g. a Homebrew-installed plz shadows the one in ~/.please.
+func warnIfNotInPath(config *core.Configuration) {
+	name := filepath.Base(os.Args[0])
+	pathBinary, err := exec.LookPath(name)
+	if err != nil {
+		return
+	}
+	pathBinary, _ = filepath.Abs(pathBinary)
+	if resolved, err := filepath.EvalSymlinks(pathBinary); err == nil {
+		pathBinary = resolved
+	}
+	location, _ := filepath.Abs(config.Please.Location)
+	if !strings.HasPrefix(pathBinary, location+string(filepath.Separator)) && pathBinary != location {
+		// Ensure a symlink exists so the binary name the user invoked (e.g. "plz")
+		// is available in the Please location directory.
+		nameLink := filepath.Join(location, name)
+		if _, err := os.Lstat(nameLink); os.IsNotExist(err) {
+			if err := os.Symlink("please", nameLink); err != nil {
+				log.Warning("Failed to create %s symlink: %s", nameLink, err)
+			}
+		}
+		log.Warning("Updated Please to %s in %s but %q in your PATH resolves to %s",
+			config.Please.Version.VersionString(), location, name, pathBinary)
+		log.Warning("To use the updated version, add %s to your PATH ahead of %s:",
+			location, filepath.Dir(pathBinary))
+		log.Warning("  export PATH=%s:$PATH", location)
+	}
 }
 
 // filterArgs filters out the --force update if forced updates were specified.
