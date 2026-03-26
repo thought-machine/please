@@ -1,14 +1,30 @@
 subinclude("//test/build_defs:build_defs")
 
-# Runs an export e2e test. It purposely tests for different aspect (e.g. BUILD files, sources)
-# within the same test to avoid the overhead of exporting multiple times.
 def please_export_e2e_test(
         name:str,
-        export_targets:list,
         dir:str,
+        export_targets:list,
         cmd_on_export:list=[],
         include_go:bool=False):
-    EXPORT_DIR="plz-out/plzexport"
+    """
+    Runs an export e2e test. To use it, create a directory with both a `test_repo` with the targets
+    to be exported and an `expected_repo` with the expected resulting files.
+    The validation steps for the e2e test are:
+        * It performs a repo-wide diff between the exported files and the `expected_repo`
+        * Builds the exported target to ensure the exported repo, and consequently the
+        `expected_repo`, include valid sources and dependencies to build the target.
+        * Optionally you can specify additional commands to run on the exported directory by
+        passing them to `cmd_on_export`.
+
+    Args:
+        name (str): Name of the test.
+        dir (str): A relative path to the directory containing `test_repo` and `expected_repo`.
+        export_targets (list): Targets to export as part of the test.
+        cmd_on_export (list): Optional. Additional commands to run on the exported directory.
+        include_go (bool): Optional. A flag to include Go dependencies in the e2e test. Use when
+            testing repos that include Go targets.
+    """
+    EXPORT_DIR = "plz-out/plzexport"
     test_repo = f"{dir}/test_repo"
     expected_repo = f"{dir}/expected_repo"
     exported_repo = f"$DATA_TEST_REPO/{EXPORT_DIR}"
@@ -32,7 +48,7 @@ def please_export_e2e_test(
     ] + [f'plz {config_override} --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
 
     test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
-    test_cmd = ' && '.join(test_cmd)
+    test_cmd = " && ".join(test_cmd)
 
     data["TEST_REPO"] = [test_repo]
     data["EXPECTED_REPO"] = [expected_repo]
@@ -41,10 +57,10 @@ def please_export_e2e_test(
 
     return gentest(
         name = name,
+        data = data,
+        labels = ["plz_e2e_test", "e2e"],
+        no_test_output = True,
+        sandbox = False,
         test_cmd = test_cmd,
         test_tools = tools,
-        data = data,
-        no_test_output = True,
-        labels = ["plz_e2e_test", "e2e"],
-        sandbox = False,
     )
