@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
@@ -287,7 +288,6 @@ type stateProgress struct {
 	numParses  atomic.Int64
 	mutex      sync.Mutex
 	closeOnce  sync.Once
-	resultOnce sync.Once
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
 	pendingTargets *cmap.Map[BuildLabel, chan struct{}]
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
@@ -308,6 +308,17 @@ type stateProgress struct {
 	results chan *BuildResult
 	// Internal result stream, used to intermediate them for the cycle checker.
 	internalResults chan *BuildResult
+	// workerCtx is cancelled when workers should stop producing results.
+	workerCtx    context.Context //nolint:containedctx
+	workerCancel context.CancelFunc
+	// dispatcherCtx is cancelled after all workers have finished, signalling
+	// the result dispatcher (forwardResults) to drain remaining results and
+	// shut down.
+	dispatcherCtx    context.Context //nolint:containedctx
+	dispatcherCancel context.CancelFunc
+	// dispatcherWg tracks the result dispatcher goroutine so CloseResults
+	// can wait for it to finish draining.
+	dispatcherWg sync.WaitGroup
 	// The cycle checker itself.
 	cycleDetector cycleDetector
 }
@@ -413,24 +424,31 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 	}
 }
 
+// WorkerContext returns the context that workers should use to detect shutdown.
+func (state *BuildState) WorkerContext() context.Context {
+	return state.progress.workerCtx
+}
+
 // Stop stops the worker queues after any current tasks are done.
 func (state *BuildState) Stop() {
 	state.progress.closeOnce.Do(func() {
+		state.progress.workerCancel()
 		close(state.pendingParses)
 		close(state.pendingActions)
 	})
 }
 
-// CloseResults closes the result channels.
+// CloseResults signals the result-forwarding goroutine to drain any remaining
+// results and close the external results channel. It blocks until forwarding
+// is complete.
+//
+// This must only be called after all workers have finished (i.e. after the
+// worker WaitGroup is done), so that no new results are produced while
+// draining.
 func (state *BuildState) CloseResults() {
 	state.progress.cycleDetector.Stop()
-	state.progress.mutex.Lock()
-	defer state.progress.mutex.Unlock()
-	if state.progress.results != nil {
-		state.progress.resultOnce.Do(func() {
-			close(state.progress.results)
-		})
-	}
+	state.progress.dispatcherCancel()
+	state.progress.dispatcherWg.Wait()
 }
 
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
@@ -624,52 +642,94 @@ func (state *BuildState) logResult(result *BuildResult) {
 	}
 }
 
-// forwardResults runs indefinitely, forwarding results from the internal
-// channel to the external one. On the way it checks if we need to do
-// cycle detection.
-func (state *BuildState) forwardResults() {
-	defer func() {
-		if r := recover(); r != nil {
-			// Ensure we don't get a "send on closed channel" when the
-			// outward results channel is closed.
-			log.Debug("%s", r)
-		}
-	}()
+// forwardResults forwards results from the internal channel to the external
+// one. On the way it checks if we need to do cycle detection.
+//
+// It runs until its context is cancelled, at which point it drains any
+// remaining results from internalResults and closes the external results
+// channel.
+func (state *BuildState) forwardResults(ctx context.Context) {
+	defer state.progress.dispatcherWg.Done()
+	defer state.closeResults()
 	activeTargets := map[*BuildTarget]struct{}{}
 	// Persist this one timer throughout so we don't generate bazillions of them.
 	t := time.NewTimer(cycleCheckDuration)
 	t.Stop()
-	var result *BuildResult
+	stopTimer := func() {
+		if !t.Stop() {
+			select {
+			case <-t.C:
+			default:
+			}
+		}
+	}
+
 	for {
+		// When no targets are active, arm the cycle detection timer.
 		if len(activeTargets) == 0 {
 			t.Reset(cycleCheckDuration)
 			select {
-			case result = <-state.progress.internalResults:
-				// This has to be properly managed to prevent hangs.
-				if !t.Stop() {
-					<-t.C
-				}
+			case <-ctx.Done():
+				state.drainResults(activeTargets)
+				return
 			case <-t.C:
 				go state.checkForCycles()
 				go dumpGoroutineInfo()
-				// Still need to get a result!
-				result = <-state.progress.internalResults
+			case result := <-state.progress.internalResults:
+				stopTimer()
+				state.forwardResult(result, activeTargets)
+				continue
 			}
+		}
+
+		// Wait for a result or shutdown.
+		select {
+		case <-ctx.Done():
+			state.drainResults(activeTargets)
+			return
+		case result := <-state.progress.internalResults:
+			state.forwardResult(result, activeTargets)
+		}
+	}
+}
+
+// forwardResult sends a single result to the external results channel and
+// updates active target tracking.
+func (state *BuildState) forwardResult(result *BuildResult, activeTargets map[*BuildTarget]struct{}) {
+	if target := result.target; target != nil {
+		if result.Status.IsActive() {
+			activeTargets[target] = struct{}{}
 		} else {
-			result = <-state.progress.internalResults
+			delete(activeTargets, target)
 		}
-		if target := result.target; target != nil {
-			if result.Status.IsActive() {
-				activeTargets[target] = struct{}{}
-			} else {
-				delete(activeTargets, target)
-			}
+	}
+	state.progress.mutex.Lock()
+	if state.progress.results != nil {
+		state.progress.results <- result
+	}
+	state.progress.mutex.Unlock()
+}
+
+// drainResults forwards any remaining results from the internal channel
+// to the external results channel without blocking.
+func (state *BuildState) drainResults(activeTargets map[*BuildTarget]struct{}) {
+	for {
+		select {
+		case result := <-state.progress.internalResults:
+			state.forwardResult(result, activeTargets)
+		default:
+			return
 		}
-		state.progress.mutex.Lock()
-		if state.progress.results != nil {
-			state.progress.results <- result
-		}
-		state.progress.mutex.Unlock()
+	}
+}
+
+// closeResults closes the external results channel under the mutex.
+func (state *BuildState) closeResults() {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+	if state.progress.results != nil {
+		close(state.progress.results)
+		state.progress.results = nil
 	}
 }
 
@@ -1497,7 +1557,11 @@ func NewBuildState(config *Configuration) *BuildState {
 	for _, exp := range config.Parse.ExperimentalDir {
 		state.experimentalLabels = append(state.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
 	}
-	go state.forwardResults()
+	ctx := context.Background()
+	state.progress.workerCtx, state.progress.workerCancel = context.WithCancel(ctx)
+	state.progress.dispatcherCtx, state.progress.dispatcherCancel = context.WithCancel(ctx)
+	state.progress.dispatcherWg.Add(1)
+	go state.forwardResults(state.progress.dispatcherCtx)
 	return state
 }
 
