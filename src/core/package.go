@@ -34,6 +34,8 @@ type Package struct {
 	targets map[string]*BuildTarget
 	// Set of output files from rules.
 	Outputs map[string]*BuildTarget
+	// Includes metadata from parsing the package BUILD file.
+	BuildFileMetadata BuildFileMetadata
 	// Protects access to above
 	mutex sync.RWMutex
 }
@@ -71,10 +73,11 @@ func (pkg *Package) TargetOrDie(name string) *BuildTarget {
 
 // AddTarget adds a new target to this package with the given name.
 // It doesn't check for duplicates.
-func (pkg *Package) AddTarget(target *BuildTarget) {
+func (pkg *Package) AddTarget(target *BuildTarget, stmt *BuildStatement) {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
 	pkg.targets[target.Label.Name] = target
+	pkg.RegisterStatement(stmt, target)
 }
 
 // AllTargets returns the current set of targets in this package.
@@ -228,6 +231,16 @@ func (pkg *Package) verifyOutputs() []string {
 		}
 	}
 	return ret
+}
+
+// RegisterStatement maps a build statement to target in the package.
+func (pkg *Package) RegisterStatement(stmt *BuildStatement, target *BuildTarget) {
+	if stmt == nil {
+		log.Infof("Attempted to register empty build statement for package %s and target %s",
+			pkg.Name, target.String())
+		return
+	}
+	pkg.BuildFileMetadata.RegisterStatementTarget(stmt, target)
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.

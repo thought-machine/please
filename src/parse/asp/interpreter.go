@@ -310,6 +310,8 @@ type scope struct {
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 	mode     core.ParseMode
+	// points to the statement currently being interpreted
+	cursor *Statement
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -525,6 +527,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 	}()
 	for _, stmt = range statements {
+		s.cursor = stmt
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -1075,6 +1078,14 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	//      we might also be able to do a more aggressive pass in cases where we know we're passing a constant
 	//      to a builtin that won't modify it (e.g. calling build_rule with a constant dict).
 	return nil
+}
+
+// CurrentBuildStatement creates a new BuildStatement from the statement that is being currently interpreted.
+func (s *scope) CurrentBuildStatement() *core.BuildStatement {
+	return &core.BuildStatement{
+		Start: int(s.cursor.Pos),
+		End:   int(s.cursor.EndPos),
+	}
 }
 
 // pkgFilename returns the filename of the current package, or the empty string if there is none.

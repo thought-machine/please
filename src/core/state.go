@@ -923,8 +923,8 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 }
 
 // AddTarget adds a new target to the build graph.
-func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
-	pkg.AddTarget(target)
+func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget, stmt *BuildStatement) {
+	pkg.AddTarget(target, stmt)
 	state.Graph.AddTarget(target)
 	if target.IsFilegroup {
 		// At least register these guys as outputs.
@@ -1071,7 +1071,7 @@ func exportFile(state *BuildState, pkg *Package, label BuildLabel) {
 	t.Subrepo = pkg.Subrepo
 	t.IsFilegroup = true
 	t.AddSource(NewFileLabel(label.Name, pkg))
-	state.AddTarget(pkg, t)
+	state.AddTarget(pkg, t, nil)
 }
 
 // CheckArchSubrepo checks if a target refers to a cross-compiling subrepo.
