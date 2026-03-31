@@ -6,6 +6,7 @@ import (
 	"iter"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime/debug"
 	"runtime/pprof"
 	"strings"
@@ -31,6 +32,8 @@ type interpreter struct {
 	limiter         semaphore
 
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
+
+	regexCache *cmap.Map[string, *regexp.Regexp]
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -42,10 +45,11 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		locals: map[string]pyObject{},
 	}
 	i := &interpreter{
-		scope:   s,
-		parser:  p,
-		configs: map[*core.BuildState]*pyConfig{},
-		limiter: make(semaphore, state.Config.Parse.NumThreads),
+		scope:      s,
+		parser:     p,
+		configs:    map[*core.BuildState]*pyConfig{},
+		limiter:    make(semaphore, state.Config.Parse.NumThreads),
+		regexCache: cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
 	}
 	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
 	if p.interpreter != nil {

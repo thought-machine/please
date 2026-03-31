@@ -368,6 +368,11 @@ var opts struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
 			} `positional-args:"true" required:"true"`
 		} `command:"revdeps" alias:"reverseDeps" description:"Queries all the reverse dependencies of a target."`
+		RuntimeDeps struct {
+			Args struct {
+				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets to query" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"runtimedeps" description:"Queries all the run-time dependencies of a target."`
 		SomePath struct {
 			Except []core.BuildLabel `long:"except" description:"Targets to exclude from path calculation"`
 			Hidden bool              `long:"hidden" description:"Show hidden targets as well"`
@@ -790,6 +795,11 @@ var buildFunctions = map[string]func() int{
 		labels := plz.ReadStdinLabels(opts.Query.ReverseDeps.Args.Targets)
 		return runQuery(true, append(labels, core.WholeGraph...), func(state *core.BuildState) {
 			query.ReverseDeps(state, state.ExpandLabels(labels), opts.Query.ReverseDeps.Level, opts.Query.ReverseDeps.Hidden)
+		})
+	},
+	"query.runtimedeps": func() int {
+		return runQuery(true, opts.Query.RuntimeDeps.Args.Targets, func(state *core.BuildState) {
+			query.RuntimeDeps(os.Stdout, state, state.ExpandOriginalLabels())
 		})
 	},
 	"query.somepath": func() int {

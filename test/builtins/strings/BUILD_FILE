@@ -1,0 +1,45 @@
+
+assert ",".join(["a","b","c"]) == "a,b,c"
+
+assert "a,b,c".split(",") == ["a", "b", "c"]
+
+assert "abc".replace("bc", "ab") == "aab"
+
+pre, sep, post = "a,b,c".partition(",")
+assert pre == "a" and sep == "," and post == "b,c"
+
+pre, sep, post = "a,b,c".rpartition(",")
+assert pre == "a,b" and sep == "," and post == "c"
+
+assert "abc".startswith("ab") == True
+
+assert "abc".endswith("bc") == True
+
+assert "a{var1},b{var2},c{var3}".format(var1="a", var2=2, var3=[3]) == "aa,b2,c[3]"
+
+assert "abcba".lstrip("a") == "bcba"
+
+assert "abcba".rstrip("a") == "abcb"
+
+assert "abcba".strip("a") == "bcb"
+
+assert "abc".removeprefix("ab") == "c"
+
+assert "abc".removesuffix("bc") == "a"
+
+assert "abcba".find("b") == 1
+
+assert "abcba".rfind("b") == 3
+
+assert "abcba".count("b") == 2
+
+assert "abc".upper() == "ABC"
+
+assert "ABC".lower() == "abc"
+
+
+assert "abc".matches("a.c")
+
+assert "abbbbbbc".matches("a.*c")
+
+assert not "abc".matches("$b")

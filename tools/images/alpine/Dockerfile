@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine
+FROM golang:1.26-alpine
 LABEL org.opencontainers.image.authors="please <at> thoughtmachine <dot> net"
 LABEL org.opencontainers.image.source=https://github.com/thought-machine/please
 

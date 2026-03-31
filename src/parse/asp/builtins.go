@@ -7,12 +7,14 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/manifoldco/promptui"
@@ -87,6 +89,8 @@ func registerBuiltins(s *scope) {
 		"rpartition":   setNativeCode(s, "rpartition", strRPartition),
 		"startswith":   setNativeCode(s, "startswith", strStartsWith),
 		"endswith":     setNativeCode(s, "endswith", strEndsWith),
+		"ljust":        setNativeCode(s, "ljust", strLJust),
+		"rjust":        setNativeCode(s, "rjust", strRJust),
 		"lstrip":       setNativeCode(s, "lstrip", strLStrip),
 		"rstrip":       setNativeCode(s, "rstrip", strRStrip),
 		"removeprefix": setNativeCode(s, "removeprefix", strRemovePrefix),
@@ -98,6 +102,7 @@ func registerBuiltins(s *scope) {
 		"count":        setNativeCode(s, "count", strCount),
 		"upper":        setNativeCode(s, "upper", strUpper),
 		"lower":        setNativeCode(s, "lower", strLower),
+		"matches":      setNativeCode(s, "matches", strMatches),
 	}
 	s.interpreter.stringMethods["format"].kwargs = true
 	s.interpreter.dictMethods = map[string]*pyFunc{
@@ -540,6 +545,35 @@ func strEndsWith(s *scope, args []pyObject) pyObject {
 	return newPyBool(strings.HasSuffix(string(self), string(x)))
 }
 
+func strLJust(s *scope, args []pyObject) pyObject {
+	return strJust(s, args, true)
+}
+
+func strRJust(s *scope, args []pyObject) pyObject {
+	return strJust(s, args, false)
+}
+
+func strJust(s *scope, args []pyObject, left bool) pyObject {
+	self := string(args[0].(pyString))
+	width := int(args[1].(pyInt))
+	fillchar := string(args[2].(pyString))
+
+	// utf8.RuneCountInString rather than objLen, because objLen returns the length of a string in
+	// bytes rather than characters:
+	s.Assert(utf8.RuneCountInString(fillchar) == 1, "fillchar must be exactly one character long")
+
+	count := width - utf8.RuneCountInString(self)
+	// strings.Repeat's second operand must be non-negative, otherwise it panics. In that case, no
+	// changes need to be made to the input string anyway, so just return a copy of it.
+	if count <= 0 {
+		return pyString(self)
+	}
+	if left {
+		return pyString(self + strings.Repeat(fillchar, count))
+	}
+	return pyString(strings.Repeat(fillchar, count) + self)
+}
+
 func strLStrip(s *scope, args []pyObject) pyObject {
 	self := args[0].(pyString)
 	cutset := args[1].(pyString)
@@ -643,6 +677,20 @@ func strUpper(s *scope, args []pyObject) pyObject {
 func strLower(s *scope, args []pyObject) pyObject {
 	self := string(args[0].(pyString))
 	return pyString(strings.ToLower(self))
+}
+
+func strMatches(s *scope, args []pyObject) pyObject {
+	self := string(args[0].(pyString))
+	pattern := string(args[1].(pyString))
+	compiledRegex := s.interpreter.regexCache.Get(pattern)
+	if compiledRegex == nil {
+		compiled, err := regexp.Compile(pattern)
+		s.Assert(err == nil, "%s", err)
+		// We don't need to check if another task inserted the regex first, as it will be an identical result.
+		s.interpreter.regexCache.Add(pattern, compiled)
+		compiledRegex = compiled
+	}
+	return newPyBool(compiledRegex.MatchString(self))
 }
 
 func boolType(s *scope, args []pyObject) pyObject {

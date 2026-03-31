@@ -1,8 +1,10 @@
 package query
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -11,10 +13,10 @@ import (
 // The targets are printed in the same order as the provided files, separated by a newline
 // Use printFiles to additionally echo the files themselves (i.e. print <file> <target>)
 func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles, ignoreUnknown bool) {
-	targets := graph.AllTargets()
+	inputs := whatInputs(graph.AllTargets(), files, hidden)
 
 	for _, file := range files {
-		if inputLabels := whatInputs(targets, file, hidden); len(inputLabels) > 0 {
+		if inputLabels := inputs[file]; len(inputLabels) > 0 {
 			for _, label := range inputLabels {
 				if printFiles {
 					fmt.Printf("%s ", file)
@@ -27,11 +29,14 @@ func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles, igno
 	}
 }
 
-func whatInputs(targets []*core.BuildTarget, file string, hidden bool) []core.BuildLabel {
-	labels := make(map[core.BuildLabel]struct{})
+func whatInputs(targets []*core.BuildTarget, files []string, hidden bool) map[string]core.BuildLabels {
+	filesMap := make(map[string]map[core.BuildLabel]struct{}, len(files))
+	for _, file := range files {
+		filesMap[file] = make(map[core.BuildLabel]struct{})
+	}
 	for _, target := range targets {
 		for _, source := range target.AllLocalSourcePaths() {
-			if source == file {
+			if labels, ok := filesMap[source]; ok {
 				label := target.Label
 				if !hidden {
 					label = target.Label.Parent()
@@ -40,12 +45,9 @@ func whatInputs(targets []*core.BuildTarget, file string, hidden bool) []core.Bu
 			}
 		}
 	}
-
-	ret := make(core.BuildLabels, 0, len(labels))
-	for label := range labels {
-		ret = append(ret, label)
+	ret := make(map[string]core.BuildLabels, len(filesMap))
+	for file, labels := range filesMap {
+		ret[file] = slices.SortedFunc(maps.Keys(labels), func(a, b core.BuildLabel) int { return cmp.Compare(a.String(), b.String()) })
 	}
-	sort.Sort(ret)
-
 	return ret
 }

@@ -313,7 +313,7 @@ jobs:
        - image: ghcr.io/thought-machine/please_ubuntu:20250318
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
-     resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
+     resource_class: 2xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout
        - attach_workspace:

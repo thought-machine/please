@@ -170,9 +170,11 @@ class ReleaseGen:
             return zf.read(filename).decode('utf-8')
 
     def trigger_build(self, token, project):
-        """Triggers a CircleCI build of a downstream project."""
+        """Triggers a CircleCI pipeline of a downstream project."""
         response = self.session.post(
-            f'https://circleci.com/api/v1.1/project/github/{project}?circle-token={token}'
+            f'https://circleci.com/api/v2/project/gh/{project}/pipeline',
+            headers={'Circle-Token': token},
+            json={'branch': 'master'},
         )
         response.raise_for_status()
 

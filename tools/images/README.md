@@ -16,4 +16,9 @@ The canonical home for these images is Github Container Registry:
 Once you have made your changes, ensure that your local docker daemon is running and you are
 [logged in to Github Container Registry][1], and then run `./tools/images/build.sh`.
 
+Authentication is easiest done with a classic personal access token with the `write:packages` and
+`read:packages` scope. Create this at <https://github.com/settings/tokens>, and then use it as the
+password for `docker login ghcr.io -u YOUR_GITHUB_USERNAME`. You must be a repository admin to
+push the images.
+
 [1]: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry
