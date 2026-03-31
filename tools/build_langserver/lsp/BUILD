@@ -17,6 +17,7 @@ go_library(
         "//rules",
         "//src/core",
         "//src/fs",
+        "//src/parse",
         "//src/parse/asp",
         "//src/plz",
         "//tools/build_langserver/lsp/astutils",
