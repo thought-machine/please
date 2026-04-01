@@ -10,7 +10,7 @@ import (
 )
 
 func TestQueryDeps(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	pkg1 := core.NewPackage("tools/performance")
 	pkg2 := core.NewPackage("third_party/python")
 

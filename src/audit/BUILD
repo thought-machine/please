@@ -3,8 +3,8 @@ go_library(
     srcs = [
         "audit.go",
     ],
-    visibility = ["PUBLIC"],
     pgo_file = "//:pgo",
+    visibility = ["PUBLIC"],
     deps = [
         "//src/cli/logging",
         "//src/fs",

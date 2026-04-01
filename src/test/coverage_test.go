@@ -221,7 +221,7 @@ func TestIstanbulCoverage2(t *testing.T) {
 }
 
 func TestIncrementalStats(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	state.Config.Cover.FileExtension = []string{".go"}
 	cov := core.TestCoverage{
 		Files: map[string][]core.LineCoverage{

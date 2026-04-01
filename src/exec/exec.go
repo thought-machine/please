@@ -111,7 +111,8 @@ func exec(state *core.BuildState, outputMode process.OutputMode, target *core.Bu
 		}
 
 		env = append(core.ExecEnvironment(state, target, filepath.Join(core.RepoRoot, runtimeDir)).ToSlice(), env...)
-		out, _, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, outputMode == process.Default)
+		ctx := context.TODO() // TODO: wire up to signal handling or a timeout
+		out, _, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(ctx, target, runtimeDir, env, time.Duration(math.MaxInt64), false, foreground, sandbox, cmd, outputMode == process.Default)
 		return out, err
 	}); err != nil {
 		log.Error("Failed to execute %s: %s", target, err)

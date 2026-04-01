@@ -63,7 +63,7 @@ func TestExecEnvironment(t *testing.T) {
 	target.AddOutput("out_file1")
 	target.AddDatum(FileLabel{File: "data_file1", Package: "pkg"})
 
-	env := ExecEnvironment(NewDefaultBuildState(), target, "/path/to/runtime/dir")
+	env := ExecEnvironment(NewDefaultBuildState(t.Context()), target, "/path/to/runtime/dir")
 
 	assert.Equal(t, env["PLZ_ENV"], "1")
 	assert.Equal(t, env["DATA"], "pkg/data_file1")
@@ -79,7 +79,7 @@ func TestExecEnvironment(t *testing.T) {
 func TestExecEnvironmentTestTarget(t *testing.T) {
 	t.Setenv("TERM", "my-term")
 
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 
 	rootPkg := NewPackage("")
 	// Set up tool 1.
@@ -122,7 +122,7 @@ func TestExecEnvironmentTestTarget(t *testing.T) {
 func TestExecEnvironmentDebugTarget(t *testing.T) {
 	t.Setenv("TERM", "my-term")
 
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 
 	// Set up tool 1.
 	rootPkg := NewPackage("")
@@ -157,7 +157,7 @@ func TestExecEnvironmentDebugTarget(t *testing.T) {
 func TestExecEnvironmentDebugTestTarget(t *testing.T) {
 	t.Setenv("TERM", "my-term")
 
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 
 	// Set up tool 1.
 	rootPkg := NewPackage("")
@@ -191,7 +191,7 @@ func TestExecEnvironmentDebugTestTarget(t *testing.T) {
 }
 
 func TestDeduplicateEnvVars(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.NeedCoverage = true
 
 	target := NewBuildTarget(NewBuildLabel("pkg", "t"))
