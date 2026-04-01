@@ -34,7 +34,7 @@ func TestCollapseHash2(t *testing.T) {
 }
 
 func TestIterSources(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	graph := buildGraph()
 
 	type SourcePair struct{ Src, Tmp string }

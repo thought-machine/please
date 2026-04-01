@@ -55,7 +55,7 @@ func TestTestDirSubrepo(t *testing.T) {
 }
 
 func TestCanSee(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	target1 := makeTarget1("//src/build/python:lib1", "")
 	target2 := makeTarget1("//src/build/python:lib2", "PUBLIC")
 	target3 := makeTarget1("//src/test/python:lib3", "//src/test/...")
@@ -89,7 +89,7 @@ func TestCanSee(t *testing.T) {
 func TestCanSeeExperimental(t *testing.T) {
 	config := DefaultConfiguration()
 	config.Parse.ExperimentalDir = []string{"experimental"}
-	state := NewBuildState(config)
+	state := NewBuildState(t.Context(), config)
 
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//experimental/user:target2", "PUBLIC")
@@ -112,7 +112,7 @@ func TestCheckDependencyVisibility(t *testing.T) {
 	target7 := makeTarget1("//src/test/python:test1", "", target5, target4)
 	target7.Test = new(TestFields)
 
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.Graph.AddTarget(target1)
 	state.Graph.AddTarget(target2)
 	state.Graph.AddTarget(target3)
@@ -312,7 +312,7 @@ func TestGetCommandConfig(t *testing.T) {
 }
 
 func TestGetCommand(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.Config.Build.Config = "dbg"
 	state.Config.Build.FallbackConfig = "opt"
 	target := makeTarget1("//src/core:target1", "PUBLIC")
@@ -331,7 +331,7 @@ func TestGetCommand(t *testing.T) {
 }
 
 func TestGetTestCommand(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.Config.Build.Config = "dbg"
 	state.Config.Build.FallbackConfig = "opt"
 	target := makeTarget1("//src/core:target1", "PUBLIC")
@@ -612,7 +612,7 @@ func TestAllLocalSourcePaths(t *testing.T) {
 }
 
 func TestAllURLs(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	target := makeTarget1("//src/core:remote1", "")
 	target.IsRemoteFile = true
 	target.AddSource(URLLabel("https://github.com/thought-machine/please"))
@@ -750,7 +750,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	buildFiles := []string{"BUILD_FILE"}
 
 	t.Run("file as source is in package", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -766,7 +766,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as named source is in package", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -782,7 +782,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as source is subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -798,7 +798,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as named source is subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -814,7 +814,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as source is in subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -830,7 +830,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as named source is in subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -846,7 +846,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as data is in package", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -862,7 +862,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as named data is in package", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -878,7 +878,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as data is subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -894,7 +894,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as named data is subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -910,7 +910,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as data is in subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -926,7 +926,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 	})
 
 	t.Run("file as named data is in subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -945,7 +945,7 @@ func TestBuildTargetOwnBuildInputs(t *testing.T) {
 func TestBuildTargetOwnBuildOutput(t *testing.T) {
 	buildFiles := []string{"BUILD_FILE"}
 	t.Run("file is in package", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -958,7 +958,7 @@ func TestBuildTargetOwnBuildOutput(t *testing.T) {
 	})
 
 	t.Run("file is subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")
@@ -971,7 +971,7 @@ func TestBuildTargetOwnBuildOutput(t *testing.T) {
 	})
 
 	t.Run("file is in subpackage", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		state.Config.Parse.BuildFileName = buildFiles
 
 		target := makeTarget1("//src/core/test_data/project", "PUBLIC")

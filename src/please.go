@@ -676,11 +676,12 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"clean": func() int {
+		ctx := context.TODO()
 		config.Cache.DirClean = false // don't run the normal cleaner
 		if len(opts.Clean.Args.Targets) == 0 && core.InitialPackage()[0].PackageName == "" {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
-				state := core.NewBuildState(config)
+				state := core.NewBuildState(ctx, config)
 				clean.Clean(config, cache.NewCache(state), !opts.Clean.NoBackground)
 				return 0
 			}
@@ -885,6 +886,7 @@ var buildFunctions = map[string]func() int{
 		})
 	},
 	"query.whatinputs": func() int {
+		ctx := context.TODO()
 		files := opts.Query.WhatInputs.Args.Files.Get()
 		// Make all these relative to the repo root; many things do not work if they're absolute.
 		for i, file := range files {
@@ -899,7 +901,7 @@ var buildFunctions = map[string]func() int{
 			}
 		}
 		// We only need this to retrieve the BuildFileName
-		state := core.NewBuildState(config)
+		state := core.NewBuildState(ctx, config)
 		labels := make([]core.BuildLabel, 0, len(files))
 		for _, file := range files {
 			labels = append(labels, core.FindOwningPackage(state, file))
@@ -1128,6 +1130,7 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 
 // Please starts & runs the main build process through to its completion.
 func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+	ctx := context.TODO()
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
@@ -1139,7 +1142,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	} else if debug || debugFailingTests {
 		config.Build.Config = "dbg"
 	}
-	state := core.NewBuildState(config)
+	state := core.NewBuildState(ctx, config)
 	state.KeepGoing = opts.BehaviorFlags.KeepGoing
 	state.VerifyHashes = !opts.BehaviorFlags.NoHashVerification
 	// Only one of these two can be passed

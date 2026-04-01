@@ -17,7 +17,7 @@ func TestRegisterSubinclude(t *testing.T) {
 }
 
 func TestRegisterOutput(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
 	pkg := NewPackage("src/core")
@@ -34,7 +34,7 @@ func TestRegisterOutput(t *testing.T) {
 }
 
 func TestRegisterOutputNonFilegroupTargets(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
@@ -45,7 +45,7 @@ func TestRegisterOutputNonFilegroupTargets(t *testing.T) {
 }
 
 func TestRegisterOutputFilegroupAndNonFilegroupTargets(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
@@ -60,7 +60,7 @@ func TestRegisterOutputFilegroupAndNonFilegroupTargets(t *testing.T) {
 }
 
 func TestRegisterOutputFilegroupTargets(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target1.IsFilegroup = true
@@ -89,7 +89,7 @@ func TestAllChildren(t *testing.T) {
 }
 
 func TestFindOwningPackages(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.Config.Parse.BuildFileName = []string{"BUILD_FILE"}
 	pkgs := FindOwningPackages(state, []string{"src/core/test_data/test_subfolder1/whatever.txt"})
 	assert.Equal(t, []BuildLabel{ParseBuildLabel("//src/core/test_data:all", "")}, pkgs)
@@ -103,7 +103,7 @@ func TestIsIncludedIn(t *testing.T) {
 }
 
 func TestVerifyOutputs(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))
 	target2 := NewBuildTarget(ParseBuildLabel("//src/core:target2", ""))
 	pkg := NewPackage("src/core")

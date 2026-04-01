@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 )
 
 func makeTarget2(g *core.BuildGraph, label string, filegroup bool, outputs ...string) *core.BuildTarget {
-	s := core.NewDefaultBuildState()
+	s := core.NewDefaultBuildState(context.Background())
 	l := core.ParseBuildLabel(label, "")
 	t := core.NewBuildTarget(l)
 

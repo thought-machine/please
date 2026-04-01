@@ -1511,7 +1511,7 @@ func executorFromConfig(config *Configuration) *process.Executor {
 // NewBuildState constructs and returns a new BuildState.
 // Everyone should use this rather than attempting to construct it themselves;
 // callers can't initialise all the required private fields.
-func NewBuildState(config *Configuration) *BuildState {
+func NewBuildState(ctx context.Context, config *Configuration) *BuildState {
 	graph := NewGraph()
 	state := &BuildState{
 		Graph:          graph,
@@ -1557,7 +1557,6 @@ func NewBuildState(config *Configuration) *BuildState {
 	for _, exp := range config.Parse.ExperimentalDir {
 		state.experimentalLabels = append(state.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
 	}
-	ctx := context.Background()
 	state.progress.workerCtx, state.progress.workerCancel = context.WithCancel(ctx)
 	state.progress.dispatcherCtx, state.progress.dispatcherCancel = context.WithCancel(ctx)
 	state.progress.dispatcherWg.Add(1)
@@ -1567,8 +1566,8 @@ func NewBuildState(config *Configuration) *BuildState {
 
 // NewDefaultBuildState creates a BuildState for the default configuration.
 // This is useful for tests etc that don't need to customise anything about it.
-func NewDefaultBuildState() *BuildState {
-	return NewBuildState(DefaultConfiguration())
+func NewDefaultBuildState(ctx context.Context) *BuildState {
+	return NewBuildState(ctx, DefaultConfiguration())
 }
 
 // A BuildResult represents a single event in the build process, i.e. a target starting or finishing
