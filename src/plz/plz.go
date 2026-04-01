@@ -77,13 +77,14 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 
 	// Start up all the build workers
+	ctx := state.WorkerContext()
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		for task := range parses {
 			go func(task core.ParseTask) {
 				state.Parses().Add(1)
-				parse.Parse(state, task.Label, task.Dependent, task.Mode)
+				parse.Parse(ctx, state, task.Label, task.Dependent, task.Mode)
 				state.Parses().Add(-1)
 				state.TaskDone()
 			}(task)
@@ -102,9 +103,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 
 				switch task.Type {
 				case core.TestTask:
-					test.Test(state, task.Target, isRemote, int(task.Run))
+					test.Test(ctx, state, task.Target, isRemote, int(task.Run))
 				case core.BuildTask:
-					build.Build(state, task.Target, isRemote)
+					build.Build(ctx, state, task.Target, isRemote)
 				}
 			}(task)
 		}
@@ -131,10 +132,11 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
 func findOriginalTasks(state *core.BuildState, preTargets, targets []core.BuildLabel, arch cli.Arch) {
+	ctx := state.WorkerContext()
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		parse.Parse(state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, core.ParseModeNormal)
+		parse.Parse(ctx, state, core.NewBuildLabel("workspace", "all"), core.OriginalTarget, core.ParseModeNormal)
 	}
 	if arch.Arch != "" && arch != cli.HostArch() {
 		// Set up a new subrepo for this architecture.
@@ -173,7 +175,8 @@ func findOriginalTaskSet(state *core.BuildState, targets []core.BuildLabel, addT
 }
 
 func queueTargetsForDebug(state *core.BuildState, target core.BuildLabel) {
-	parse.Parse(state, target, core.OriginalTarget, core.ParseModeNormal)
+	ctx := state.WorkerContext()
+	parse.Parse(ctx, state, target, core.OriginalTarget, core.ParseModeNormal)
 	t := state.Graph.TargetOrDie(target)
 	for _, tool := range t.AllDebugTools() {
 		if l, ok := tool.Label(); ok {
