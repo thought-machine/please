@@ -39,10 +39,13 @@ def please_export_e2e_test(
         tools["GO"] = [CONFIG.GO.GO_TOOL]
 
     test_cmd = [
+        # Enforce source_repo and expected_repo differences
+        f'(diff -rq "$DATA_SOURCE_REPO" "$DATA_EXPECTED_REPO" && \
+            echo "Source and Expected repos must differ" && exit 1 || true)',
         # Export
         f'plz {config_override} --repo_root="$DATA_SOURCE_REPO" export --output "{EXPORT_DIR}" {targets}',
         # Golden-Master validation with expected repo. Done before any building to avoid plz-out
-        f'diff -r "{exported_repo}" "$DATA_EXPECTED_REPO"',
+        f'diff -ru "{exported_repo}" "$DATA_EXPECTED_REPO"',
         # Tests building the exported target which in turn ensures the sources are included
         f'plz {config_override} --repo_root="{exported_repo}" build {targets}',
     ] + [f'plz {config_override} --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
