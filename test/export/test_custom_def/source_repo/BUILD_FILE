@@ -5,3 +5,9 @@ simple_custom_target(
     srcs = ["file.txt"],
     outs = ["file_simple.out"],
 )
+
+simple_custom_target(
+    name = "dummy",
+    srcs = ["file.txt"],
+    outs = ["dummy.out"],
+)

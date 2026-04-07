@@ -6,3 +6,10 @@ standard_children_custom_target(
     outs = ["file_standard.out"],
     outs_child = ["file_child.out"],
 )
+
+standard_children_custom_target(
+    name = "dummy",
+    srcs = ["file.txt"],
+    outs = ["dummy.out"],
+    outs_child = ["dummy_child.out"],
+)

@@ -5,3 +5,9 @@ package(default_visibility = ["PUBLIC"])
 go_stdlib(
     name = "std",
 )
+
+go_repo(
+    # Dummy, unused target
+    module = "github.com/google/go-cmp",
+    version = "v0.5.6",
+)

@@ -4,3 +4,10 @@ genrule(
     cmd = "echo 'other' > $OUT",
     visibility = ["PUBLIC"],
 )
+
+genrule(
+    name = "dummy",
+    outs = ["dummy.out"],
+    cmd = "echo 'dummy' > $OUT",
+    visibility = ["PUBLIC"],
+)

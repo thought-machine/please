@@ -4,3 +4,8 @@ go_binary(
     name = "go_bin",
     srcs = ["main.go"],
 )
+
+go_binary(
+    name = "dummy",
+    srcs = ["dummy.go"],
+)

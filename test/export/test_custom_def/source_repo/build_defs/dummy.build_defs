@@ -1,10 +1,8 @@
 def dummy_target(
         name:str,
-        srcs:list=[],
         outs:list=[]):
     return genrule(
         name = name,
-        srcs = srcs,
         outs = outs,
         cmd = "echo dummy > $OUT",
     )

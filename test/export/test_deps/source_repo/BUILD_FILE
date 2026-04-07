@@ -15,3 +15,10 @@ genrule(
     outs = ["out2.txt"],
     cmd = "cat $SRCS > $OUT",
 )
+
+genrule(
+    name = "dummy",
+    srcs = ["file1.txt"],
+    outs = ["dummy.out"],
+    cmd = "cat $SRCS > $OUT",
+)
