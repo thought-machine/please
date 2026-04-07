@@ -46,8 +46,8 @@ def please_export_e2e_test(
         f'plz {config_override} --repo_root="$DATA_SOURCE_REPO" export --output "{EXPORT_DIR}" {targets}',
         # Golden-Master validation with expected repo. Done before any building to avoid plz-out
         f'diff -ru "{exported_repo}" "$DATA_EXPECTED_REPO"',
-        # Tests building the exported target which in turn ensures the sources are included
-        f'plz {config_override} --repo_root="{exported_repo}" build {targets}',
+        # Tests building the exported repo which in turn ensures the sources are included
+        f'plz {config_override} --repo_root="{exported_repo}" build //...',
     ] + [f'plz {config_override} --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
 
     test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
