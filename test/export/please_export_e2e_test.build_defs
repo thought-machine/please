@@ -7,7 +7,7 @@ def please_export_e2e_test(
         cmd_on_export:list=[],
         include_go:bool=False):
     """
-    Runs an export e2e test. To use it, create a directory with both a `test_repo` with the targets
+    Runs an export e2e test. To use it, create a directory with both a `source_repo` with the targets
     to be exported and an `expected_repo` with the expected resulting files.
     The validation steps for the e2e test are:
         * It performs a repo-wide diff between the exported files and the `expected_repo`
@@ -18,16 +18,16 @@ def please_export_e2e_test(
 
     Args:
         name (str): Name of the test.
-        dir (str): A relative path to the directory containing `test_repo` and `expected_repo`.
+        dir (str): A relative path to the directory containing `source_repo` and `expected_repo`.
         export_targets (list): Targets to export as part of the test.
         cmd_on_export (list): Optional. Additional commands to run on the exported directory.
         include_go (bool): Optional. A flag to include Go dependencies in the e2e test. Use when
             testing repos that include Go targets.
     """
     EXPORT_DIR = "plz-out/plzexport"
-    test_repo = f"{dir}/test_repo"
+    source_repo = f"{dir}/source_repo"
     expected_repo = f"{dir}/expected_repo"
-    exported_repo = f"$DATA_TEST_REPO/{EXPORT_DIR}"
+    exported_repo = f"$DATA_SOURCE_REPO/{EXPORT_DIR}"
     data = {}
     tools = {}
 
@@ -40,7 +40,7 @@ def please_export_e2e_test(
 
     test_cmd = [
         # Export
-        f'plz {config_override} --repo_root="$DATA_TEST_REPO" export --output "{EXPORT_DIR}" {targets}',
+        f'plz {config_override} --repo_root="$DATA_SOURCE_REPO" export --output "{EXPORT_DIR}" {targets}',
         # Golden-Master validation with expected repo. Done before any building to avoid plz-out
         f'diff -r "{exported_repo}" "$DATA_EXPECTED_REPO"',
         # Tests building the exported target which in turn ensures the sources are included
@@ -50,7 +50,7 @@ def please_export_e2e_test(
     test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
     test_cmd = " && ".join(test_cmd)
 
-    data["TEST_REPO"] = [test_repo]
+    data["SOURCE_REPO"] = [source_repo]
     data["EXPECTED_REPO"] = [expected_repo]
 
     tools["PLEASE"] = ["//package:installed_files|please"]
