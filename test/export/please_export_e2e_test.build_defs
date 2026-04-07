@@ -2,7 +2,6 @@ subinclude("//test/build_defs:build_defs")
 
 def please_export_e2e_test(
         name:str,
-        dir:str,
         export_targets:list,
         cmd_on_export:list=[],
         include_go:bool=False):
@@ -18,15 +17,14 @@ def please_export_e2e_test(
 
     Args:
         name (str): Name of the test.
-        dir (str): A relative path to the directory containing `source_repo` and `expected_repo`.
         export_targets (list): Targets to export as part of the test.
         cmd_on_export (list): Optional. Additional commands to run on the exported directory.
         include_go (bool): Optional. A flag to include Go dependencies in the e2e test. Use when
             testing repos that include Go targets.
     """
     EXPORT_DIR = "plz-out/plzexport"
-    source_repo = f"{dir}/source_repo"
-    expected_repo = f"{dir}/expected_repo"
+    source_repo = "source_repo"
+    expected_repo = "expected_repo"
     exported_repo = f"$DATA_SOURCE_REPO/{EXPORT_DIR}"
     data = {}
     tools = {}
