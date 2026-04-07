@@ -4,7 +4,8 @@
 package export
 
 import (
-	"fmt"
+	"bufio"
+	"io"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
@@ -62,6 +63,45 @@ func ToDir(state *core.BuildState, dir string, noTrim bool, targets []core.Build
 	for _, preload := range state.Config.Parse.PreloadBuildDefs {
 		if err := fs.RecursiveCopy(preload, filepath.Join(dir, preload), 0); err != nil {
 			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
+		}
+	}
+}
+
+// export implements the logic of ToDir, but prevents repeating targets.
+func (e *export) export(target *core.BuildTarget) {
+	if e.exportedTargets[target.Label] {
+		return
+	}
+	log.Warningf("Exporting %v.\n", target.Label)
+	e.exportedTargets[target.Label] = true
+
+	pkg := e.state.Graph.PackageOrDie(target.Label)
+	log.Warningf("%+v", pkg.BuildFileMetadata)
+
+	// We want to export the package that made this subrepo available, but we still need to walk the target deps
+	// as it may depend on other subrepos or first party targets
+	if target.Subrepo != nil {
+		log.Warningf("Subrepo: %v", target.Subrepo.Target)
+		e.export(target.Subrepo.Target)
+	} else if e.noTrim {
+		// Export the whole package, rather than trying to trim the package down to only the targets we need
+		e.exportEntirePackage(target)
+	} else {
+		e.selectBuildStatement(pkg, target)
+		e.exportSources(target)
+	}
+
+	for _, dep := range target.Dependencies() {
+		e.export(dep)
+	}
+	for _, subinclude := range pkg.AllSubincludes(e.state.Graph) {
+		e.export(e.state.Graph.TargetOrDie(subinclude))
+	}
+
+	for stmt := range e.selectedStatements[pkg] {
+		relatedTargets := pkg.BuildFileMetadata.StmtToTarget[stmt]
+		for _, t := range relatedTargets {
+			e.export(t)
 		}
 	}
 }
@@ -162,44 +202,6 @@ func (e *export) selectBuildStatement(pkg *core.Package, target *core.BuildTarge
 	e.selectedStatements[pkg][*stmt] = true
 }
 
-// export implements the logic of ToDir, but prevents repeating targets.
-func (e *export) export(target *core.BuildTarget) {
-	if e.exportedTargets[target.Label] {
-		return
-	}
-	log.Warningf("Exporting %v.\n", target.Label)
-	e.exportedTargets[target.Label] = true
-
-	pkg := e.state.Graph.PackageOrDie(target.Label)
-
-	// We want to export the package that made this subrepo available, but we still need to walk the target deps
-	// as it may depend on other subrepos or first party targets
-	if target.Subrepo != nil {
-		log.Warningf("Subrepo: %v", target.Subrepo.Target)
-		e.export(target.Subrepo.Target)
-	} else if e.noTrim {
-		// Export the whole package, rather than trying to trim the package down to only the targets we need
-		e.exportEntirePackage(target)
-	} else {
-		e.selectBuildStatement(pkg, target)
-		e.exportSources(target)
-	}
-
-	for _, dep := range target.Dependencies() {
-		e.export(dep)
-	}
-	for _, subinclude := range pkg.AllSubincludes(e.state.Graph) {
-		e.export(e.state.Graph.TargetOrDie(subinclude))
-	}
-
-	for stmt := range e.selectedStatements[pkg] {
-		relatedTargets := pkg.BuildFileMetadata.StmtToTarget[stmt]
-		for _, t := range relatedTargets {
-			e.export(t)
-		}
-	}
-}
-
 // writeBuildStatements writes the BUILD file statements to the export directory.
 func (e *export) writeBuildStatements() {
 	log.Warningf("Selected Statements: %v", e.selectedStatements)
@@ -220,37 +222,44 @@ func (e *export) writeBuildStatements() {
 
 func (e *export) writeBuildFile(pkg *core.Package, stmts []core.BuildStatement) {
 	filename := pkg.Filename
+	exportedFilename := filepath.Join(e.targetDir, filename)
+
 	log.Warningf("Writing file: %s", filename)
-	if err := fs.EnsureDir(filepath.Join(e.targetDir, filename)); err != nil {
-		log.Fatalf("failed to create directory for %s: %v", filename, err)
-	}
-	fw, err := os.Create(filepath.Join(e.targetDir, filename))
-	if err != nil {
-		log.Fatalf("failed to create BUILD file %s: %v", filename, err)
-	}
-	defer fw.Close()
 
 	fr, err := os.Open(filename)
 	if err != nil {
-		// TODO ensure only visiting correct files and move Warn to Fatal
-		log.Warningf("failed to open file %s: %v", filename, err)
+		log.Fatalf("failed to open file original BUILD file: %v", err)
 		return
 	}
 	defer fr.Close()
 
+	frStat, err := fr.Stat()
+	if err != nil {
+		log.Fatalf("failed to get original BUILD file status: %v", err)
+	}
+
+	fw, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY, frStat.Mode())
+	if err != nil {
+		log.Fatalf("failed to create and open exported BUILD file for %s: %v", exportedFilename, err)
+	}
+	defer fw.Close()
+
+	writer := bufio.NewWriter(fw)
 	for _, s := range stmts {
-		buff := make([]byte, s.Len())
-		_, err := fr.ReadAt(buff, int64(s.Start))
-		if err != nil {
-			log.Fatalf("failed to read BUILD file %s: %v", filename, err)
+		if _, err := fr.Seek(s.StartPos(), io.SeekStart); err != nil {
+			log.Fatalf("failed to seek in BUILD file %s: %v", filename, err)
 		}
 
-		if _, err := fw.Write(buff); err != nil {
-			log.Fatalf("failed to write statement to %s: %v", filename, err)
+		if _, err := io.CopyN(writer, fr, s.Len()); err != nil {
+			log.Fatalf("failed to copy statement from %s to %s: %v", filename, exportedFilename, err)
 		}
-		if _, err := fmt.Fprintf(fw, "\n#%+v\n\n", s); err != nil {
-			log.Fatalf("failed to write newline to %s: %v", filename, err)
+
+		if _, err := writer.WriteString("\n"); err != nil {
+			log.Fatalf("failed to add newline to %s: %v", exportedFilename, err)
 		}
+	}
+	if err := writer.Flush(); err != nil {
+		log.Fatalf("failed write exported BUILD file %s: %v", exportedFilename, err)
 	}
 }
 

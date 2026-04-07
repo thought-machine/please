@@ -9,12 +9,16 @@ type BuildStatement struct {
 	Start, End int
 }
 
-func (bs *BuildStatement) Len() int {
-	return bs.End - bs.Start
+func (bs *BuildStatement) Len() int64 {
+	return int64(bs.End - bs.Start)
+}
+
+func (bs *BuildStatement) StartPos() int64 {
+	return int64(bs.Start)
 }
 
 type BuildFileMetadata struct {
-	StmtToTarget map[BuildStatement][]*BuildTarget
+	StmtToTarget    map[BuildStatement][]*BuildTarget
 	SubincludeStmts []BuildStatement
 }
 
