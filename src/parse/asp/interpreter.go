@@ -304,14 +304,14 @@ type scope struct {
 	subincludeLabel *core.BuildLabel // If set, label of the subinclude we're currently interpreting
 	parsingFor      *parseTarget
 	parent          *scope
+	callerScope     *scope // caller local scope, nil if not in callstack
 	locals          pyDict
 	config          *pyConfig
 	globber         *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 	mode     core.ParseMode
-	// points to the statement currently being interpreted
-	cursor *Statement
+	cursor   *Statement // points to the statement currently being interpreted
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -428,6 +428,7 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		config:      s.config,
 		Callback:    s.Callback,
 		mode:        mode,
+		cursor:      s.cursor,
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -1082,9 +1083,16 @@ func (s *scope) Constant(expr *Expression) pyObject {
 
 // CurrentBuildStatement creates a new BuildStatement from the statement that is being currently interpreted.
 func (s *scope) CurrentBuildStatement() *core.BuildStatement {
+	stmtScope := s
+	for curr := s; curr != nil; curr = curr.callerScope {
+		if curr.pkg != nil && curr.filename == s.pkg.Filename {
+			stmtScope = curr
+		}
+	}
+	s.NAssert(stmtScope.cursor == nil, "Cursor is not pointing to a statement")
 	return &core.BuildStatement{
-		Start: int(s.cursor.Pos),
-		End:   int(s.cursor.EndPos),
+		Start: int(stmtScope.cursor.Pos),
+		End:   int(stmtScope.cursor.EndPos),
 	}
 }
 
