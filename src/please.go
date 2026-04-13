@@ -1149,7 +1149,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	}
 	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
 	state.TestArgs = opts.Test.StateArgs
-	state.NeedCoverage = opts.Cover.active
+	state.NeedCoverage = opts.Cover.active || config.Build.Config == "cover"
 	state.NeedBuild = shouldBuild
 	state.NeedTests = shouldTest
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
