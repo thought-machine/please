@@ -521,8 +521,8 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	// At this point it's verified all the directories, but not the files themselves.
 	digests := make([]digest.Digest, 0, len(outputs))
 	for _, output := range outputs {
-		// Skip empty directories and symlinks - they don't have digests to verify
-		if output.IsEmptyDirectory || output.SymlinkTarget != "" {
+		// Skip empty directories, symlinks, and any output with an empty digest - they have no blob to verify
+		if output.IsEmptyDirectory || output.SymlinkTarget != "" || output.Digest.Hash == "" {
 			continue
 		}
 		digests = append(digests, output.Digest)
