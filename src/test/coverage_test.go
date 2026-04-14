@@ -156,6 +156,34 @@ func TestParseBlocks(t *testing.T) {
 	assertLine(t, lines, 3, core.Covered)
 }
 
+func TestParseBlocksLineZero(t *testing.T) {
+	lines := parseBlocks([]cover.ProfileBlock{
+		{StartLine: 0, EndLine: 1, Count: 1},
+		{StartLine: 1, EndLine: 2, Count: 1},
+	})
+	if len(lines) != 2 {
+		t.Errorf("Wrong number of lines, should have been %d, was %d", 2, len(lines))
+	}
+	assertLine(t, lines, 1, core.Covered)
+	assertLine(t, lines, 2, core.Covered)
+}
+
+func TestParseBlocksUnsorted(t *testing.T) {
+	lines := parseBlocks([]cover.ProfileBlock{
+		{StartLine: 5, EndLine: 10, Count: 1},
+		{StartLine: 1, EndLine: 3, Count: 1},
+	})
+	if len(lines) != 10 {
+		t.Errorf("Wrong number of lines, should have been %d, was %d", 10, len(lines))
+	}
+	assertLine(t, lines, 1, core.Covered)
+	assertLine(t, lines, 2, core.Covered)
+	assertLine(t, lines, 3, core.Covered)
+	assertLine(t, lines, 4, core.NotExecutable)
+	assertLine(t, lines, 5, core.Covered)
+	assertLine(t, lines, 10, core.Covered)
+}
+
 func assertLine(t *testing.T, lines []core.LineCoverage, i int, expected core.LineCoverage) {
 	t.Helper()
 	i-- // 1-indexed
