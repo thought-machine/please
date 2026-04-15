@@ -43,17 +43,26 @@ func init() {
 	execPromises = make(map[execKey]*execPromise, initCacheSize)
 }
 
-// doExec fork/exec's a command and returns the output as a string.  exec
-// accepts either a string or a list of commands and arguments.  The output from
-// exec() is memoized by default to prevent side effects and aid in performance
-// of duplicate calls to the same command with the same arguments (e.g. `git
-// rev-parse --short HEAD`).  The output from exec()'ed commands must be
-// reproducible.  If storeNegative is true, it is possible for success to return
-// successfully and return an error (i.e. we're expecing a command to fail and
-// want to cache the failure).
+// doExec executes a command and returns what it outputted on stdout.
 //
-// NOTE: Commands that rely on the current working directory must not be cached.
-func doExec(s *scope, cmdIn pyObject, cacheOutput bool, storeNegative bool) (pyObj pyObject, success bool, err error) {
+// cmdIn is the command to execute followed by the command's arguments, either as a list or a
+// space-delimited string.
+//
+// If cacheOutput is true, the command's output is memoised to prevent side effects and improve the
+// performance of duplicate calls to the same command with the same arguments (e.g. `git rev-parse
+// --short HEAD`); to gain any benefit from this, the output from executed commands must be
+// reproducible.
+//
+// If storeNegative is true, the command's output will be memoised (and doExec will return with
+// success = true) even if the command exits with a non-zero exit code; this is useful when
+// a command is expected to fail.
+//
+// If outputAsList is true, pyObj will be a pyList consisting of one pyStr per line of the command's
+// output (i.e. split on newlines); if outputAsList is false, pyObj will be the command's entire
+// output in a single pyStr.
+//
+// NOTE: Commands that rely on the current working directory must not have their output cached.
+func doExec(s *scope, cmdIn pyObject, cacheOutput, storeNegative, outputAsList bool) (pyObj pyObject, success bool, err error) {
 	var argv []string
 	if isType(cmdIn, "str") {
 		argv = strings.Fields(string(cmdIn.(pyString)))
@@ -97,7 +106,7 @@ func doExec(s *scope, cmdIn pyObject, cacheOutput bool, storeNegative bool) (pyO
 			// since we're also returning an error, which tells the caller to
 			// fallthrough their logic if a command returns with a non-zero exit code.
 			outStr = execSetCachedOutput(key, argv, &execOut{out: outStr, success: false})
-			return pyString(outStr), true, err
+			return parseExecOutput(outStr, outputAsList), true, err
 		}
 
 		return pyString(fmt.Sprintf("exec() unable to run command %q: %v", argv, err)), false, err
@@ -107,7 +116,7 @@ func doExec(s *scope, cmdIn pyObject, cacheOutput bool, storeNegative bool) (pyO
 		outStr = execSetCachedOutput(key, argv, &execOut{out: outStr, success: true})
 	}
 
-	return pyString(outStr), true, nil
+	return parseExecOutput(outStr, outputAsList), true, nil
 }
 
 // execFindCmd looks for a command using PATH and returns a cached abspath.
@@ -174,6 +183,22 @@ func execGetCachedOutput(key execKey, args []string) (output *execOut, found boo
 	return outputRaw.(*execOut), true
 }
 
+// parseExecOutput returns the given command output as a pyList consisting of one pyStr per line if
+// asList is true, or as a pyStr containing the entire command output if asList is false.
+func parseExecOutput(output string, asList bool) pyObject {
+	if !asList {
+		return pyString(output)
+	}
+	// We don't know how many lines the command output consists of, but 8 seems like a reasonable
+	// initial upper limit, given that this function is only used to parse the output of git(1)
+	// commands.
+	ret := make([]pyObject, 0, 8)
+	for line := range strings.SplitSeq(output, "\n") {
+		ret = append(ret, pyString(line))
+	}
+	return pyList(ret)
+}
+
 // execGitBranch returns the output of a git_branch() command.
 //
 // git_branch() returns the output of `git symbolic-ref -q --short HEAD`
@@ -187,9 +212,7 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	}
 	cmdIn = append(cmdIn, pyString("HEAD"))
 
-	cacheOutput := true
-	storeNegative := true
-	gitSymRefResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
+	gitSymRefResult, success, err := doExec(s, pyList(cmdIn), true, true, false)
 	switch {
 	case success && err == nil:
 		return gitSymRefResult
@@ -207,8 +230,7 @@ func execGitBranch(s *scope, args []pyObject) pyObject {
 	cmdIn[1] = pyString("show")
 	cmdIn[2] = pyString("-q")
 	cmdIn[3] = pyString("--format=%D")
-	storeNegative = false
-	gitShowResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
+	gitShowResult, success, err := doExec(s, pyList(cmdIn), true, false, false)
 	if !success {
 		// doExec returns a formatted error string
 		return s.Error("exec() %q failed: %v", pyList(cmdIn).String(), err)
@@ -233,10 +255,8 @@ func execGitCommit(s *scope, args []pyObject) pyObject {
 		pyString("HEAD"),
 	}
 
-	cacheOutput := true
-	storeNegative := false
 	// No error handling required since we don't want to retry
-	pyResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
+	pyResult, success, err := doExec(s, pyList(cmdIn), true, false, false)
 	if !success {
 		return s.Error("git_commit() failed: %v", err)
 	}
@@ -291,9 +311,7 @@ func execGitShow(s *scope, args []pyObject) pyObject {
 		pyString(fmt.Sprintf("--format=%s", formatVerb)),
 	}
 
-	cacheOutput := true
-	storeNegative := false
-	pyResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
+	pyResult, success, err := doExec(s, pyList(cmdIn), true, false, false)
 	if !success {
 		return s.Error("git_show() failed: %v", err)
 	}
@@ -313,9 +331,7 @@ func execGitState(s *scope, args []pyObject) pyObject {
 		pyString("--porcelain"),
 	}
 
-	cacheOutput := true
-	storeNegative := false
-	pyResult, success, err := doExec(s, pyList(cmdIn), cacheOutput, storeNegative)
+	pyResult, success, err := doExec(s, pyList(cmdIn), true, false, false)
 	if !success {
 		return s.Error("git_state() failed: %v", err)
 	}
@@ -328,6 +344,34 @@ func execGitState(s *scope, args []pyObject) pyObject {
 		return dirtyLabel
 	}
 	return cleanLabel
+}
+
+// execGitTags implements the built-in git_tags function, which returns the output of
+// `git tag -l --sort=refname --points-at HEAD`. Tag names are returned in lexicographical order.
+func execGitTags(s *scope, args []pyObject) pyObject {
+	cmdIn := []pyObject{
+		pyString("git"),
+		pyString("tag"),
+		pyString("-l"),
+		pyString("--sort=refname"),
+		pyString("--points-at"),
+		pyString("HEAD"),
+	}
+
+	// No special error handling required here - `git tag` exits with exit code 0 even if no tags
+	// point at HEAD.
+	pyResult, success, err := doExec(s, pyList(cmdIn), true, false, true)
+	if !success {
+		return s.Error("git_tags() failed: %v", err)
+	}
+
+	// If no tags point at HEAD, return an empty list, rather than the list consisting of a single
+	// empty string element that doExec returned to us.
+	if list, ok := pyResult.(pyList); ok && list.Len() == 1 && list.Item(0) == pyString("") {
+		return pyList{}
+	}
+
+	return pyResult
 }
 
 // execMakeKey returns an execKey.

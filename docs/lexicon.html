@@ -1493,6 +1493,21 @@
       </table>
     </div>
   </section>
+
+  <section class="mt4">
+    <h3 class="title-3" id="git_tags">
+      git_tags
+    </h3>
+
+    <code class="code-signature">git_tags()</code>
+
+    <p>
+      Returns the list of tags that point to the current commit by running
+      <code class="code">git tag -l --points-at HEAD</code>. The returned list
+      is sorted in lexicographical order. If no tags point to the current
+      commit, an empty list is returned.
+    </p>
+  </section>
 </section>
 
 
