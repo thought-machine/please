@@ -182,7 +182,7 @@ func formatPluginHelpMessage(message, description, docSite string, options map[s
 	if docSite != "" {
 		message += "\n" + docSite + "\n"
 	}
-	configOptions := ""
+	var configOptionsBuilder strings.Builder
 	for k, v := range options {
 		valueType := v.Type
 		if v.Type == "" {
@@ -210,31 +210,33 @@ func formatPluginHelpMessage(message, description, docSite string, options map[s
 		if def != "" {
 			def = " (" + def + ")"
 		}
-		configOptions += fmt.Sprintf("${BLUE}   %s${RESET} ${GREEN}(%s)${RESET}${WHITE}%s${RESET} %s\n",
+		_, _ = fmt.Fprintf(&configOptionsBuilder, "${BLUE}   %s${RESET} ${GREEN}(%s)${RESET}${WHITE}%s${RESET} %s\n",
 			key,
 			valueType,
 			def,
 			v.Help)
 	}
-	if configOptions != "" {
-		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptions
+	if configOptionsBuilder.Len() != 0 {
+		message += "\n${BOLD_YELLOW}This plugin has the following options:${RESET}\n" + configOptionsBuilder.String()
 	}
 
-	buildDefs := ""
+	var buildDefsBuilder strings.Builder
 	for k, v := range buildRulesMap {
-		buildDefs += fmt.Sprintf("${BLUE}   %v${RESET}", strings.ToLower(k))
-		arglist := "("
+		_, _ = fmt.Fprintf(&buildDefsBuilder, "${BLUE}   %v${RESET}", strings.ToLower(k))
+		var argListBuilder strings.Builder
+		argListBuilder.WriteString("(")
 		for i, arg := range v.FuncDef.Arguments {
+			argListBuilder.WriteString(arg.Name)
 			if i != len(v.FuncDef.Arguments)-1 {
-				arglist += arg.Name + ", "
+				argListBuilder.WriteString(", ")
 			} else {
-				arglist += arg.Name + ")"
+				argListBuilder.WriteString(")")
 			}
 		}
-		buildDefs += fmt.Sprintf("${GREEN}%v${RESET}\n", arglist)
+		_, _ = fmt.Fprintf(&buildDefsBuilder, "${GREEN}%v${RESET}\n", argListBuilder.String())
 	}
-	if buildDefs != "" {
-		message += "\n${BOLD_YELLOW}And provides the following build defs:${RESET}\n" + buildDefs
+	if buildDefsBuilder.Len() != 0 {
+		message += "\n${BOLD_YELLOW}And provides the following build defs:${RESET}\n" + buildDefsBuilder.String()
 	}
 
 	return message

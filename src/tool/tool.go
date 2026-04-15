@@ -26,8 +26,9 @@ type Tool string
 
 // Complete suggests completions for a partial tool name.
 func (tool Tool) Complete(match string) []flags.Completion {
-	ret := []flags.Completion{}
-	for k := range matchingTools(core.DefaultConfiguration(), match) {
+	matches := matchingTools(core.DefaultConfiguration(), match)
+	ret := make([]flags.Completion, 0, len(matches))
+	for k := range matches {
 		ret = append(ret, flags.Completion{Item: k})
 	}
 	return ret
@@ -80,8 +81,9 @@ func MatchingTool(config *core.Configuration, tool string) (string, bool) {
 
 // allToolNames returns the names of all available tools.
 func allToolNames(config *core.Configuration, prefix string) []string {
-	ret := []string{}
-	for k := range matchingTools(config, prefix) {
+	matches := matchingTools(config, prefix)
+	ret := make([]string, 0, len(matches))
+	for k := range matches {
 		ret = append(ret, k)
 	}
 	sort.Strings(ret)

@@ -87,7 +87,8 @@ func getRules(buildDefsDirs []string) *rules.Rules {
 		}
 	}
 
-	args := []string{"--noupdate", "query", "rules"}
+	args := make([]string, 0, 3+len(defs))
+	args = append(args, []string{"--noupdate", "query", "rules"}...)
 	cmd := exec.Command(opts.Please, append(args, defs...)...)
 	var outb, errb bytes.Buffer
 	cmd.Stdout = &outb

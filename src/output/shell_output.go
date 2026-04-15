@@ -630,13 +630,16 @@ var errorMessageRe = deferredregex.DeferredRegex{Re: `^([^ ]+\.[^: /]+):([0-9]+)
 
 // unbuiltTargetsMessage returns a message for any targets that are supposed to build but haven't yet.
 func unbuiltTargetsMessage(graph *core.BuildGraph) string {
-	msg := ""
+	var msgBuilder strings.Builder
 	for _, target := range graph.AllTargets() {
 		if target.State() == core.Active {
-			msg += fmt.Sprintf("  %s", target.Label)
+			_, _ = fmt.Fprintf(&msgBuilder, "  %s", target.Label)
 		} else if target.State() == core.Pending {
-			msg += fmt.Sprintf("  %s (pending build)\n", target.Label)
+			_, _ = fmt.Fprintf(&msgBuilder, "  %s (pending build)\n", target.Label)
 		}
+	}
+	if msgBuilder.Len() == 0 {
+		return "\nThe following targets have not yet built:\n" + msgBuilder.String()
 	}
 	if msg != "" {
 		return "\nThe following targets have not yet built:\n" + msg

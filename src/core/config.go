@@ -49,7 +49,7 @@ const ArchConfigFileName string = ".plzconfig_" + OsArch
 const LocalConfigFileName string = ".plzconfig.local"
 
 // MachineConfigFileName is the file name for the machine-level config - can use this to override
-// things for a particular machine (eg. build machine with different caching behaviour).
+// things for a particular machine (e.g. build machine with different caching behaviour).
 const MachineConfigFileName = "/etc/please/plzconfig"
 
 // UserConfigFileName is the file name for user-specific config (for all their repos).
@@ -122,7 +122,7 @@ func checkPluginVersionRequirements(config *Configuration) {
 
 // ReadDefaultConfigFiles reads all the config files from the default locations and
 // merges them into a config object.
-// The repo root must have already have been set before calling this.
+// The repo root must have already been set before calling this.
 func ReadDefaultConfigFiles(fs iofs.FS, profiles []ConfigProfile) (*Configuration, error) {
 	s := make([]string, len(profiles))
 	for i, p := range profiles {
@@ -548,7 +548,7 @@ type Configuration struct {
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
-		DisableCoverage          []string     `help:"Disables coverage for tests that have any of these labels spcified."`
+		DisableCoverage          []string     `help:"Disables coverage for tests that have any of these labels specified."`
 		Upload                   cli.URL      `help:"URL to upload test results to (in XML format)"`
 		UploadGzipped            bool         `help:"True to upload the test results gzipped."`
 		StoreTestOutputOnSuccess bool         `help:"True to store stdout and stderr in the test results for successful tests."`
@@ -619,7 +619,7 @@ type Configuration struct {
 		WheelRepo           cli.URL  `help:"Defines a location for a remote repo that python_wheel rules will download from. See python_wheel for more information." var:"PYTHON_WHEEL_REPO"`
 		UsePyPI             bool     `help:"Whether or not to use PyPI for pip_library rules or not. Defaults to true, if you disable this you will presumably want to set DefaultPipRepo to use one of your own.\nIs overridden by the use_pypi argument to pip_library." var:"USE_PYPI"`
 		WheelNameScheme     []string `help:"Defines a custom templatized wheel naming scheme. Templatized variables should be surrounded in curly braces, and the available options are: url_base, package_name, version and initial (the first character of package_name). The default search pattern is '{url_base}/{package_name}-{version}-${{OS}}-${{ARCH}}.whl' along with a few common variants." var:"PYTHON_WHEEL_NAME_SCHEME"`
-		InterpreterOptions  string   `help:"Options to pass to the python interpeter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
+		InterpreterOptions  string   `help:"Options to pass to the python interpreter, when writing shebangs for pex executables." var:"PYTHON_INTERPRETER_OPTIONS"`
 		DisableVendorFlags  bool     `help:"Disables injection of vendor specific flags for pip while using pip_library. The option can be useful if you are using something like Pyenv, and the passing of additional flags or configuration that are vendor specific, e.g. --system, breaks your build." var:"DISABLE_VENDOR_FLAGS"`
 	} `help:"Please has built-in support for compiling Python.\nPlease's Python artifacts are pex files, which are essentially self-executable zip files containing all needed dependencies, bar the interpreter itself. This fits our aim of at least semi-static binaries for each language.\nSee https://github.com/pantsbuild/pex for more information.\nNote that due to differences between the environment inside a pex and outside some third-party code may not run unmodified (for example, it cannot simply open() files). It's possible to work around a lot of this, but if it all becomes too much it's possible to mark pexes as not zip-safe which typically resolves most of it at a modest speed penalty." exclude:"true"`
 	Java struct {
@@ -1042,7 +1042,7 @@ func (config *Configuration) UpdateArgsWithAliases(args []string) []string {
 		for k, v := range config.Alias {
 			if arg == k {
 				aliasInvocationCount.WithLabelValues(k, metrics.CILabel).Inc()
-				// We could insert every token in v into os.Args at this point and then we could have
+				// We could insert every token in v into os.Args at this point, and then we could have
 				// aliases defined in terms of other aliases but that seems rather like overkill so just
 				// stick the replacement in wholesale instead.
 				// Do not ask about the inner append and the empty slice.
