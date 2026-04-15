@@ -125,6 +125,7 @@ func registerBuiltins(s *scope) {
 		setNativeCode(s, "git_commit", execGitCommit)
 		setNativeCode(s, "git_show", execGitShow)
 		setNativeCode(s, "git_state", execGitState)
+		setNativeCode(s, "git_tags", execGitTags)
 	}
 	setLogCode(s, "debug", log.Debug)
 	setLogCode(s, "info", log.Info)

@@ -499,7 +499,7 @@ type Configuration struct {
 		PreloadSubincludes []BuildLabel `help:"Subinclude targets to preload by the parser before loading any BUILD files.\nSubincludes can be slow so it's recommended to use PreloadBuildDefs where possible." example:"///pleasings//python:requirements"`
 		BuildDefsDir       []string     `help:"Directory to look in when prompted for help topics that aren't known internally." example:"build_defs"`
 		NumThreads         int          `help:"Number of parallel parse operations to run.\nIs overridden by the --num_threads command line flag." example:"6"`
-		GitFunctions       bool         `help:"Activates built-in functions git_branch, git_commit, git_show and git_state. If disabled they will not be usable at parse time."`
+		GitFunctions       bool         `help:"Activates built-in functions git_branch, git_commit, git_show, git_state and git_tags. If disabled they will not be usable at parse time."`
 	} `help:"The [parse] section in the config contains settings specific to parsing files."`
 	Display struct {
 		UpdateTitle  bool   `help:"Updates the title bar of the shell window Please is running in as the build progresses. This isn't on by default because not everyone's shell is configured to reset it again after and we don't want to alter it forever."`

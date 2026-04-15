@@ -244,6 +244,8 @@ def git_show(fmt:str) -> str:
     fail('Disabled in config')
 def git_state(clean_label:str="clean", dirty_label:str="dirty") -> str:
     fail('Disabled in config')
+def git_tags() -> list:
+    fail("Disabled in config")
 
 def debug(args):
     pass
