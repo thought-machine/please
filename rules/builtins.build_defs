@@ -237,15 +237,15 @@ def tag(name:str, tag:str):
     pass
 
 def git_branch(short:bool=True) -> str:
-    fail('Disabled in config')
+    fail("git_branch is disabled by configuration; enable it by setting Parse.GitFunctions to true")
 def git_commit() -> str:
-    fail('Disabled in config')
+    fail("git_commit is disabled by configuration; enable it by setting Parse.GitFunctions to true")
 def git_show(fmt:str) -> str:
-    fail('Disabled in config')
+    fail("git_show is disabled by configuration; enable it by setting Parse.GitFunctions to true")
 def git_state(clean_label:str="clean", dirty_label:str="dirty") -> str:
-    fail('Disabled in config')
+    fail("git_state is disabled by configuration; enable it by setting Parse.GitFunctions to true")
 def git_tags() -> list:
-    fail("Disabled in config")
+    fail("git_tags is disabled by configuration; enable it by setting Parse.GitFunctions to true")
 
 def debug(args):
     pass
