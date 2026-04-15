@@ -641,9 +641,6 @@ func unbuiltTargetsMessage(graph *core.BuildGraph) string {
 	if msgBuilder.Len() == 0 {
 		return "\nThe following targets have not yet built:\n" + msgBuilder.String()
 	}
-	if msg != "" {
-		return "\nThe following targets have not yet built:\n" + msg
-	}
 	return ""
 }
 
