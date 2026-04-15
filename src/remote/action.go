@@ -127,7 +127,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target),
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		Arguments:            c.sandboxArgs(target.Sandbox, process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError)),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
 		OutputPaths:          outs,
 	}, err
@@ -167,7 +167,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 				},
 			},
 		},
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		Arguments:            c.sandboxArgs(target.Test.Sandbox, process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError)),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
 		OutputPaths:          paths,
 	}, err
@@ -572,10 +572,31 @@ func reallyTranslateOS(os string) string {
 	}
 }
 
+// sandboxArgs prepends the configured external sandbox tool to the given argument list,
+// matching what local execution does in exec_linux.go for the non-plz-sandbox case.
+// Returns args unchanged if sandboxing is disabled or no external tool is configured.
+func (c *Client) sandboxArgs(sandbox bool, args []string) []string {
+	if !sandbox {
+		return args
+	}
+	tool := c.state.Config.Sandbox.Tool
+	if tool == "" {
+		// Built-in plz sandbox re-execs into the local plz binary; not supported remotely.
+		return args
+	}
+	return append([]string{tool}, args...)
+}
+
 // buildEnv translates the set of environment variables for this target to a proto.
 func (c *Client) buildEnv(target *core.BuildTarget, env core.BuildEnv, sandbox bool) []*pb.Command_EnvironmentVariable {
 	if sandbox {
 		env["SANDBOX"] = "true"
+		if c.state.Config.Sandbox.Tool != "" {
+			// Mirror what local execution sets so the sandbox tool sees the same interface.
+			// SHARE_NETWORK/SHARE_MOUNT=0 means "don't share" i.e. sandbox that namespace.
+			env["SHARE_NETWORK"] = "0"
+			env["SHARE_MOUNT"] = "0"
+		}
 	}
 	if target != nil && target.IsBinary {
 		env["_BINARY"] = "true"
