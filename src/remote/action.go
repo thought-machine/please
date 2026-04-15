@@ -116,7 +116,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 			Arguments: []string{
 				"fetch", strings.Join(target.AllURLs(state), " "), "verify", strings.Join(target.Hashes, " "),
 			},
-			EnvironmentVariables: c.buildEnv(target, map[string]string{}, false),
+			EnvironmentVariables: c.buildEnv(target, map[string]string{}, process.NoSandbox),
 			OutputPaths:          outs,
 		}, nil
 	}
@@ -128,7 +128,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target),
 		Arguments:            c.sandboxArgs(target.Sandbox, process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError)),
-		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
+		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), process.NewSandboxConfig(target.Sandbox, target.Sandbox)),
 		OutputPaths:          outs,
 	}, err
 }
@@ -168,7 +168,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 			},
 		},
 		Arguments:            c.sandboxArgs(target.Test.Sandbox, process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError)),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
+		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), process.NewSandboxConfig(target.Test.Sandbox, target.Test.Sandbox)),
 		OutputPaths:          paths,
 	}, err
 }
@@ -182,7 +182,7 @@ func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarge
 	return &pb.Command{
 		Platform:             c.platform,
 		Arguments:            outs,
-		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(state), false),
+		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(state), process.NoSandbox),
 	}, nil
 }
 
@@ -588,14 +588,20 @@ func (c *Client) sandboxArgs(sandbox bool, args []string) []string {
 }
 
 // buildEnv translates the set of environment variables for this target to a proto.
-func (c *Client) buildEnv(target *core.BuildTarget, env core.BuildEnv, sandbox bool) []*pb.Command_EnvironmentVariable {
-	if sandbox {
+func (c *Client) buildEnv(target *core.BuildTarget, env core.BuildEnv, sandbox process.SandboxConfig) []*pb.Command_EnvironmentVariable {
+	if sandbox != process.NoSandbox {
 		env["SANDBOX"] = "true"
 		if c.state.Config.Sandbox.Tool != "" {
-			// Mirror what local execution sets so the sandbox tool sees the same interface.
-			// SHARE_NETWORK/SHARE_MOUNT=0 means "don't share" i.e. sandbox that namespace.
-			env["SHARE_NETWORK"] = "0"
-			env["SHARE_MOUNT"] = "0"
+			shareNetwork := "1"
+			if sandbox.Network {
+				shareNetwork = "0"
+			}
+			shareMount := "1"
+			if sandbox.Mount {
+				shareMount = "0"
+			}
+			env["SHARE_NETWORK"] = shareNetwork
+			env["SHARE_MOUNT"] = shareMount
 		}
 	}
 	if target != nil && target.IsBinary {
