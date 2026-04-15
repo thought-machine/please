@@ -1021,7 +1021,7 @@ func (target *BuildTarget) SourcePaths(graph *BuildGraph, sources []BuildInput) 
 // sourcePaths returns the source paths for a single source.
 func (target *BuildTarget) sourcePaths(graph *BuildGraph, source BuildInput, f buildPathsFunc) []string {
 	if label, ok := source.nonOutputLabel(); ok {
-		ret := []string{}
+		var ret []string // nolint:prealloc
 		for _, providedLabel := range graph.TargetOrDie(label).ProvideFor(target) {
 			ret = append(ret, f(providedLabel, graph)...)
 		}

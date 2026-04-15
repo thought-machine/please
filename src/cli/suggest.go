@@ -2,6 +2,7 @@ package cli
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/texttheater/golang-levenshtein/levenshtein"
 )
@@ -32,18 +33,20 @@ func PrettyPrintSuggestion(needle string, haystack []string, maxSuggestionDistan
 		return ""
 	}
 	// Obviously there's now more code to pretty-print the suggestions than to do the calculation...
-	msg := "\nMaybe you meant "
+	var msgBuilder strings.Builder
+	msgBuilder.WriteString("\nMaybe you meant ")
 	for i, o := range options {
 		if i > 0 {
 			if i < len(options)-1 {
-				msg += " , " // Leave a space before the comma so you can select them without getting the question mark
+				msgBuilder.WriteString(" , ") // Leave a space before the comma so you can select them without getting the question mark
 			} else {
-				msg += " or "
+				msgBuilder.WriteString(" or ")
 			}
 		}
-		msg += o
+		msgBuilder.WriteString(o)
 	}
-	return msg + " ?" // Leave a space so you can select them without getting the question mark
+	msgBuilder.WriteString(" ?") // Leave a space so you can select them without getting the question mark
+	return msgBuilder.String()
 }
 
 type suggestion struct {

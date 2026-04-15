@@ -257,7 +257,7 @@ func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, ep, in
 		}
 		return base64.RawURLEncoding.EncodeToString(h)
 	}
-	output := ""
+	var outputBuilder strings.Builder
 	if ep == "" {
 		for _, out := range dep.Outputs() {
 			if allOutputs || out == in {
@@ -266,24 +266,23 @@ func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, ep, in
 					if err != nil {
 						log.Fatalf("Couldn't calculate relative path: %s", err)
 					}
-					output += quote(abs) + " "
+					outputBuilder.WriteString(quote(abs))
 				} else {
-					output += quote(fileDestination(target, dep, out, dir, outPrefix, test)) + " "
+					outputBuilder.WriteString(quote(fileDestination(target, dep, out, dir, outPrefix, test)))
 				}
+				outputBuilder.WriteString(" ")
 				if dir {
 					break
 				}
 			}
 		}
-	} else {
-		out, ok := dep.EntryPoints[ep]
-		if !ok {
-			log.Fatalf("%v has no entry point %s", dep, ep)
-		}
-		output = quote(fileDestination(target, dep, out, dir, outPrefix, test))
+		return strings.TrimRight(outputBuilder.String(), " ")
 	}
-
-	return strings.TrimRight(output, " ")
+	out, ok := dep.EntryPoints[ep]
+	if !ok {
+		log.Fatalf("%v has no entry point %s", dep, ep)
+	}
+	return quote(fileDestination(target, dep, out, dir, outPrefix, test))
 }
 
 func fileDestination(target, dep *BuildTarget, out string, dir, outPrefix, test bool) string {

@@ -75,10 +75,10 @@ type errCycle struct {
 }
 
 func (err *errCycle) Error() string {
-	labels := make([]string, len(err.Cycle))
+	labels := make([]string, len(err.Cycle)+1)
 	for i, t := range err.Cycle {
 		labels[i] = t.Label.String()
 	}
-	labels = append(labels, labels[0])
+	labels[len(labels)-1] = labels[0]
 	return fmt.Sprintf("Dependency cycle found:\n%s\nSorry, but you'll have to refactor your build files to avoid this cycle", strings.Join(labels, "\n -> "))
 }

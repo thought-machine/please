@@ -609,19 +609,18 @@ func reencodeSRI(target *core.BuildTarget, h string) string {
 
 // dialOpts returns a set of dial options to apply based on the config.
 func (c *Client) dialOpts() ([]grpc.DialOption, error) {
-	opts := []grpc.DialOption{
-		grpc.WithStatsHandler(c.stats),
-		// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400)),
-		grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
-		grpc.WithChainStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
-	}
+	opts := make([]grpc.DialOption, 4, 5)
+	opts[0] = grpc.WithStatsHandler(c.stats)
+	// Set an arbitrarily large (400MB) max message size so it isn't a limitation.
+	opts[1] = grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400))
+	opts[2] = grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor)
+	opts[3] = grpc.WithChainStreamInterceptor(grpc_prometheus.StreamClientInterceptor)
 	if c.state.Config.Remote.TokenFile == "" {
 		return opts, nil
 	}
 	token, err := os.ReadFile(c.state.Config.Remote.TokenFile)
 	if err != nil {
-		return opts, fmt.Errorf("Failed to load token from file: %s", err)
+		return opts, fmt.Errorf("failed to load token from file: %s", err)
 	}
 	return append(opts, grpc.WithPerRPCCredentials(preSharedToken(string(token)))), nil
 }

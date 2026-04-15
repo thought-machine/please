@@ -67,15 +67,15 @@ func (g *git) ChangesIn(diffSpec string, relativeTo string) []string {
 	if relativeTo == "" {
 		relativeTo = g.repoRoot
 	}
-	files := make([]string, 0)
 	command := []string{"diff-tree", "--no-commit-id", "--name-only", "-r", diffSpec}
 	out, err := exec.Command("git", command...).CombinedOutput()
 	if err != nil {
 		log.Fatalf("unable to determine changes: %s\nOutput:\n%s", err, string(out))
 	}
 	output := strings.Split(string(out), "\n")
-	for _, o := range output {
-		files = append(files, g.fixGitRelativePath(strings.TrimSpace(o), relativeTo))
+	files := make([]string, len(output))
+	for i, o := range output {
+		files[i] = g.fixGitRelativePath(strings.TrimSpace(o), relativeTo)
 	}
 	return files
 }
@@ -86,7 +86,8 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 		relativeTo = g.repoRoot
 	}
 	relSuffix := []string{"--", relativeTo}
-	command := []string{"diff", "--name-only", "HEAD"}
+	command := make([]string, 0, 3+len(relSuffix))
+	command = append(command, []string{"diff", "--name-only", "HEAD"}...)
 
 	out, err := exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
 	if err != nil {
@@ -97,9 +98,10 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 	if fromCommit != "" {
 		// Grab the diff from the merge-base to HEAD using ... syntax.  This ensures we have just
 		// the changes that have occurred on the current branch.
-		command = []string{"diff", "--name-only", fromCommit + "...HEAD"}
-		command = append(command, relSuffix...)
-		out, err = exec.Command("git", command...).CombinedOutput()
+		fromCommand := make([]string, 0, 3+len(relSuffix))
+		fromCommand = append(fromCommand, []string{"diff", "--name-only", fromCommit + "...HEAD"}...)
+		fromCommand = append(fromCommand, relSuffix...)
+		out, err = exec.Command("git", fromCommand...).CombinedOutput()
 		if err != nil {
 			log.Fatalf("unable to check diff vs. %s: %s\nOutput:\n%s", fromCommit, err, string(out))
 		}
@@ -107,8 +109,9 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 		files = append(files, committedChanges...)
 	}
 	if includeUntracked {
-		command = []string{"ls-files", "--other", "--exclude-standard"}
-		out, err = exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
+		includeCommand := make([]string, 0, 3+len(relSuffix))
+		includeCommand = append(includeCommand, []string{"ls-files", "--other", "--exclude-standard"}...)
+		out, err = exec.Command("git", append(includeCommand, relSuffix...)...).CombinedOutput()
 		if err != nil {
 			log.Fatalf("unable to determine untracked files: %s\nOutput:\n%s", err, string(out))
 		}
@@ -116,9 +119,9 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 		files = append(files, untracked...)
 	}
 	// git will report changed files relative to the worktree: re-relativize to relativeTo
-	normalized := make([]string, 0)
-	for _, f := range files {
-		normalized = append(normalized, g.fixGitRelativePath(strings.TrimSpace(f), relativeTo))
+	normalized := make([]string, len(files))
+	for i, f := range files {
+		normalized[i] = g.fixGitRelativePath(strings.TrimSpace(f), relativeTo)
 	}
 	return normalized
 }

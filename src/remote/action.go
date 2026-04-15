@@ -90,7 +90,8 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	// We can't predict what variables like this should be so we sneakily bung something on
 	// the front of the command. It'd be nicer if there were a better way though...
-	var commandPrefix = "export TMP_DIR=\"`pwd`\" && export HOME=$TMP_DIR && "
+	var commandPrefixBuilder strings.Builder
+	commandPrefixBuilder.WriteString("export TMP_DIR=\"`pwd`\" && export HOME=$TMP_DIR && ")
 
 	// Similarly, we need to export these so that things like $TMP_DIR get expanded correctly.
 	if len(target.Env) > 0 {
@@ -100,13 +101,13 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			commandPrefix += fmt.Sprintf("export %s=%s && ", k, shellescape.Quote(target.Env[k]))
+			_, _ = fmt.Fprintf(&commandPrefixBuilder, "export %s=%s && ", k, shellescape.Quote(target.Env[k]))
 		}
 	}
 
 	outs := target.AllOutputs()
 	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
-		commandPrefix += `export OUT="$TMP_DIR/$OUT" && `
+		commandPrefixBuilder.WriteString(`export OUT="$TMP_DIR/$OUT" && `)
 	}
 	if target.IsRemoteFile {
 		// Synthesize something for the Command proto. We never execute this, but it does get hashed for caching
@@ -127,7 +128,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target),
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		Arguments:            process.BashCommand(c.shellPath, commandPrefixBuilder.String()+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
 		OutputPaths:          outs,
 	}, err
