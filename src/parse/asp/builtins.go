@@ -913,14 +913,14 @@ func mapFunc(s *scope, args []pyObject) pyObject {
 	s.Assert(isFunc, "Argument mapper must be callable, not %s", args[0].Type())
 	s.Assert(isList, "Argument seq must be a list, not %s", args[1].Type())
 
-	var ret pyList
-	for _, li := range l {
+	ret := make(pyList, len(l))
+	for i, li := range l {
 		c := &Call{
 			Arguments: []CallArgument{{
 				Value: Expression{optimised: &optimisedExpression{Constant: li}},
 			}},
 		}
-		ret = append(ret, mapper.Call(s, c))
+		ret[i] = mapper.Call(s, c)
 	}
 	return ret
 }
