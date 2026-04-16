@@ -1,6 +1,0 @@
-subinclude("///go//build_defs:go")
-
-go_binary(
-    name = "go_bin",
-    srcs = ["main.go"],
-)
