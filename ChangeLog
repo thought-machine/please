@@ -2,8 +2,8 @@ Version 17.30.0
 ---------------
     * Support go-to-definition for plugin-defined rules (#3491)
     * Fix typos, and slight performance tweaks (#3522, #3524)
-    * Add `git_tags()` built-in function to list git tags at build time (#3523)
-    * Make git_* built-in function failures more informative (#3525)
+    * Add `git_tags()` built-in function to list the tags that point at the repo's `HEAD` (#3523)
+    * Make `git_*` built-in function failures more informative (#3525)
     * Fix go coverage when parsing blocks out of order (#3519)
     * Update to golang 1.26 (#3498)
 
