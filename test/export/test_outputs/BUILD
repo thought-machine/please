@@ -11,8 +11,6 @@ please_repo_e2e_test(
         "EXPECTED": [EXPECTED_FILES],
     },
     defer_cmd = [
-        f'test -f "{OUTPUT_DIR}/some_output.txt"',
-        f'test ! -f "{OUTPUT_DIR}/BUILD_FILE"',
         # Golden-Master validation with expected files. Test data is added to HOME dir.
         f'diff -ru "{OUTPUT_DIR}" "$HOME/$DATA_EXPECTED"',
     ],
