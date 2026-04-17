@@ -1,0 +1,15 @@
+subinclude("//build_defs:custom_build_def")
+
+custom_target(
+    name = "custom_target",
+    srcs = ["file.txt"],
+    outs = ["file.out"],
+    outs_adjacent = ["file_adjacent.out"],
+)
+
+custom_target(
+    name = "dummy",
+    srcs = ["file.txt"],
+    outs = ["dummy.out"],
+    outs_adjacent = ["dummy_adjacent.out"],
+)

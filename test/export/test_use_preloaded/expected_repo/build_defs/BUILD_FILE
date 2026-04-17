@@ -1,0 +1,5 @@
+filegroup(
+    name = "preloaded_build_def",
+    srcs = ["preloaded.build_defs"],
+    visibility = ["PUBLIC"],
+)

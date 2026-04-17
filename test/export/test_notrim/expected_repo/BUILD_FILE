@@ -1,0 +1,13 @@
+genrule(
+    name = "target1",
+    srcs = ["file1.txt"],
+    outs = ["out1.txt"],
+    cmd = "cat $SRCS > $OUT",
+)
+
+genrule(
+    name = "unrelated",
+    srcs = ["file2.txt"],
+    outs = ["out2.txt"],
+    cmd = "cat $SRCS > $OUT",
+)

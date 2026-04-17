@@ -1,0 +1,24 @@
+genrule(
+    name = "dep1",
+    srcs = ["file1.txt"],
+    outs = ["out1.txt"],
+    cmd = "cat $SRCS > $OUT",
+)
+
+genrule(
+    name = "dep2",
+    srcs = [
+        "file2.txt",
+        ":dep1",
+        "//other_deps:other_target",
+    ],
+    outs = ["out2.txt"],
+    cmd = "cat $SRCS > $OUT",
+)
+
+genrule(
+    name = "dummy",
+    srcs = ["file1.txt"],
+    outs = ["dummy.out"],
+    cmd = "cat $SRCS > $OUT",
+)

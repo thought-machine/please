@@ -1,0 +1,5 @@
+filegroup(
+    name = "custom_build_def",
+    srcs = ["custom.build_defs"],
+    visibility = ["PUBLIC"],
+)

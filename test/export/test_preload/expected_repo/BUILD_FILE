@@ -1,0 +1,5 @@
+genrule(
+    name = "native_target",
+    outs = ["file_no_preload.out"],
+    cmd = "echo 'woosh' > $OUT",
+)

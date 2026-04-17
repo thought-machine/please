@@ -1,0 +1,72 @@
+subinclude("//test/build_defs:build_defs")
+
+def please_export_e2e_test(
+        name:str,
+        export_targets:list,
+        cmd_on_export:list=[],
+        source_repo:str="source_repo",
+        expected_repo:str="expected_repo",
+        flags:str="",
+        enforce_different_repos:bool=True):
+    """
+    Runs an export e2e test. To use it, create a directory with both a `source_repo` with the targets
+    to be exported and an `expected_repo` with the expected resulting files.
+    The validation steps for the e2e test are:
+        * It performs a repo-wide diff between the exported files and the `expected_repo`
+        * Builds the exported target to ensure the exported repo, and consequently the
+        `expected_repo`, include valid sources and dependencies to build the target.
+        * Optionally you can specify additional commands to run on the exported directory by
+        passing them to `cmd_on_export`.
+
+    Args:
+        name (str): Name of the test.
+        export_targets (list): Targets to export as part of the test.
+        cmd_on_export (list): Optional. Additional commands to run on the exported directory.
+        source_repo (str): Optional. Repository to export targets from. Defaults to "source_repo".
+        expected_repo (str): Optional. Repository containing the expected results for golden-master
+            validation. Defaults to "expected_repo".
+        flags (str): Optional. Additional flags for the export command.
+        enforce_different_repos (bool): Optional. Ensures we test the trimming capabilities of the
+            export by enforcing that the source and expected repos differ in content. Default to True.
+    """
+    EXPORT_DIR = "plz-out/plzexport"
+    exported_repo = f"$DATA_SOURCE_REPO/{EXPORT_DIR}"
+    data = {}
+    tools = {}
+
+    targets = " ".join(export_targets)
+
+    test_cmd = []
+    if enforce_different_repos:
+        test_cmd += [
+            # Enforce source_repo and expected_repo differences
+            f'(diff -rq "$DATA_SOURCE_REPO" "$DATA_EXPECTED_REPO" && \
+                echo "Source and Expected repos must differ" && exit 1 || true)',
+        ]
+
+    test_cmd += [
+        # Export
+        f'plz --repo_root="$DATA_SOURCE_REPO" export --output "{EXPORT_DIR}" {flags} {targets}',
+        # Golden-Master validation with expected repo. Done before any building to avoid plz-out
+        f'diff -ru "{exported_repo}" "$DATA_EXPECTED_REPO"',
+        # Tests building the exported repo which in turn ensures the sources are included
+        f'plz --repo_root="{exported_repo}" build //...',
+    ] + [f'plz --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
+
+    test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
+    test_cmd = " && ".join(test_cmd)
+
+    data["SOURCE_REPO"] = [source_repo]
+    data["EXPECTED_REPO"] = [expected_repo]
+
+    tools["PLEASE"] = ["//package:installed_files|please"]
+
+    return gentest(
+        name = name,
+        data = data,
+        labels = ["plz_e2e_test", "e2e"],
+        no_test_output = True,
+        sandbox = False,
+        test_cmd = test_cmd,
+        test_tools = tools,
+    )

@@ -1,0 +1,19 @@
+filegroup(
+    name = "simple_build_def",
+    srcs = ["simple.build_defs"],
+    visibility = ["//test_custom_defs/..."],
+)
+
+subinclude(":simple_build_def")
+
+simple_custom_target(
+    name = "simple_custom_target",
+    srcs = ["file.txt"],
+    outs = ["file_simple.out"],
+)
+
+simple_custom_target(
+    name = "dummy",
+    srcs = ["dummy.in"],
+    outs = ["dummy.out"],
+)

@@ -1,0 +1,11 @@
+def preloaded_target(
+        name:str,
+        cmd:str,
+        srcs:list=[],
+        outs:list=[]):
+    return genrule(
+        name = name,
+        srcs = srcs,
+        outs = outs,
+        cmd = f"{cmd} $SRCS > $OUT",
+    )

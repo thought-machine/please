@@ -1,0 +1,6 @@
+genrule(
+    name = "native_genrule",
+    srcs = ["file.txt"],
+    outs = ["file.wordcount"],
+    cmd = "wc $SRCS > $OUT",
+)
