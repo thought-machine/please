@@ -12,6 +12,6 @@ go_binary(
     name = "dummy",
     srcs = ["dummy.go"],
     deps = [
-        "///third_party/go/github.com_stretchr_testify//:testify"
+        "///third_party/go/github.com_stretchr_testify//:testify",
     ],
 )
