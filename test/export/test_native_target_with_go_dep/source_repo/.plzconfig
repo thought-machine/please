@@ -4,4 +4,5 @@ BuildFileName = BUILD_FILE
 
 [Plugin "go"]
 Target = //plugins:go
+gotool = //third_party/go:toolchain|go
 stdlib = //third_party/go:std
