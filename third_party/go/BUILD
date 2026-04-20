@@ -35,12 +35,12 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/text",
-    version = "v0.31.0",
+    version = "v0.33.0",
 )
 
 go_repo(
     module = "golang.org/x/tools",
-    version = "v0.38.0",
+    version = "v0.40.0",
 )
 
 go_repo(
@@ -81,7 +81,7 @@ go_repo(
 
 go_repo(
     module = "github.com/stretchr/testify",
-    version = "v1.9.0",
+    version = "v1.11.1",
 )
 
 go_repo(
@@ -116,7 +116,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/net",
-    version = "v0.52.0",
+    version = "v0.49.0",
 )
 
 go_repo(
@@ -146,7 +146,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/oauth2",
-    version = "v0.27.0",
+    version = "v0.34.0",
 )
 
 go_repo(
@@ -211,7 +211,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/term",
-    version = "v0.37.0",
+    version = "v0.39.0",
 )
 
 go_repo(
@@ -271,7 +271,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sync",
-    version = "v0.18.0",
+    version = "v0.19.0",
 )
 
 go_repo(
@@ -301,7 +301,7 @@ go_repo(
 
 go_repo(
     module = "cloud.google.com/go/compute/metadata",
-    version = "v0.3.0",
+    version = "v0.9.0",
 )
 
 go_repo(
@@ -331,7 +331,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sys",
-    version = "v0.38.0",
+    version = "v0.40.0",
 )
 
 go_repo(
@@ -351,7 +351,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/grpc",
-    version = "v1.62.1",
+    version = "v1.80.0",
 )
 
 go_repo(
@@ -366,7 +366,7 @@ go_repo(
 
 go_repo(
     module = "github.com/cespare/xxhash/v2",
-    version = "v2.2.0",
+    version = "v2.3.0",
 )
 
 go_repo(
@@ -401,18 +401,18 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.45.0",
+    version = "v0.47.0",
 )
 
 go_repo(
     module = "google.golang.org/protobuf",
-    version = "v1.33.0",
+    version = "v1.36.11",
 )
 
 go_repo(
     module = "github.com/golang/glog",
     patch = ["glog_disable.patch"],
-    version = "v1.2.4",
+    version = "v1.2.5",
 )
 
 go_repo(
@@ -550,7 +550,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/rpc",
-    version = "v0.0.0-20240304212257-790db918fca8",
+    version = "v0.0.0-20260120221211-b8f7ae30c516",
 )
 
 go_repo(
@@ -568,7 +568,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/api",
-    version = "v0.0.0-20240304212257-790db918fca8",
+    version = "v0.0.0-20260120221211-b8f7ae30c516",
 )
 
 go_repo(
@@ -592,7 +592,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/go-logr/logr",
-    version = "v1.4.1",
+    version = "v1.4.3",
 )
 
 go_repo(
@@ -628,19 +628,19 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel",
-    version = "v1.24.0",
+    version = "v1.39.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/metric",
-    version = "v1.24.0",
+    version = "v1.39.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/trace",
-    version = "v1.24.0",
+    version = "v1.39.0",
 )
 
 go_repo(
@@ -683,4 +683,16 @@ go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/sdk",
     version = "v1.22.0",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "go.opentelemetry.io/auto/sdk",
+    version = "v1.2.1",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "go.uber.org/goleak",
+    version = "v1.3.0",
 )
