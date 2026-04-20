@@ -73,11 +73,10 @@ func (pkg *Package) TargetOrDie(name string) *BuildTarget {
 
 // AddTarget adds a new target to this package with the given name.
 // It doesn't check for duplicates.
-func (pkg *Package) AddTarget(target *BuildTarget, stmt *BuildStatement) {
+func (pkg *Package) AddTarget(target *BuildTarget) {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
 	pkg.targets[target.Label.Name] = target
-	pkg.RegisterStatement(stmt, target)
 }
 
 // AllTargets returns the current set of targets in this package.
@@ -234,12 +233,14 @@ func (pkg *Package) verifyOutputs() []string {
 }
 
 // RegisterStatement maps a build statement to target in the package.
-func (pkg *Package) RegisterStatement(stmt *BuildStatement, target *BuildTarget) {
+func (pkg *Package) RegisterStatement(target *BuildTarget, stmt *BuildStatement) {
 	if stmt == nil {
 		log.Infof("Attempted to register empty build statement for package %s and target %s",
 			pkg.Name, target.String())
 		return
 	}
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
 	pkg.BuildFileMetadata.RegisterStatementTarget(stmt, target)
 }
 
