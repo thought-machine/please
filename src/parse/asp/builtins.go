@@ -211,6 +211,8 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	populateTarget(s, target, args)
 	s.state.AddTarget(s.pkg, target)
 	s.pkg.RegisterStatement(target, s.CurrentBuildStatement())
+	s.pkg.RegisterRequiredSubincludes(target, s.ActiveSubincludes())
+
 	if s.Callback {
 		target.AddedPostBuild = true
 	}

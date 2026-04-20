@@ -244,6 +244,19 @@ func (pkg *Package) RegisterStatement(target *BuildTarget, stmt *BuildStatement)
 	pkg.BuildFileMetadata.RegisterStatementTarget(stmt, target)
 }
 
+// RegisterRequiredSubincludes maps the required subincludes to generate the target.
+func (pkg *Package) RegisterRequiredSubincludes(target *BuildTarget, subincludes BuildLabels) {
+	if len(subincludes) == 0 {
+		log.Infof("Attempted to register empty subinclude labels for package %s and target %s",
+			pkg.Name, target.String())
+		return
+	}
+
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
+	pkg.BuildFileMetadata.RegisterSubinclude(target, subincludes)
+}
+
 // FindStatement finds the build statement that generated the target.
 func (pkg *Package) FindStatement(target *BuildTarget) (*BuildStatement, error) {
 	return pkg.BuildFileMetadata.FindStatement(target)
@@ -252,6 +265,11 @@ func (pkg *Package) FindStatement(target *BuildTarget) (*BuildStatement, error) 
 // FindRelatedTargets finds all the targets related to the build statement.
 func (pkg *Package) FindRelatedTargets(stmt *BuildStatement) ([]*BuildTarget, error) {
 	return pkg.BuildFileMetadata.FindTargets(stmt)
+}
+
+// FindRequiredSubincludes finds the subincludes target labels required by the given target.
+func (pkg *Package) FindRequiredSubincludes(target *BuildTarget) (BuildLabels, error) {
+	return pkg.BuildFileMetadata.FindSubincludes(target)
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.

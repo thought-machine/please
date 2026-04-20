@@ -251,9 +251,7 @@ type BuildTarget struct {
 	// Marks the target as a remote_file.
 	IsRemoteFile bool `print:"false"`
 	// Marks the target as a text_file.
-	IsTextFile bool `name:"text_file" print:"false"`
-	// The subincludes that were active when this target was defined.
-	Subincludes []BuildLabel `name:"subincludes"`
+	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
 	// If true, skips generating environment variables for sources; instead files will be generated in

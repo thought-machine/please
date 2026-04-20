@@ -192,8 +192,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
 	}
 
-	target.Subincludes = s.ActiveSubincludes()
-
 	return target
 }
 

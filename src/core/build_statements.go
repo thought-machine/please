@@ -18,8 +18,9 @@ func (bs *BuildStatement) StartPos() int64 {
 }
 
 type BuildFileMetadata struct {
-	StmtToTarget    map[BuildStatement][]*BuildTarget
-	SubincludeStmts map[BuildStatement][]*BuildTarget
+	StmtToTarget     map[BuildStatement][]*BuildTarget
+	TargetToSubinclude map[*BuildTarget]BuildLabels
+	// TODO Untracked stmts - will export every time (e.g. package)
 }
 
 func (bfm *BuildFileMetadata) RegisterStatementTarget(stmt *BuildStatement, target *BuildTarget) {
@@ -27,6 +28,13 @@ func (bfm *BuildFileMetadata) RegisterStatementTarget(stmt *BuildStatement, targ
 		bfm.StmtToTarget = make(map[BuildStatement][]*BuildTarget)
 	}
 	bfm.StmtToTarget[*stmt] = append(bfm.StmtToTarget[*stmt], target)
+}
+
+func (bfm *BuildFileMetadata) RegisterSubinclude(target *BuildTarget, subincludes BuildLabels) {
+	if bfm.TargetToSubinclude == nil {
+		bfm.TargetToSubinclude = make(map[*BuildTarget]BuildLabels)
+	}
+	bfm.TargetToSubinclude[target] = append(bfm.TargetToSubinclude[target], subincludes...)
 }
 
 func (bfm *BuildFileMetadata) FindStatement(target *BuildTarget) (*BuildStatement, error) {
@@ -44,4 +52,12 @@ func (bfm *BuildFileMetadata) FindTargets(stmt *BuildStatement) ([]*BuildTarget,
 		return nil, fmt.Errorf("Targets not found for statement %v.", stmt)
 	}
 	return targets, nil
+}
+
+func (bfm *BuildFileMetadata) FindSubincludes(target *BuildTarget) (BuildLabels, error) {
+	subincludes, ok := bfm.TargetToSubinclude[target]
+	if !ok {
+		return nil, fmt.Errorf("Subincludes not found for target %v.", target)
+	}
+	return subincludes, nil
 }

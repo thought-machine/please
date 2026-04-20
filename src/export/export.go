@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/please-build/buildtools/build"
+
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -28,6 +30,7 @@ type export struct {
 	exportedTargets    map[core.BuildLabel]bool
 	exportedPackages   map[string]bool
 	selectedStatements map[*core.Package]map[core.BuildStatement]bool
+	requiredSubincludes map[*core.Package]map[core.BuildLabel]bool
 }
 
 func Repo(state *core.BuildState, dir string, noTrim bool, targets []core.BuildLabel) {
@@ -69,6 +72,7 @@ func newExport(state *core.BuildState, dir string, noTrim bool) *export {
 		exportedPackages:   map[string]bool{},
 		exportedTargets:    map[core.BuildLabel]bool{},
 		selectedStatements: map[*core.Package]map[core.BuildStatement]bool{},
+		requiredSubincludes: map[*core.Package]map[core.BuildLabel]bool{},
 	}
 }
 
@@ -126,17 +130,29 @@ func (e *export) target(target *core.BuildTarget) {
 
 	// TODO notrim
 
-	e.subincludes(pkg)
+	e.subincludes(pkg, target)
 	e.buildStatements(pkg, target)
 	e.sources(target)
 	e.dependencies(target)
 }
 
-func (e *export) subincludes(pkg *core.Package) {
-	// TODO update to required subincludes
-	for _, subinclude := range pkg.AllSubincludes(e.state.Graph) {
+func (e *export) subincludes(pkg *core.Package, target *core.BuildTarget) {
+	subincludes, err := pkg.FindRequiredSubincludes(target)
+	if err != nil {
+		log.Infof("No subincludes found, assuming non required.: %w", pkg.Name, err)
+		return
+	}
+
+	for _, subinclude := range subincludes {
+		if _, ok := e.requiredSubincludes[pkg]; !ok {
+			e.requiredSubincludes[pkg] = map[core.BuildLabel]bool{}
+		}
+		e.requiredSubincludes[pkg][subinclude] = true
+
 		e.target(e.state.Graph.TargetOrDie(subinclude))
 	}
+
+	log.Warningf("Parse Metadata Subincludes: %v", pkg.BuildFileMetadata.TargetToSubinclude)
 }
 
 // buildStatements exports BUILD statements that generate the build target.
@@ -248,6 +264,7 @@ func (e *export) writeBuildStatements() {
 		for stmt := range stmtMap {
 			stmts = append(stmts, stmt)
 		}
+
 		// Sort statements by position to keep them in order
 		slices.SortFunc(stmts, func(a, b core.BuildStatement) int {
 			return cmp.Compare(a.Start, b.Start)
@@ -282,6 +299,13 @@ func (e *export) writeBuildFile(pkg *core.Package, stmts []core.BuildStatement) 
 	defer fw.Close()
 
 	writer := bufio.NewWriter(fw)
+	// Subinclude
+	if subinclude := e.makeSubincludesStatement(pkg); subinclude != "" {
+		if _, err := writer.WriteString(subinclude + "\n\n"); err != nil {
+			log.Fatalf("failed to add subincludes to %s: %v", exportedFilename, err)
+		}
+	}
+	// Statements
 	for _, s := range stmts {
 		if _, err := fr.Seek(s.StartPos(), io.SeekStart); err != nil {
 			log.Fatalf("failed to seek in BUILD file %s: %v", filename, err)
@@ -298,4 +322,29 @@ func (e *export) writeBuildFile(pkg *core.Package, stmts []core.BuildStatement) 
 	if err := writer.Flush(); err != nil {
 		log.Fatalf("failed write exported BUILD file %s: %v", exportedFilename, err)
 	}
+}
+
+func (e *export) makeSubincludesStatement(pkg *core.Package) string {
+	subincludesMap, ok := e.requiredSubincludes[pkg]
+	if !ok || len(subincludesMap) == 0 {
+		return ""
+	}
+
+	labels := make(core.BuildLabels, 0, len(subincludesMap))
+	for label := range subincludesMap {
+		labels = append(labels, label)
+	}
+
+	slices.SortFunc(labels, func(a, b core.BuildLabel) int {
+		return cmp.Compare(a.String(), b.String())
+	})
+
+	call := &build.CallExpr{
+		X: &build.Ident{Name: "subinclude"},
+	}
+	for _, label := range labels {
+		call.List = append(call.List, &build.StringExpr{Value: label.String()})
+	}
+
+	return build.FormatString(call)
 }
