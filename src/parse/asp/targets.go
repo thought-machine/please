@@ -191,8 +191,12 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Debug = new(core.DebugFields)
 		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
 	}
+
+	target.Subincludes = s.ActiveSubincludes()
+
 	return target
 }
+
 
 // validateSandbox ensures that the target isn't opting out of the build/test sandbox when it's not allowed to
 func validateSandbox(state *core.BuildState, target *core.BuildTarget) error {

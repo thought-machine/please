@@ -1096,6 +1096,25 @@ func (s *scope) CurrentBuildStatement() *core.BuildStatement {
 	}
 }
 
+// ActiveSubincludes traces the call stack and scopes to find subincludes that provided the
+// macros/functions actively executing to define this target.
+func (s *scope) ActiveSubincludes() []core.BuildLabel {
+	var subincludes []core.BuildLabel
+	seen := map[core.BuildLabel]bool{}
+	for curr := s; curr != nil; curr = curr.callerScope {
+		for localScope := curr; localScope != nil; localScope = localScope.parent {
+			if localScope.subincludeLabel != nil {
+				label := *localScope.subincludeLabel
+				if !seen[label] {
+					seen[label] = true
+					subincludes = append(subincludes, label)
+				}
+			}
+		}
+	}
+	return subincludes
+}
+
 // pkgFilename returns the filename of the current package, or the empty string if there is none.
 func (s *scope) pkgFilename() string {
 	if s.pkg != nil {
