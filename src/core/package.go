@@ -243,6 +243,10 @@ func (pkg *Package) RegisterStatement(stmt *BuildStatement, target *BuildTarget)
 	pkg.BuildFileMetadata.RegisterStatementTarget(stmt, target)
 }
 
+func (pkg *Package) FindStatement(target *BuildTarget) (*BuildStatement, error) {
+	return pkg.BuildFileMetadata.FindStatement(target)
+}
+
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.
 func FindOwningPackages(state *BuildState, files []string) []BuildLabel {
 	ret := make([]BuildLabel, len(files))

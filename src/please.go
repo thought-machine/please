@@ -775,7 +775,7 @@ var buildFunctions = map[string]func() int{
 	"export": func() int {
 		success, state := runBuild(opts.Export.Args.Targets, false, false, false)
 		if success {
-			export.ToDir(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
+			export.Repo(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
 		}
 		return toExitCode(success, state)
 	},
