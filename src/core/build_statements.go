@@ -19,7 +19,7 @@ func (bs *BuildStatement) StartPos() int64 {
 
 type BuildFileMetadata struct {
 	StmtToTarget    map[BuildStatement][]*BuildTarget
-	SubincludeStmts []BuildStatement
+	SubincludeStmts map[BuildStatement][]*BuildTarget
 }
 
 func (bfm *BuildFileMetadata) RegisterStatementTarget(stmt *BuildStatement, target *BuildTarget) {
@@ -36,4 +36,12 @@ func (bfm *BuildFileMetadata) FindStatement(target *BuildTarget) (*BuildStatemen
 		}
 	}
 	return nil, fmt.Errorf("Target %s not found in statement metadata.", target.String())
+}
+
+func (bfm *BuildFileMetadata) FindTargets(stmt *BuildStatement) ([]*BuildTarget, error) {
+	targets, ok := bfm.StmtToTarget[*stmt]
+	if !ok {
+		return nil, fmt.Errorf("Targets not found for statement %v.", stmt)
+	}
+	return targets, nil
 }

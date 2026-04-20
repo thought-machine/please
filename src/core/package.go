@@ -243,8 +243,14 @@ func (pkg *Package) RegisterStatement(stmt *BuildStatement, target *BuildTarget)
 	pkg.BuildFileMetadata.RegisterStatementTarget(stmt, target)
 }
 
+// FindStatement finds the build statement that generated the target.
 func (pkg *Package) FindStatement(target *BuildTarget) (*BuildStatement, error) {
 	return pkg.BuildFileMetadata.FindStatement(target)
+}
+
+// FindRelatedTargets finds all the targets related to the build statement.
+func (pkg *Package) FindRelatedTargets(stmt *BuildStatement) ([]*BuildTarget, error) {
+	return pkg.BuildFileMetadata.FindTargets(stmt)
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.

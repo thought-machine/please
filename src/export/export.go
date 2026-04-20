@@ -154,7 +154,21 @@ func (e *export) buildStatements(pkg *core.Package, target *core.BuildTarget) {
 	if err != nil {
 		log.Fatalf("Failed to find statement in %s: %w", pkg.Name, err)
 	}
+
+	// check if visited before
+	if e.selectedStatements[pkg][*stmt] == true {
+		return
+	}
 	e.selectedStatements[pkg][*stmt] = true
+
+	relatedTargets, err := pkg.FindRelatedTargets(stmt)
+	if err != nil {
+		log.Fatalf("Failed to lookup related targets for package %s: %w", pkg.Name, err)
+	}
+
+	for _, target := range relatedTargets {
+		e.target(target)
+	}
 }
 
 func (e *export) sources(target *core.BuildTarget) {
