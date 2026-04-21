@@ -291,7 +291,7 @@ func (c *Client) initFetch() error {
 	} else {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
-	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL, append(dialOpts, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))...)
+	conn, err := grpc.NewClient(c.state.Config.Remote.AssetURL, append(dialOpts, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))...)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to the remote fetch server: %s", err)
 	}
