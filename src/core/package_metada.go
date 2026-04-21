@@ -17,6 +17,13 @@ func (bs *BuildStatement) StartPos() int64 {
 	return int64(bs.Start)
 }
 
+// BuildStatements is a slice of BuildStatement that implements sort.Interface.
+type BuildStatements []BuildStatement
+
+func (s BuildStatements) Len() int           { return len(s) }
+func (s BuildStatements) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s BuildStatements) Less(i, j int) bool { return s[i].Start < s[j].Start }
+
 type BuildFileMetadata struct {
 	StmtToTarget     map[BuildStatement][]*BuildTarget
 	TargetToSubinclude map[*BuildTarget]BuildLabels

@@ -5,12 +5,13 @@ package export
 
 import (
 	"bufio"
-	"cmp"
 	"io"
 	iofs "io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 
 	"github.com/please-build/buildtools/build"
 
@@ -271,15 +272,9 @@ func (e *export) writeBuildStatements() {
 	log.Warningf("Selected Statements: %v", e.selectedStatements)
 
 	for pkg, stmtMap := range e.selectedStatements {
-		stmts := make([]core.BuildStatement, 0, len(stmtMap))
-		for stmt := range stmtMap {
-			stmts = append(stmts, stmt)
-		}
-
+		stmts := slices.Collect(maps.Keys(stmtMap))
 		// Sort statements by position to keep them in order
-		slices.SortFunc(stmts, func(a, b core.BuildStatement) int {
-			return cmp.Compare(a.Start, b.Start)
-		})
+		sort.Sort(core.BuildStatements(stmts))
 
 		e.writeBuildFile(pkg, stmts)
 	}
@@ -341,14 +336,8 @@ func (e *export) makeSubincludesStatement(pkg *core.Package) string {
 		return ""
 	}
 
-	labels := make(core.BuildLabels, 0, len(subincludesMap))
-	for label := range subincludesMap {
-		labels = append(labels, label)
-	}
-
-	slices.SortFunc(labels, func(a, b core.BuildLabel) int {
-		return cmp.Compare(a.String(), b.String())
-	})
+	labels := slices.Collect(maps.Keys(subincludesMap))
+	sort.Sort(core.BuildLabels(labels))
 
 	call := &build.CallExpr{
 		X: &build.Ident{Name: "subinclude"},
