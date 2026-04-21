@@ -42,6 +42,7 @@ type Handler struct {
 type builtin struct {
 	Stmt        *asp.Statement
 	Pos, EndPos asp.FilePosition
+	Labels      []core.BuildLabel // which subinclude targets can provide this (empty for core builtins)
 }
 
 // A Conn is a minimal set of the jsonrpc2.Conn that we need.
@@ -174,6 +175,12 @@ func (h *Handler) handle(method string, params *json.RawMessage) (res interface{
 			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 		}
 		return h.definition(positionParams)
+	case "textDocument/references":
+		referenceParams := &lsp.ReferenceParams{}
+		if err := json.Unmarshal(*params, referenceParams); err != nil {
+			return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
+		}
+		return h.references(referenceParams)
 	default:
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
 	}
@@ -244,6 +251,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 			DocumentFormattingProvider: true,
 			DocumentSymbolProvider:     true,
 			DefinitionProvider:         true,
+			ReferencesProvider:         true,
 			CompletionProvider: &lsp.CompletionOptions{
 				TriggerCharacters: []string{"/", ":"},
 			},
@@ -308,15 +316,41 @@ func (h *Handler) loadParserFunctions() {
 			continue
 		}
 		file := asp.NewFile(filename, data)
+		labels := h.findLabelsForFile(filename)
 		for _, stmt := range stmts {
 			name := stmt.FuncDef.Name
 			h.builtins[name] = append(h.builtins[name], builtin{
 				Stmt:   stmt,
 				Pos:    file.Pos(stmt.Pos),
 				EndPos: file.Pos(stmt.EndPos),
+				Labels: labels,
 			})
 		}
 	}
+}
+
+// findLabelsForFile finds all build labels that produce the given output file.
+// A file can be exposed by multiple targets (e.g., multiple filegroups pointing to the same source).
+func (h *Handler) findLabelsForFile(filename string) []core.BuildLabel {
+	// Make the filename absolute for comparison
+	if !filepath.IsAbs(filename) {
+		filename = filepath.Join(h.root, filename)
+	}
+	var labels []core.BuildLabel
+	for _, pkg := range h.state.Graph.PackageMap() {
+		for _, target := range pkg.AllTargets() {
+			for _, out := range target.FullOutputs() {
+				absOut := out
+				if !filepath.IsAbs(out) {
+					absOut = filepath.Join(h.root, out)
+				}
+				if absOut == filename {
+					labels = append(labels, target.Label)
+				}
+			}
+		}
+	}
+	return labels
 }
 
 // fromURI converts a DocumentURI to a path.

@@ -5,6 +5,7 @@ go_library(
         "definition.go",
         "diagnostics.go",
         "lsp.go",
+        "references.go",
         "symbols.go",
         "text.go",
     ],
@@ -20,6 +21,7 @@ go_library(
         "//src/parse",
         "//src/parse/asp",
         "//src/plz",
+        "//src/query",
         "//tools/build_langserver/lsp/astutils",
     ],
 )
@@ -30,15 +32,20 @@ go_test(
     srcs = [
         "definition_test.go",
         "lsp_test.go",
+        "references_test.go",
         "symbols_test.go",
     ],
-    data = ["test_data"],
+    data = [
+        "test_data",
+        "test_data_find_references",
+    ],
     deps = [
         ":lsp",
         "///third_party/go/github.com_please-build_buildtools//build",
         "///third_party/go/github.com_sourcegraph_go-lsp//:go-lsp",
         "///third_party/go/github.com_sourcegraph_jsonrpc2//:jsonrpc2",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/cli",
         "//src/core",
     ],

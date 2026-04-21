@@ -1,0 +1,3 @@
+def duplicate_func(name:str):
+    """Second definition of duplicate_func - from defs2 (different file!)."""
+    return filegroup(name = name)
