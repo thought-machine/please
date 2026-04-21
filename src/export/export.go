@@ -31,6 +31,7 @@ type export struct {
 	exportedPackages   map[string]bool
 	selectedStatements map[*core.Package]map[core.BuildStatement]bool
 	requiredSubincludes map[*core.Package]map[core.BuildLabel]bool
+	preloadedSubincludes map[core.BuildLabel]bool
 }
 
 func Repo(state *core.BuildState, dir string, noTrim bool, targets []core.BuildLabel) {
@@ -73,6 +74,7 @@ func newExport(state *core.BuildState, dir string, noTrim bool) *export {
 		exportedTargets:    map[core.BuildLabel]bool{},
 		selectedStatements: map[*core.Package]map[core.BuildStatement]bool{},
 		requiredSubincludes: map[*core.Package]map[core.BuildLabel]bool{},
+		preloadedSubincludes: map[core.BuildLabel]bool{},
 	}
 }
 
@@ -101,7 +103,11 @@ func (e *export) preloaded() {
 	}
 
 	for _, target := range e.state.Config.Parse.PreloadSubincludes {
-		e.targets(append(e.state.Graph.TransitiveSubincludes(target), target))
+		targets := append(e.state.Graph.TransitiveSubincludes(target), target)
+		for _, t := range targets {
+			e.preloadedSubincludes[t] = true
+		}
+		e.targets(targets)
 	}
 }
 
@@ -144,6 +150,11 @@ func (e *export) subincludes(pkg *core.Package, target *core.BuildTarget) {
 	}
 
 	for _, subinclude := range subincludes {
+		// skip for preloaded subincludes
+		if e.preloadedSubincludes[subinclude] {
+			continue
+		}
+
 		if _, ok := e.requiredSubincludes[pkg]; !ok {
 			e.requiredSubincludes[pkg] = map[core.BuildLabel]bool{}
 		}
