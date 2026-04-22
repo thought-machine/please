@@ -6,7 +6,6 @@ package export
 import (
 	"bufio"
 	"io"
-	iofs "io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -379,22 +378,16 @@ func (nte *NoTrimExporter) Target(target *core.BuildTarget) {
 
 	pkg := nte.state.Graph.PackageOrDie(target.Label)
 
-	nte.Package(target)
+	nte.Package(pkg)
 	nte.Subincludes(pkg, target)
 	nte.AllTargets(pkg)
+	nte.Sources(target)
 	nte.Dependencies(target)
 }
 
-var ignoreDirectories = map[string]bool{
-	"plz-out": true,
-	".git":    true,
-	".svn":    true,
-	".hg":     true,
-}
-
-// Package exports the package BUILD file containing the given target and all sources.
-func (nte *NoTrimExporter) Package(target *core.BuildTarget) {
-	pkgName := target.Label.PackageName
+// Package exports the package BUILD file.
+func (nte *NoTrimExporter) Package(pkg *core.Package) {
+	pkgName := pkg.Name
 	if pkgName == parse.InternalPackageName {
 		return
 	}
@@ -403,35 +396,15 @@ func (nte *NoTrimExporter) Package(target *core.BuildTarget) {
 	}
 	nte.exportedPackages[pkgName] = true
 
-	pkgDir := filepath.Clean(pkgName)
+	pkgFilename := pkg.Filename
+	exportedFilename := filepath.Join(nte.targetDir, pkgFilename)
 
-	err := filepath.WalkDir(pkgDir, func(path string, d iofs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			if path != pkgDir && fs.IsPackage(nte.state.Config.Parse.BuildFileName, path) {
-				return filepath.SkipDir // We want to stop when we find another package in our dir tree
-			}
-			if ignoreDirectories[d.Name()] {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return nil // Ignore symlinks, which are almost certainly generated sources.
-		}
-		dest := filepath.Join(nte.targetDir, path)
-		if err := fs.EnsureDir(dest); err != nil {
-			return err
-		}
-		return fs.CopyFile(path, dest, 0)
-	})
-	if err != nil {
-		log.Fatalf("failed to export package %s for %s: %v", pkgName, target.Label, err)
+	if err := fs.CopyFile(pkgFilename, exportedFilename, 0); err != nil {
+		log.Fatalf("failed to export package %s: %v", pkgName, err)
 	}
 }
 
+// Subincludes exports the subincluded targets.
 func (nte *NoTrimExporter) Subincludes(pkg *core.Package, target *core.BuildTarget) {
 	subincludes := pkg.AllSubincludes(nte.state.Graph)
 	for _, subinclude := range subincludes {
@@ -447,7 +420,7 @@ func (nte *NoTrimExporter) AllTargets(pkg *core.Package) {
 }
 
 // WriteBuildStatements in the NoTrimExporter doesn't require an implementation due to total copy
-// of BUILD package.
+// of BUILD file.
 func (nte *NoTrimExporter) WriteBuildStatements() {
 	return
 }
