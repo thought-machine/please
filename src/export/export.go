@@ -300,7 +300,7 @@ func (e *DefaultExporter) writePackageFile(pkg *core.Package, stmts []core.Build
 		}
 	}
 	// Statements
-	for _, s := range stmts {
+	for i, s := range stmts {
 		if _, err := fr.Seek(s.StartPos(), io.SeekStart); err != nil {
 			log.Fatalf("failed to seek in BUILD file %s: %v", filename, err)
 		}
@@ -311,6 +311,12 @@ func (e *DefaultExporter) writePackageFile(pkg *core.Package, stmts []core.Build
 
 		if _, err := writer.WriteString("\n"); err != nil {
 			log.Fatalf("failed to add newline to %s: %v", exportedFilename, err)
+		}
+
+		if i < len(stmts) - 1 {	// skip for last stmt
+			if _, err := writer.WriteString("\n"); err != nil {
+				log.Fatalf("failed to add extra newline to %s: %v", exportedFilename, err)
+			}
 		}
 	}
 	if err := writer.Flush(); err != nil {
