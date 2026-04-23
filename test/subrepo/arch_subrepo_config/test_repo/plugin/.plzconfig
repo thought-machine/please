@@ -1,0 +1,10 @@
+
+
+#Define a simple plugin with an inherited string key to test with.
+[PluginDefinition]
+name = plugin
+
+[PluginConfig "teststring"]
+ConfigKey = teststring
+DefaultValue = "DefaultString"
+Inherit = true 
