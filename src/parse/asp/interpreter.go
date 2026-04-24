@@ -1090,10 +1090,7 @@ func (s *scope) CurrentBuildStatement() *core.BuildStatement {
 		}
 	}
 	s.NAssert(stmtScope.cursor == nil, "Cursor is not pointing to a statement")
-	return &core.BuildStatement{
-		Start: int(stmtScope.cursor.Pos),
-		End:   int(stmtScope.cursor.EndPos),
-	}
+	return NewBuildStatement(stmtScope.cursor)
 }
 
 // ActiveSubincludes traces the call stack and scopes to find subincludes that provided the
@@ -1121,4 +1118,12 @@ func (s *scope) pkgFilename() string {
 		return s.pkg.Filename
 	}
 	return ""
+}
+
+// NewBuildStatement creates a new core.BuildStatment from an asp.statment.
+func NewBuildStatement(stmt *Statement) *core.BuildStatement {
+	return &core.BuildStatement{
+		Start: int(stmt.Pos),
+		End:   int(stmt.EndPos),
+	}
 }

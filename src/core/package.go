@@ -48,10 +48,11 @@ func NewPackage(name string) *Package {
 // NewPackageSubrepo constructs a new package with the given name and subrepo.
 func NewPackageSubrepo(name, subrepo string) *Package {
 	return &Package{
-		Name:        name,
-		SubrepoName: subrepo,
-		targets:     map[string]*BuildTarget{},
-		Outputs:     map[string]*BuildTarget{},
+		Name:              name,
+		SubrepoName:       subrepo,
+		targets:           map[string]*BuildTarget{},
+		Outputs:           map[string]*BuildTarget{},
+		BuildFileMetadata: *newBuildFileMetadata(),
 	}
 }
 
@@ -254,7 +255,14 @@ func (pkg *Package) RegisterRequiredSubincludes(target *BuildTarget, subincludes
 
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
-	pkg.BuildFileMetadata.RegisterSubinclude(target, subincludes)
+	pkg.BuildFileMetadata.RegisterRequiredSubinclude(target, subincludes)
+}
+
+// RegisterSubincludeStmt maps the subincludes build statement to the included targets.
+func (pkg *Package) RegisterSubincludeStmt(label BuildLabel, stmt *BuildStatement) {
+	pkg.mutex.Lock()
+	defer pkg.mutex.Unlock()
+	pkg.BuildFileMetadata.RegisterSubincludeStmt(label, stmt)
 }
 
 // FindStatement finds the build statement that generated the target.
@@ -267,9 +275,15 @@ func (pkg *Package) FindRelatedTargets(stmt *BuildStatement) ([]*BuildTarget, er
 	return pkg.BuildFileMetadata.FindTargets(stmt)
 }
 
-// FindRequiredSubincludes finds the subincludes target labels required by the given target.
+// FindRequiredSubincludes finds the subincluded target labels required by the given target.
 func (pkg *Package) FindRequiredSubincludes(target *BuildTarget) (BuildLabels, error) {
-	return pkg.BuildFileMetadata.FindSubincludes(target)
+	return pkg.BuildFileMetadata.FindRequiredSubincludes(target)
+}
+
+// GetSubincludedLabels returns the labels subincluded by the given statement and true if it
+// is a subinclude.
+func (pkg *Package) GetSubincludedLabels(stmt *BuildStatement) (BuildLabels, bool) {
+	return pkg.BuildFileMetadata.GetSubincludedLabels(stmt)
 }
 
 // FindOwningPackages returns build labels corresponding to the packages that own each of the given files.
