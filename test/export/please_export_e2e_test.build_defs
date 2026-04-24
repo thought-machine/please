@@ -40,7 +40,7 @@ def please_export_e2e_test(
     if enforce_different_repos:
         test_cmd += [
             # Enforce source_repo and expected_repo differences
-            f'(diff -rq "$DATA_SOURCE_REPO" "$DATA_EXPECTED_REPO" && \
+            f'(diff -rq "$DATA_SOURCE_REPO" "$DATA_EXPECTED_REPO" > /dev/null && \
                 echo "Source and Expected repos must differ" && exit 1 || true)',
         ]
 
