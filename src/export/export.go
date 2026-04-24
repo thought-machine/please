@@ -303,6 +303,7 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 	for _, stmt := range parsedStmts {
 		bStmt := asp.NewBuildStatement(stmt)
 
+		// Write content that's between stmts (e.g. comments)
 		if cursor < bStmt.Start {
 			if _, err := buffer.Write(original[cursor:bStmt.Start]); err != nil {
 				return nil, err
@@ -312,8 +313,7 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 
 		// Write filtered subincludes
 		if stmtLabels, ok := pkg.GetSubincludedLabels(bStmt); ok {
-
-			subStmt := e.makeSubincludeStatement(stmtLabels, e.requiredSubincludes[pkg])
+			subStmt := e.minimalSubincludeStatement(pkg, stmtLabels)
 			buffer.Write([]byte(subStmt))
 			cursor = bStmt.End
 			continue
@@ -321,14 +321,10 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 
 		// Don't write statements that generate targets we are not interested about
 		if targets, err := pkg.FindRelatedTargets(bStmt); err == nil {
-			needed := false
-			for _, target := range targets {
-				if e.exportedTargets[pkg][target.Label] {
-					needed = true
-				}
-			}
-			if needed == false {
-				// don't write
+			needed := slices.ContainsFunc(targets, func(target *core.BuildTarget) bool {
+				return e.exportedTargets[pkg][target.Label]
+			})
+			if !needed {
 				cursor = bStmt.End
 				continue
 			}
@@ -349,9 +345,9 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// makeSubincludeStatement generates a single subinclude statement (as string) with the argument labels.
-func (e *DefaultExporter) makeSubincludeStatement(available core.BuildLabels, required map[core.BuildLabel]bool) string {
-	// make subincludes that contains a subset of the labels defined in the statement
+// minimalSubincludeStatement generates a subinclude statement containing only the required labels.
+func (e *DefaultExporter) minimalSubincludeStatement(pkg *core.Package, available core.BuildLabels) string {
+	required := e.requiredSubincludes[pkg]
 	var filteredLabels core.BuildLabels
 	for _, label := range available {
 		if required[label] {
@@ -364,7 +360,7 @@ func (e *DefaultExporter) makeSubincludeStatement(available core.BuildLabels, re
 		X: &build.Ident{Name: "subinclude"},
 	}
 	for _, label := range filteredLabels {
-		call.List = append(call.List, &build.StringExpr{Value: label.String()})
+		call.List = append(call.List, &build.StringExpr{Value: label.ShortString(pkg.Label())})
 	}
 
 	return build.FormatString(call)
