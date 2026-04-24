@@ -279,7 +279,7 @@ func (e *DefaultExporter) OpenExportedPackageFile(pkg *core.Package) *os.File {
 	exportedFilename := filepath.Join(e.targetDir, filename)
 	f, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY, 0664)
 	if err != nil {
-		log.Fatalf("failed to create and open exported BUILD file for %s: %v", exportedFilename, err)
+		log.Fatalf("Failed to create and open exported BUILD file for %s: %v", exportedFilename, err)
 	}
 	return f
 }
@@ -289,12 +289,12 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 	p := asp.NewParserOnly()
 	parsedStmts, err := p.ParseFileOnly(pkg.Filename)
 	if err != nil {
-		log.Fatalf("failed to parse original BUILD file: %v", err)
+		log.Fatalf("Failed to parse original BUILD file: %v", err)
 	}
 
 	original, err := os.ReadFile(pkg.Filename)
 	if err != nil {
-		log.Fatalf("failed to open original BUILD file: %v", err)
+		log.Fatalf("Failed to open original BUILD file: %v", err)
 	}
 
 	cursor := 0
@@ -302,6 +302,7 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 	for _, stmt := range parsedStmts {
 		bStmt := asp.NewBuildStatement(stmt)
 
+		log.Debugf("Evaluating statement %s", original[bStmt.Start:bStmt.End])
 		// Write content that's between stmts (e.g. comments)
 		if cursor < bStmt.Start {
 			if _, err := buffer.Write(original[cursor:bStmt.Start]); err != nil {
@@ -314,14 +315,17 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 			// Write filtered subincludes
 			subStmt := e.minimalSubincludeStatement(pkg, stmtLabels)
 			buffer.Write([]byte(subStmt))
-		} else if !e.isRequiredStatement(pkg, bStmt) {
+			log.Debugf("Decision: %s", subStmt)
+		} else if required, err := e.isRequiredStatement(pkg, bStmt); err == nil && !required {
 			// Don't write statements that generate targets we are not interested about
+			log.Debugf("Decision: <skip>")
 			// skip
 		} else {
 			// Write every other statement
-			if buffer.Write(original[bStmt.Start:bStmt.End]); err != nil {
+			if _, err := buffer.Write(original[bStmt.Start:bStmt.End]); err != nil {
 				return nil, err
 			}
+			log.Debugf("Decision: <write>")
 		}
 
 		cursor = bStmt.End
@@ -336,16 +340,16 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 }
 
 // isRequiredStatement evaluates if the current build statement is required by the export.
-func (e *DefaultExporter) isRequiredStatement(pkg *core.Package, stmt *core.BuildStatement) bool {
+func (e *DefaultExporter) isRequiredStatement(pkg *core.Package, stmt *core.BuildStatement) (bool, error) {
 	targets, err := pkg.FindRelatedTargets(stmt)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	required := slices.ContainsFunc(targets, func(target *core.BuildTarget) bool {
 		return e.exportedTargets[pkg][target.Label]
 	})
-	return required
+	return required, nil
 }
 
 // minimalSubincludeStatement generates a subinclude statement containing only the required labels.
