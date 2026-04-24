@@ -251,6 +251,9 @@ func (e *DefaultExporter) BuildStatements(pkg *core.Package, target *core.BuildT
 // WritePackageFiles writes the trimmed BUILD files to the export directory.
 func (e *DefaultExporter) WritePackageFiles() {
 	for pkg := range e.exportedTargets {
+		if pkg.Subrepo != nil || pkg.Name == parse.InternalPackageName {
+			continue // Skip subrepos and internal packages
+		}
 
 		// filter
 		filteredBytes, err := e.FilterPackageFile(pkg)
