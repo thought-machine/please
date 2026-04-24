@@ -5,7 +5,6 @@ package export
 
 import (
 	"bytes"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -225,8 +224,6 @@ func (e *DefaultExporter) Subincludes(pkg *core.Package, target *core.BuildTarge
 
 		e.Target(e.state.Graph.TargetOrDie(subinclude))
 	}
-
-	log.Warningf("Parse Metadata Subincludes: %v", pkg.BuildFileMetadata.TargetToSubinclude)
 }
 
 // BuildStatements exports BUILD statements that generate the build target.
@@ -253,8 +250,7 @@ func (e *DefaultExporter) BuildStatements(pkg *core.Package, target *core.BuildT
 
 // WritePackageFiles writes the trimmed BUILD files to the export directory.
 func (e *DefaultExporter) WritePackageFiles() {
-	for pkg, labels := range e.exportedTargets {
-		log.Warningf("On package %v Selected targets: %v", pkg, slices.Collect(maps.Keys(labels)))
+	for pkg := range e.exportedTargets {
 
 		// filter
 		filteredBytes, err := e.FilterPackageFile(pkg)
@@ -264,12 +260,12 @@ func (e *DefaultExporter) WritePackageFiles() {
 
 		// format
 		buildParser, err := build.ParseBuild(pkg.Filename, filteredBytes)
-		formatedBytes := build.Format(buildParser)
+		formattedBytes := build.Format(buildParser)
 
 		// write
 		file := e.OpenExportedPackageFile(pkg)
 		defer file.Close()
-		if _, err := file.Write(formatedBytes); err != nil {
+		if _, err := file.Write(formattedBytes); err != nil {
 			log.Fatalf("Failed to write to exported BUILD file %s: %v", file.Name(), err)
 		}
 	}
@@ -311,29 +307,20 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 			cursor = bStmt.Start
 		}
 
-		// Write filtered subincludes
 		if stmtLabels, ok := pkg.GetSubincludedLabels(bStmt); ok {
+			// Write filtered subincludes
 			subStmt := e.minimalSubincludeStatement(pkg, stmtLabels)
 			buffer.Write([]byte(subStmt))
-			cursor = bStmt.End
-			continue
-		}
-
-		// Don't write statements that generate targets we are not interested about
-		if targets, err := pkg.FindRelatedTargets(bStmt); err == nil {
-			needed := slices.ContainsFunc(targets, func(target *core.BuildTarget) bool {
-				return e.exportedTargets[pkg][target.Label]
-			})
-			if !needed {
-				cursor = bStmt.End
-				continue
+		} else if !e.isRequiredStatement(pkg, bStmt) {
+			// Don't write statements that generate targets we are not interested about
+			// skip
+		} else {
+			// Write every other statement
+			if buffer.Write(original[bStmt.Start:bStmt.End]); err != nil {
+				return nil, err
 			}
 		}
 
-		// Write every other statement
-		if buffer.Write(original[bStmt.Start:bStmt.End]); err != nil {
-			return nil, err
-		}
 		cursor = bStmt.End
 	}
 
@@ -343,6 +330,19 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 	}
 
 	return buffer.Bytes(), nil
+}
+
+// isRequiredStatement evaluates if the current build statement is required by the export.
+func (e *DefaultExporter) isRequiredStatement(pkg *core.Package, stmt *core.BuildStatement) bool {
+	targets, err := pkg.FindRelatedTargets(stmt)
+	if err != nil {
+		return false
+	}
+
+	required := slices.ContainsFunc(targets, func(target *core.BuildTarget) bool {
+		return e.exportedTargets[pkg][target.Label]
+	})
+	return required
 }
 
 // minimalSubincludeStatement generates a subinclude statement containing only the required labels.
