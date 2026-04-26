@@ -29,8 +29,9 @@ type Exporter interface {
 	WritePackageFiles()
 }
 
+// Repo export a new please repo including the targets and dependencies requested.
 func Repo(state *core.BuildState, dir string, noTrim bool, targets []core.BuildLabel) {
-	e := newExporter(state, dir, noTrim)
+	e := NewExporter(state, dir, noTrim)
 
 	// ensure output dir
 	if err := os.MkdirAll(dir, fs.DirPermissions); err != nil {
@@ -60,7 +61,8 @@ func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	}
 }
 
-func newExporter(state *core.BuildState, dir string, noTrim bool) Exporter {
+// NewExporter creates a new exporter of a specific type based on the arguments.
+func NewExporter(state *core.BuildState, dir string, noTrim bool) Exporter {
 	base := baseExporter{
 		state:           state,
 		targetDir:       dir,
@@ -143,6 +145,7 @@ func (be *baseExporter) Sources(target *core.BuildTarget) {
 	}
 }
 
+// checkFirstExport is a helper to ensure we only visit the same target once.
 func (be *baseExporter) checkFirstExport(pkg *core.Package, target *core.BuildTarget) bool {
 	if _, ok := be.exportedTargets[pkg]; !ok {
 		be.exportedTargets[pkg] = map[core.BuildLabel]bool{}
@@ -274,6 +277,7 @@ func (e *DefaultExporter) WritePackageFiles() {
 	}
 }
 
+// OpenExportedPackageFile creates a new package (BUILD) file in the exported dir.
 func (e *DefaultExporter) OpenExportedPackageFile(pkg *core.Package) *os.File {
 	filename := pkg.Filename
 	exportedFilename := filepath.Join(e.targetDir, filename)
