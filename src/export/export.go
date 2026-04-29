@@ -125,6 +125,7 @@ func (be *baseExporter) Targets(labels core.BuildLabels) {
 // Dependencies exports dependencies of a target.
 func (be *baseExporter) Dependencies(target *core.BuildTarget) {
 	for _, dep := range target.Dependencies() {
+		log.Infof("Dependency of (%v): %v", target.Label, dep.Label)
 		be.impl.Target(dep)
 	}
 }
@@ -132,14 +133,15 @@ func (be *baseExporter) Dependencies(target *core.BuildTarget) {
 // Sources exports all files required by the target.
 func (be *baseExporter) Sources(target *core.BuildTarget) {
 	for _, src := range append(target.AllSources(), target.AllData()...) {
-		if _, ok := src.Label(); !ok { // We'll handle these dependencies later
-			for _, p := range src.Paths(be.state.Graph) {
-				if !filepath.IsAbs(p) { // Don't copy system file deps.
-					if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
-						log.Fatalf("Error copying file: %s\n", err)
-					}
-					log.Warning("Writing source file: %s", p)
+		if _, ok := src.Label(); ok {
+			continue // These will be handled as dependencies later
+		}
+		for _, p := range src.Paths(be.state.Graph) {
+			if !filepath.IsAbs(p) { // Don't copy system file deps.
+				if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
+					log.Fatalf("Error copying file: %s\n", err)
 				}
+				log.Warning("Writing source file: %s", p)
 			}
 		}
 	}
@@ -191,11 +193,12 @@ func (e *DefaultExporter) Target(target *core.BuildTarget) {
 		return
 	}
 
-	// We want to export the package that made this subrepo available, but we still need to walk the target deps
-	// as it may depend on other subrepos or first party targets
+	// We want to export the package that made this subrepo available, but we still need to walk the
+	// target deps as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
 		e.Target(target.Subrepo.Target)
-		// TODO do we need dependencies and sources?
+		e.Dependencies(target)
+		// TODO do we need to walk build statements or subincludes?
 		return
 	}
 
@@ -410,7 +413,8 @@ func (nte *NoTrimExporter) Target(target *core.BuildTarget) {
 	// as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
 		nte.Target(target.Subrepo.Target)
-		// TODO do we need dependencies and sources?
+		nte.Dependencies(target)
+		// TODO do we need to walk build statements or subincludes?
 		return
 	}
 
