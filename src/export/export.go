@@ -124,10 +124,9 @@ func (be *baseExporter) Targets(labels core.BuildLabels) {
 
 // Dependencies exports dependencies of a target.
 func (be *baseExporter) Dependencies(target *core.BuildTarget) {
-	for _, dep := range target.Dependencies() {
-		log.Infof("Dependency of (%v): %v", target.Label, dep.Label)
-		be.impl.Target(dep)
-	}
+	deps := target.DeclaredDependencies()
+	log.Infof("Exporting dependencies of (%v): %v", target.Label, deps)
+	be.Targets(deps)
 }
 
 // Sources exports all files required by the target.
@@ -141,7 +140,7 @@ func (be *baseExporter) Sources(target *core.BuildTarget) {
 				if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
 					log.Fatalf("Error copying file: %s\n", err)
 				}
-				log.Warning("Writing source file: %s", p)
+				log.Infof("Writing exported source file: %s", p)
 			}
 		}
 	}
@@ -248,6 +247,7 @@ func (e *DefaultExporter) BuildStatements(pkg *core.Package, target *core.BuildT
 	if err != nil {
 		log.Fatalf("Failed to lookup related targets for package %s: %w", pkg.Name, err)
 	}
+	log.Infof("Exporting related targets to (%v): %v", target.Label, relatedTargets)
 
 	for _, target := range relatedTargets {
 		e.Target(target)

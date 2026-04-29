@@ -1,0 +1,9 @@
+def secondary_custom_target(
+        name:str,
+        outs:list=[]):
+    return genrule(
+        name = name,
+        srcs = ["//build_defs:secondary_file"],
+        outs = outs,
+        cmd = "echo 'secondary' > $OUT && cat $SRCS >> $OUT ",
+    )

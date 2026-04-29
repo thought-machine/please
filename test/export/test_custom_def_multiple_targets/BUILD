@@ -5,7 +5,7 @@ please_export_e2e_test(
     name = "export_custom_with_adjacent_target",
     cmd_on_export = [
         # Adjacent target of build def
-        "build //:custom_target#adjacent",
+        "build //:custom_target_adjacent",
     ],
     export_targets = ["//:custom_target"],
 )

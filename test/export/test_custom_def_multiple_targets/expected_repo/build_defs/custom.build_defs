@@ -1,13 +1,13 @@
+subinclude("//build_defs:secondary_build_def")
+
 def custom_target(
         name:str,
         srcs:list=[],
         outs:list=[],
         outs_adjacent:list=[]):
-    genrule(
-        name = f"{name}#adjacent",
-        srcs = srcs,
+    secondary_custom_target(
+        name = f"{name}_adjacent",
         outs = outs_adjacent,
-        cmd = "echo 'adjacent' > $OUT && cat $SRCS >> $OUT ",
     )
     return genrule(
         name = name,
