@@ -368,6 +368,11 @@ func (e *DefaultExporter) minimalSubincludeStatement(pkg *core.Package, availabl
 			filteredLabels = append(filteredLabels, label)
 		}
 	}
+
+	if len(filteredLabels) == 0 {
+		return ""
+	}
+
 	sort.Sort(filteredLabels)
 
 	call := &build.CallExpr{
