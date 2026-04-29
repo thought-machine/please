@@ -9,6 +9,7 @@ import (
 	"github.com/please-build/gcfg"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/plz"
 )
 
 // Config prints configuration settings in human-readable format.
@@ -29,7 +30,15 @@ func Config(config *core.Configuration, options []string) {
 
 			values, err := gcfg.Get(config, section, subsection, name)
 			if err != nil {
-				log.Fatalf("Failed to get %s: %s", option, err)
+				if section == "plugin" {
+					if defaultValues, ok := pluginConfigFieldDefaultValues(config, subsection, name); ok {
+						values = defaultValues
+						err = nil
+					}
+				}
+				if err != nil {
+					log.Fatalf("Failed to get %s: %s", option, err)
+				}
 			}
 
 			for _, value := range values {
@@ -37,6 +46,53 @@ func Config(config *core.Configuration, options []string) {
 			}
 		}
 	}
+}
+
+// pluginConfigFieldDefaultValues returns the default values of a plugin config field and a boolean indicating whether
+// the plugin field actually exists.
+func pluginConfigFieldDefaultValues(config *core.Configuration, pluginName string, name string) ([]string, bool) {
+	plugin, ok := config.Plugin[pluginName]
+	if !ok {
+		return nil, false
+	}
+
+	state := core.NewBuildState(config)
+	plz.Run([]core.BuildLabel{plugin.Target}, nil, state, state.Config, state.TargetArch)
+	subrepo := state.Graph.SubrepoOrDie(pluginName)
+	subrepo.State.Initialise(subrepo)
+
+	for key, field := range subrepo.State.RepoConfig.PluginConfig {
+		configKey := field.ConfigKey
+		if configKey == "" {
+			configKey = strings.ReplaceAll(key, "_", "")
+		}
+		if strings.EqualFold(configKey, name) {
+			values := normaliseBuildLabels(field.DefaultValue, subrepo.Name)
+			return values, true
+		}
+	}
+
+	return nil, false
+}
+
+// normaliseBuildLabels returns a copy of values with each build label made absolute.
+// For example, //tools/bar in subrepo foo is replaced by ///foo//tools/bar.
+func normaliseBuildLabels(values []string, subrepo string) []string {
+	valuesCopy := make([]string, len(values))
+	for i, value := range values {
+		if core.LooksLikeABuildLabel(value) {
+			target, annotation := core.SplitLabelAnnotation(value)
+			if label, err := core.TryParseBuildLabel(target, "", subrepo); err == nil {
+				annotatedLabel := core.AnnotatedOutputLabel{
+					BuildLabel: label,
+					Annotation: annotation,
+				}
+				value = annotatedLabel.String()
+			}
+		}
+		valuesCopy[i] = value
+	}
+	return valuesCopy
 }
 
 // ConfigJSON prints the configuration settings as JSON.
