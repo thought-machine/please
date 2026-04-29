@@ -3,7 +3,7 @@ package dummy
 import (
 	"fmt"
 
-	"github.com/stretchr/testify/"
+	"github.com/google/uuid"
 )
 
 func main() {
