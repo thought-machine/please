@@ -1,0 +1,11 @@
+filegroup(
+    name = "go_mod",
+    srcs = ["go.mod"],
+    visibility = ["PUBLIC"],
+)
+
+go_test(
+    name = "test",
+    srcs = ["test.go"],
+    deps = ["///third_party/go/github.com_stretchr_testify//assert"],
+)
