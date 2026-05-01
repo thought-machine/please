@@ -123,7 +123,11 @@ func (be *baseExporter) PlzConfig() {
 // Targets exports all targets for the given labels.
 func (be *baseExporter) Targets(labels core.BuildLabels) {
 	for _, l := range labels {
-		target := be.state.Graph.TargetOrDie(l)
+		target := be.state.Graph.Target(l)
+		if target == nil {
+			log.Errorf("Unable to lookup target %s", l)
+			continue
+		}
 		be.impl.Target(target)
 	}
 }
@@ -240,7 +244,12 @@ func (e *DefaultExporter) Subincludes(pkg *core.Package, target *core.BuildTarge
 		}
 		e.requiredSubincludes[pkg][subinclude] = true
 
-		e.Target(e.state.Graph.TargetOrDie(subinclude))
+		target := e.state.Graph.Target(subinclude)
+		if target == nil {
+			log.Errorf("Unable to lookup target %s", subinclude)
+			continue
+		}
+		e.Target(target)
 	}
 }
 
