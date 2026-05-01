@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"maps"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime/debug"
 	"runtime/pprof"
+	"slices"
 	"strings"
 	"sync"
 
@@ -1100,20 +1102,16 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 // provided the macros/functions actively executing to define this target.
 func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
 	return func() core.BuildLabels {
-		var subincludes []core.BuildLabel
 		seen := map[core.BuildLabel]bool{}
 		for curr := s; curr != nil; curr = curr.callerScope {
 			for localScope := curr; localScope != nil; localScope = localScope.parent {
 				if localScope.subincludeLabel != nil {
 					label := *localScope.subincludeLabel
-					if !seen[label] {
-						seen[label] = true
-						subincludes = append(subincludes, label)
-					}
+					seen[label] = true
 				}
 			}
 		}
-		return subincludes
+		return slices.Collect(maps.Keys(seen))
 	}
 }
 
