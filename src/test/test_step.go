@@ -33,7 +33,7 @@ var numUploadFailures int64
 const maxUploadFailures int64 = 10
 
 // Test runs the tests for a single target.
-func Test(state *core.BuildState, target *core.BuildTarget, remote bool, run int) {
+func Test(ctx context.Context, state *core.BuildState, target *core.BuildTarget, remote bool, run int) {
 	// Defer this so that no matter what happens in this test run, we always call target.CompleteRun
 	defer func() {
 		runsAllCompleted := target.CompleteRun(state)
@@ -51,10 +51,10 @@ func Test(state *core.BuildState, target *core.BuildTarget, remote bool, run int
 	}()
 
 	state.LogTestRunning(target, run, core.TargetTesting, "Testing...")
-	test(state.ForTarget(target), target.Label, target, remote, run)
+	test(ctx, state.ForTarget(target), target.Label, target, remote, run)
 }
 
-func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
+func test(ctx context.Context, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget, runRemotely bool, run int) {
 	target.StartTestSuite()
 
 	hash, err := runtimeHash(state, target, runRemotely, run)
@@ -186,7 +186,7 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 	coverage := &core.TestCoverage{}
 	if state.NumTestRuns == 1 {
 		var results core.TestSuite
-		results, coverage = doFlakeRun(state, target, run, runRemotely)
+		results, coverage = doFlakeRun(ctx, state, target, run, runRemotely)
 		target.AddTestResults(results)
 
 		if target.Test.Results.TestCases.AllSucceeded() {
@@ -197,13 +197,13 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 		for run := 1; run <= int(state.NumTestRuns); run++ {
 			state.LogTestRunning(target, run, core.TargetTesting, "Testing...")
 			var results core.TestSuite
-			results, coverage = doTest(state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
+			results, coverage = doTest(ctx, state, target, runRemotely, 1) // Sequential tests re-use run 1's test dir
 			target.AddTestResults(results)
 		}
 	} else {
 		state.LogTestRunning(target, run, core.TargetTesting, "Testing...")
 		var results core.TestSuite
-		results, coverage = doTest(state, target, runRemotely, run)
+		results, coverage = doTest(ctx, state, target, runRemotely, run)
 		target.AddTestResults(results)
 	}
 
@@ -231,7 +231,7 @@ func retrieveFromCache(state *core.BuildState, target *core.BuildTarget, hash []
 }
 
 // doFlakeRun runs a test repeatably until it succeeds or exceeds the max number of flakes for the test
-func doFlakeRun(state *core.BuildState, target *core.BuildTarget, run int, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
+func doFlakeRun(ctx context.Context, state *core.BuildState, target *core.BuildTarget, run int, runRemotely bool) (core.TestSuite, *core.TestCoverage) {
 	coverage := &core.TestCoverage{}
 	results := core.TestSuite{}
 
@@ -239,7 +239,7 @@ func doFlakeRun(state *core.BuildState, target *core.BuildTarget, run int, runRe
 	for flakes := 1; flakes <= int(target.Test.Flakiness); flakes++ {
 		state.LogTestRunning(target, run, core.TargetTesting, getFlakeStatus(flakes, int(target.Test.Flakiness)))
 
-		testSuite, cov := doTest(state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
+		testSuite, cov := doTest(ctx, state, target, runRemotely, 1) // If we're running flakes, numRuns must be 1
 
 		results.TimedOut = results.TimedOut || testSuite.TimedOut
 		results.Properties = testSuite.Properties
@@ -349,19 +349,19 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int
 	return replacedCmd, env, err
 }
 
-func runTest(state *core.BuildState, target *core.BuildTarget, run int) ([]byte, error) {
+func runTest(ctx context.Context, state *core.BuildState, target *core.BuildTarget, run int) ([]byte, error) {
 	replacedCmd, env, err := testCommandAndEnv(state, target, run)
 	if err != nil {
 		return nil, err
 	}
 	log.Debugf("Running test %s#%d\nENVIRONMENT:\n%s\n%s", target.Label, run, env, replacedCmd)
-	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(target, target.TestDir(run), env.ToSlice(), target.Test.Timeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Test.Sandbox, target.Test.Sandbox), replacedCmd, state.DebugFailingTests)
+	_, stderr, err := state.ProcessExecutor.ExecWithTimeoutShellStdStreams(ctx, target, target.TestDir(run), env.ToSlice(), target.Test.Timeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Test.Sandbox, target.Test.Sandbox), replacedCmd, state.DebugFailingTests)
 	return stderr, err
 }
 
-func doTest(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
+func doTest(ctx context.Context, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (core.TestSuite, *core.TestCoverage) {
 	startTime := time.Now()
-	metadata, resultsData, coverage, err := doTestResults(state, target, runRemotely, run)
+	metadata, resultsData, coverage, err := doTestResults(ctx, state, target, runRemotely, run)
 	duration := time.Since(startTime)
 	parsedSuite := parseTestOutput(string(metadata.Stdout), string(metadata.Stderr), err, duration, target, resultsData)
 	return core.TestSuite{
@@ -375,7 +375,7 @@ func doTest(state *core.BuildState, target *core.BuildTarget, runRemotely bool, 
 	}, coverage
 }
 
-func doTestResults(state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
+func doTestResults(ctx context.Context, state *core.BuildState, target *core.BuildTarget, runRemotely bool, run int) (*core.BuildMetadata, [][]byte, *core.TestCoverage, error) {
 	var err error
 	var metadata *core.BuildMetadata
 
@@ -386,7 +386,7 @@ func doTestResults(state *core.BuildState, target *core.BuildTarget, runRemotely
 		}
 	} else {
 		var stdout []byte
-		stdout, err = prepareAndRunTest(state, target, run)
+		stdout, err = prepareAndRunTest(ctx, state, target, run)
 		metadata = &core.BuildMetadata{Stdout: stdout}
 	}
 
@@ -409,12 +409,12 @@ func doTestResults(state *core.BuildState, target *core.BuildTarget, runRemotely
 }
 
 // prepareAndRunTest sets up a test directory and runs the test.
-func prepareAndRunTest(state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
+func prepareAndRunTest(ctx context.Context, state *core.BuildState, target *core.BuildTarget, run int) (stdout []byte, err error) {
 	if err = core.PrepareRuntimeDir(state, target, target.TestDir(run)); err != nil {
 		state.LogBuildError(target.Label, core.TargetTestFailed, err, "Failed to prepare test directory for %s: %s", target.Label, err)
 		return []byte{}, err
 	}
-	return runTest(state, target, run)
+	return runTest(ctx, state, target, run)
 }
 
 func parseTestOutput(stdout string, stderr string, runError error, duration time.Duration, target *core.BuildTarget, resultsData [][]byte) core.TestSuite {

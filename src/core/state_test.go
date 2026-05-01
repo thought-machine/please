@@ -8,7 +8,7 @@ import (
 )
 
 func TestExpandOriginalLabels(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
 	state.Include = []string{"go"}
@@ -33,7 +33,7 @@ func TestExpandOriginalLabels(t *testing.T) {
 }
 
 func TestExpandOriginalTestLabels(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 	state.NeedTests = true
 	state.Include = []string{"go"}
@@ -49,7 +49,7 @@ func TestExpandOriginalTestLabels(t *testing.T) {
 }
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 
 	addTarget(state, "//src/core:target1", "py")
@@ -58,7 +58,7 @@ func TestExpandVisibleOriginalTargets(t *testing.T) {
 }
 
 func TestExpandOriginalSubLabels(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"}, true)
 	state.Include = []string{"go"}
@@ -75,7 +75,7 @@ func TestExpandOriginalSubLabels(t *testing.T) {
 }
 
 func TestExpandOriginalLabelsOrdering(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
 	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"}, true)
@@ -94,7 +94,7 @@ func TestExpandOriginalLabelsOrdering(t *testing.T) {
 }
 
 func TestAddTargetFilegroupPackageOutputs(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 
 	pkg := NewPackage("src/core")
 	target := NewBuildTarget(ParseBuildLabel("//src/core:test", ""))
@@ -110,7 +110,7 @@ func TestAddTargetFilegroupPackageOutputs(t *testing.T) {
 }
 
 func TestAddDepsToTarget(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	_, builds := state.TaskQueues()
 	pkg := NewPackage("src/core")
 	target1 := addTargetDeps(state, pkg, "//src/core:target1", "//src/core:target2")

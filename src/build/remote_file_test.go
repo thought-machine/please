@@ -26,7 +26,7 @@ func listen(s *http.Server) net.Listener {
 }
 
 func TestHeader(t *testing.T) {
-	state, target := newState("//pkg:header_test")
+	state, target := newState(t, "//pkg:header_test")
 	target.IsRemoteFile = true
 	target.Sources = []core.BuildInput{core.URLLabel("http://localhost:8080/header")}
 	target.AddOutput("header")
@@ -46,7 +46,7 @@ func TestHeader(t *testing.T) {
 }
 
 func TestSecretHeader(t *testing.T) {
-	state, target := newState("//pkg:header_test")
+	state, target := newState(t, "//pkg:header_test")
 	target.IsRemoteFile = true
 	target.Sources = []core.BuildInput{core.URLLabel("http://localhost:8080/header")}
 	target.AddOutput("header")
@@ -73,7 +73,7 @@ func TestSecretHeader(t *testing.T) {
 }
 
 func TestBasicAuth(t *testing.T) {
-	state, target := newState("//pkg:header_test")
+	state, target := newState(t, "//pkg:header_test")
 	target.IsRemoteFile = true
 	target.Sources = []core.BuildInput{core.URLLabel("http://localhost:8080/header")}
 	target.AddOutput("header")

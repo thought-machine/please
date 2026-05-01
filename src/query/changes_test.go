@@ -11,8 +11,8 @@ import (
 )
 
 func TestDiffGraphs(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
+	s2 := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s1, "//src/query:changes", nil, "src/query/changes.go")
 	t2 := addTarget(s2, "//src/query:changes", nil, "src/query/changes.go")
 	addTarget(s1, "//src/query:changes_test", t1, "src/query/changes_test.go")
@@ -29,8 +29,8 @@ func TestDiffGraphs(t *testing.T) {
 }
 
 func TestDiffGraphsIncludeNothing(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
+	s2 := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
 	t2 := addTarget(s1, "//src/query:changes", t1, "src/query/changes.go")
 	addTarget(s1, "//src/query:changes_test", t2, "src/query/changes_test.go")
@@ -41,8 +41,8 @@ func TestDiffGraphsIncludeNothing(t *testing.T) {
 }
 
 func TestDiffGraphsIncludeDirect(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
+	s2 := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
 	t2 := addTarget(s1, "//src/query:changes", t1, "src/query/changes.go")
 	addTarget(s1, "//src/query:changes_test", t2, "src/query/changes_test.go")
@@ -53,8 +53,8 @@ func TestDiffGraphsIncludeDirect(t *testing.T) {
 }
 
 func TestDiffGraphsLevel(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
+	s2 := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
 	t2 := addTarget(s1, "//src/query:changes", t1, "src/query/changes.go")
 	t3 := addTarget(s1, "//src/query:changes_test", t2, "src/query/changes_test.go")
@@ -67,8 +67,8 @@ func TestDiffGraphsLevel(t *testing.T) {
 }
 
 func TestDiffGraphsIncludeTransitive(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
+	s2 := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
 	t2 := addTarget(s1, "//src/query:changes", t1, "src/query/changes.go")
 	addTarget(s1, "//src/query:changes_test", t2, "src/query/changes_test.go")
@@ -79,14 +79,14 @@ func TestDiffGraphsIncludeTransitive(t *testing.T) {
 }
 
 func TestDiffGraphsStopsAtSubrepos(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s1, "//:modfile", nil, "go.mod")
 	t2 := addTarget(s1, "//third_party/go:mod", t1)
 	t3 := addTarget(s1, "///third_party/go/mod//:mod", nil)
 	t3.Subrepo = core.NewSubrepo(s1, "go_mod", "third_party/go", t2, cli.Arch{}, false)
 	addTarget(s1, "//src/core:core", t3)
 
-	s2 := core.NewDefaultBuildState()
+	s2 := core.NewDefaultBuildState(t.Context())
 	t1 = addTarget(s2, "//:modfile", nil, "go.mod")
 	t2 = addTarget(s2, "//third_party/go:mod", t1)
 	t3 = addTarget(s2, "///third_party/go/mod//:mod", nil)
@@ -98,14 +98,14 @@ func TestDiffGraphsStopsAtSubrepos(t *testing.T) {
 }
 
 func TestDiffGraphsStillChecksTargetsInSubrepos(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s1, "//:modfile", nil, "go.mod")
 	t2 := addTarget(s1, "//third_party/go:mod", t1)
 	t3 := addTarget(s1, "///third_party/go/mod//:mod", nil)
 	t3.Subrepo = core.NewSubrepo(s1, "go_mod", "third_party/go", t2, cli.Arch{}, false)
 	addTarget(s1, "//src/core:core", t3)
 
-	s2 := core.NewDefaultBuildState()
+	s2 := core.NewDefaultBuildState(t.Context())
 	t1 = addTarget(s2, "//:modfile", nil, "go.mod")
 	t2 = addTarget(s2, "//third_party/go:mod", t1)
 	t3 = addTarget(s2, "///third_party/go/mod//:mod", nil, "test.go")
@@ -119,7 +119,7 @@ func TestDiffGraphsStillChecksTargetsInSubrepos(t *testing.T) {
 }
 
 func TestChangesIncludesDataDirs(t *testing.T) {
-	s := core.NewDefaultBuildState()
+	s := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s, "//src/core:core", nil, "src/core/core.go")
 	t2 := addTarget(s, "//src/query:changes", t1, "src/query/changes.go")
 	t3 := addTarget(s, "//src/query:changes_test", t2, "src/query/changes_test.go")
@@ -128,8 +128,8 @@ func TestChangesIncludesDataDirs(t *testing.T) {
 }
 
 func TestSameToolHashNoChange(t *testing.T) {
-	s1 := core.NewDefaultBuildState()
-	s2 := core.NewDefaultBuildState()
+	s1 := core.NewDefaultBuildState(t.Context())
+	s2 := core.NewDefaultBuildState(t.Context())
 	target := addTarget(s1, "//src/core:core", nil, "src/core/core.go")
 	target.AddTool(core.SystemPathLabel{Name: "non-existent", Path: s1.Config.Path()})
 	target = addTarget(s2, "//src/core:core", nil, "src/core/core.go")
@@ -138,7 +138,7 @@ func TestSameToolHashNoChange(t *testing.T) {
 }
 
 func TestChangesIncludesRootTarget(t *testing.T) {
-	s := core.NewDefaultBuildState()
+	s := core.NewDefaultBuildState(t.Context())
 	t1 := addTarget(s, "//:file", nil, "file.go")
 	assert.EqualValues(t, []core.BuildLabel{t1.Label}, Changes(s, []string{"file.go"}, 0, false))
 }

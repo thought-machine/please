@@ -10,10 +10,11 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-func newScope(pkgName, subrepo, plugin string) *scope {
+func newScope(t *testing.T, pkgName, subrepo, plugin string) *scope {
+	t.Helper()
 	s := &scope{
 		pkg:   core.NewPackageSubrepo(pkgName, subrepo),
-		state: core.NewBuildState(core.DefaultConfiguration()),
+		state: core.NewBuildState(t.Context(), core.DefaultConfiguration()),
 	}
 	if plugin != "" {
 		s.state.Config.PluginDefinition.Name = plugin
@@ -33,7 +34,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test parse absolute label with subrepo using @",
 			label:    "@other_subrepo//test:target",
-			scope:    newScope("subrepo_package", "subrepo", ""),
+			scope:    newScope(t, "subrepo_package", "subrepo", ""),
 			subrepo:  "other_subrepo",
 			pkg:      "test",
 			name:     "target",
@@ -41,7 +42,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test parse absolute label with subrepo using ///",
 			label:    "///other_subrepo//test:target",
-			scope:    newScope("subrepo_package", "subrepo", ""),
+			scope:    newScope(t, "subrepo_package", "subrepo", ""),
 			subrepo:  "other_subrepo",
 			pkg:      "test",
 			name:     "target",
@@ -49,7 +50,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test host reference using @",
 			label:    "@//test:target",
-			scope:    newScope("subrepo_package", "subrepo", ""),
+			scope:    newScope(t, "subrepo_package", "subrepo", ""),
 			subrepo:  "",
 			pkg:      "test",
 			name:     "target",
@@ -57,7 +58,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test host reference using ///",
 			label:    "/////test:target",
-			scope:    newScope("subrepo_package", "subrepo", ""),
+			scope:    newScope(t, "subrepo_package", "subrepo", ""),
 			subrepo:  "",
 			pkg:      "test",
 			name:     "target",
@@ -65,7 +66,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test label relative to subrepo",
 			label:    "//test:target",
-			scope:    newScope("subrepo_package", "subrepo", ""),
+			scope:    newScope(t, "subrepo_package", "subrepo", ""),
 			subrepo:  "subrepo",
 			pkg:      "test",
 			name:     "target",
@@ -73,7 +74,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test label relative to package in subrepo",
 			label:    ":target",
-			scope:    newScope("subrepo_package", "subrepo", ""),
+			scope:    newScope(t, "subrepo_package", "subrepo", ""),
 			subrepo:  "subrepo",
 			pkg:      "subrepo_package",
 			name:     "target",
@@ -81,7 +82,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test host arch is stripped",
 			label:    fmt.Sprintf("///%s//test:target", (&arch).String()),
-			scope:    newScope("pkg", "", ""),
+			scope:    newScope(t, "pkg", "", ""),
 			subrepo:  "",
 			pkg:      "test",
 			name:     "target",
@@ -89,7 +90,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test host arch is stripped from subrepo",
 			label:    fmt.Sprintf("///subrepo@%s//test:target", (&arch).String()),
-			scope:    newScope("pkg", "", ""),
+			scope:    newScope(t, "pkg", "", ""),
 			subrepo:  "subrepo",
 			pkg:      "test",
 			name:     "target",
@@ -97,7 +98,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test host arch is stripped from nested subrepo",
 			label:    "///foowin_amd64//test:target",
-			scope:    newScope("pkg", "subrepo2@foowin_amd64", ""),
+			scope:    newScope(t, "pkg", "subrepo2@foowin_amd64", ""),
 			subrepo:  "foowin_amd64",
 			pkg:      "test",
 			name:     "target",
@@ -105,7 +106,7 @@ func TestParseLabelContext(t *testing.T) {
 		{
 			testName: "Test host plugin is stripped",
 			label:    "///foo//test:target",
-			scope:    newScope("subrepo_package", "", "foo"),
+			scope:    newScope(t, "subrepo_package", "", "foo"),
 			subrepo:  "",
 			pkg:      "test",
 			name:     "target",

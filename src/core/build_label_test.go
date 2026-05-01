@@ -109,7 +109,7 @@ func TestCompleteError(t *testing.T) {
 }
 
 func TestSubrepoLabel(t *testing.T) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	assert.EqualValues(t, BuildLabel{PackageName: "", Name: "test"}, subrepoLabel("test", ""))
 	assert.EqualValues(t, BuildLabel{PackageName: "package", Name: "test"}, subrepoLabel("package/test", ""))
 	// This isn't really valid (the caller shouldn't need to call it in such a case)
@@ -128,7 +128,7 @@ func TestSubrepoLabel(t *testing.T) {
 func TestPluginSubrepoLabel(t *testing.T) {
 	subrepoLabel := BuildLabel{PackageName: "foo/bar", Name: "plugin"}
 
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.Config.Plugin = map[string]*Plugin{}
 	state.Config.Plugin["plugin"] = &Plugin{Target: subrepoLabel}
 	state.Graph.AddSubrepo(&Subrepo{Name: "foowin_amd64", Arch: cli.NewArch("foowin", "amd64")})

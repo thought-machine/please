@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	iofs "io/fs"
 	"os"
@@ -223,7 +224,8 @@ func main() {
 	}
 	config.Please.NumThreads = opts.NumThreads
 
-	state := core.NewBuildState(config)
+	ctx := context.TODO()
+	state := core.NewBuildState(ctx, config)
 	if opts.BuildDefsDir != "" {
 		mustLoadBuildDefsDir(state, opts.BuildDefsDir)
 	}

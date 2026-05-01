@@ -39,7 +39,7 @@ func TestCycleDetector(t *testing.T) {
 	}
 
 	t.Run("NoCycle", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		newTarget(state, "//src:a", "//src:b", "//src:c")
 		newTarget(state, "//src:b", "//src:d", "//src:e")
 		newTarget(state, "//src:c", "//src:b", "//src:f")
@@ -54,7 +54,7 @@ func TestCycleDetector(t *testing.T) {
 	})
 
 	t.Run("Cycle", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := NewDefaultBuildState(t.Context())
 		newTarget(state, "//src:a", "//src:b", "//src:c")
 		newTarget(state, "//src:b", "//src:d", "//src:e")
 		newTarget(state, "//src:c", "//src:b", "//src:f")

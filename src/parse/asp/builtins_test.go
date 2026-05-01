@@ -12,7 +12,7 @@ import (
 func TestPackageName(t *testing.T) {
 	s := &scope{
 		pkg:   &core.Package{Name: "test/package"},
-		state: core.NewBuildState(core.DefaultConfiguration()),
+		state: core.NewBuildState(t.Context(), core.DefaultConfiguration()),
 	}
 	assert.Equal(t, "test/package", packageName(s, []pyObject{pyNone{}, pyNone{}}).String())
 	assert.Equal(t, "test/package", packageName(s, []pyObject{pyString(":test"), pyNone{}}).String())
@@ -20,7 +20,7 @@ func TestPackageName(t *testing.T) {
 }
 
 func TestGetLabels(t *testing.T) {
-	state := core.NewBuildState(core.DefaultConfiguration())
+	state := core.NewBuildState(t.Context(), core.DefaultConfiguration())
 
 	bottom := core.NewBuildTarget(core.NewBuildLabel("pkg", "bottom"))
 	bottom.AddLabel("target:bottom")
