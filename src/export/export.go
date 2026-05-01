@@ -23,10 +23,15 @@ import (
 var log = logging.Log
 
 type Exporter interface {
+	// PlzConfig exports the repo configuration files.
 	PlzConfig()
+	// Preloaded exports the preloaded targets, build defs and subincludes.
 	Preloaded()
+	// Targets exports all targets for the given labels.
 	Targets(core.BuildLabels)
+	// Target exports an individual target and its dependencies.
 	Target(target *core.BuildTarget)
+	// WritePackageFiles writes the processed BUILD files to the export directory.
 	WritePackageFiles()
 }
 
@@ -162,7 +167,9 @@ func (be *baseExporter) checkFirstExport(pkg *core.Package, target *core.BuildTa
 // DefaultExporter implements an exporter that trims packages to reach a minimal exported repo.
 type DefaultExporter struct {
 	baseExporter
-	requiredSubincludes  map[*core.Package]map[core.BuildLabel]bool
+	// requiredSubincludes maps packages to the subinclude labels they require.
+	requiredSubincludes map[*core.Package]map[core.BuildLabel]bool
+	// preloadedSubincludes tracks subincludes that are preloaded and don't need explicit export.
 	preloadedSubincludes map[core.BuildLabel]bool
 }
 
@@ -394,9 +401,11 @@ func (e *DefaultExporter) minimalSubincludeStatement(pkg *core.Package, availabl
 // and statements in a package.
 type NoTrimExporter struct {
 	baseExporter
+	// exportedPackages tracks which packages have already had their BUILD files exported.
 	exportedPackages map[string]bool
 }
 
+// Preloaded exports the preloaded targets, build defs and subincludes.
 func (nte *NoTrimExporter) Preloaded() {
 	// Write any preloaded build defs
 	for _, preload := range nte.state.Config.Parse.PreloadBuildDefs {
