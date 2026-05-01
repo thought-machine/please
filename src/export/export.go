@@ -194,6 +194,10 @@ func (e *DefaultExporter) Target(target *core.BuildTarget) {
 
 	log.Infof("Exporting target: %v", target.Label)
 
+	// Skip export for internal packages
+	if target.Label.PackageName == parse.InternalPackageName {
+		return
+	}
 	// We want to export the package that made this subrepo available, but we still need to walk the
 	// target deps as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
@@ -235,11 +239,6 @@ func (e *DefaultExporter) Subincludes(pkg *core.Package, target *core.BuildTarge
 
 // BuildStatements exports BUILD statements that generate the build target.
 func (e *DefaultExporter) BuildStatements(pkg *core.Package, target *core.BuildTarget) {
-	if target.Label.PackageName == parse.InternalPackageName {
-		// TODO validate if we still need this
-		return
-	}
-
 	stmt, err := pkg.FindStatement(target)
 	if err != nil {
 		log.Fatalf("Failed to find statement in %s: %w", pkg.Name, err)
