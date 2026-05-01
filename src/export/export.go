@@ -138,7 +138,7 @@ func (be *baseExporter) Sources(target *core.BuildTarget) {
 		for _, p := range src.Paths(be.state.Graph) {
 			if !filepath.IsAbs(p) { // Don't copy system file deps.
 				if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
-					log.Fatalf("Error copying file: %s\n", err)
+					log.Warningf("Error copying file, skipping...: %s", err)
 				}
 				log.Infof("Writing exported source file: %s", p)
 			}
@@ -191,6 +191,8 @@ func (e *DefaultExporter) Target(target *core.BuildTarget) {
 	if e.checkFirstExport(pkg, target) == false {
 		return
 	}
+
+	log.Infof("Exporting target: %v", target.Label)
 
 	// We want to export the package that made this subrepo available, but we still need to walk the
 	// target deps as it may depend on other subrepos or first party targets
