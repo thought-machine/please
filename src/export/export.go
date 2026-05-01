@@ -5,6 +5,7 @@ package export
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -203,7 +204,6 @@ func (e *DefaultExporter) Target(target *core.BuildTarget) {
 	if target.Subrepo != nil {
 		e.Target(target.Subrepo.Target)
 		e.Dependencies(target)
-		// TODO do we need to walk build statements or subincludes?
 		return
 	}
 
@@ -241,15 +241,17 @@ func (e *DefaultExporter) Subincludes(pkg *core.Package, target *core.BuildTarge
 func (e *DefaultExporter) BuildStatements(pkg *core.Package, target *core.BuildTarget) {
 	stmt, err := pkg.FindStatement(target)
 	if err != nil {
-		log.Fatalf("Failed to find statement in %s: %w", pkg.Name, err)
+		log.Errorf("Failed to find statement in %s: %w", pkg.Name, err)
+		return
 	}
 
 	relatedTargets, err := pkg.FindRelatedTargets(stmt)
 	if err != nil {
-		log.Fatalf("Failed to lookup related targets for package %s: %w", pkg.Name, err)
+		log.Errorf("Failed to lookup related targets for package %s: %w", pkg.Name, err)
+		return
 	}
-	log.Infof("Exporting related targets to (%v): %v", target.Label, relatedTargets)
 
+	log.Infof("Exporting related targets to (%v): %v", target.Label, relatedTargets)
 	for _, target := range relatedTargets {
 		e.Target(target)
 	}
@@ -265,7 +267,8 @@ func (e *DefaultExporter) WritePackageFiles() {
 		// filter
 		filteredBytes, err := e.FilterPackageFile(pkg)
 		if err != nil {
-			log.Fatalf("Failed to filter the build statements of package %s: %v", pkg.Label(), err)
+			log.Errorf("Failed to filter the build statements of package %s: %v", pkg.Label(), err)
+			continue
 		}
 
 		// format
@@ -276,7 +279,8 @@ func (e *DefaultExporter) WritePackageFiles() {
 		file := e.OpenExportedPackageFile(pkg)
 		defer file.Close()
 		if _, err := file.Write(formattedBytes); err != nil {
-			log.Fatalf("Failed to write to exported BUILD file %s: %v", file.Name(), err)
+			log.Errorf("Failed to write to exported BUILD file %s: %v", file.Name(), err)
+			continue
 		}
 	}
 }
@@ -297,12 +301,12 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 	p := asp.NewParserOnly()
 	parsedStmts, err := p.ParseFileOnly(pkg.Filename)
 	if err != nil {
-		log.Fatalf("Failed to parse original BUILD file: %v", err)
+		return nil, fmt.Errorf("Parsing original BUILD file: %v", err)
 	}
 
 	original, err := os.ReadFile(pkg.Filename)
 	if err != nil {
-		log.Fatalf("Failed to open original BUILD file: %v", err)
+		return nil, fmt.Errorf("Opening original BUILD file: %v", err)
 	}
 
 	cursor := 0
@@ -340,7 +344,7 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 	}
 
 	// Write the rest of the original file (non build targets)
-	if buffer.Write(original[cursor:]); err != nil {
+	if _, err := buffer.Write(original[cursor:]); err != nil {
 		return nil, err
 	}
 
@@ -397,7 +401,7 @@ func (nte *NoTrimExporter) Preloaded() {
 	// Write any preloaded build defs
 	for _, preload := range nte.state.Config.Parse.PreloadBuildDefs {
 		if err := fs.RecursiveCopy(preload, filepath.Join(nte.targetDir, preload), 0); err != nil {
-			log.Fatalf("Failed to copy preloaded build def %s: %s", preload, err)
+			log.Errorf("Failed to copy preloaded build def %s: %s", preload, err)
 		}
 	}
 
@@ -420,7 +424,6 @@ func (nte *NoTrimExporter) Target(target *core.BuildTarget) {
 	if target.Subrepo != nil {
 		nte.Target(target.Subrepo.Target)
 		nte.Dependencies(target)
-		// TODO do we need to walk build statements or subincludes?
 		return
 	}
 
@@ -446,7 +449,7 @@ func (nte *NoTrimExporter) Package(pkg *core.Package) {
 	exportedFilename := filepath.Join(nte.targetDir, pkgFilename)
 
 	if err := fs.CopyFile(pkgFilename, exportedFilename, 0); err != nil {
-		log.Fatalf("failed to export package %s: %v", pkgName, err)
+		log.Errorf("failed to export package %s: %v", pkgName, err)
 	}
 }
 
