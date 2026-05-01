@@ -35,7 +35,7 @@ type Package struct {
 	// Set of output files from rules.
 	Outputs map[string]*BuildTarget
 	// Includes metadata from parsing the package BUILD file.
-	BuildFileMetadata BuildFileMetadata
+	BuildFileMetadata PackageMetadata
 	// Protects access to above
 	mutex sync.RWMutex
 }
@@ -45,6 +45,16 @@ func NewPackage(name string) *Package {
 	return NewPackageSubrepo(name, "")
 }
 
+// NewPackageWithOpts constructs a new package with the given name, and enables additional features
+// given the flags enabled in the build state.
+func NewPackageWithOpts(state *BuildState, name string) *Package {
+	pkg := NewPackage(name)
+	if state.ParseMetadata {
+		pkg.BuildFileMetadata = newBuildFileMetadata()
+	}
+	return pkg
+}
+
 // NewPackageSubrepo constructs a new package with the given name and subrepo.
 func NewPackageSubrepo(name, subrepo string) *Package {
 	return &Package{
@@ -52,7 +62,7 @@ func NewPackageSubrepo(name, subrepo string) *Package {
 		SubrepoName:       subrepo,
 		targets:           map[string]*BuildTarget{},
 		Outputs:           map[string]*BuildTarget{},
-		BuildFileMetadata: *newBuildFileMetadata(),
+		BuildFileMetadata: newNoopPackageMetadata(),
 	}
 }
 
@@ -234,35 +244,24 @@ func (pkg *Package) verifyOutputs() []string {
 }
 
 // RegisterStatement maps a build statement to target in the package.
-func (pkg *Package) RegisterStatement(target *BuildTarget, stmt *BuildStatement) {
-	if stmt == nil {
-		log.Infof("Attempted to register empty build statement for package %s and target %s",
-			pkg.Name, target.String())
-		return
-	}
+func (pkg *Package) RegisterStatement(target *BuildTarget, stmtProvider BuildStatementProvider) {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
-	pkg.BuildFileMetadata.RegisterStatementTarget(stmt, target)
+	pkg.BuildFileMetadata.RegisterStatementTarget(target, stmtProvider)
 }
 
 // RegisterRequiredSubincludes maps the required subincludes to generate the target.
-func (pkg *Package) RegisterRequiredSubincludes(target *BuildTarget, subincludes BuildLabels) {
-	if len(subincludes) == 0 {
-		log.Infof("Attempted to register empty subinclude labels for package %s and target %s",
-			pkg.Name, target.String())
-		return
-	}
-
+func (pkg *Package) RegisterRequiredSubincludes(target *BuildTarget, labelProvider SubincludesLabelProvider) {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
-	pkg.BuildFileMetadata.RegisterRequiredSubinclude(target, subincludes)
+	pkg.BuildFileMetadata.RegisterRequiredSubinclude(target, labelProvider)
 }
 
 // RegisterSubincludeStmt maps the subincludes build statement to the included targets.
-func (pkg *Package) RegisterSubincludeStmt(label BuildLabel, stmt *BuildStatement) {
+func (pkg *Package) RegisterSubincludeStmt(label BuildLabel, stmtProvider BuildStatementProvider) {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
-	pkg.BuildFileMetadata.RegisterSubincludeStmt(label, stmt)
+	pkg.BuildFileMetadata.RegisterSubincludeStmt(label, stmtProvider)
 }
 
 // FindStatement finds the build statement that generated the target.

@@ -1081,35 +1081,40 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	return nil
 }
 
-// CurrentBuildStatement creates a new BuildStatement from the statement that is being currently interpreted.
-func (s *scope) CurrentBuildStatement() *core.BuildStatement {
-	stmtScope := s
-	for curr := s; curr != nil; curr = curr.callerScope {
-		if curr.pkg != nil && curr.filename == s.pkg.Filename {
-			stmtScope = curr
+// CurrentBuildStatement creates a provider for creating a new BuildStatement from the statement
+// that is being currently interpreted.
+func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
+	return func() *core.BuildStatement {
+		stmtScope := s
+		for curr := s; curr != nil; curr = curr.callerScope {
+			if curr.pkg != nil && curr.filename == s.pkg.Filename {
+				stmtScope = curr
+			}
 		}
+		s.NAssert(stmtScope.cursor == nil, "Cursor is not pointing to a statement")
+		return NewBuildStatement(stmtScope.cursor)
 	}
-	s.NAssert(stmtScope.cursor == nil, "Cursor is not pointing to a statement")
-	return NewBuildStatement(stmtScope.cursor)
 }
 
-// ActiveSubincludes traces the call stack and scopes to find subincludes that provided the
-// macros/functions actively executing to define this target.
-func (s *scope) ActiveSubincludes() []core.BuildLabel {
-	var subincludes []core.BuildLabel
-	seen := map[core.BuildLabel]bool{}
-	for curr := s; curr != nil; curr = curr.callerScope {
-		for localScope := curr; localScope != nil; localScope = localScope.parent {
-			if localScope.subincludeLabel != nil {
-				label := *localScope.subincludeLabel
-				if !seen[label] {
-					seen[label] = true
-					subincludes = append(subincludes, label)
+// ActiveSubincludes creates a provider to trace the call stack and scopes to find subincludes that
+// provided the macros/functions actively executing to define this target.
+func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
+	return func() core.BuildLabels {
+		var subincludes []core.BuildLabel
+		seen := map[core.BuildLabel]bool{}
+		for curr := s; curr != nil; curr = curr.callerScope {
+			for localScope := curr; localScope != nil; localScope = localScope.parent {
+				if localScope.subincludeLabel != nil {
+					label := *localScope.subincludeLabel
+					if !seen[label] {
+						seen[label] = true
+						subincludes = append(subincludes, label)
+					}
 				}
 			}
 		}
+		return subincludes
 	}
-	return subincludes
 }
 
 // pkgFilename returns the filename of the current package, or the empty string if there is none.
