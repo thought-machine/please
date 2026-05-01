@@ -191,7 +191,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 	return target
 }
 
-
 // validateSandbox ensures that the target isn't opting out of the build/test sandbox when it's not allowed to
 func validateSandbox(state *core.BuildState, target *core.BuildTarget) error {
 	if target.IsFilegroup || len(state.Config.Sandbox.ExcludeableTargets) == 0 {
