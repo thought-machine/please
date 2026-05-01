@@ -7,26 +7,55 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-func TestMakeSubincludesStatement(t *testing.T) {
-	e := &export{
-		requiredSubincludes: map[*core.Package]map[core.BuildLabel]bool{},
+func TestMinimalSubincludeStatement(t *testing.T) {
+	var subincludesTests = []struct {
+		name            string
+		availableLabels []core.BuildLabel
+		requiredLabels  []core.BuildLabel
+		out             string
+	}{
+		{
+			"Successful no pruning subinclude",
+			core.ParseBuildLabels([]string{"//build_defs:test"}),
+			core.ParseBuildLabels([]string{"//build_defs:test"}),
+			`subinclude("//build_defs:test")`,
+		},
+		{
+			"No subincludes",
+			nil,
+			nil,
+			"",
+		},
+		{
+			"Single subinclude (not required)",
+			core.ParseBuildLabels([]string{"//build_defs:other"}),
+			nil,
+			"",
+		},
+		{
+			"Multiple subincludes (sorted and filtered)",
+			core.ParseBuildLabels([]string{"//build_defs:test", "//build_defs:abc", "//build_defs:other"}),
+			core.ParseBuildLabels([]string{"//build_defs:test", "//build_defs:abc"}),
+			"subinclude(\n" +
+				"    \"//build_defs:abc\",\n" +
+				"    \"//build_defs:test\",\n" +
+				")",
+		},
 	}
 
-	pkg := &core.Package{Name: "test"}
+	for _, tt := range subincludesTests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &DefaultExporter{
+				requiredSubincludes: map[*core.Package]map[core.BuildLabel]bool{},
+			}
 
-	// Test case 1: No subincludes
-	assert.Equal(t, "", e.makeSubincludesStatement(pkg))
+			pkg := &core.Package{Name: "test"}
+			e.requiredSubincludes[pkg] = map[core.BuildLabel]bool{}
+			for _, labels := range tt.requiredLabels {
+				e.requiredSubincludes[pkg][labels] = true
+			}
 
-	// Test case 2: Single subinclude
-	label1 := core.ParseBuildLabel("//build_defs:test", "")
-	e.requiredSubincludes[pkg] = map[core.BuildLabel]bool{
-		label1: true,
+			assert.Equal(t, tt.out, e.minimalSubincludeStatement(pkg, tt.availableLabels))
+		})
 	}
-	assert.Equal(t, `subinclude("//build_defs:test")`, e.makeSubincludesStatement(pkg))
-
-	// Test case 3: Multiple subincludes (sorted)
-	label2 := core.ParseBuildLabel("//build_defs:abc", "")
-	e.requiredSubincludes[pkg][label2] = true
-	expected := "subinclude(\n    \"//build_defs:abc\",\n    \"//build_defs:test\",\n)"
-	assert.Equal(t, expected, e.makeSubincludesStatement(pkg))
 }
