@@ -664,7 +664,7 @@ go_repo(
 go_repo(
     licences = ["MPL-2.0"],
     module = "github.com/shoenig/go-m1cpu",
-    version = "v0.1.6",
+    version = "v0.2.1",
 )
 
 go_repo(
