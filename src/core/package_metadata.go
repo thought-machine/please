@@ -63,7 +63,7 @@ type packageMetadataImpl struct {
 	LabelsPerSubincludeStmt map[BuildStatement]BuildLabels
 }
 
-func newBuildFileMetadata() PackageMetadata {
+func newPackageMetadata() PackageMetadata {
 	return &packageMetadataImpl{
 		StmtToTarget:            map[BuildStatement][]*BuildTarget{},
 		TargetToSubinclude:      map[*BuildTarget]BuildLabels{},

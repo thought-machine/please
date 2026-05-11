@@ -227,7 +227,7 @@ func (e *DefaultExporter) Target(target *core.BuildTarget) {
 // Subincludes exports the subincluded targets required to generate the target and selects them to
 // later be written to the package as statements.
 func (e *DefaultExporter) Subincludes(pkg *core.Package, target *core.BuildTarget) {
-	subincludes, err := pkg.FindRequiredSubincludes(target)
+	subincludes, err := pkg.Metadata.FindRequiredSubincludes(target)
 	if err != nil {
 		log.Infof("No subincludes found, assuming non required.: %w", pkg.Name, err)
 		return
@@ -255,13 +255,13 @@ func (e *DefaultExporter) Subincludes(pkg *core.Package, target *core.BuildTarge
 
 // BuildStatements exports BUILD statements that generate the build target.
 func (e *DefaultExporter) BuildStatements(pkg *core.Package, target *core.BuildTarget) {
-	stmt, err := pkg.FindStatement(target)
+	stmt, err := pkg.Metadata.FindStatement(target)
 	if err != nil {
 		log.Errorf("Failed to find statement in %s: %w", pkg.Name, err)
 		return
 	}
 
-	relatedTargets, err := pkg.FindRelatedTargets(stmt)
+	relatedTargets, err := pkg.Metadata.FindTargets(stmt)
 	if err != nil {
 		log.Errorf("Failed to lookup related targets for package %s: %w", pkg.Name, err)
 		return
@@ -339,7 +339,7 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 			cursor = bStmt.Start
 		}
 
-		if stmtLabels, ok := pkg.GetSubincludedLabels(bStmt); ok {
+		if stmtLabels, ok := pkg.Metadata.GetSubincludedLabels(bStmt); ok {
 			// Write filtered subincludes
 			subStmt := e.minimalSubincludeStatement(pkg, stmtLabels)
 			buffer.Write([]byte(subStmt))
@@ -369,7 +369,7 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 
 // isRequiredStatement evaluates if the current build statement is required by the export.
 func (e *DefaultExporter) isRequiredStatement(pkg *core.Package, stmt *core.BuildStatement) (bool, error) {
-	targets, err := pkg.FindRelatedTargets(stmt)
+	targets, err := pkg.Metadata.FindTargets(stmt)
 	if err != nil {
 		return false, err
 	}
