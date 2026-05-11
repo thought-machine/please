@@ -210,8 +210,8 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
 	s.state.AddTarget(s.pkg, target)
-	s.pkg.RegisterStatement(target, s.CurrentBuildStatement())
-	s.pkg.RegisterRequiredSubincludes(target, s.ActiveSubincludes())
+	s.pkg.Metadata.RegisterStatementTarget(target, s.CurrentBuildStatement())
+	s.pkg.Metadata.RegisterRequiredSubinclude(target, s.ActiveSubincludes())
 
 	if s.Callback {
 		target.AddedPostBuild = true
@@ -419,7 +419,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	t = s.WaitForSubincludedTarget(l, pkgLabel)
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
-		s.pkg.RegisterSubincludeStmt(l, s.CurrentBuildStatement())
+		s.pkg.Metadata.RegisterSubincludeStmt(l, s.CurrentBuildStatement())
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude
 		s.state.Graph.RegisterTransitiveSubinclude(*s.subincludeLabel, l)
 	}
