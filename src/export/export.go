@@ -339,12 +339,12 @@ func (e *DefaultExporter) FilterPackageFile(pkg *core.Package) ([]byte, error) {
 			cursor = bStmt.Start
 		}
 
-		if stmtLabels, ok := pkg.Metadata.GetSubincludedLabels(bStmt); ok {
+		if stmtLabels, ok := pkg.Metadata.GetSubincludedLabels(&bStmt); ok {
 			// Write filtered subincludes
 			subStmt := e.minimalSubincludeStatement(pkg, stmtLabels)
 			buffer.Write([]byte(subStmt))
 			log.Debugf("Decision: %s", subStmt)
-		} else if required, err := e.isRequiredStatement(pkg, bStmt); err == nil && !required {
+		} else if required, err := e.isRequiredStatement(pkg, &bStmt); err == nil && !required {
 			// Don't write statements that generate targets we are not interested about
 			log.Debugf("Decision: <skip>")
 			// skip

@@ -29,7 +29,7 @@ func (s BuildStatements) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s BuildStatements) Less(i, j int) bool { return s[i].StartPos() < s[j].StartPos() }
 
 // BuildStatementProvider is a type for methods that generate new build statements.
-type BuildStatementProvider func() *BuildStatement
+type BuildStatementProvider func() BuildStatement
 
 // SubincludesLabelProvider is a type for methods that generate labels from a subincludes.
 type SubincludesLabelProvider func() BuildLabels
@@ -81,7 +81,7 @@ func (m *packageMetadataImpl) RegisterStatementTarget(target *BuildTarget, stmtP
 
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.StmtToTarget[*stmt] = append(m.StmtToTarget[*stmt], target)
+	m.StmtToTarget[stmt] = append(m.StmtToTarget[stmt], target)
 }
 
 // RegisterRequiredSubinclude maps a target to the subincludes required to build it.
@@ -103,7 +103,7 @@ func (m *packageMetadataImpl) RegisterSubincludeStmt(label BuildLabel, stmtProvi
 
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.LabelsPerSubincludeStmt[*stmt] = append(m.LabelsPerSubincludeStmt[*stmt], label)
+	m.LabelsPerSubincludeStmt[stmt] = append(m.LabelsPerSubincludeStmt[stmt], label)
 }
 
 // FindStatement returns the build statement that generated the given target.
