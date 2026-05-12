@@ -1086,7 +1086,7 @@ func (s *scope) Constant(expr *Expression) pyObject {
 // CurrentBuildStatement creates a provider for creating a new BuildStatement from the statement
 // that is being currently interpreted.
 func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
-	return func() *core.BuildStatement {
+	return func() core.BuildStatement {
 		stmtScope := s
 		for curr := s; curr != nil; curr = curr.callerScope {
 			if curr.pkg != nil && curr.filename == s.pkg.Filename {
@@ -1099,7 +1099,7 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 }
 
 // ActiveSubincludes creates a provider to trace the call stack and scopes to find subincludes that
-// provided the macros/functions actively executing to define this target.
+// provided the macros/functions actively executing to define this target.1
 func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
 	return func() core.BuildLabels {
 		seen := map[core.BuildLabel]bool{}
@@ -1123,9 +1123,9 @@ func (s *scope) pkgFilename() string {
 	return ""
 }
 
-// NewBuildStatement creates a new core.BuildStatment from an asp.statment.
-func NewBuildStatement(stmt *Statement) *core.BuildStatement {
-	return &core.BuildStatement{
+// NewBuildStatement creates a new core.BuildStatement from an asp.statement.
+func NewBuildStatement(stmt *Statement) core.BuildStatement {
+	return core.BuildStatement{
 		Start: int(stmt.Pos),
 		End:   int(stmt.EndPos),
 	}
