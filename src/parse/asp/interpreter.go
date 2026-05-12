@@ -401,7 +401,7 @@ func (s *scope) subincludePackage() *core.Package {
 			return pkg
 		}
 		// We're probably doing a local subinclude so the package isn't ready yet
-		return core.NewPackageSubrepo(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
+		return core.NewPackage(s.subincludeLabel.PackageName, core.WithPackageSubrepo(s.subincludeLabel.Subrepo))
 	}
 	return nil
 }

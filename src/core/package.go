@@ -40,30 +40,40 @@ type Package struct {
 	mutex sync.RWMutex
 }
 
-// NewPackage constructs a new package with the given name.
-func NewPackage(name string) *Package {
-	return NewPackageSubrepo(name, "")
+// PackageOptions is a functional option type for configuring a new Package.
+type PackageOptions func(*Package)
+
+// WithPackageSubrepo returns a PackageOptions that sets the subrepo name for a new Package.
+func WithPackageSubrepo(name string) PackageOptions {
+	return func(p *Package) {
+		p.SubrepoName = name
+	}
 }
 
-// NewPackageWithOpts constructs a new package with the given name, and enables additional features
-// given the flags enabled in the build state.
-func NewPackageWithOpts(state *BuildState, name string) *Package {
-	pkg := NewPackage(name)
-	if state.ParseMetadata {
-		pkg.Metadata = newPackageMetadata()
+// WithPackageMetadata returns a PackageOptions that enables tracking of
+// metadata (like statement positions and subinclude mappings) for the Package.
+// This is required for features like 'plz export'.
+func WithPackageMetadata() PackageOptions {
+	return func(p *Package) {
+		p.Metadata = newPackageMetadata()
+	}
+}
+
+// NewPackage constructs a new package with the given name, and enables additional features
+// given the PackageOptions provided.
+func NewPackage(name string, options ...PackageOptions) *Package {
+	pkg := &Package{
+		Name:    name,
+		targets: map[string]*BuildTarget{},
+		Outputs: map[string]*BuildTarget{},
+		// Defaults to noop to avoid storing metadata for most operations
+		Metadata: newNoopPackageMetadata(),
+	}
+
+	for _, option := range options {
+		option(pkg)
 	}
 	return pkg
-}
-
-// NewPackageSubrepo constructs a new package with the given name and subrepo.
-func NewPackageSubrepo(name, subrepo string) *Package {
-	return &Package{
-		Name:        name,
-		SubrepoName: subrepo,
-		targets:     map[string]*BuildTarget{},
-		Outputs:     map[string]*BuildTarget{},
-		Metadata:    newNoopPackageMetadata(),
-	}
 }
 
 // Target returns the target with the given name, or nil if this package doesn't have one.
