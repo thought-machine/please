@@ -577,7 +577,7 @@ func reallyTranslateOS(os string) string {
 // matching what local execution does in exec_linux.go for the non-plz-sandbox case.
 // Returns args unchanged if sandboxing is disabled or no external tool is configured.
 func (c *Client) sandboxArgs(sandbox bool, args []string) []string {
-	if !sandbox {
+	if !sandbox || !c.state.Config.Sandbox.Remote {
 		return args
 	}
 	tool := c.state.Config.Sandbox.Tool
@@ -590,7 +590,7 @@ func (c *Client) sandboxArgs(sandbox bool, args []string) []string {
 
 // buildEnv translates the set of environment variables for this target to a proto.
 func (c *Client) buildEnv(target *core.BuildTarget, env core.BuildEnv, sandbox process.SandboxConfig) []*pb.Command_EnvironmentVariable {
-	if sandbox != process.NoSandbox {
+	if sandbox != process.NoSandbox && c.state.Config.Sandbox.Remote {
 		env["SANDBOX"] = "true"
 		if c.state.Config.Sandbox.Tool != "" {
 			shareNetwork := "1"
