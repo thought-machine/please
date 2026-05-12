@@ -252,12 +252,7 @@ func (e *defaultExporter) WritePackageFiles() {
 		buildParser, err := build.ParseBuild(pkg.Filename, filteredBytes)
 		formattedBytes := build.Format(buildParser)
 
-		file := e.openExportedPackageFile(pkg)
-		defer file.Close()
-		if _, err := file.Write(formattedBytes); err != nil {
-			log.Errorf("Failed to write to exported BUILD file %s: %v", file.Name(), err)
-			continue
-		}
+		e.WriteExportedPackageFile(pkg, formattedBytes)
 	}
 }
 
@@ -311,15 +306,19 @@ func (e *defaultExporter) exportBuildStatements(pkg *core.Package, target *core.
 	}
 }
 
-// openExportedPackageFile creates a new package (BUILD) file in the exported dir.
-func (e *defaultExporter) openExportedPackageFile(pkg *core.Package) *os.File {
+// WriteExportedPackageFile creates a new package (BUILD) file in the exported dir and writes to it.
+func (e *defaultExporter) WriteExportedPackageFile(pkg *core.Package, content []byte) {
 	filename := pkg.Filename
 	exportedFilename := filepath.Join(e.targetDir, filename)
 	f, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY, 0664)
 	if err != nil {
 		log.Fatalf("Failed to create and open exported BUILD file for %s: %v", exportedFilename, err)
 	}
-	return f
+	defer f.Close()
+
+	if _, err := f.Write(content); err != nil {
+		log.Errorf("Failed to write to exported BUILD file %s: %v", f.Name(), err)
+	}
 }
 
 // filterPackageFile filters the statements to be written to the exported BUILD file.
