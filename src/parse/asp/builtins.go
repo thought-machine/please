@@ -419,7 +419,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	t = s.WaitForSubincludedTarget(l, pkgLabel)
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
-		s.pkg.Metadata.RegisterSubincludeStmt(l, s.CurrentBuildStatement())
+		s.pkg.Metadata.RegisterSubincludeStatement(l, s.CurrentBuildStatement())
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude
 		s.state.Graph.RegisterTransitiveSubinclude(*s.subincludeLabel, l)
 	}
