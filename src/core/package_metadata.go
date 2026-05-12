@@ -88,7 +88,7 @@ func (m *packageMetadataImpl) RegisterStatementTarget(target *BuildTarget, stmtP
 func (m *packageMetadataImpl) RegisterRequiredSubinclude(target *BuildTarget, labelProvider SubincludesLabelProvider) {
 	labels := labelProvider()
 	if len(labels) == 0 {
-		log.Infof("Attempted to register empty subinclude labels for target %s", target.String())
+		log.Debugf("Attempted to register empty subinclude labels for target %s", target.String())
 		return
 	}
 

@@ -135,7 +135,7 @@ func (be *baseExporter) Targets(labels core.BuildLabels) {
 // Dependencies exports dependencies of a target.
 func (be *baseExporter) Dependencies(target *core.BuildTarget) {
 	deps := target.DeclaredDependencies()
-	log.Infof("Exporting dependencies of (%v): %v", target.Label, deps)
+	log.Debugf("Exporting dependencies of (%v): %v", target.Label, deps)
 	be.Targets(deps)
 }
 
@@ -150,7 +150,7 @@ func (be *baseExporter) Sources(target *core.BuildTarget) {
 				if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
 					log.Warningf("Error copying file, skipping...: %s", err)
 				}
-				log.Infof("Writing exported source file: %s", p)
+				log.Debugf("Writing exported source file: %s", p)
 			}
 		}
 	}
@@ -204,7 +204,7 @@ func (e *DefaultExporter) Target(target *core.BuildTarget) {
 		return
 	}
 
-	log.Infof("Exporting target: %v", target.Label)
+	log.Debugf("Exporting target: %v", target.Label)
 
 	// Skip export for internal packages
 	if target.Label.PackageName == parse.InternalPackageName {
@@ -229,7 +229,7 @@ func (e *DefaultExporter) Target(target *core.BuildTarget) {
 func (e *DefaultExporter) Subincludes(pkg *core.Package, target *core.BuildTarget) {
 	subincludes, err := pkg.Metadata.FindRequiredSubincludes(target)
 	if err != nil {
-		log.Infof("No subincludes found, assuming non required.: %w", pkg.Name, err)
+		log.Debugf("No subincludes found, assuming non required.: %w", pkg.Name, err)
 		return
 	}
 
@@ -267,7 +267,7 @@ func (e *DefaultExporter) BuildStatements(pkg *core.Package, target *core.BuildT
 		return
 	}
 
-	log.Infof("Exporting related targets to (%v): %v", target.Label, relatedTargets)
+	log.Debugf("Exporting related targets to (%v): %v", target.Label, relatedTargets)
 	for _, target := range relatedTargets {
 		e.Target(target)
 	}
