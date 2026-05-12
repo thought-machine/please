@@ -8,54 +8,54 @@ import (
 )
 
 func TestMinimalSubincludeStatement(t *testing.T) {
-	var subincludesTests = []struct {
+	testCases := []struct {
 		name            string
 		availableLabels []core.BuildLabel
 		requiredLabels  []core.BuildLabel
 		out             string
 	}{
 		{
-			"Successful no pruning subinclude",
-			core.ParseBuildLabels([]string{"//build_defs:test"}),
-			core.ParseBuildLabels([]string{"//build_defs:test"}),
-			`subinclude("//build_defs:test")`,
+			name:            "Successful no pruning subinclude",
+			availableLabels: core.ParseBuildLabels([]string{"//build_defs:test"}),
+			requiredLabels:  core.ParseBuildLabels([]string{"//build_defs:test"}),
+			out:             `subinclude("//build_defs:test")`,
 		},
 		{
-			"No subincludes",
-			nil,
-			nil,
-			"",
+			name:            "No subincludes",
+			availableLabels: nil,
+			requiredLabels:  nil,
+			out:             "",
 		},
 		{
-			"Single subinclude (not required)",
-			core.ParseBuildLabels([]string{"//build_defs:other"}),
-			nil,
-			"",
+			name:            "Single subinclude (not required)",
+			availableLabels: core.ParseBuildLabels([]string{"//build_defs:other"}),
+			requiredLabels:  nil,
+			out:             "",
 		},
 		{
-			"Multiple subincludes (sorted and filtered)",
-			core.ParseBuildLabels([]string{"//build_defs:test", "//build_defs:abc", "//build_defs:other"}),
-			core.ParseBuildLabels([]string{"//build_defs:test", "//build_defs:abc"}),
-			"subinclude(\n" +
+			name:            "Multiple subincludes (sorted and filtered)",
+			availableLabels: core.ParseBuildLabels([]string{"//build_defs:test", "//build_defs:abc", "//build_defs:other"}),
+			requiredLabels:  core.ParseBuildLabels([]string{"//build_defs:test", "//build_defs:abc"}),
+			out: "subinclude(\n" +
 				"    \"//build_defs:abc\",\n" +
 				"    \"//build_defs:test\",\n" +
 				")",
 		},
 	}
 
-	for _, tt := range subincludesTests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
 			e := &defaultExporter{
 				requiredSubincludes: map[*core.Package]map[core.BuildLabel]bool{},
 			}
 
 			pkg := &core.Package{Name: "test"}
 			e.requiredSubincludes[pkg] = map[core.BuildLabel]bool{}
-			for _, labels := range tt.requiredLabels {
-				e.requiredSubincludes[pkg][labels] = true
+			for _, label := range test.requiredLabels {
+				e.requiredSubincludes[pkg][label] = true
 			}
 
-			assert.Equal(t, tt.out, e.minimalSubincludeStatement(pkg, tt.availableLabels))
+			assert.Equal(t, test.out, e.minimalSubincludeStatement(pkg, test.availableLabels))
 		})
 	}
 }
