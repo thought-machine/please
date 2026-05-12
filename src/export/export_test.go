@@ -45,7 +45,7 @@ func TestMinimalSubincludeStatement(t *testing.T) {
 
 	for _, tt := range subincludesTests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &DefaultExporter{
+			e := &defaultExporter{
 				requiredSubincludes: map[*core.Package]map[core.BuildLabel]bool{},
 			}
 
