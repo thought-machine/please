@@ -161,25 +161,30 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 			continue // These will be handled as dependencies later
 		}
 		for _, p := range src.Paths(be.state.Graph) {
-			if !filepath.IsAbs(p) { // Don't copy system file deps.
-				if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
-					log.Warningf("Error copying file, skipping...: %s", err)
-				}
-				log.Debugf("Writing exported source file: %s", p)
+			if filepath.IsAbs(p) { // Don't copy system file deps.
+				log.Infof("System dependency detected, skipping...: %s", p)
+				continue
 			}
+			if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
+				log.Warningf("Error copying file, skipping...: %s", err)
+			}
+			log.Debugf("Writing exported source file: %s", p)
 		}
 	}
 }
 
 // checkFirstExport is a helper to ensure we only visit the same target once.
+// It returns true if this is the first time the target is being exported.
 func (be *baseExporter) checkFirstExport(pkg *core.Package, target *core.BuildTarget) bool {
-	if _, ok := be.exportedTargets[pkg]; !ok {
-		be.exportedTargets[pkg] = map[core.BuildLabel]bool{}
+	targets, ok := be.exportedTargets[pkg]
+	if !ok {
+		targets = make(map[core.BuildLabel]bool)
+		be.exportedTargets[pkg] = targets
 	}
-	if be.exportedTargets[pkg][target.Label] {
+	if targets[target.Label] {
 		return false
 	}
-	be.exportedTargets[pkg][target.Label] = true
+	targets[target.Label] = true
 	return true
 }
 
@@ -230,7 +235,7 @@ func (e *defaultExporter) ExportTarget(target *core.BuildTarget) {
 	}
 
 	e.exportSubincludes(pkg, target)
-	e.exportBuildStatements(pkg, target)
+	e.exportRelatedTargets(pkg, target)
 	e.exportSources(target)
 	e.exportDependencies(target)
 }
@@ -249,8 +254,11 @@ func (e *defaultExporter) WritePackageFiles() {
 			continue
 		}
 
-		buildParser, err := build.ParseBuild(pkg.Filename, filteredBytes)
-		formattedBytes := build.Format(buildParser)
+		parsedBuild, err := build.ParseBuild(pkg.Filename, filteredBytes)
+		if err != nil {
+			log.Fatalf("Failed to parse bytes for formatting: %v", err)
+		}
+		formattedBytes := build.Format(parsedBuild)
 
 		e.WriteExportedPackageFile(pkg, formattedBytes)
 	}
@@ -286,8 +294,8 @@ func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 	}
 }
 
-// exportBuildStatements exports BUILD statements that generate the build target.
-func (e *defaultExporter) exportBuildStatements(pkg *core.Package, target *core.BuildTarget) {
+// exportRelatedTargets exports build targets that are related to the build statement that generated.
+func (e *defaultExporter) exportRelatedTargets(pkg *core.Package, target *core.BuildTarget) {
 	stmt, err := pkg.Metadata.FindStatement(target)
 	if err != nil {
 		log.Errorf("Failed to find statement in %s: %w", pkg.Name, err)
@@ -340,7 +348,8 @@ func (e *defaultExporter) filterPackageFile(pkg *core.Package) ([]byte, error) {
 		bStmt := asp.NewBuildStatement(stmt)
 
 		log.Debugf("Evaluating statement %s", original[bStmt.Start:bStmt.End])
-		// Write content that's between stmts (e.g. comments)
+		// Write content that's between stmts (e.g. comments). We skip these while parsing so it won't
+		// be included in "parsedStmts" but we want the resulting BUILD file to include these.
 		if cursor < bStmt.Start {
 			if _, err := buffer.Write(original[cursor:bStmt.Start]); err != nil {
 				return nil, err
@@ -356,7 +365,6 @@ func (e *defaultExporter) filterPackageFile(pkg *core.Package) ([]byte, error) {
 		} else if required, err := e.isRequiredStatement(pkg, &bStmt); err == nil && !required {
 			// Don't write statements that generate targets we are not interested about
 			log.Debugf("Decision: <skip>")
-			// skip
 		} else {
 			// Write every other statement
 			if _, err := buffer.Write(original[bStmt.Start:bStmt.End]); err != nil {
