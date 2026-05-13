@@ -305,15 +305,20 @@ type scope struct {
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel // If set, label of the subinclude we're currently interpreting
 	parsingFor      *parseTarget
-	parent          *scope
-	callerScope     *scope // caller local scope, nil if not in callstack
-	locals          pyDict
-	config          *pyConfig
-	globber         *fs.Globber
+	// parent points to the lexical parent of this scope. It is used for variable resolution
+	// and is nil for the root scope.
+	parent *scope
+	// caller points to the scope that initiated the call which created this scope.
+	// It is used to trace the call stack and is nil if not in a call stack.
+	caller  *scope
+	locals  pyDict
+	config  *pyConfig
+	globber *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 	mode     core.ParseMode
-	cursor   *Statement // points to the statement currently being interpreted
+	// cursor points to the statement currently being interpreted
+	cursor *Statement
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -1088,7 +1093,7 @@ func (s *scope) Constant(expr *Expression) pyObject {
 func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 	return func() core.BuildStatement {
 		stmtScope := s
-		for curr := s; curr != nil; curr = curr.callerScope {
+		for curr := s; curr != nil; curr = curr.caller {
 			if curr.pkg != nil && curr.filename == s.pkg.Filename {
 				stmtScope = curr
 			}
@@ -1103,10 +1108,10 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
 	return func() core.BuildLabels {
 		seen := map[core.BuildLabel]bool{}
-		for curr := s; curr != nil; curr = curr.callerScope {
-			for localScope := curr; localScope != nil; localScope = localScope.parent {
-				if localScope.subincludeLabel != nil {
-					label := *localScope.subincludeLabel
+		for callScope := s; callScope != nil; callScope = callScope.caller {
+			for lexicalScope := callScope; lexicalScope != nil; lexicalScope = lexicalScope.parent {
+				if lexicalScope.subincludeLabel != nil {
+					label := *lexicalScope.subincludeLabel
 					seen[label] = true
 				}
 			}
