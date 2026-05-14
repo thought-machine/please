@@ -267,13 +267,7 @@ func (e *defaultExporter) WritePackageFiles() {
 // exportSubincludes exports the subincluded targets required to generate the target and selects them to
 // later be written to the package as statements.
 func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.BuildTarget) {
-	subincludes, err := pkg.Metadata.FindRequiredSubincludes(target)
-	if err != nil {
-		log.Debugf("No subincludes found, assuming non required.: %w", pkg.Name, err)
-		return
-	}
-
-	for _, subinclude := range subincludes {
+	for _, subinclude := range pkg.Metadata.FindRequiredSubincludes(target) {
 		// skip for preloaded subincludes, these are handled separately at the start to ensure they are
 		// they are exported even if not directly used by an exported target.
 		if e.preloadedSubincludes[subinclude] {
@@ -296,19 +290,14 @@ func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 
 // exportRelatedTargets exports build targets that are related to the build statement that generated.
 func (e *defaultExporter) exportRelatedTargets(pkg *core.Package, target *core.BuildTarget) {
-	stmt, err := pkg.Metadata.FindStatement(target)
-	if err != nil {
-		log.Errorf("Failed to find statement in %s: %w", pkg.Name, err)
+	stmt := pkg.Metadata.FindStatement(target)
+	if stmt == nil {
+		log.Errorf("Failed to find statement for target %s in %s", target, pkg.Name)
 		return
 	}
 
-	relatedTargets, err := pkg.Metadata.FindTargets(stmt)
-	if err != nil {
-		log.Errorf("Failed to lookup related targets for package %s: %w", pkg.Name, err)
-		return
-	}
-
-	log.Debugf("Exporting related targets to (%v): %v", target.Label, relatedTargets)
+	relatedTargets := pkg.Metadata.FindTargets(stmt)
+	log.Debugf("Exporting targets related to %s: %v", target, relatedTargets)
 	for _, target := range relatedTargets {
 		e.ExportTarget(target)
 	}
@@ -357,12 +346,12 @@ func (e *defaultExporter) filterPackageFile(pkg *core.Package) ([]byte, error) {
 			cursor = bStmt.Start
 		}
 
-		if stmtLabels, ok := pkg.Metadata.GetSubincludedLabels(&bStmt); ok {
+		if stmtLabels := pkg.Metadata.GetSubincludedLabels(&bStmt); len(stmtLabels) > 0 {
 			// Write filtered subincludes
 			subStmt := e.minimalSubincludeStatement(pkg, stmtLabels)
 			buffer.Write([]byte(subStmt))
 			log.Debugf("Decision: %s", subStmt)
-		} else if required, err := e.isRequiredStatement(pkg, &bStmt); err == nil && !required {
+		} else if e.shouldSkipStatement(pkg, &bStmt) {
 			// Don't write statements that generate targets we are not interested about
 			log.Debugf("Decision: <skip>")
 		} else {
@@ -384,17 +373,21 @@ func (e *defaultExporter) filterPackageFile(pkg *core.Package) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// isRequiredStatement evaluates if the current build statement is required by the export.
-func (e *defaultExporter) isRequiredStatement(pkg *core.Package, stmt *core.BuildStatement) (bool, error) {
-	targets, err := pkg.Metadata.FindTargets(stmt)
-	if err != nil {
-		return false, err
+// shouldSkipStatement evaluates if the current build statement should be skipped during export.
+// We skip statements that generated build targets, but none of those targets are required by the export.
+func (e *defaultExporter) shouldSkipStatement(pkg *core.Package, stmt *core.BuildStatement) bool {
+	targets := pkg.Metadata.FindTargets(stmt)
+	if len(targets) == 0 {
+		// If the statement didn't generate any targets (e.g. variable assignments, package() calls),
+		// we keep it to ensure the BUILD file remains valid.
+		return false
 	}
 
 	required := slices.ContainsFunc(targets, func(target *core.BuildTarget) bool {
 		return e.exportedTargets[pkg][target.Label]
 	})
-	return required, nil
+	// Skip if it generated targets, but none of them are required.
+	return !required
 }
 
 // minimalSubincludeStatement generates a subinclude statement containing only the required labels.
