@@ -187,7 +187,6 @@ func createTarget(s *scope, args []pyObject) *core.BuildTarget {
 		target.Debug = new(core.DebugFields)
 		target.Debug.Command, _ = decodeCommands(s, args[debugCMDBuildRuleArgIdx])
 	}
-
 	return target
 }
 
