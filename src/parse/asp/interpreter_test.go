@@ -770,3 +770,125 @@ func TestStrRjust(t *testing.T) {
 	_, err = parseFile("src/parse/asp/test_data/interpreter/str/rjust_multiple_fillchars.build")
 	assert.Error(t, err, "fillchar must be exactly one character long")
 }
+
+func TestCurrentBuildStatement(t *testing.T) {
+	pkg := core.NewPackage("test/package")
+	pkg.Filename = "test/package/BUILD"
+
+	// Root statement in the BUILD file (e.g. a macro call)
+	rootStmt := &Statement{Pos: 10, EndPos: 20}
+	rootScope := &scope{
+		pkg:      pkg,
+		filename: pkg.Filename,
+		cursor:   rootStmt,
+	}
+
+	// A nested call inside the same BUILD file (e.g. function def)
+	NestedStmt := &Statement{Pos: 30, EndPos: 40}
+	NestedScope := &scope{
+		pkg:      pkg,
+		filename: pkg.Filename,
+		cursor:   NestedStmt,
+		caller:   rootScope,
+	}
+
+	// A call from a different file (e.g. a function inside a subincluded .build_defs file)
+	defsRootStmt := &Statement{Pos: 50, EndPos: 60}
+	defsRootScope := &scope{
+		pkg:      pkg,
+		filename: "other/file.build_defs",
+		cursor:   defsRootStmt,
+		caller:   NestedScope,
+	}
+
+	// Another call deep in the other file
+	defsNestedStmt := &Statement{Pos: 70, EndPos: 80}
+	defsNestedScope := &scope{
+		pkg:      pkg,
+		filename: "other/file.build_defs",
+		cursor:   defsNestedStmt,
+		caller:   defsRootScope,
+	}
+
+	t.Run("FindsRootStatementFromBUILD", func(t *testing.T) {
+		// Calling it from buildNestedScope should walk back to buildRootScope
+		stmt := NestedScope.CurrentBuildStatement()()
+		assert.Equal(t, NewBuildStatement(rootStmt), stmt)
+	})
+
+	t.Run("FindsRootStatementFromOtherFile", func(t *testing.T) {
+		// Calling it from defsNestedScope should still find the root statement in the BUILD file
+		stmt := defsNestedScope.CurrentBuildStatement()()
+		assert.Equal(t, NewBuildStatement(rootStmt), stmt)
+	})
+
+	t.Run("HandlesNoPackageFileInStack", func(t *testing.T) {
+		// A scope that has no pkg/filename context
+		standaloneScope := &scope{cursor: rootStmt}
+		stmt := standaloneScope.CurrentBuildStatement()()
+		assert.Equal(t, NewBuildStatement(rootStmt), stmt)
+	})
+}
+
+func TestActiveSubincludes(t *testing.T) {
+	labelA := core.ParseBuildLabel("//pkg:labelA", "")
+	labelB := core.ParseBuildLabel("//pkg:labelB", "")
+
+	t.Run("NoSubincludes", func(t *testing.T) {
+		// BUILD scope
+		scopeBUILD := &scope{}
+		// Function execution
+		scopeFuncExec := &scope{
+			caller: scopeBUILD,
+		}
+		labels := scopeFuncExec.ActiveSubincludes()()
+		assert.Empty(t, labels)
+	})
+
+	t.Run("SingleSubinclude", func(t *testing.T) {
+		// File A scope
+		scopeA := &scope{
+			subincludeLabel: &labelA,
+		}
+		// Function defined in File A
+		scopeFuncDef := &scope{
+			parent: scopeA,
+		}
+		// BUILD scope
+		scopeBUILD := &scope{}
+		// Function execution
+		scopeFuncExec := &scope{
+			parent: scopeFuncDef,
+			caller: scopeBUILD,
+		}
+
+		labels := scopeFuncExec.ActiveSubincludes()()
+		assert.Equal(t, core.BuildLabels{labelA}, labels)
+	})
+
+	t.Run("NestedSubincludes", func(t *testing.T) {
+		// File A scope
+		scopeA := &scope{
+			subincludeLabel: &labelA,
+		}
+		// File B scope (subincluded by A)
+		scopeB := &scope{
+			subincludeLabel: &labelB,
+			parent:          scopeA,
+		}
+		// Function defined in File B
+		scopeFuncDef := &scope{
+			parent: scopeB,
+		}
+		// BUILD scope
+		scopeBUILD := &scope{}
+		// Function execution
+		scopeFuncExec := &scope{
+			parent: scopeFuncDef,
+			caller: scopeBUILD,
+		}
+
+		labels := scopeFuncExec.ActiveSubincludes()()
+		assert.ElementsMatch(t, core.BuildLabels{labelA, labelB}, labels)
+	})
+}
