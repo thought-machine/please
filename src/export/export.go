@@ -97,15 +97,15 @@ func newExporter(state *core.BuildState, dir string, noTrim bool) Exporter {
 		}
 		exporter.impl = exporter
 		return exporter
-	} else {
-		exporter := &defaultExporter{
-			baseExporter:         base,
-			requiredSubincludes:  map[*core.Package]map[core.BuildLabel]bool{},
-			preloadedSubincludes: map[core.BuildLabel]bool{},
-		}
-		exporter.impl = exporter
-		return exporter
 	}
+
+	exporter := &defaultExporter{
+		baseExporter:         base,
+		requiredSubincludes:  map[*core.Package]map[core.BuildLabel]bool{},
+		preloadedSubincludes: map[core.BuildLabel]bool{},
+	}
+	exporter.impl = exporter
+	return exporter
 }
 
 // baseExporter provides common fields and methods of other exporters.
@@ -343,7 +343,6 @@ func (e *defaultExporter) filterPackageFile(pkg *core.Package) ([]byte, error) {
 			if _, err := buffer.Write(original[cursor:bStmt.Start]); err != nil {
 				return nil, err
 			}
-			cursor = bStmt.Start
 		}
 
 		if stmtLabels := pkg.Metadata.GetSubincludedLabels(&bStmt); len(stmtLabels) > 0 {
@@ -362,6 +361,8 @@ func (e *defaultExporter) filterPackageFile(pkg *core.Package) ([]byte, error) {
 			log.Debugf("Decision: <write>")
 		}
 
+		// Move the cursor to the end of the processed statement. The cursor will enable writing of lines
+		// that are not considered statements by the parser (e.g. comments, new lines).
 		cursor = bStmt.End
 	}
 
