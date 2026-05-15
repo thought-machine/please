@@ -20,25 +20,15 @@ go_stdlib(
 )
 
 go_repo(
+    name = "cmp",
+    install = ["..."],
     module = "github.com/google/go-cmp",
     version = "v0.5.6",
 )
 
 go_repo(
     # Dummy, unused target
-    name = "testify",
-    install = ["..."],
-    licences = ["MIT"],
-    module = "github.com/stretchr/testify",
-    version = "v1.7.0",
-    deps = [":yaml.v3"],  # test we can depend on go_modules
-)
-
-go_module(
-    # Dummy, unused target
-    name = "yaml.v3",
-    licences = ["MIT"],
-    module = "gopkg.in/yaml.v3",
-    version = "v3.0.0-20210107192922-496545a6307b",
-    visibility = ["PUBLIC"],
+    name = "uuid",
+    module = "github.com/google/uuid",
+    version = "v1.6.0",
 )

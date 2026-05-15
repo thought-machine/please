@@ -240,6 +240,8 @@ type BuildState struct {
 	// NeedDebugDeps is true if we're doing a `plz debug` and we need to build the debug tools and
 	// data
 	NeedDebugDeps bool
+	// ParseMetadata is true if we want to store build file metadata
+	ParseMetadata bool
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once

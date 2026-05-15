@@ -1,0 +1,5 @@
+filegroup(
+    name = "simple_build_def",
+    srcs = ["simple.build_defs"],
+    visibility = ["PUBLIC"],
+)

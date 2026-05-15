@@ -182,7 +182,11 @@ func maybeParseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo
 // parsePackage parses a BUILD file and adds the package to the build graph
 func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo, mode core.ParseMode) (*core.Package, error) {
 	packageName := label.PackageName
-	pkg := core.NewPackage(packageName)
+	var opts []core.PackageOptions
+	if state.ParseMetadata {
+		opts = append(opts, core.WithPackageMetadata())
+	}
+	pkg := core.NewPackage(packageName, opts...)
 	pkg.Subrepo = subrepo
 	var fileSystem iofs.FS = fs.HostFS
 	if subrepo != nil {

@@ -1,0 +1,17 @@
+# This is a header comment
+package(default_visibility = ["PUBLIC"])
+
+VERSION = "1.2.3"
+
+target(
+    name = "a",
+    # This is a comment inside a target
+    srcs = ["a.py"],
+    version = VERSION,
+)
+
+# This is a middle comment
+target(
+    name = "b",
+    srcs = ["b.py"],
+)

@@ -1,0 +1,11 @@
+filegroup(
+    name = "simple_build_def",
+    srcs = ["simple.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "unused_build_def",
+    srcs = ["unused.build_defs"],
+    visibility = ["PUBLIC"],
+)

@@ -20,6 +20,8 @@ go_stdlib(
 )
 
 go_repo(
+    name = "cmp",
+    install = ["..."],
     module = "github.com/google/go-cmp",
     version = "v0.5.6",
 )

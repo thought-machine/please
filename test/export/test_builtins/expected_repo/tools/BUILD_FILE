@@ -1,0 +1,6 @@
+export_file(
+    name = "tool",
+    src = "tool.sh",
+    binary = True,
+    visibility = ["PUBLIC"],
+)

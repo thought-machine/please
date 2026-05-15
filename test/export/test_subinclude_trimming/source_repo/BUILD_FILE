@@ -1,0 +1,15 @@
+subinclude(
+    "//build_defs:simple_build_def",
+    "//build_defs:unused_build_def",
+)
+
+simple_custom_target(
+    name = "simple_custom_target",
+    srcs = ["file.txt"],
+    outs = ["file_simple.out"],
+)
+
+unused_target(
+    name = "dummy",
+    outs = ["dummy.out"],
+)

@@ -475,7 +475,7 @@ var opts struct {
 // Functions are called after args are parsed and return a POSIX exit code (0 means success).
 var buildFunctions = map[string]func() int{
 	"build": func() int {
-		success, state := runBuild(opts.Build.Args.Targets, true, false, false)
+		success, state := runBuild(opts.Build.Args.Targets, buildOpts{Build: true})
 		if !success || opts.Build.OutDir == "" {
 			return toExitCode(success, state)
 		}
@@ -499,7 +499,7 @@ var buildFunctions = map[string]func() int{
 		if opts.Hash.Update {
 			opts.BehaviorFlags.NoHashVerification = true
 		}
-		success, state := runBuild(opts.Hash.Args.Targets, true, false, false)
+		success, state := runBuild(opts.Hash.Args.Targets, buildOpts{Build: true})
 		if success {
 			if opts.Hash.Detailed {
 				for _, target := range state.ExpandOriginalLabels() {
@@ -556,14 +556,14 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"debug": func() int {
-		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, true, false, false)
+		success, state := runBuild([]core.BuildLabel{opts.Debug.Args.Target}, buildOpts{Build: true})
 		if !success {
 			return toExitCode(success, state)
 		}
 		return debug.Debug(state, opts.Debug.Args.Target, opts.Debug.Args.Args, exec.ConvertEnv(opts.Debug.Env), opts.Debug.Share.Network, opts.Debug.Share.Mount)
 	},
 	"exec": func() int {
-		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target.BuildLabel}, true, false, false)
+		success, state := runBuild([]core.BuildLabel{opts.Exec.Args.Target.BuildLabel}, buildOpts{Build: true})
 		if !success {
 			return toExitCode(success, state)
 		}
@@ -594,7 +594,7 @@ var buildFunctions = map[string]func() int{
 		if len(unannotated) == 0 {
 			return 0
 		}
-		success, state := runBuild(unannotated, true, false, false)
+		success, state := runBuild(unannotated, buildOpts{Build: true})
 		if !success {
 			return toExitCode(success, state)
 		}
@@ -608,7 +608,7 @@ var buildFunctions = map[string]func() int{
 		if len(unannotated) == 0 {
 			return 0
 		}
-		success, state := runBuild(unannotated, true, false, false)
+		success, state := runBuild(unannotated, buildOpts{Build: true})
 		if !success {
 			return toExitCode(success, state)
 		}
@@ -618,7 +618,7 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"run": func() int {
-		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, true, false, false); success {
+		if success, state := runBuild([]core.BuildLabel{opts.Run.Args.Target.BuildLabel}, buildOpts{Build: true}); success {
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
@@ -642,7 +642,7 @@ var buildFunctions = map[string]func() int{
 		if len(unannotated) == 0 {
 			return 0
 		}
-		if success, state := runBuild(unannotated, true, false, false); success {
+		if success, state := runBuild(unannotated, buildOpts{Build: true}); success {
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
@@ -659,7 +659,7 @@ var buildFunctions = map[string]func() int{
 		if len(unannotated) == 0 {
 			return 0
 		}
-		if success, state := runBuild(unannotated, true, false, false); success {
+		if success, state := runBuild(unannotated, buildOpts{Build: true}); success {
 			var dir string
 			if opts.Run.WD != "" {
 				dir = getAbsolutePath(opts.Run.WD, originalWorkingDirectory)
@@ -686,7 +686,7 @@ var buildFunctions = map[string]func() int{
 			}
 			opts.Clean.Args.Targets = core.WholeGraph
 		}
-		if success, state := runBuild(opts.Clean.Args.Targets, false, false, false); success {
+		if success, state := runBuild(opts.Clean.Args.Targets, buildOpts{}); success {
 			clean.Targets(state, state.ExpandOriginalLabels())
 			return 0
 		}
@@ -708,7 +708,7 @@ var buildFunctions = map[string]func() int{
 		return 1
 	},
 	"gc": func() int {
-		success, state := runBuild(core.WholeGraph, false, false, true)
+		success, state := runBuild(core.WholeGraph, buildOpts{IsQuery: true})
 		if success {
 			gc.GarbageCollect(state, opts.Gc.Args.Targets, state.ExpandLabels(state.Config.Gc.Keep), state.Config.Gc.Keep, state.Config.Gc.KeepLabel,
 				opts.Gc.Conservative, opts.Gc.TargetsOnly, opts.Gc.SrcsOnly, opts.Gc.NoPrompt, opts.Gc.DryRun, opts.Gc.Git)
@@ -767,14 +767,14 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"export": func() int {
-		success, state := runBuild(opts.Export.Args.Targets, false, false, false)
+		success, state := runBuild(opts.Export.Args.Targets, buildOpts{ParseMetadata: true})
 		if success {
-			export.ToDir(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
+			export.Repo(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
 		}
 		return toExitCode(success, state)
 	},
 	"export.outputs": func() int {
-		success, state := runBuild(opts.Export.Outputs.Args.Targets, true, false, true)
+		success, state := runBuild(opts.Export.Outputs.Args.Targets, buildOpts{Build: true, IsQuery: true, ParseMetadata: true})
 		if success {
 			export.Outputs(state, opts.Export.Output, state.ExpandOriginalLabels())
 		}
@@ -962,14 +962,14 @@ var buildFunctions = map[string]func() int{
 			log.Fatalf("%s", err)
 		}
 		readConfig()
-		_, before := runBuild(core.WholeGraph, false, false, false)
+		_, before := runBuild(core.WholeGraph, buildOpts{})
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		if err := scm.Checkout(original); err != nil {
 			log.Fatalf("%s", err)
 		}
 		readConfig()
-		success, after := runBuild(core.WholeGraph, false, false, false)
+		success, after := runBuild(core.WholeGraph, buildOpts{})
 		if !success {
 			return 1
 		}
@@ -1001,7 +1001,7 @@ var buildFunctions = map[string]func() int{
 	"watch": func() int {
 		targets, args := testTargets(opts.Watch.Args.Target, opts.Watch.Args.Args, false, "")
 		// Don't ask it to test now since we don't know if any of them are tests yet.
-		success, state := runBuild(targets, true, false, false)
+		success, state := runBuild(targets, buildOpts{Build: true})
 		state.NeedRun = opts.Watch.Run
 		watch.Watch(state, state.ExpandOriginalLabels(), args, opts.Watch.NoTest, runPlease)
 		return toExitCode(success, state)
@@ -1026,7 +1026,7 @@ var buildFunctions = map[string]func() int{
 			opts.Generate.Args.Targets = []core.BuildLabel{target}
 		}
 
-		if success, state := runBuild(opts.Generate.Args.Targets, true, false, true); success {
+		if success, state := runBuild(opts.Generate.Args.Targets, buildOpts{Build: true, IsQuery: true}); success {
 			if opts.Generate.Gitignore != "" {
 				err := generate.UpdateGitignore(state.Graph, state.ExpandOriginalLabels(), opts.Generate.Gitignore)
 				if err != nil {
@@ -1068,7 +1068,7 @@ func runTool(_tool tool.Tool) int {
 	// We skip loading the repo config in init for `plz tool` to allow this command to work outside of a repo root. If
 	// the tool looks like a build label, we need to set the repo root now.
 	config = mustReadConfigAndSetRoot(false)
-	if success, state := runBuild(label, true, false, false); success {
+	if success, state := runBuild(label, buildOpts{Build: true}); success {
 		annotatedOutputLabels := core.AnnotateLabels(label)
 		run.Run(state, annotatedOutputLabels[0], opts.Tool.Args.Args.AsStrings(), false, false, false, "", "")
 	}
@@ -1100,7 +1100,7 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 	if len(labels) == 0 {
 		labels = core.WholeGraph
 	}
-	if success, state := runBuild(labels, false, false, true); success {
+	if success, state := runBuild(labels, buildOpts{IsQuery: true}); success {
 		onSuccess(state)
 		return 0
 	}
@@ -1112,7 +1112,7 @@ func doTest(targets []core.BuildLabel, args []string, surefireDir cli.Filepath, 
 	fs.RemoveAll(string(resultsFile))
 	os.MkdirAll(string(surefireDir), core.DirPermissions)
 	opts.Test.StateArgs = args
-	success, state := runBuild(targets, true, true, false)
+	success, state := runBuild(targets, buildOpts{Build: true, Test: true})
 	test.CopySurefireXMLFilesToDir(state, string(surefireDir))
 	test.WriteResultsToFileOrDie(state.Graph, string(resultsFile), state.Config.Test.StoreTestOutputOnSuccess)
 	return success, state
@@ -1127,7 +1127,7 @@ func prettyOutput(interactiveOutput bool, plainOutput bool, verbosity cli.Verbos
 }
 
 // Please starts & runs the main build process through to its completion.
-func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, shouldTest bool) (bool, *core.BuildState) {
+func Please(targets []core.BuildLabel, config *core.Configuration, buildOpts buildOpts) (bool, *core.BuildState) {
 	if opts.BuildFlags.NumThreads > 0 {
 		config.Please.NumThreads = opts.BuildFlags.NumThreads
 		config.Parse.NumThreads = opts.BuildFlags.NumThreads
@@ -1150,8 +1150,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.TestSequentially = opts.Test.Sequentially || opts.Cover.Sequentially // Similarly here.
 	state.TestArgs = opts.Test.StateArgs
 	state.NeedCoverage = opts.Cover.active || config.Build.Config == "cover"
-	state.NeedBuild = shouldBuild
-	state.NeedTests = shouldTest
 	state.NeedRun = !opts.Run.Args.Target.IsEmpty() || len(opts.Run.Parallel.PositionalArgs.Targets) > 0 || len(opts.Run.Sequential.PositionalArgs.Targets) > 0 || !opts.Exec.Args.Target.IsEmpty() || len(opts.Exec.Sequential.Args.Targets) > 0 || len(opts.Exec.Parallel.Args.Targets) > 0 || opts.Tool.Args.Tool != "" || debug
 	state.NeedHashesOnly = len(opts.Hash.Args.Targets) > 0
 	state.PrepareOnly = opts.Build.Shell != "" || opts.Test.Shell != "" || opts.Cover.Shell != ""
@@ -1165,6 +1163,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, shouldBuild, 
 	state.ShowAllOutput = opts.OutputFlags.ShowAllOutput
 	state.ParsePackageOnly = opts.ParsePackageOnly
 	state.EnableBreakpoints = opts.BehaviorFlags.Debug
+	state.NeedBuild = buildOpts.Build
+	state.NeedTests = buildOpts.Test
+	state.ParseMetadata = buildOpts.ParseMetadata
 	state.NeedDebugDeps = debug
 
 	// What outputs get downloaded in remote execution.
@@ -1317,10 +1318,18 @@ func readConfig() *core.Configuration {
 	return cfg
 }
 
+// buildOpts specifies parameter for the core.runBuild method.
+type buildOpts struct {
+	Build         bool
+	Test          bool
+	IsQuery       bool
+	ParseMetadata bool
+}
+
 // Runs the actual build
 // Which phases get run are controlled by shouldBuild and shouldTest.
-func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) (bool, *core.BuildState) {
-	if !isQuery {
+func runBuild(targets []core.BuildLabel, buildOpts buildOpts) (bool, *core.BuildState) {
+	if !buildOpts.IsQuery {
 		opts.BuildFlags.Exclude = append(opts.BuildFlags.Exclude, "manual", "manual:"+core.OsArch)
 	}
 	if stat, _ := os.Stdin.Stat(); (stat.Mode()&os.ModeCharDevice) == 0 && !plz.ReadingStdin(targets) {
@@ -1332,7 +1341,7 @@ func runBuild(targets []core.BuildLabel, shouldBuild, shouldTest, isQuery bool) 
 	if len(targets) == 0 {
 		targets = core.InitialPackage()
 	}
-	return Please(targets, config, shouldBuild, shouldTest)
+	return Please(targets, config, buildOpts)
 }
 
 var originalWorkingDirectory string
@@ -1430,7 +1439,7 @@ func getCompletions(qry string) (*query.CompletionPackages, []string) {
 
 	if completions.PackageToParse != "" || completions.IsRoot {
 		labelsToParse := []core.BuildLabel{{PackageName: completions.PackageToParse, Name: "all"}}
-		if success, state := Please(labelsToParse, config, false, false); success {
+		if success, state := Please(labelsToParse, config, buildOpts{}); success {
 			return completions, query.Completions(state.Graph, completions, binary, isTest, completions.Hidden)
 		}
 	}
