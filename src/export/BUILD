@@ -16,9 +16,11 @@ go_library(
 go_test(
     name = "export_test",
     srcs = ["export_test.go"],
+    data = ["test_data"],
     deps = [
         ":export",
         "///third_party/go/github.com_stretchr_testify//assert",
         "//src/core",
+        "//src/parse/asp",
     ],
 )
