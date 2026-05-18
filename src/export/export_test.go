@@ -51,10 +51,7 @@ func TestMinimalSubincludeStatement(t *testing.T) {
 			e := newExporter(nil, "", false).(*defaultExporter)
 
 			pkg := &core.Package{Name: "test"}
-			e.requiredSubincludes[pkg] = map[core.BuildLabel]bool{}
-			for _, label := range tc.requiredLabels {
-				e.requiredSubincludes[pkg][label] = true
-			}
+			e.requiredSubincludes[pkg.Label()] = tc.requiredLabels
 
 			assert.Equal(t, tc.out, e.minimalSubincludeStatement(pkg, tc.availableLabels))
 		})
@@ -116,13 +113,11 @@ func TestFilterPackageFile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			caseTargets := map[core.BuildLabel]bool{}
-			for _, name := range tc.required {
-				caseTargets[targetLabels[name]] = true
-			}
-
 			e := newExporter(nil, "", false).(*defaultExporter)
-			e.exportedTargets[pkg] = caseTargets
+			for _, name := range tc.required {
+				e.exportedTargets[targetLabels[name]] = true
+			}
+			e.visitedPackages[pkg.Label()] = true
 
 			got, err := e.filterPackageFile(pkg)
 			assert.NoError(t, err)
