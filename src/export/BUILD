@@ -1,6 +1,9 @@
 go_library(
     name = "export",
-    srcs = ["export.go"],
+    srcs = [
+        "export.go",
+        "trimmer.go",
+    ],
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [

@@ -1,0 +1,5 @@
+val = "a"
+
+if val == "a":
+  target(name = "a")
+elif val == "b":
