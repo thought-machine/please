@@ -70,16 +70,22 @@ type ForStatement struct {
 
 // An IfStatement implements the if-elif-else statement.
 type IfStatement struct {
-	Condition      Expression
-	Statements     []*Statement
-	Elif           []IfStatementElif
-	ElseStatements []*Statement
+	HeaderPos        Position
+	HeaderEndPos     Position
+	Condition        Expression
+	Statements       []*Statement
+	Elif             []IfStatementElif
+	ElseHeaderPos    Position
+	ElseHeaderEndPos Position
+	ElseStatements   []*Statement
 }
 
 // An IfStatementElif holds an elif clause in the if-elif-else statement.
 type IfStatementElif struct {
-	Condition  Expression
-	Statements []*Statement
+	HeaderPos    Position
+	HeaderEndPos Position
+	Condition    Expression
+	Statements   []*Statement
 }
 
 // An Argument represents an argument to a function definition.

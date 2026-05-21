@@ -1,0 +1,12 @@
+if True:
+    genrule(
+        name = "a",
+        outs = ["a.txt"],
+        cmd = "echo a > $OUT",
+    )
+else:
+    genrule(
+        name = "b",
+        outs = ["b.txt"],
+        cmd = "echo b > $OUT",
+    )

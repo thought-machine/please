@@ -4,12 +4,10 @@
 package export
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 
 	"github.com/please-build/buildtools/build"
 
@@ -241,7 +239,7 @@ func (e *defaultExporter) ExportTarget(target *core.BuildTarget) {
 func (e *defaultExporter) WritePackageFiles() {
 	for pkgLabel := range e.visitedPackages {
 		pkg := e.state.Graph.PackageOrDie(pkgLabel)
-		filteredBytes, err := e.filterPackageFile(pkg)
+		filteredBytes, err := e.trimPackage(pkg)
 		if err != nil {
 			log.Errorf("Failed to filter the build statements of package %s: %v", pkg.Label(), err)
 			continue
@@ -249,7 +247,7 @@ func (e *defaultExporter) WritePackageFiles() {
 
 		parsedBuild, err := build.ParseBuild(pkg.Filename, filteredBytes)
 		if err != nil {
-			log.Fatalf("Failed to parse bytes for formatting: %v", err)
+			log.Fatalf("Failed to parse bytes for formatting: %v\nData:\n%s", err, filteredBytes)
 		}
 		formattedBytes := build.Format(parsedBuild)
 
@@ -312,102 +310,29 @@ func (e *defaultExporter) WriteExportedPackageFile(pkg *core.Package, content []
 	}
 }
 
-// filterPackageFile filters the statements to be written to the exported BUILD file.
-func (e *defaultExporter) filterPackageFile(pkg *core.Package) ([]byte, error) {
+// trimPackage filters the statements to be written to the exported BUILD file.
+func (e *defaultExporter) trimPackage(pkg *core.Package) ([]byte, error) {
 	p := asp.NewParserOnly()
-	parsedStmts, err := p.ParseFileOnly(pkg.Filename)
+	parsed, err := p.ParseFileOnly(pkg.Filename)
 	if err != nil {
 		return nil, fmt.Errorf("Parsing original BUILD file: %v", err)
 	}
 
-	original, err := os.ReadFile(pkg.Filename)
+	content, err := os.ReadFile(pkg.Filename)
 	if err != nil {
 		return nil, fmt.Errorf("Opening original BUILD file: %v", err)
 	}
 
-	cursor := 0
-	var buffer bytes.Buffer
-	for _, stmt := range parsedStmts {
-		bStmt := asp.NewBuildStatement(stmt)
-
-		log.Debugf("Evaluating statement %s", original[bStmt.Start:bStmt.End])
-		// Write content that's between stmts (e.g. comments). We skip these while parsing so it won't
-		// be included in "parsedStmts" but we want the resulting BUILD file to include these.
-		if cursor < bStmt.Start {
-			if _, err := buffer.Write(original[cursor:bStmt.Start]); err != nil {
-				return nil, err
-			}
-		}
-
-		if stmtLabels := pkg.Metadata.GetSubincludedLabels(&bStmt); len(stmtLabels) > 0 {
-			// Write filtered subincludes
-			subStmt := e.minimalSubincludeStatement(pkg, stmtLabels)
-			buffer.Write([]byte(subStmt))
-			log.Debugf("Decision: %s", subStmt)
-		} else if e.shouldSkipStatement(pkg, &bStmt) {
-			// Don't write statements that generate targets we are not interested about
-			log.Debugf("Decision: <skip>")
-		} else {
-			// Write every other statement
-			if _, err := buffer.Write(original[bStmt.Start:bStmt.End]); err != nil {
-				return nil, err
-			}
-			log.Debugf("Decision: <write>")
-		}
-
-		// Move the cursor to the end of the processed statement. The cursor will enable writing of lines
-		// that are not considered statements by the parser (e.g. comments, new lines).
-		cursor = bStmt.End
+	trimmer := trimmer{
+		origin:   content,
+		pkg:      pkg,
+		exporter: e,
+		// assuming max len of the original file to avoid reallocations.
+		bytes: make([]byte, 0, len(content)),
 	}
+	trimmer.trimBlock(parsed, 0, asp.Position(len(content)))
 
-	// Write the rest of the original file (non build targets)
-	if _, err := buffer.Write(original[cursor:]); err != nil {
-		return nil, err
-	}
-
-	return buffer.Bytes(), nil
-}
-
-// shouldSkipStatement evaluates if the current build statement should be skipped during export.
-// We skip statements that generated build targets, but none of those targets are required by the export.
-func (e *defaultExporter) shouldSkipStatement(pkg *core.Package, stmt *core.BuildStatement) bool {
-	targets := pkg.Metadata.FindTargets(stmt)
-	if len(targets) == 0 {
-		// If the statement didn't generate any targets (e.g. variable assignments, package() calls),
-		// we keep it to ensure the BUILD file remains valid.
-		return false
-	}
-
-	required := slices.ContainsFunc(targets, func(target *core.BuildTarget) bool {
-		return e.exportedTargets[target.Label]
-	})
-	// Skip if it generated targets, but none of them are required.
-	return !required
-}
-
-// minimalSubincludeStatement generates a subinclude statement containing only the required labels.
-func (e *defaultExporter) minimalSubincludeStatement(pkg *core.Package, available core.BuildLabels) string {
-	var filteredLabels core.BuildLabels
-	for _, required := range e.requiredSubincludes[pkg.Label()] {
-		if slices.Contains(available, required) {
-			filteredLabels = append(filteredLabels, required)
-		}
-	}
-
-	if len(filteredLabels) == 0 {
-		return ""
-	}
-
-	sort.Sort(filteredLabels)
-
-	call := &build.CallExpr{
-		X: &build.Ident{Name: "subinclude"},
-	}
-	for _, label := range filteredLabels {
-		call.List = append(call.List, &build.StringExpr{Value: label.ShortString(pkg.Label())})
-	}
-
-	return build.FormatString(call)
+	return trimmer.bytes, nil
 }
 
 // noTrimExporter implements an exporter that avoids trimming any packages by exporting all targets
