@@ -42,9 +42,11 @@ type interpreter struct {
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
-		ctx:    context.Background(),
-		state:  state,
-		locals: map[string]pyObject{},
+		ctx:             context.Background(),
+		state:           state,
+		locals:          map[string]pyObject{},
+		objectOrigins:   map[string]core.BuildLabel{},
+		requiredOrigins: map[core.BuildLabel]bool{},
 	}
 	i := &interpreter{
 		scope:      s,
@@ -157,7 +159,7 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 
 	s.interpreter.loadPluginConfig(s, includeState)
 	for _, out := range t.FullOutputs() {
-		s.SetAll(s.interpreter.Subinclude(s, out, t.Label, true), false)
+		s.SetAllWithOrigin(s.interpreter.Subinclude(s, out, t.Label, true), false, &t.Label)
 	}
 	return nil
 }
@@ -319,6 +321,10 @@ type scope struct {
 	mode     core.ParseMode
 	// cursor points to the statement currently being interpreted
 	cursor *Statement
+	// objectOrigins tracks the subinclude label that each variable was originally defined in.
+	objectOrigins map[string]core.BuildLabel
+	// requiredOrigins tracks which subinclude labels have been requiredOrigins by looking up variables.
+	requiredOrigins map[core.BuildLabel]bool
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -424,18 +430,20 @@ func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint in
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
 	s2 := &scope{
-		ctx:         s.ctx,
-		filename:    filename,
-		interpreter: s.interpreter,
-		state:       s.state,
-		pkg:         pkg,
-		parsingFor:  s.parsingFor,
-		parent:      s,
-		locals:      make(pyDict, hint),
-		config:      s.config,
-		Callback:    s.Callback,
-		mode:        mode,
-		cursor:      s.cursor,
+		ctx:             s.ctx,
+		filename:        filename,
+		interpreter:     s.interpreter,
+		state:           s.state,
+		pkg:             pkg,
+		parsingFor:      s.parsingFor,
+		parent:          s,
+		locals:          make(pyDict, hint),
+		config:          s.config,
+		Callback:        s.Callback,
+		mode:            mode,
+		cursor:          s.cursor,
+		objectOrigins:   map[string]core.BuildLabel{},
+		requiredOrigins: map[core.BuildLabel]bool{},
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -466,12 +474,24 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // Lookup looks up a variable name in this scope, walking back up its ancestor scopes as needed.
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
-	if obj, present := s.locals[name]; present {
-		return obj
-	} else if s.parent != nil {
-		return s.parent.Lookup(name)
+	obj, origin := s.lookupWithOrigin(name)
+	if origin != nil && s.state.ParseMetadata {
+		s.requiredOrigins[*origin] = true
 	}
-	return s.Error("name '%s' is not defined", name)
+	return obj
+}
+
+// lookupWithOrigin is like Lookup but returns the origin label of the variable as well.
+func (s *scope) lookupWithOrigin(name string) (pyObject, *core.BuildLabel) {
+	if obj, present := s.locals[name]; present {
+		if label, ok := s.objectOrigins[name]; ok {
+			return obj, &label
+		}
+		return obj, nil
+	} else if s.parent != nil {
+		return s.parent.lookupWithOrigin(name)
+	}
+	return s.Error("name '%s' is not defined", name), nil
 }
 
 // LocalLookup looks up a variable name in the current scope.
@@ -490,6 +510,11 @@ func (s *scope) Set(name string, value pyObject) {
 // SetAll sets all contents of the given dict in this scope.
 // Optionally it can filter to just public objects (i.e. those not prefixed with an underscore)
 func (s *scope) SetAll(d pyDict, publicOnly bool) {
+	s.SetAllWithOrigin(d, publicOnly, nil)
+}
+
+// SetAllWithOrigin is like SetAll but also records the origin label for all variables.
+func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLabel) {
 	for k, v := range d {
 		if k == "CONFIG" {
 			// Special case; need to merge config entries rather than overwriting the entire object.
@@ -498,6 +523,11 @@ func (s *scope) SetAll(d pyDict, publicOnly bool) {
 			s.config.Merge(c)
 		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
+			if origin != nil {
+				s.objectOrigins[k] = *origin
+			} else if s.subincludeLabel != nil {
+				s.objectOrigins[k] = *s.subincludeLabel
+			}
 		}
 	}
 }
@@ -1112,17 +1142,11 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 // in the current callstack, actively executing to define this target.
 func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
 	return func() core.BuildLabels {
-		// We walk back on the callstack. For each scope of a method call we walk back at the local/lexical
-		// scopes in that method's context to find the original/root scope. If that scope includes a "subincludeLabel"
-		// it means this scope was generated by a subinclude statement and we'll register that label as required.
+		// We walk back on the callstack. For each scope of a method call we lookup the
+		// subinclude labels marked as used, meaning values from those subincluded labels were used to generate this target, be it func defs or variables.
 		seen := map[core.BuildLabel]bool{}
 		for callScope := s; callScope != nil; callScope = callScope.caller {
-			for lexicalScope := callScope; lexicalScope != nil; lexicalScope = lexicalScope.parent {
-				if lexicalScope.subincludeLabel != nil {
-					label := *lexicalScope.subincludeLabel
-					seen[label] = true
-				}
-			}
+			maps.Copy(seen, callScope.requiredOrigins)
 		}
 		return slices.Collect(maps.Keys(seen))
 	}
