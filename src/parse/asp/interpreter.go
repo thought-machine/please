@@ -42,12 +42,15 @@ type interpreter struct {
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
-		ctx:             context.Background(),
-		state:           state,
-		locals:          map[string]pyObject{},
-		objectOrigins:   map[string]core.BuildLabel{},
-		requiredOrigins: map[core.BuildLabel]bool{},
+		ctx:      context.Background(),
+		state:    state,
+		locals:   map[string]pyObject{},
+		metadata: &noopScopeMetadata{},
 	}
+	if state.ParseMetadata {
+		s.metadata = &scopeMetadata{}
+	}
+
 	i := &interpreter{
 		scope:      s,
 		parser:     p,
@@ -319,12 +322,7 @@ type scope struct {
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 	mode     core.ParseMode
-	// cursor points to the statement currently being interpreted
-	cursor *Statement
-	// objectOrigins tracks the subinclude label that each variable was originally defined in.
-	objectOrigins map[string]core.BuildLabel
-	// requiredOrigins tracks which subinclude labels have been requiredOrigins by looking up variables.
-	requiredOrigins map[core.BuildLabel]bool
+	metadata ScopeMetadata
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -430,20 +428,18 @@ func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint in
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
 	s2 := &scope{
-		ctx:             s.ctx,
-		filename:        filename,
-		interpreter:     s.interpreter,
-		state:           s.state,
-		pkg:             pkg,
-		parsingFor:      s.parsingFor,
-		parent:          s,
-		locals:          make(pyDict, hint),
-		config:          s.config,
-		Callback:        s.Callback,
-		mode:            mode,
-		cursor:          s.cursor,
-		objectOrigins:   map[string]core.BuildLabel{},
-		requiredOrigins: map[core.BuildLabel]bool{},
+		ctx:         s.ctx,
+		filename:    filename,
+		interpreter: s.interpreter,
+		state:       s.state,
+		pkg:         pkg,
+		parsingFor:  s.parsingFor,
+		parent:      s,
+		locals:      make(pyDict, hint),
+		config:      s.config,
+		Callback:    s.Callback,
+		mode:        mode,
+		metadata:    s.metadata.NewMetadata(),
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -475,19 +471,14 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
 	obj, origin := s.lookupWithOrigin(name)
-	if origin != nil && s.state.ParseMetadata {
-		s.requiredOrigins[*origin] = true
-	}
+	s.metadata.SetRequiredOrigin(origin)
 	return obj
 }
 
 // lookupWithOrigin is like Lookup but returns the origin label of the variable as well.
 func (s *scope) lookupWithOrigin(name string) (pyObject, *core.BuildLabel) {
 	if obj, present := s.locals[name]; present {
-		if label, ok := s.objectOrigins[name]; ok {
-			return obj, &label
-		}
-		return obj, nil
+		return obj, s.metadata.Origin(name)
 	} else if s.parent != nil {
 		return s.parent.lookupWithOrigin(name)
 	}
@@ -513,7 +504,7 @@ func (s *scope) SetAll(d pyDict, publicOnly bool) {
 	s.SetAllWithOrigin(d, publicOnly, nil)
 }
 
-// SetAllWithOrigin is like SetAll but also records the origin label for all variables.
+// SetAllWithOrigin is like SetAll but also records the origin labe	l for all variables.
 func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLabel) {
 	for k, v := range d {
 		if k == "CONFIG" {
@@ -524,9 +515,7 @@ func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLa
 		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
 			if origin != nil {
-				s.objectOrigins[k] = *origin
-			} else if s.subincludeLabel != nil {
-				s.objectOrigins[k] = *s.subincludeLabel
+				s.metadata.SetObjectOrigin(k, *origin)
 			}
 		}
 	}
@@ -565,7 +554,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 	}()
 	for _, stmt = range statements {
-		s.cursor = stmt
+		s.metadata.SetCursor(stmt)
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -1132,8 +1121,8 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 				stmtScope = curr
 			}
 		}
-		s.NAssert(stmtScope.cursor == nil, "Cursor is not pointing to a statement")
-		return NewBuildStatement(stmtScope.cursor)
+		s.NAssert(stmtScope.metadata.Cursor() == nil, "Cursor is not pointing to a statement")
+		return NewBuildStatement(stmtScope.metadata.Cursor())
 	}
 }
 
@@ -1143,10 +1132,10 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
 	return func() core.BuildLabels {
 		// We walk back on the callstack. For each scope of a method call we lookup the
-		// subinclude labels marked as used, meaning values from those subincluded labels were used to generate this target, be it func defs or variables.
-		seen := map[core.BuildLabel]bool{}
+		// subinclude labels marked as used, meaning values from those subincluded labels were used to generate this target, be it function defs or variables.
+		seen := map[core.BuildLabel]struct{}{}
 		for callScope := s; callScope != nil; callScope = callScope.caller {
-			maps.Copy(seen, callScope.requiredOrigins)
+			maps.Copy(seen, callScope.metadata.RequiredOrigins())
 		}
 		return slices.Collect(maps.Keys(seen))
 	}
@@ -1159,6 +1148,87 @@ func (s *scope) pkgFilename() string {
 	}
 	return ""
 }
+
+// scopeMetadata maintains additional information generated during the interpretation phase.
+// This is optionally used for operations (e.g. export) that require more details on the relation
+// between targets and statements. The no-op implementation should be used for most operations to
+// avoid any computational overhead.
+type ScopeMetadata interface {
+	// NewMetadata creates a new instance of the same ScopeMetadata implementation type.
+	NewMetadata() ScopeMetadata
+	// Cursor returns the statement being currently interpreted.
+	Cursor() *Statement
+	// Origin gets the origin of the object by name. Should return nil if not found or unimplemented.
+	Origin(name string) *core.BuildLabel
+	// RequiredOrigins returns a set of all the origins (subincluded labels) required by the current
+	// scope.
+	RequiredOrigins() map[core.BuildLabel]struct{}
+	// SetCursor register the statement currently being interpreted.
+	SetCursor(stmt *Statement)
+	// SetObjectOrigin registers the origin for the given named object. The origin is the label of a
+	// subincluded target.
+	SetObjectOrigin(name string, origin core.BuildLabel)
+	// SetRequiredOrigin marks the named object as required by the current scope.
+	SetRequiredOrigin(origin *core.BuildLabel)
+}
+
+type scopeMetadata struct {
+	// cursor points to the statement currently being interpreted
+	cursor *Statement
+	// objectOrigins tracks the subinclude label that each variable was originally defined in.
+	objectOrigins map[string]core.BuildLabel
+	// requiredOrigins tracks which subinclude labels have been used by looking up objects.
+	requiredOrigins map[core.BuildLabel]struct{}
+}
+
+func (m *scopeMetadata) NewMetadata() ScopeMetadata {
+	return &scopeMetadata{
+		objectOrigins:   map[string]core.BuildLabel{},
+		requiredOrigins: map[core.BuildLabel]struct{}{},
+	}
+}
+
+func (m *scopeMetadata) Cursor() *Statement {
+	return m.cursor
+}
+
+func (m *scopeMetadata) Origin(name string) *core.BuildLabel {
+	if label, ok := m.objectOrigins[name]; ok {
+		return &label
+	}
+	return nil
+}
+
+func (m *scopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{} {
+	return m.requiredOrigins
+}
+
+func (m *scopeMetadata) SetCursor(stmt *Statement) {
+	m.cursor = stmt
+}
+
+func (m *scopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {
+	m.objectOrigins[name] = origin
+}
+
+func (m *scopeMetadata) SetRequiredOrigin(origin *core.BuildLabel) {
+	if origin == nil {
+		return
+	}
+	m.requiredOrigins[*origin] = struct{}{}
+}
+
+// noopScopeMetadata implements the ScopeMetadata interface with no-op methods. This is used to
+// avoid the overhead of storing metadata for operations that don't depend on it.
+type noopScopeMetadata struct{}
+
+func (nm *noopScopeMetadata) NewMetadata() ScopeMetadata                          { return &noopScopeMetadata{} }
+func (nm *noopScopeMetadata) Cursor() *Statement                                  { return nil }
+func (nm *noopScopeMetadata) Origin(name string) *core.BuildLabel                 { return nil }
+func (nm *noopScopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{}       { return nil }
+func (nm *noopScopeMetadata) SetCursor(stmt *Statement)                           {}
+func (nm *noopScopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {}
+func (nm *noopScopeMetadata) SetRequiredOrigin(origin *core.BuildLabel)           {}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {
