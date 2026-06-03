@@ -267,6 +267,65 @@ func TestPassUnsafeEnvExcludedFromDigest(t *testing.T) {
 	assert.True(t, envContainsValue(real1, "first"))
 }
 
+// TestStripUnsafeEnvConfigLevel checks the stripping logic removes values from the global [Build]
+// PassUnsafeEnv config keyword while retaining PassEnv values (which are intentionally part of the cache key).
+func TestStripUnsafeEnvConfigLevel(t *testing.T) {
+	c := newClientInstance("strip")
+	c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
+	c.state.Config.Build.PassUnsafeEnv = []string{"CFG_UNSAFE"}
+	c.state.Config.Build.PassEnv = []string{"CFG_SAFE"}
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "x"})
+	unsafe := []string{"TGT_UNSAFE"}
+	target.PassUnsafeEnv = &unsafe
+
+	env := core.BuildEnv{
+		"CFG_UNSAFE": "secret",
+		"CFG_SAFE":   "keep",
+		"TGT_UNSAFE": "alsosecret",
+		"OTHER":      "v",
+	}
+	c.stripUnsafeEnv(c.state.ForTarget(target), target, env)
+
+	_, cfgUnsafePresent := env["CFG_UNSAFE"]
+	_, tgtUnsafePresent := env["TGT_UNSAFE"]
+	assert.False(t, cfgUnsafePresent, "config-level PassUnsafeEnv should be stripped")
+	assert.False(t, tgtUnsafePresent, "target-level PassUnsafeEnv should be stripped")
+	assert.Equal(t, "keep", env["CFG_SAFE"], "PassEnv must be retained")
+	assert.Equal(t, "v", env["OTHER"], "unrelated env must be retained")
+}
+
+// TestConfigPassUnsafeEnvExcludedFromDigest checks that values declared via the global [Build]
+// PassUnsafeEnv config keyword (not just the per-target attribute) are excluded from the cache-key digest.
+// Because config-level values are captured once per config object, this uses a separate client per value
+// and sets the config before the client (and its async init) is created.
+func TestConfigPassUnsafeEnvExcludedFromDigest(t *testing.T) {
+	canonicalAndReal := func(value string) (string, string) {
+		t.Setenv("MY_CFG_UNSAFE", value)
+		c := newClientInstanceWith(fmt.Sprintf("cfg-unsafe-%d", time.Now().UnixNano()), func(config *core.Configuration) {
+			config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
+			config.Build.PassUnsafeEnv = []string{"MY_CFG_UNSAFE"}
+		})
+		target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "cfgunsafe"})
+		target.AddOutput("out.txt")
+		target.Command = "echo hello > $OUT"
+		target.BuildTimeout = time.Minute
+		canon, canonDigest, err := c.buildAction(target, false, false, true, 0)
+		require.NoError(t, err)
+		require.False(t, envContainsValue(canon, value), "config-level PassUnsafeEnv value must not be in the canonical command")
+		real, realDigest, err := c.buildAction(target, false, true, false, 0)
+		require.NoError(t, err)
+		require.True(t, envContainsValue(real, value), "executed action should include the config-level value")
+		return canonDigest.Hash, realDigest.Hash
+	}
+
+	canonFirst, realFirst := canonicalAndReal("first")
+	canonSecond, realSecond := canonicalAndReal("second")
+
+	assert.Equal(t, canonFirst, canonSecond, "config-level PassUnsafeEnv value must not affect the cache-key digest")
+	assert.NotEqual(t, realFirst, realSecond, "the executed action should still include the config-level value")
+}
+
 // TestPassUnsafeEnvRemoteCacheHitAcrossValues is an end-to-end test against the in-process testServer
 // that proves changing a PassUnsafeEnv value does not re-execute the action: the first build executes
 // and backfills the cache-key digest, and a second build with a *different* value (and a fresh client,

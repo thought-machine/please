@@ -132,7 +132,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	env := c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun)
 	if canonical {
-		c.stripUnsafeEnv(target, env)
+		c.stripUnsafeEnv(state, target, env)
 	}
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target),
@@ -142,28 +142,46 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}, err
 }
 
-// excludesUnsafeEnv reports whether PassUnsafeEnv values should be kept out of the action digest for this target.
-func (c *Client) excludesUnsafeEnv(target *core.BuildTarget) bool {
-	return c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest && target.PassUnsafeEnv != nil && len(*target.PassUnsafeEnv) > 0
+// excludesUnsafeEnv reports whether PassUnsafeEnv values should be kept out of the action digest for this
+// target. This considers both the global [Build] PassUnsafeEnv config keyword and the target's own
+// pass_unsafe_env attribute, mirroring how the local cache excludes both from its hash.
+func (c *Client) excludesUnsafeEnv(state *core.BuildState, target *core.BuildTarget) bool {
+	if !c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest {
+		return false
+	}
+	if len(state.Config.Build.PassUnsafeEnv) > 0 {
+		return true
+	}
+	return target.PassUnsafeEnv != nil && len(*target.PassUnsafeEnv) > 0
 }
 
 // stripUnsafeEnv removes the values of PassUnsafeEnv variables from the given environment so that they do
-// not contribute to the action digest. Variables that are also listed in PassEnv are left intact, since
-// those values are intentionally part of the cache key.
-func (c *Client) stripUnsafeEnv(target *core.BuildTarget, env core.BuildEnv) {
-	if !c.excludesUnsafeEnv(target) {
+// not contribute to the action digest. Both the global [Build] PassUnsafeEnv config keyword and the
+// target's pass_unsafe_env attribute are considered. Variables that are also listed in PassEnv (config or
+// target level) are left intact, since those values are intentionally part of the cache key.
+func (c *Client) stripUnsafeEnv(state *core.BuildState, target *core.BuildTarget, env core.BuildEnv) {
+	if !c.excludesUnsafeEnv(state, target) {
 		return
 	}
 	safe := map[string]bool{}
+	for _, e := range state.Config.Build.PassEnv {
+		safe[e] = true
+	}
 	if target.PassEnv != nil {
 		for _, e := range *target.PassEnv {
 			safe[e] = true
 		}
 	}
-	for _, e := range *target.PassUnsafeEnv {
-		if !safe[e] {
-			delete(env, e)
+	strip := func(vars []string) {
+		for _, e := range vars {
+			if !safe[e] {
+				delete(env, e)
+			}
 		}
+	}
+	strip(state.Config.Build.PassUnsafeEnv)
+	if target.PassUnsafeEnv != nil {
+		strip(*target.PassUnsafeEnv)
 	}
 }
 
@@ -194,7 +212,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	env := core.TestEnvironment(state, target, ".", run)
 	if canonical {
-		c.stripUnsafeEnv(target, env)
+		c.stripUnsafeEnv(state, target, env)
 	}
 	return &pb.Command{
 		Platform: &pb.Platform{

@@ -417,7 +417,7 @@ func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.Actio
 	// store & look up results under a "cache-key" action digest that omits those inputs, while still
 	// executing the real action that includes them. This implements the rule whereby e.g. the SCM
 	// revision or an unsafe env var changing doesn't force a rebuild.
-	useCacheKeyDigest := target.Stamp || c.excludesUnsafeEnv(target)
+	useCacheKeyDigest := target.Stamp || c.excludesUnsafeEnv(c.state.ForTarget(target), target)
 	var cacheKeyDigest *pb.Digest
 	if useCacheKeyDigest {
 		command, digest, err := c.buildAction(target, false, false, true, 0)
@@ -614,7 +614,7 @@ func (c *Client) Test(target *core.BuildTarget, run int) (metadata *core.BuildMe
 	}
 	// As in build(), if PassUnsafeEnv values are excluded from the digest we look results up under a
 	// cache-key digest that omits them, while executing the real action that includes them.
-	useCacheKeyDigest := c.excludesUnsafeEnv(target)
+	useCacheKeyDigest := c.excludesUnsafeEnv(c.state.ForTarget(target), target)
 	var ar *pb.ActionResult
 	if useCacheKeyDigest {
 		cacheKeyCommand, cacheKeyDigest, cErr := c.buildAction(target, true, false, true, run)
