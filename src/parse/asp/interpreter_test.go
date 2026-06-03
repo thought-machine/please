@@ -780,39 +780,43 @@ func TestCurrentBuildStatement(t *testing.T) {
 	rootScope := &scope{
 		pkg:      pkg,
 		filename: pkg.Filename,
-		cursor:   rootStmt,
+		metadata: newScopeMetadata(),
 	}
+	rootScope.metadata.SetCursor(rootStmt)
 
 	// A nested call inside the same BUILD file (e.g. function def)
-	NestedStmt := &Statement{Pos: 30, EndPos: 40}
-	NestedScope := &scope{
+	nestedStmt := &Statement{Pos: 30, EndPos: 40}
+	nestedScope := &scope{
 		pkg:      pkg,
 		filename: pkg.Filename,
-		cursor:   NestedStmt,
 		caller:   rootScope,
+		metadata: newScopeMetadata(),
 	}
+	nestedScope.metadata.SetCursor(nestedStmt)
 
 	// A call from a different file (e.g. a function inside a subincluded .build_defs file)
 	defsRootStmt := &Statement{Pos: 50, EndPos: 60}
 	defsRootScope := &scope{
 		pkg:      pkg,
 		filename: "other/file.build_defs",
-		cursor:   defsRootStmt,
-		caller:   NestedScope,
+		caller:   nestedScope,
+		metadata: newScopeMetadata(),
 	}
+	defsRootScope.metadata.SetCursor(defsRootStmt)
 
 	// Another call deep in the other file
 	defsNestedStmt := &Statement{Pos: 70, EndPos: 80}
 	defsNestedScope := &scope{
 		pkg:      pkg,
 		filename: "other/file.build_defs",
-		cursor:   defsNestedStmt,
 		caller:   defsRootScope,
+		metadata: newScopeMetadata(),
 	}
+	defsNestedScope.metadata.SetCursor(defsNestedStmt)
 
 	t.Run("FindsRootStatementFromBUILD", func(t *testing.T) {
 		// Calling it from buildNestedScope should walk back to buildRootScope
-		stmt := NestedScope.CurrentBuildStatement()()
+		stmt := nestedScope.CurrentBuildStatement()()
 		assert.Equal(t, NewBuildStatement(rootStmt), stmt)
 	})
 
@@ -824,7 +828,8 @@ func TestCurrentBuildStatement(t *testing.T) {
 
 	t.Run("HandlesNoPackageFileInStack", func(t *testing.T) {
 		// A scope that has no pkg/filename context
-		standaloneScope := &scope{cursor: rootStmt}
+		standaloneScope := &scope{metadata: newScopeMetadata()}
+		standaloneScope.metadata.SetCursor(rootStmt)
 		stmt := standaloneScope.CurrentBuildStatement()()
 		assert.Equal(t, NewBuildStatement(rootStmt), stmt)
 	})
@@ -836,10 +841,13 @@ func TestActiveSubincludes(t *testing.T) {
 
 	t.Run("NoSubincludes", func(t *testing.T) {
 		// BUILD scope
-		scopeBUILD := &scope{}
+		scopeBUILD := &scope{
+			metadata: newScopeMetadata(),
+		}
 		// Function execution
 		scopeFuncExec := &scope{
-			caller: scopeBUILD,
+			caller:   scopeBUILD,
+			metadata: newScopeMetadata(),
 		}
 		labels := scopeFuncExec.ActiveSubincludes()()
 		assert.Empty(t, labels)
@@ -849,18 +857,29 @@ func TestActiveSubincludes(t *testing.T) {
 		// File A scope
 		scopeA := &scope{
 			subincludeLabel: &labelA,
+			locals:          make(pyDict),
+			metadata:        newScopeMetadata(),
 		}
+		scopeA.SetAllWithOrigin(pyDict{"foo": pyString("val")}, false, &labelA)
+
 		// Function defined in File A
 		scopeFuncDef := &scope{
-			parent: scopeA,
+			parent:   scopeA,
+			metadata: newScopeMetadata(),
 		}
 		// BUILD scope
-		scopeBUILD := &scope{}
+		scopeBUILD := &scope{
+			metadata: newScopeMetadata(),
+		}
 		// Function execution
 		scopeFuncExec := &scope{
-			parent: scopeFuncDef,
-			caller: scopeBUILD,
+			parent:   scopeFuncDef,
+			caller:   scopeBUILD,
+			metadata: newScopeMetadata(),
 		}
+
+		// Lookup triggers tracking of required subincludes
+		scopeFuncExec.Lookup("foo")
 
 		labels := scopeFuncExec.ActiveSubincludes()()
 		assert.Equal(t, core.BuildLabels{labelA}, labels)
@@ -870,25 +889,48 @@ func TestActiveSubincludes(t *testing.T) {
 		// File A scope
 		scopeA := &scope{
 			subincludeLabel: &labelA,
+			locals:          make(pyDict),
+			metadata:        newScopeMetadata(),
 		}
+		scopeA.SetAllWithOrigin(pyDict{"varA": pyString("valA")}, false, &labelA)
+
 		// File B scope (subincluded by A)
 		scopeB := &scope{
 			subincludeLabel: &labelB,
 			parent:          scopeA,
+			locals:          make(pyDict),
+			metadata:        newScopeMetadata(),
 		}
+		scopeB.SetAllWithOrigin(pyDict{"varB": pyString("valB")}, false, &labelB)
+
 		// Function defined in File B
 		scopeFuncDef := &scope{
-			parent: scopeB,
+			parent:   scopeB,
+			metadata: newScopeMetadata(),
 		}
 		// BUILD scope
-		scopeBUILD := &scope{}
+		scopeBUILD := &scope{
+			metadata: newScopeMetadata(),
+		}
 		// Function execution
 		scopeFuncExec := &scope{
-			parent: scopeFuncDef,
-			caller: scopeBUILD,
+			parent:   scopeFuncDef,
+			caller:   scopeBUILD,
+			metadata: newScopeMetadata(),
 		}
+
+		// Lookups trigger tracking of required subincludes
+		scopeFuncExec.Lookup("varA")
+		scopeFuncExec.Lookup("varB")
 
 		labels := scopeFuncExec.ActiveSubincludes()()
 		assert.ElementsMatch(t, core.BuildLabels{labelA, labelB}, labels)
 	})
+}
+
+func newScopeMetadata() ScopeMetadata {
+	return &scopeMetadata{
+		objectOrigins:   map[string]core.BuildLabel{},
+		requiredOrigins: map[core.BuildLabel]struct{}{},
+	}
 }
