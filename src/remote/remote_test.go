@@ -166,7 +166,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 	target.AddOutput("remote_test")
 	target.AddSource(core.FileLabel{Package: "package", File: "file"})
 	target.AddTool(tool.Label)
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	testDir := os.Getenv("TEST_DIR")
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
@@ -185,7 +185,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
 	target.AddOutput("remote_test")
 	target.AddTool(core.SystemPathLabel{Path: []string{os.Getenv("TMP_DIR")}, Name: "remote_test"})
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
 			assert.False(t, filepath.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
@@ -199,15 +199,69 @@ func TestRemoteFilesHashConsistently(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "download"})
 	target.IsRemoteFile = true
 	target.AddSource(core.URLLabel("https://localhost/file"))
-	cmd, digest, err := c.buildAction(target, false, false, 0)
+	cmd, digest, err := c.buildAction(target, false, false, false, 0)
 	assert.NoError(t, err)
 	// After we change this path, the rule should still give back the same protos since it is
 	// not relevant to how we fetch a remote asset.
 	c.state.Config.Build.Path = []string{"/usr/bin/nope"}
-	cmd2, digest2, err := c.buildAction(target, false, false, 0)
+	cmd2, digest2, err := c.buildAction(target, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, cmd, cmd2)
 	assert.Equal(t, digest, digest2)
+}
+
+// envContainsValue reports whether any environment variable in the command has the given value.
+func envContainsValue(cmd *pb.Command, value string) bool {
+	for _, e := range cmd.EnvironmentVariables {
+		if e.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
+func TestPassUnsafeEnvExcludedFromDigest(t *testing.T) {
+	c := newClientInstance("unsafe_env")
+	assert.True(t, c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest, "should default to true")
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "unsafe"})
+	target.AddOutput("out.txt")
+	target.Command = "echo hello > $OUT"
+	unsafe := []string{"MY_UNSAFE_VAR"}
+	target.PassUnsafeEnv = &unsafe
+	target.BuildTimeout = time.Minute
+
+	t.Setenv("MY_UNSAFE_VAR", "first")
+	canon1, canonDigest1, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	real1, realDigest1, err := c.buildAction(target, false, true, false, 0)
+	require.NoError(t, err)
+
+	t.Setenv("MY_UNSAFE_VAR", "second")
+	canon2, canonDigest2, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	_, realDigest2, err := c.buildAction(target, false, true, false, 0)
+	require.NoError(t, err)
+
+	// The cache-key (canonical) digest is stable across changes to the PassUnsafeEnv value, and the value
+	// never appears in the canonical command's environment.
+	assert.Equal(t, canonDigest1.Hash, canonDigest2.Hash)
+	assert.False(t, envContainsValue(canon1, "first"))
+	assert.False(t, envContainsValue(canon2, "second"))
+
+	// The executed action still includes the real value, so its digest changes when the value changes.
+	assert.NotEqual(t, realDigest1.Hash, realDigest2.Hash)
+	assert.True(t, envContainsValue(real1, "first"))
+
+	// With the feature disabled the value contributes to the cache-key digest as before.
+	c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = false
+	t.Setenv("MY_UNSAFE_VAR", "first")
+	_, disabledDigest1, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	t.Setenv("MY_UNSAFE_VAR", "second")
+	_, disabledDigest2, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	assert.NotEqual(t, disabledDigest1.Hash, disabledDigest2.Hash)
 }
 
 func TestOutDirsSetOutsOnTarget(t *testing.T) {
@@ -318,7 +372,7 @@ func TestTargetPlatform(t *testing.T) {
 	c := newClientInstance("platform_test")
 	c.platform = convertPlatform(c.state.Config.Remote.Platform) // Bit of a hack but we can't go through the normal path.
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target"})
-	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, &pb.Platform{
 		Properties: []*pb.Platform_Property{
@@ -330,7 +384,7 @@ func TestTargetPlatform(t *testing.T) {
 	}, cmd.Platform) //nolint:staticcheck
 
 	target.Labels = []string{"remote-platform-property:size=chomky"}
-	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, &pb.Platform{
 		Properties: []*pb.Platform_Property{

@@ -701,6 +701,15 @@
           PassEnv, environment variable values are not used to calculate build
           target hashes.
         </p>
+        <p>
+          When building remotely, the
+          <a href="#remote.excludepassunsafeenvvarsfromdigest">Remote.ExcludePassUnsafeEnvVarsFromDigest</a>
+          option (enabled by default) likewise keeps these values out of the
+          remote action cache key, so changing them does not cause remote cache
+          misses. The values are still passed to the executed action. Note that a
+          cached result may therefore be reused (and shared between users) even if
+          the PassUnsafeEnv values differ from those it was originally built with.
+        </p>
       </div>
     </li>
     <li>
@@ -1014,6 +1023,12 @@
       <div>
         <h3 class="mt1 f6 lh-title" id="remote.verifyoutputs">VerifyOutputs <span class="normal">(bool)</span></h3>
         <p>{{ index .ConfigHelpText "remote.verifyoutputs" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="remote.excludepassunsafeenvvarsfromdigest">ExcludePassUnsafeEnvVarsFromDigest <span class="normal">(bool)</span></h3>
+        <p>{{ index .ConfigHelpText "remote.excludepassunsafeenvvarsfromdigest" }}</p>
       </div>
     </li>
     <li>

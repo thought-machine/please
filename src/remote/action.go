@@ -40,7 +40,7 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool, run 
 		}
 		inputRootEntry, inputRootDigest := c.protoEntry(inputRoot)
 		ch <- inputRootEntry
-		command, err = c.buildCommand(target, inputRoot, isTest, isRun, target.Stamp, run)
+		command, err = c.buildCommand(target, inputRoot, isTest, isRun, target.Stamp, false, run)
 		if err != nil {
 			return err
 		}
@@ -60,13 +60,14 @@ func (c *Client) uploadAction(target *core.BuildTarget, isTest, isRun bool, run 
 }
 
 // buildAction creates a build action for a target and returns the command and the action digest. No uploading is done.
-func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool, run int) (*pb.Command, *pb.Digest, error) {
+// If canonical is true the values of PassUnsafeEnv variables are excluded from the digest (see buildCommand).
+func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp, canonical bool, run int) (*pb.Command, *pb.Digest, error) {
 	inputRoot, err := c.uploadInputs(nil, target, isTest)
 	if err != nil {
 		return nil, nil, err
 	}
 	inputRootDigest := c.digestMessage(inputRoot)
-	command, err := c.buildCommand(target, inputRoot, isTest, false, stamp, run)
+	command, err := c.buildCommand(target, inputRoot, isTest, false, stamp, canonical, run)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,10 +82,13 @@ func (c *Client) buildAction(target *core.BuildTarget, isTest, stamp bool, run i
 }
 
 // buildCommand builds the command for a single target.
-func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp bool, run int) (*pb.Command, error) {
+// If canonical is true, the values of PassUnsafeEnv variables are stripped from the environment so that
+// they do not contribute to the action digest; this is used to compute a stable cache-key action that is
+// never actually executed (see Client.build).
+func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory, isTest, isRun, stamp, canonical bool, run int) (*pb.Command, error) {
 	state := c.state.ForTarget(target)
 	if isTest {
-		return c.buildTestCommand(state, target, run)
+		return c.buildTestCommand(state, target, canonical, run)
 	} else if isRun {
 		return c.buildRunCommand(state, target)
 	}
@@ -126,12 +130,41 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		cmd = "true"
 	}
 	cmd, err := core.ReplaceSequences(state, target, cmd)
+	env := c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun)
+	if canonical {
+		c.stripUnsafeEnv(target, env)
+	}
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target),
 		Arguments:            process.BashCommand(c.shellPath, commandPrefixBuilder.String()+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
+		EnvironmentVariables: c.buildEnv(target, env, target.Sandbox),
 		OutputPaths:          outs,
 	}, err
+}
+
+// excludesUnsafeEnv reports whether PassUnsafeEnv values should be kept out of the action digest for this target.
+func (c *Client) excludesUnsafeEnv(target *core.BuildTarget) bool {
+	return c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest && target.PassUnsafeEnv != nil && len(*target.PassUnsafeEnv) > 0
+}
+
+// stripUnsafeEnv removes the values of PassUnsafeEnv variables from the given environment so that they do
+// not contribute to the action digest. Variables that are also listed in PassEnv are left intact, since
+// those values are intentionally part of the cache key.
+func (c *Client) stripUnsafeEnv(target *core.BuildTarget, env core.BuildEnv) {
+	if !c.excludesUnsafeEnv(target) {
+		return
+	}
+	safe := map[string]bool{}
+	if target.PassEnv != nil {
+		for _, e := range *target.PassEnv {
+			safe[e] = true
+		}
+	}
+	for _, e := range *target.PassUnsafeEnv {
+		if !safe[e] {
+			delete(env, e)
+		}
+	}
 }
 
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
@@ -146,7 +179,7 @@ func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.Bu
 }
 
 // buildTestCommand builds a command for a target when testing.
-func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget, run int) (*pb.Command, error) {
+func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarget, canonical bool, run int) (*pb.Command, error) {
 	paths := target.Test.Outputs
 	if target.NeedCoverage(state) {
 		paths = append(paths, core.CoverageFile)
@@ -159,6 +192,10 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
 	}
 	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	env := core.TestEnvironment(state, target, ".", run)
+	if canonical {
+		c.stripUnsafeEnv(target, env)
+	}
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{
@@ -169,7 +206,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 			},
 		},
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
-		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
+		EnvironmentVariables: c.buildEnv(nil, env, target.Test.Sandbox),
 		OutputPaths:          paths,
 	}, err
 }
