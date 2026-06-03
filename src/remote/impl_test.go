@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
@@ -55,6 +56,7 @@ type testServer struct {
 	blobs                         map[string][]byte
 	bytestreams                   map[string][]byte
 	mockActionResult              *pb.ActionResult
+	executions                    atomic.Int64
 }
 
 func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitiesRequest) (*pb.ServerCapabilities, error) {
@@ -86,6 +88,7 @@ func (s *testServer) Reset() {
 	s.blobs = map[string][]byte{}
 	s.bytestreams = map[string][]byte{}
 	s.mockActionResult = nil
+	s.executions.Store(0)
 }
 
 func (s *testServer) GetActionResult(ctx context.Context, req *pb.GetActionResultRequest) (*pb.ActionResult, error) {
@@ -249,6 +252,7 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 }
 
 func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteServer) error {
+	s.executions.Add(1)
 	mm := func(msg protoreflect.ProtoMessage) *anypb.Any {
 		a := &anypb.Any{}
 		a.MarshalFrom(msg)

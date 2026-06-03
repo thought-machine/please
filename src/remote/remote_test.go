@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -262,6 +263,54 @@ func TestPassUnsafeEnvExcludedFromDigest(t *testing.T) {
 	_, disabledDigest2, err := c.buildAction(target, false, false, true, 0)
 	require.NoError(t, err)
 	assert.NotEqual(t, disabledDigest1.Hash, disabledDigest2.Hash)
+}
+
+// TestPassUnsafeEnvRemoteCacheHitAcrossValues is an end-to-end test against the in-process testServer
+// that proves changing a PassUnsafeEnv value does not re-execute the action: the first build executes
+// and backfills the cache-key digest, and a second build with a *different* value (and a fresh client,
+// so a cold local cache) is served from the remote action cache instead of being re-executed.
+func TestPassUnsafeEnvRemoteCacheHitAcrossValues(t *testing.T) {
+	server.Reset()
+	defer server.Reset()
+
+	// Use unique instance names per run so each client's (disk-backed) local metadata store is empty.
+	// This guarantees the first build is a cold miss and forces the second build through the shared
+	// remote action cache (which is keyed by digest only, so it is shared across instances). Both names
+	// are something other than "test"/"mock" so the test server takes its default execution branch.
+	base := fmt.Sprintf("unsafe-%d", time.Now().UnixNano())
+
+	newTarget := func() *core.BuildTarget {
+		target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target2"})
+		target.AddSource(core.FileLabel{File: "src1.txt", Package: "package"})
+		target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
+		target.AddOutput("out2.txt")
+		target.BuildTimeout = time.Minute
+		target.Command = "echo hello && echo test > $OUT"
+		unsafe := []string{"MY_UNSAFE_VAR"}
+		target.PassUnsafeEnv = &unsafe
+		return target
+	}
+
+	// First build: cold cache, so the action is executed once and the result is backfilled under the
+	// value-independent cache-key digest.
+	c1 := newClientInstance(base + "-a")
+	require.NoError(t, c1.CheckInitialised())
+	require.True(t, c1.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest)
+	t.Setenv("MY_UNSAFE_VAR", "first")
+	md1, _, _, err := c1.build(newTarget())
+	require.NoError(t, err)
+	assert.False(t, md1.Cached, "first build should not be cached")
+	assert.EqualValues(t, 1, server.executions.Load(), "first build should execute the action once")
+
+	// Second build: different PassUnsafeEnv value and a separate client with an empty local cache. It
+	// must be a remote cache hit on the cache-key digest, not a re-execution.
+	c2 := newClientInstance(base + "-b")
+	require.NoError(t, c2.CheckInitialised())
+	t.Setenv("MY_UNSAFE_VAR", "second")
+	md2, _, _, err := c2.build(newTarget())
+	require.NoError(t, err)
+	assert.True(t, md2.Cached, "build with a different PassUnsafeEnv value should be a cache hit")
+	assert.EqualValues(t, 1, server.executions.Load(), "changing only PassUnsafeEnv must not re-execute the action")
 }
 
 func TestOutDirsSetOutsOnTarget(t *testing.T) {
