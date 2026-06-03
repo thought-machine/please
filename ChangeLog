@@ -6,10 +6,10 @@ Version 17.30.0
     * Make `git_*` built-in function failures more informative (#3525)
     * Fix go coverage when parsing blocks out of order (#3519)
     * Update to golang 1.26 (#3498)
-    * Exclude `PassUnsafeEnv` values from the remote action digest by default, so
-      changing them no longer causes remote cache misses (matching local cache
-      behaviour). Controlled by the new `Remote.ExcludePassUnsafeEnvVarsFromDigest`
-      config option.
+    * Add `Remote.ExcludePassUnsafeEnvVarsFromDigest` config option (disabled by
+      default) which, when enabled, excludes `PassUnsafeEnv` values from the remote
+      action digest so changing them no longer causes remote cache misses (matching
+      local cache behaviour).
 
 Version 17.29.1
 ---------------

@@ -223,7 +223,7 @@ func envContainsValue(cmd *pb.Command, value string) bool {
 
 func TestPassUnsafeEnvExcludedFromDigest(t *testing.T) {
 	c := newClientInstance("unsafe_env")
-	assert.True(t, c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest, "should default to true")
+	assert.False(t, c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest, "should default to false")
 
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "unsafe"})
 	target.AddOutput("out.txt")
@@ -231,6 +231,18 @@ func TestPassUnsafeEnvExcludedFromDigest(t *testing.T) {
 	unsafe := []string{"MY_UNSAFE_VAR"}
 	target.PassUnsafeEnv = &unsafe
 	target.BuildTimeout = time.Minute
+
+	// With the feature disabled (the default) the value contributes to the cache-key digest.
+	t.Setenv("MY_UNSAFE_VAR", "first")
+	_, disabledDigest1, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	t.Setenv("MY_UNSAFE_VAR", "second")
+	_, disabledDigest2, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	assert.NotEqual(t, disabledDigest1.Hash, disabledDigest2.Hash)
+
+	// Enable the feature; now the value must be excluded from the cache-key digest.
+	c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
 
 	t.Setenv("MY_UNSAFE_VAR", "first")
 	canon1, canonDigest1, err := c.buildAction(target, false, false, true, 0)
@@ -253,16 +265,6 @@ func TestPassUnsafeEnvExcludedFromDigest(t *testing.T) {
 	// The executed action still includes the real value, so its digest changes when the value changes.
 	assert.NotEqual(t, realDigest1.Hash, realDigest2.Hash)
 	assert.True(t, envContainsValue(real1, "first"))
-
-	// With the feature disabled the value contributes to the cache-key digest as before.
-	c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = false
-	t.Setenv("MY_UNSAFE_VAR", "first")
-	_, disabledDigest1, err := c.buildAction(target, false, false, true, 0)
-	require.NoError(t, err)
-	t.Setenv("MY_UNSAFE_VAR", "second")
-	_, disabledDigest2, err := c.buildAction(target, false, false, true, 0)
-	require.NoError(t, err)
-	assert.NotEqual(t, disabledDigest1.Hash, disabledDigest2.Hash)
 }
 
 // TestPassUnsafeEnvRemoteCacheHitAcrossValues is an end-to-end test against the in-process testServer
@@ -294,8 +296,8 @@ func TestPassUnsafeEnvRemoteCacheHitAcrossValues(t *testing.T) {
 	// First build: cold cache, so the action is executed once and the result is backfilled under the
 	// value-independent cache-key digest.
 	c1 := newClientInstance(base + "-a")
+	c1.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
 	require.NoError(t, c1.CheckInitialised())
-	require.True(t, c1.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest)
 	t.Setenv("MY_UNSAFE_VAR", "first")
 	md1, _, _, err := c1.build(newTarget())
 	require.NoError(t, err)
@@ -305,6 +307,7 @@ func TestPassUnsafeEnvRemoteCacheHitAcrossValues(t *testing.T) {
 	// Second build: different PassUnsafeEnv value and a separate client with an empty local cache. It
 	// must be a remote cache hit on the cache-key digest, not a re-execution.
 	c2 := newClientInstance(base + "-b")
+	c2.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
 	require.NoError(t, c2.CheckInitialised())
 	t.Setenv("MY_UNSAFE_VAR", "second")
 	md2, _, _, err := c2.build(newTarget())

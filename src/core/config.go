@@ -409,7 +409,6 @@ func DefaultConfiguration() *Configuration {
 	config.Remote.NumExecutors = 20 // kind of arbitrary
 	config.Remote.Secure = true
 	config.Remote.VerifyOutputs = true
-	config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
 	config.Remote.UploadDirs = true
 	config.Remote.CacheDuration = cli.Duration(10000 * 24 * time.Hour) // Effectively forever.
 	config.Remote.Shell = "bash"
@@ -574,7 +573,7 @@ type Configuration struct {
 		Timeout                            cli.Duration `help:"Timeout for connections made to the remote server."`
 		Secure                             bool         `help:"Whether to use TLS for communication or not."`
 		VerifyOutputs                      bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
-		ExcludePassUnsafeEnvVarsFromDigest bool         `help:"Whether to exclude the values of PassUnsafeEnv environment variables from the remote action digest. When true (the default) PassUnsafeEnv values are still passed to the executed action but do not contribute to the cache key, so changing them does not cause remote cache misses (matching local cache behaviour). Note that this means a cached result may be reused (and shared between users) even if the PassUnsafeEnv values differ from those it was built with."`
+		ExcludePassUnsafeEnvVarsFromDigest bool         `help:"Whether to exclude the values of PassUnsafeEnv environment variables from the remote action digest. When enabled, PassUnsafeEnv values are still passed to the executed action but do not contribute to the cache key, so changing them does not cause remote cache misses (matching local cache behaviour). This is disabled by default; note that enabling it means a cached result may be reused (and shared between users) even if the PassUnsafeEnv values differ from those it was built with."`
 		UploadDirs                         bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
 		OptionalOutputsRequired            bool         `help:"Requires that any optional outputs of build actions (optional test outputs, coverage when not opted out of) are produced. By default this is a non-fatal failure, but the actions may not cache remotely."`
 		Shell                              string       `help:"Path to the shell to use to execute actions in. Default is 'bash' which will be looked up by the server."`
