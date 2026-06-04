@@ -146,13 +146,8 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 // target. This considers both the global [Build] PassUnsafeEnv config keyword and the target's own
 // pass_unsafe_env attribute, mirroring how the local cache excludes both from its hash.
 func (c *Client) excludesUnsafeEnv(state *core.BuildState, target *core.BuildTarget) bool {
-	if !c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest {
-		return false
-	}
-	if len(state.Config.Build.PassUnsafeEnv) > 0 {
-		return true
-	}
-	return target.PassUnsafeEnv != nil && len(*target.PassUnsafeEnv) > 0
+	return c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest &&
+		(len(state.Config.Build.PassUnsafeEnv) > 0 || (target.PassUnsafeEnv != nil && len(*target.PassUnsafeEnv) > 0))
 }
 
 // stripUnsafeEnv removes the values of PassUnsafeEnv variables from the given environment so that they do
