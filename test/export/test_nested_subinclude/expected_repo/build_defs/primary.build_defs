@@ -1,0 +1,10 @@
+subinclude("//build_defs:secondary_build_def")
+
+def helper_rule_primary(name: str):
+    # Generates the requested target (which has no unparsed dependencies)
+    filegroup(
+        name = name,
+        srcs = [],
+    )
+    # Generates an adjacent target (which calls helper_rule and has an unparsed dependency)
+    helper_rule(name + "_adjacent")

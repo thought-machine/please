@@ -1,0 +1,5 @@
+subinclude("//build_defs:primary_build_def")
+
+helper_rule_primary(
+    name = "target",
+)

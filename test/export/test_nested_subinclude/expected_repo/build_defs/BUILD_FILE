@@ -1,0 +1,11 @@
+filegroup(
+    name = "primary_build_def",
+    srcs = ["primary.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "secondary_build_def",
+    srcs = ["secondary.build_defs"],
+    visibility = ["PUBLIC"],
+)
