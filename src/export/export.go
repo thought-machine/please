@@ -137,13 +137,23 @@ func (be *baseExporter) ExportPlzConfig() {
 
 func (be *baseExporter) ExportTargets(labels core.BuildLabels) {
 	for _, l := range labels {
-		target := be.state.Graph.Target(l)
+		target := be.getOrParseTarget(l)
 		if target == nil {
 			log.Errorf("Unable to lookup target %s", l)
 			continue
 		}
 		be.impl.ExportTarget(target)
 	}
+}
+
+func (be *baseExporter) getOrParseTarget(label core.BuildLabel) *core.BuildTarget {
+	target := be.state.Graph.Target(label)
+	if target == nil {
+		log.Debugf("Target %v not found in graph. Attempting to parse...", label)
+		be.state.WaitForBuiltTarget(label, core.OriginalTarget, core.ParseModeNormal)
+		target = be.state.Graph.Target(label)
+	}
+	return target
 }
 
 // exportDependencies exports exportDependencies of a target.
@@ -271,7 +281,7 @@ func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 		}
 		e.requiredSubincludes[pkg.Label()] = required
 
-		target := e.state.Graph.Target(subinclude)
+		target := e.getOrParseTarget(subinclude)
 		if target == nil {
 			log.Errorf("Unable to lookup target %s", subinclude)
 			continue
@@ -403,9 +413,7 @@ func (nte *noTrimExporter) exportPackage(pkg *core.Package) {
 // exportSubincludes exports the subincluded targets.
 func (nte *noTrimExporter) exportSubincludes(pkg *core.Package) {
 	subincludes := pkg.AllSubincludes(nte.state.Graph)
-	for _, subinclude := range subincludes {
-		nte.ExportTarget(nte.state.Graph.TargetOrDie(subinclude))
-	}
+	nte.ExportTargets(subincludes)
 }
 
 // exportAllTargets will export all the targets in the provided package.
