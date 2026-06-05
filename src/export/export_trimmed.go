@@ -1,12 +1,12 @@
 package export
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 
-	"github.com/please-build/buildtools/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/parse"
@@ -78,13 +78,8 @@ func (e *defaultExporter) WritePackageFiles() {
 			continue
 		}
 
-		parsedBuild, err := build.ParseBuild(pkg.Filename, filteredBytes)
-		if err != nil {
-			log.Fatalf("Failed to parse bytes for formatting: %v\nData:\n%s", err, filteredBytes)
-		}
-		formattedBytes := build.Format(parsedBuild)
-
-		e.WriteExportedPackageFile(pkg, formattedBytes)
+		filteredBytes = trimNewlines(filteredBytes)
+		e.writeExportedPackageFile(pkg, filteredBytes)
 	}
 }
 
@@ -124,7 +119,7 @@ func (e *defaultExporter) exportRelatedTargets(pkg *core.Package, target *core.B
 }
 
 // WriteExportedPackageFile creates a new package (BUILD) file in the exported dir and writes to it.
-func (e *defaultExporter) WriteExportedPackageFile(pkg *core.Package, content []byte) {
+func (e *defaultExporter) writeExportedPackageFile(pkg *core.Package, content []byte) {
 	filename := pkg.Filename
 	exportedFilename := filepath.Join(e.targetDir, filename)
 	f, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY, 0664)
@@ -161,4 +156,28 @@ func (e *defaultExporter) trimPackage(pkg *core.Package) ([]byte, error) {
 	trimmer.trimBlock(parsed, 0, asp.Position(len(content)))
 
 	return trimmer.bytes, nil
+}
+
+// trimNewlines trims leading and trailing whitespace and collapses 3+ consecutive newlines to 2.
+func trimNewlines(b []byte) []byte {
+	trimmed := bytes.TrimSpace(b)
+	var pointer, newlines int
+	for _, val := range trimmed {
+		if val == '\n' {
+			newlines++
+			if newlines > 2 {
+				continue // Skip third (or more) consecutive newline
+			}
+		} else {
+			newlines = 0
+		}
+		trimmed[pointer] = val
+		pointer++
+	}
+	trimmed = trimmed[:pointer]
+
+	if len(trimmed) > 0 {
+		trimmed = append(trimmed, '\n') // Trailing newline
+	}
+	return trimmed
 }

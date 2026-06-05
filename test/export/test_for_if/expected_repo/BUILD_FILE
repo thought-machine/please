@@ -1,7 +1,4 @@
-for i in [
-    "a",
-    "b",
-]:
+for i in ["a", "b"]:
     if i == "a":
         genrule(
             name = "a",
