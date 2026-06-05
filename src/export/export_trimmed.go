@@ -91,7 +91,8 @@ func (e *defaultExporter) WritePackageFiles() {
 // exportSubincludes exports the subincluded targets required to generate the target and selects them to
 // later be written to the package as statements.
 func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.BuildTarget) {
-	for _, subinclude := range pkg.Metadata.FindRequiredSubincludes(target) {
+	subincludes := pkg.Metadata.FindRequiredSubincludes(target)
+	for _, subinclude := range subincludes {
 		// skip for preloaded subincludes, these are handled separately at the start to ensure they are
 		// they are exported even if not directly used by an exported target.
 		if e.preloadedSubincludes[subinclude] {
@@ -103,14 +104,8 @@ func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 			required = append(required, subinclude)
 		}
 		e.requiredSubincludes[pkg.Label()] = required
-
-		target := e.getOrParseTarget(subinclude)
-		if target == nil {
-			log.Errorf("Unable to lookup target %s", subinclude)
-			continue
-		}
-		e.ExportTarget(target)
 	}
+	e.ExportTargets(subincludes)
 }
 
 // exportRelatedTargets exports build targets that are related to the build statement that generated.
