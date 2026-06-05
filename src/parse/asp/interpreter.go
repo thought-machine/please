@@ -1183,6 +1183,7 @@ type scopeMetadata struct {
 
 func (m *scopeMetadata) NewMetadata() ScopeMetadata {
 	return &scopeMetadata{
+		cursor:          m.cursor,
 		objectOrigins:   map[string]core.BuildLabel{},
 		requiredOrigins: map[core.BuildLabel]struct{}{},
 	}
