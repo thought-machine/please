@@ -1,9 +1,9 @@
 go_library(
     name = "export",
-    srcs = [
-        "export.go",
-        "trimmer.go",
-    ],
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -18,7 +18,7 @@ go_library(
 
 go_test(
     name = "export_test",
-    srcs = ["export_test.go"],
+    srcs = glob("*_test.go"),
     data = ["test_data"],
     deps = [
         ":export",
