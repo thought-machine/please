@@ -110,7 +110,8 @@ func TestFilterPackageFile(t *testing.T) {
 			}
 			e.visitedPackages[pkg.Label()] = true
 
-			got, err := e.trimPackage(pkg)
+			p := asp.NewParserOnly()
+			got, err := e.trimPackage(p, pkg)
 			assert.NoError(t, err)
 
 			expected, err := os.ReadFile(tc.expected)
