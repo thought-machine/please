@@ -70,9 +70,10 @@ func (e *defaultExporter) ExportTarget(target *core.BuildTarget) {
 }
 
 func (e *defaultExporter) WritePackageFiles() {
+	p := asp.NewParserOnly()
 	for pkgLabel := range e.visitedPackages {
 		pkg := e.state.Graph.PackageOrDie(pkgLabel)
-		filteredBytes, err := e.trimPackage(pkg)
+		filteredBytes, err := e.trimPackage(p, pkg)
 		if err != nil {
 			log.Errorf("Failed to filter the build statements of package %s: %v", pkg.Label(), err)
 			continue
@@ -134,8 +135,7 @@ func (e *defaultExporter) writeExportedPackageFile(pkg *core.Package, content []
 }
 
 // trimPackage filters the statements to be written to the exported BUILD file.
-func (e *defaultExporter) trimPackage(pkg *core.Package) ([]byte, error) {
-	p := asp.NewParserOnly()
+func (e *defaultExporter) trimPackage(p *asp.Parser, pkg *core.Package) ([]byte, error) {
 	parsed, err := p.ParseFileOnly(pkg.Filename)
 	if err != nil {
 		return nil, fmt.Errorf("Parsing original BUILD file: %v", err)
