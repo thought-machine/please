@@ -32,7 +32,6 @@ func (t *trimmer) walkFile(stmts []*asp.Statement, start, end asp.Position, cons
 	// cursor tracks the position in a block that's being interpreted.
 	cursor := start
 	for _, stmt := range stmts {
-		log.Debugf("Evaluating statement %s", t.origin[stmt.Pos:stmt.EndPos])
 		// Write content that's between stmts (e.g. comments). We skip these while parsing so it won't
 		// be included in "parsedStmts" but we want the resulting BUILD file to include these.
 		if cursor < stmt.Pos {
