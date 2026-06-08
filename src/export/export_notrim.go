@@ -11,7 +11,7 @@ import (
 // noTrimExporter implements an exporter that avoids trimming any packages by exporting all targets
 // and statements in a package.
 type noTrimExporter struct {
-	baseExporter
+	*baseExporter
 	// exportedPackages tracks which packages have already had their BUILD files exported.
 	exportedPackages map[string]bool
 }
@@ -26,7 +26,7 @@ func (nte *noTrimExporter) ExportPreloaded() {
 
 	for _, target := range nte.state.Config.Parse.PreloadSubincludes {
 		targets := append(nte.state.Graph.TransitiveSubincludes(target), target)
-		nte.ExportTargets(targets)
+		nte.exportTargets(targets)
 	}
 }
 
@@ -76,7 +76,7 @@ func (nte *noTrimExporter) exportPackage(pkg *core.Package) {
 // exportSubincludes exports the subincluded targets.
 func (nte *noTrimExporter) exportSubincludes(pkg *core.Package) {
 	subincludes := pkg.AllSubincludes(nte.state.Graph)
-	nte.ExportTargets(subincludes)
+	nte.exportTargets(subincludes)
 }
 
 // exportAllTargets will export all the targets in the provided package.
