@@ -11,7 +11,10 @@ PLZ_ARGS="${PLZ_ARGS:-}"
 # CGO_ENABLED=0 avoids segfaults from go-m1cpu's IOKit code on Apple Silicon during bootstrap.
 # The final binary built by Please also disables CGO, so this is consistent.
 notice "Bootstrapping please..."
-CGO_ENABLED=0 go run -race src/please.go -p -v2 $PLZ_ARGS --log_file plz-out/log/bootstrap_build.log build //src:please
+
+# -race requires cgo on non-apple platforms, account for that
+[ "$(go env GOOS)" = "darwin" ] && export CGO_ENABLED=0
+go run -race src/please.go -p -v2 $PLZ_ARGS --log_file plz-out/log/bootstrap_build.log build //src:please
 
 if [ $# -gt 0 ] && [ "$1" == "--skip_tests" ]; then
     notice "Skipping tests... done."
