@@ -15,7 +15,7 @@ import (
 
 // defaultExporter implements an exporter that trims packages to reach a minimal exported repo.
 type defaultExporter struct {
-	baseExporter
+	*baseExporter
 	// visitedPackages maintains a record of the packages visited during the export process.
 	visitedPackages map[core.BuildLabel]bool
 	// requiredSubincludes maps packages to the subinclude labels they require.
@@ -37,7 +37,7 @@ func (e *defaultExporter) ExportPreloaded() {
 		for _, t := range targets {
 			e.preloadedSubincludes[t] = true
 		}
-		e.ExportTargets(targets)
+		e.exportTargets(targets)
 	}
 }
 
@@ -101,7 +101,7 @@ func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 		}
 		e.requiredSubincludes[pkg.Label()] = required
 	}
-	e.ExportTargets(subincludes)
+	e.exportTargets(subincludes)
 }
 
 // exportRelatedTargets exports build targets that are related to the build statement that generated.
