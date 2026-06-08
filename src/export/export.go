@@ -178,7 +178,7 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 func (be *baseExporter) getOrParseTarget(label core.BuildLabel) *core.BuildTarget {
 	target := be.state.Graph.Target(label)
 	if target == nil {
-		log.Debugf("Target %v not found in graph. Attempting to parse...", label)
+		log.Infof("Target %v not found in graph. Attempting to parse...", label)
 		be.state.WaitForBuiltTarget(label, core.OriginalTarget, core.ParseModeNormal)
 		target = be.state.Graph.Target(label)
 	}

@@ -32,7 +32,7 @@ func (e *defaultExporter) ExportPreloaded() {
 		}
 	}
 
-	for _, target := range e.state.Config.Parse.PreloadSubincludes {
+	for _, target := range e.state.GetPreloadedSubincludes() {
 		targets := append(e.state.Graph.TransitiveSubincludes(target), target)
 		for _, t := range targets {
 			e.preloadedSubincludes[t] = true
@@ -88,6 +88,11 @@ func (e *defaultExporter) WritePackageFiles() {
 // later be written to the package as statements.
 func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.BuildTarget) {
 	subincludes := pkg.Metadata.FindRequiredSubincludes(target)
+	if len(subincludes) == 0 {
+		return
+	}
+
+	log.Debugf("Subincludes required for %s: %v", target, subincludes)
 	for _, subinclude := range subincludes {
 		// skip for preloaded subincludes, these are handled separately at the start to ensure they are
 		// they are exported even if not directly used by an exported target.
@@ -106,17 +111,9 @@ func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 
 // exportRelatedTargets exports build targets that are related to the build statement that generated.
 func (e *defaultExporter) exportRelatedTargets(pkg *core.Package, target *core.BuildTarget) {
-	stmt := pkg.Metadata.FindStatement(target)
-	if stmt == nil {
-		log.Errorf("Failed to find statement for target %s in %s", target, pkg.Name)
-		return
-	}
-
-	relatedTargets := pkg.Metadata.FindTargets(stmt)
+	relatedTargets := pkg.Metadata.FindRelatedTargets(target)
 	log.Debugf("Exporting targets related to %s: %v", target, relatedTargets)
-	for _, target := range relatedTargets {
-		e.ExportTarget(target)
-	}
+	e.exportTargets(relatedTargets)
 }
 
 // WriteExportedPackageFile creates a new package (BUILD) file in the exported dir and writes to it.

@@ -26,6 +26,8 @@ type interpreter struct {
 	parser      *Parser
 	subincludes *cmap.ErrMap[string, pyDict]
 	asts        *cmap.ErrMap[string, []*Statement]
+	// preloaded is a set to register all preloaded objects.
+	preloaded *cmap.Map[string, struct{}]
 
 	configs      map[*core.BuildState]*pyConfig
 	configsMutex sync.RWMutex
@@ -54,6 +56,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	i := &interpreter{
 		scope:      s,
 		parser:     p,
+		preloaded:  cmap.New[string, struct{}](cmap.SmallShardCount, cmap.XXHash),
 		configs:    map[*core.BuildState]*pyConfig{},
 		limiter:    make(semaphore, state.Config.Parse.NumThreads),
 		regexCache: cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
@@ -162,9 +165,23 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 
 	s.interpreter.loadPluginConfig(s, includeState)
 	for _, out := range t.FullOutputs() {
-		s.SetAllWithOrigin(s.interpreter.Subinclude(s, out, t.Label, true), false, &t.Label)
+		globals := s.interpreter.Subinclude(s, out, t.Label, true)
+		s.interpreter.registerPreloaded(globals)
+		s.SetAllWithOrigin(globals, false, &t.Label)
 	}
 	return nil
+}
+
+// registerPreloaded marks objects as preloaded for later reference.
+func (i *interpreter) registerPreloaded(d pyDict) {
+	for k := range d {
+		if k == "CONFIG" {
+			// Config will be set for each scope instance from global config. Skipping since every preload
+			// will override this value and will never use it.
+			continue
+		}
+		i.preloaded.Add(k, struct{}{})
+	}
 }
 
 // interpretAll runs a series of statements in the scope of the given package.
@@ -478,7 +495,7 @@ func (s *scope) Lookup(name string) pyObject {
 // lookupWithOrigin is like Lookup but returns the origin label of the variable as well.
 func (s *scope) lookupWithOrigin(name string) (pyObject, *core.BuildLabel) {
 	if obj, present := s.locals[name]; present {
-		return obj, s.metadata.Origin(name)
+		return obj, s.metadata.Origin(s, name)
 	} else if s.parent != nil {
 		return s.parent.lookupWithOrigin(name)
 	}
@@ -504,7 +521,7 @@ func (s *scope) SetAll(d pyDict, publicOnly bool) {
 	s.SetAllWithOrigin(d, publicOnly, nil)
 }
 
-// SetAllWithOrigin is like SetAll but also records the origin labe	l for all variables.
+// SetAllWithOrigin is like SetAll but also records the origin label for all variables.
 func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLabel) {
 	for k, v := range d {
 		if k == "CONFIG" {
@@ -1159,7 +1176,7 @@ type ScopeMetadata interface {
 	// Cursor returns the statement being currently interpreted.
 	Cursor() *Statement
 	// Origin gets the origin of the object by name. Should return nil if not found or unimplemented.
-	Origin(name string) *core.BuildLabel
+	Origin(scope *scope, name string) *core.BuildLabel
 	// RequiredOrigins returns a set of all the origins (subincluded labels) required by the current
 	// scope.
 	RequiredOrigins() map[core.BuildLabel]struct{}
@@ -1193,7 +1210,10 @@ func (m *scopeMetadata) Cursor() *Statement {
 	return m.cursor
 }
 
-func (m *scopeMetadata) Origin(name string) *core.BuildLabel {
+func (m *scopeMetadata) Origin(scope *scope, name string) *core.BuildLabel {
+	if scope.interpreter != nil && scope.interpreter.preloaded.Contains(name) {
+		return nil
+	}
 	if label, ok := m.objectOrigins[name]; ok {
 		return &label
 	}
@@ -1225,7 +1245,7 @@ type noopScopeMetadata struct{}
 
 func (nm *noopScopeMetadata) NewMetadata() ScopeMetadata                          { return &noopScopeMetadata{} }
 func (nm *noopScopeMetadata) Cursor() *Statement                                  { return nil }
-func (nm *noopScopeMetadata) Origin(name string) *core.BuildLabel                 { return nil }
+func (nm *noopScopeMetadata) Origin(scope *scope, name string) *core.BuildLabel   { return nil }
 func (nm *noopScopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{}       { return nil }
 func (nm *noopScopeMetadata) SetCursor(stmt *Statement)                           {}
 func (nm *noopScopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {}
