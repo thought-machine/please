@@ -116,24 +116,14 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		// proceeding with the specific op for the graph to be complete.
 		state.WaitForBuildToComplete()
 		reportResults(state, config)
-		// Cleanup() needs to be called at the end of the CLI run when KeepParserRunning is enabled.
+		// state.CleanUp() needs to be called at the end of the CLI run when KeepParserRunning is enabled.
 		return
 	}
 	// Wait for all worker to finish. This should happen as soon as we no longer have pending tasks.
 	// The last task should call state.Close() and close the queue channels.
 	wg.Wait()
 	reportResults(state, config)
-	CleanUp(state)
-}
-
-// CleanUp cleans up and shuts down the build state.
-func CleanUp(state *core.BuildState) {
-	if state.Cache != nil {
-		state.Cache.Shutdown()
-	}
-	if state.RemoteClient != nil {
-		state.RemoteClient.Disconnect()
-	}
+	state.CleanUp()
 }
 
 // reportResults reports on metrics and results at the end of the build.
@@ -142,7 +132,6 @@ func reportResults(state *core.BuildState, config *core.Configuration) {
 		_, _, in, out := state.RemoteClient.DataRate()
 		log.Info("Total remote RPC data in: %d out: %d", in, out)
 	}
-	state.CloseResults()
 	metrics.Push(config.Metrics, config.IsRemoteExecution())
 }
 
