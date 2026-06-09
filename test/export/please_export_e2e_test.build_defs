@@ -53,7 +53,9 @@ def please_export_e2e_test(
         f'plz --repo_root="{exported_repo}" build //... > /dev/null',
     ] + [f'plz --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
 
-    test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
+    cache_args = '--override=cache.dir:"$($TOOLS_PLEASE query reporoot)"/plz-out/test-cache'
+
+    test_cmd = [cmd.replace("plz ", f"$TOOLS_PLEASE {cache_args} ") for cmd in test_cmd]
     test_cmd = " && ".join(test_cmd)
 
     data["SOURCE_REPO"] = [source_repo]
