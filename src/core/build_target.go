@@ -416,6 +416,11 @@ func (target *BuildTarget) String() string {
 	return target.Label.String()
 }
 
+// hashBuildTarget returns a mostly unique hash of a BuildTarget by relying on the BuildLabel hash.
+func hashBuildTarget(target *BuildTarget) uint64 {
+	return hashBuildLabel(target.Label)
+}
+
 // TmpDir returns the temporary working directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._build
 // Note the extra subdirectory to keep rules separate from one another, and the .build suffix
