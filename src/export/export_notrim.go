@@ -16,6 +16,7 @@ type noTrimExporter struct {
 	exportedPackages map[string]bool
 }
 
+// ExportPreloaded implements [Exporter].
 func (nte *noTrimExporter) ExportPreloaded() {
 	// Write any preloaded build defs
 	for _, preload := range nte.state.Config.Parse.PreloadBuildDefs {
@@ -30,6 +31,7 @@ func (nte *noTrimExporter) ExportPreloaded() {
 	}
 }
 
+// ExportTarget implements [Exporter].
 func (nte *noTrimExporter) ExportTarget(target *core.BuildTarget) {
 	pkg := nte.state.Graph.PackageOrDie(target.Label)
 	if !nte.checkAndSetVisited(target) {
@@ -51,6 +53,7 @@ func (nte *noTrimExporter) ExportTarget(target *core.BuildTarget) {
 	nte.exportDependencies(target)
 }
 
+// WritePackageFiles implements [Exporter].
 func (nte *noTrimExporter) WritePackageFiles() {
 }
 
