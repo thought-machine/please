@@ -769,7 +769,7 @@ var buildFunctions = map[string]func() int{
 	"export": func() int {
 		success, state := runBuild(opts.Export.Args.Targets, buildOpts{ParseMetadata: true, KeepParserRunning: true})
 		// Required cleanup due to running parser in background
-		defer plz.CleanUp(state)
+		defer state.CleanUp()
 
 		if success {
 			export.Repo(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
@@ -1227,8 +1227,8 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(state, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
+	state.WaitForDisplay = wg.Wait
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
-	wg.Wait()
 }
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single
@@ -1327,7 +1327,7 @@ type buildOpts struct {
 	IsQuery       bool
 	ParseMetadata bool
 	// Keep the workers running in the background for inline parsing during specific ops (e.g. export).
-	// Note: when running background workers we need to explicit call plz.Cleanup() at the end of the CLI op.
+	// Note: when running background workers we need to explicit call CleanUp at the end of the CLI op.
 	KeepParserRunning bool
 }
 

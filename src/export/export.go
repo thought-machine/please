@@ -10,6 +10,7 @@ import (
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/parse"
 )
 
 var log = logging.Log
@@ -179,7 +180,7 @@ func (be *baseExporter) getOrParseTarget(label core.BuildLabel) *core.BuildTarge
 	target := be.state.Graph.Target(label)
 	if target == nil {
 		log.Infof("Target %v not found in graph. Attempting to parse...", label)
-		be.state.WaitForBuiltTarget(label, core.OriginalTarget, core.ParseModeNormal)
+		parse.Parse(be.state, label, core.OriginalTarget, core.ParseModeNormal)
 		target = be.state.Graph.Target(label)
 	}
 	return target

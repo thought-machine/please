@@ -245,6 +245,8 @@ type BuildState struct {
 	// KeepParserRunning prevents closing task worker (parse and build) channels to support later
 	// calls to parser.
 	KeepParserRunning bool
+	// WaitForDisplay is a function that blocks until the display thread has finished.
+	WaitForDisplay func()
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
@@ -444,6 +446,22 @@ func (state *BuildState) CloseResults() {
 		state.progress.resultOnce.Do(func() {
 			close(state.progress.results)
 		})
+	}
+}
+
+// CleanUp cleans up and shuts down the build state.
+func (state *BuildState) CleanUp() {
+	state.CloseResults()
+
+	if state.WaitForDisplay != nil {
+		state.WaitForDisplay()
+	}
+
+	if state.Cache != nil {
+		state.Cache.Shutdown()
+	}
+	if state.RemoteClient != nil {
+		state.RemoteClient.Disconnect()
 	}
 }
 
@@ -679,11 +697,17 @@ func (state *BuildState) forwardResults() {
 				delete(activeTargets, target)
 			}
 		}
-		state.progress.mutex.Lock()
-		if state.progress.results != nil {
-			state.progress.results <- result
-		}
-		state.progress.mutex.Unlock()
+		state.sendResult(result)
+	}
+}
+
+// sendResult sends a unique result to the channel. A simple method that is mostly useful for a
+// deferring the mutex close and avoid deadlocks even when we attempt to write to a closed channel.
+func (state *BuildState) sendResult(result *BuildResult) {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+	if state.progress.results != nil {
+		state.progress.results <- result
 	}
 }
 
