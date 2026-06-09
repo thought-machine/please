@@ -103,6 +103,7 @@ func newPackageMetadata() PackageMetadata {
 	}
 }
 
+// RegisterStatementTarget implements [PackageMetadata].
 func (m *packageMetadataImpl) RegisterStatementTarget(target *BuildTarget, stmtProvider BuildStatementProvider) {
 	stmt := stmtProvider()
 	targets := m.stmtToTarget.Get(stmt)
@@ -110,18 +111,21 @@ func (m *packageMetadataImpl) RegisterStatementTarget(target *BuildTarget, stmtP
 	m.targetToStmt.Set(target, stmt)
 }
 
+// RegisterRequiredSubinclude implements [PackageMetadata].
 func (m *packageMetadataImpl) RegisterRequiredSubinclude(target *BuildTarget, labelProvider SubincludesLabelProvider) {
 	labels := labelProvider()
 	existing := m.targetToRequiredSubincludes.Get(target)
 	m.targetToRequiredSubincludes.Set(target, append(existing, labels...))
 }
 
+// RegisterSubincludeStatement implements [PackageMetadata].
 func (m *packageMetadataImpl) RegisterSubincludeStatement(label BuildLabel, stmtProvider BuildStatementProvider) {
 	stmt := stmtProvider()
 	existing := m.labelsPerSubincludeStmt.Get(stmt)
 	m.labelsPerSubincludeStmt.Set(stmt, append(existing, label))
 }
 
+// FindStatement implements [PackageMetadata].
 func (m *packageMetadataImpl) FindStatement(target *BuildTarget) *BuildStatement {
 	if target == nil {
 		return nil
@@ -135,6 +139,7 @@ func (m *packageMetadataImpl) FindStatement(target *BuildTarget) *BuildStatement
 	return nil
 }
 
+// FindTargets implements [PackageMetadata].
 func (m *packageMetadataImpl) FindTargets(stmt *BuildStatement) BuildTargets {
 	if stmt == nil {
 		return nil
@@ -143,6 +148,7 @@ func (m *packageMetadataImpl) FindTargets(stmt *BuildStatement) BuildTargets {
 	return m.stmtToTarget.Get(*stmt)
 }
 
+// FindRequiredSubincludes implements [PackageMetadata].
 func (m *packageMetadataImpl) FindRequiredSubincludes(target *BuildTarget) BuildLabels {
 	if target == nil {
 		return nil
@@ -151,6 +157,7 @@ func (m *packageMetadataImpl) FindRequiredSubincludes(target *BuildTarget) Build
 	return m.targetToRequiredSubincludes.Get(target)
 }
 
+// FindRelatedTargets implements [PackageMetadata].
 func (m *packageMetadataImpl) FindRelatedTargets(target *BuildTarget) BuildLabels {
 	stmt := m.FindStatement(target)
 	relatedTargets := m.FindTargets(stmt)
@@ -163,6 +170,7 @@ func (m *packageMetadataImpl) FindRelatedTargets(target *BuildTarget) BuildLabel
 	return labels
 }
 
+// GetSubincludedLabels implements [PackageMetadata].
 func (m *packageMetadataImpl) GetSubincludedLabels(stmt *BuildStatement) BuildLabels {
 	if stmt == nil {
 		return nil
@@ -180,27 +188,42 @@ func newNoopPackageMetadata() PackageMetadata {
 	return &noopPackageMetadata{}
 }
 
+// RegisterStatementTarget implements [PackageMetadata].
 func (n *noopPackageMetadata) RegisterStatementTarget(target *BuildTarget, stmtProvider BuildStatementProvider) {
 }
+
+// RegisterRequiredSubinclude implements [PackageMetadata].
 func (n *noopPackageMetadata) RegisterRequiredSubinclude(target *BuildTarget, labelProvider SubincludesLabelProvider) {
 }
+
+// RegisterSubincludeStatement implements [PackageMetadata].
 func (n *noopPackageMetadata) RegisterSubincludeStatement(label BuildLabel, stmtProvider BuildStatementProvider) {
 }
+
+// FindStatement implements [PackageMetadata].
 func (n *noopPackageMetadata) FindStatement(target *BuildTarget) *BuildStatement {
 	log.Fatalf("Metadata not tracked, using no-op implementation.")
 	return nil
 }
+
+// FindTargets implements [PackageMetadata].
 func (n *noopPackageMetadata) FindTargets(stmt *BuildStatement) BuildTargets {
 	log.Fatalf("Metadata not tracked, using no-op implementation.")
 	return nil
 }
+
+// FindRequiredSubincludes implements [PackageMetadata].
 func (n *noopPackageMetadata) FindRequiredSubincludes(target *BuildTarget) BuildLabels {
 	log.Fatalf("Metadata not tracked, using no-op implementation.")
 	return nil
 }
-func (m *noopPackageMetadata) FindRelatedTargets(target *BuildTarget) BuildLabels {
+
+// FindRelatedTargets implements [PackageMetadata].
+func (n *noopPackageMetadata) FindRelatedTargets(target *BuildTarget) BuildLabels {
 	return nil
 }
+
+// GetSubincludedLabels implements [PackageMetadata].
 func (n *noopPackageMetadata) GetSubincludedLabels(stmt *BuildStatement) BuildLabels {
 	log.Fatalf("Metadata not tracked, using no-op implementation.")
 	return nil

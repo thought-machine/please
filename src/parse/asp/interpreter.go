@@ -1198,6 +1198,7 @@ type scopeMetadata struct {
 	requiredOrigins map[core.BuildLabel]struct{}
 }
 
+// NewMetadata implements [ScopeMetadata].
 func (m *scopeMetadata) NewMetadata() ScopeMetadata {
 	return &scopeMetadata{
 		cursor:          m.cursor,
@@ -1206,10 +1207,12 @@ func (m *scopeMetadata) NewMetadata() ScopeMetadata {
 	}
 }
 
+// Cursor implements [ScopeMetadata].
 func (m *scopeMetadata) Cursor() *Statement {
 	return m.cursor
 }
 
+// Origin implements [ScopeMetadata].
 func (m *scopeMetadata) Origin(scope *scope, name string) *core.BuildLabel {
 	if scope.interpreter != nil && scope.interpreter.preloaded.Contains(name) {
 		return nil
@@ -1220,18 +1223,22 @@ func (m *scopeMetadata) Origin(scope *scope, name string) *core.BuildLabel {
 	return nil
 }
 
+// RequiredOrigins implements [ScopeMetadata].
 func (m *scopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{} {
 	return m.requiredOrigins
 }
 
+// SetCursor implements [ScopeMetadata].
 func (m *scopeMetadata) SetCursor(stmt *Statement) {
 	m.cursor = stmt
 }
 
+// SetObjectOrigin implements [ScopeMetadata].
 func (m *scopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {
 	m.objectOrigins[name] = origin
 }
 
+// SetRequiredOrigin implements [ScopeMetadata].
 func (m *scopeMetadata) SetRequiredOrigin(origin *core.BuildLabel) {
 	if origin == nil {
 		return
@@ -1243,13 +1250,26 @@ func (m *scopeMetadata) SetRequiredOrigin(origin *core.BuildLabel) {
 // avoid the overhead of storing metadata for operations that don't depend on it.
 type noopScopeMetadata struct{}
 
-func (nm *noopScopeMetadata) NewMetadata() ScopeMetadata                          { return &noopScopeMetadata{} }
-func (nm *noopScopeMetadata) Cursor() *Statement                                  { return nil }
-func (nm *noopScopeMetadata) Origin(scope *scope, name string) *core.BuildLabel   { return nil }
-func (nm *noopScopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{}       { return nil }
-func (nm *noopScopeMetadata) SetCursor(stmt *Statement)                           {}
+// NewMetadata implements [ScopeMetadata].
+func (nm *noopScopeMetadata) NewMetadata() ScopeMetadata { return &noopScopeMetadata{} }
+
+// Cursor implements [ScopeMetadata].
+func (nm *noopScopeMetadata) Cursor() *Statement { return nil }
+
+// Origin implements [ScopeMetadata].
+func (nm *noopScopeMetadata) Origin(scope *scope, name string) *core.BuildLabel { return nil }
+
+// RequiredOrigins implements [ScopeMetadata].
+func (nm *noopScopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{} { return nil }
+
+// SetCursor implements [ScopeMetadata].
+func (nm *noopScopeMetadata) SetCursor(stmt *Statement) {}
+
+// SetObjectOrigin implements [ScopeMetadata].
 func (nm *noopScopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {}
-func (nm *noopScopeMetadata) SetRequiredOrigin(origin *core.BuildLabel)           {}
+
+// SetRequiredOrigin implements [ScopeMetadata].
+func (nm *noopScopeMetadata) SetRequiredOrigin(origin *core.BuildLabel) {}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {
