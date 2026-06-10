@@ -50,7 +50,7 @@ func TestMinimalSubincludeStatement(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			e := newExporter(nil, "", false).impl.(*defaultExporter)
+			e := newExporter(nil, "", false).impl.(*trimmedExporter)
 
 			pkg := &core.Package{Name: "test"}
 			e.requiredSubincludes[pkg.Label()] = tc.requiredLabels
@@ -104,7 +104,7 @@ func TestFilterPackageFile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			e := newExporter(nil, "", false).impl.(*defaultExporter)
+			e := newExporter(nil, "", false).impl.(*trimmedExporter)
 			for _, name := range tc.required {
 				e.exportedTargets[targetLabels[name]] = true
 			}
@@ -169,11 +169,11 @@ else:
 			required:   []string{"b"},
 			expected: `
 if False:
-    pass  #Trimmed during export
+    pass  # Trimmed during export
 elif True:
     genrule(name = "b")
 else:
-    pass  #Trimmed during export
+    pass  # Trimmed during export
 `},
 		{
 			name: "Required target in for",
@@ -209,7 +209,7 @@ for i in [
     if i == "a":
         genrule(name = "a")
     elif i == "b":
-        pass  #Trimmed during export
+        pass  # Trimmed during export
 `},
 	}
 
@@ -223,7 +223,7 @@ for i in [
 			pkg.Filename = "BUILD"
 
 			targetLabels := walkASTRegisterTargets(t, statements, pkg, tc.registered)
-			e := newExporter(nil, "", false).impl.(*defaultExporter)
+			e := newExporter(nil, "", false).impl.(*trimmedExporter)
 			for _, name := range tc.required {
 				e.exportedTargets[targetLabels[name]] = true
 			}

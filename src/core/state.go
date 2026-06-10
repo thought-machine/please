@@ -242,8 +242,10 @@ type BuildState struct {
 	NeedDebugDeps bool
 	// ParseMetadata is true if we want to store build file metadata
 	ParseMetadata bool
-	// KeepParserRunning prevents closing task worker (parse and build) channels to support later
-	// calls to parser.
+	// KeepParserRunning prevents closing task workers (parse and build channels) to support later
+	// calls to the parser. This is needed to support the export operation since the export logic will
+	// attempt to export targets that have not been parsed during the normal build phase. An example
+	// is when exporting dependencies of targets that are not explicitly used but adjacent/related.
 	KeepParserRunning bool
 	// WaitForDisplay is a function that blocks until the display thread has finished.
 	WaitForDisplay func()

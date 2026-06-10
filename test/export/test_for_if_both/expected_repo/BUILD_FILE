@@ -17,4 +17,4 @@ for i in [
             cmd = "cat $SRCS > $OUT",
         )
     else:
-        pass  #Trimmed during export
+        pass  # Trimmed during export

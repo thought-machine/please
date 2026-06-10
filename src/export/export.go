@@ -6,6 +6,7 @@ package export
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
@@ -18,7 +19,7 @@ var log = logging.Log
 // Repo export a new please repo including the targets and dependencies requested. Depending on the
 // noTrim flag, the export will attempt to trim the resulting repository, exporting only the required
 // targets and build statements in their packages. If noTrim is set, all targets of a package will be
-// exported and not build statement trimming will be attempted, the BUILD file is copied in its entirety.
+// exported and no build statement trimming will be attempted, the BUILD file is copied in its entirety.
 func Repo(state *core.BuildState, dir string, noTrim bool, targets []core.BuildLabel) {
 	e := newExporter(state, dir, noTrim)
 
@@ -48,21 +49,21 @@ func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	}
 }
 
-// Exporter defines the interface for exporting parts of a Please repository to a new directory.
+// exporterImpl defines the interface for exporting parts of a Please repository to a new directory.
 // It handles the copying of configuration files, preloaded build definitions, and selected
 // targets along with their necessary source files and dependencies.
-type Exporter interface {
-	// ExportPreloaded exports all globally preloaded build definitions and subincluded targets.
+type exporterImpl interface {
+	// exportPreloaded exports all globally preloaded build definitions and subincluded targets.
 	// These are usually defined in the repository's configuration file.
-	ExportPreloaded()
-	// ExportTarget exports an individual build target.
+	exportPreloaded()
+	// exportTarget exports an individual build target.
 	// Each target recursively exports all their source files and required build statements, but also
 	// targets in their transitive dependencies.
-	ExportTarget(*core.BuildTarget)
-	// WritePackageFiles writes the processed BUILD files for all exported targets to the
+	exportTarget(*core.BuildTarget)
+	// writePackageFiles writes the processed BUILD files for all exported targets to the
 	// export directory. These BUILD files may be modified (e.g., trimmed) depending on
 	// the exporter's implementation.
-	WritePackageFiles()
+	writePackageFiles()
 }
 
 // newExporter creates a new exporter of a specific type based on the arguments.
@@ -73,19 +74,11 @@ func newExporter(state *core.BuildState, dir string, noTrim bool) *baseExporter 
 		exportedTargets: map[core.BuildLabel]bool{},
 	}
 
-	var exporter Exporter
+	var exporter exporterImpl
 	if noTrim {
-		exporter = &noTrimExporter{
-			baseExporter:     base,
-			exportedPackages: map[string]bool{},
-		}
+		exporter = newNoTrimExporter(base)
 	} else {
-		exporter = &defaultExporter{
-			baseExporter:         base,
-			visitedPackages:      map[core.BuildLabel]bool{},
-			requiredSubincludes:  map[core.BuildLabel]core.BuildLabels{},
-			preloadedSubincludes: map[core.BuildLabel]bool{},
-		}
+		exporter = newTrimmedExporter(base)
 	}
 
 	base.impl = exporter
@@ -94,22 +87,39 @@ func newExporter(state *core.BuildState, dir string, noTrim bool) *baseExporter 
 
 // baseExporter provides common fields and methods of other exporters.
 type baseExporter struct {
-	state     *core.BuildState
-	targetDir string
+	state         *core.BuildState
+	targetDir     string
+	targetCounter int
 
 	// exportedTargets maintains a record of the targets that have been exported so far.
 	exportedTargets map[core.BuildLabel]bool
 	// impl is a reference to the concrete exporter implementation. It's included for calling the
 	// specific exporter implementation from the common methods.
-	impl Exporter
+	impl exporterImpl
 }
 
 // run specifies the main steps when running an export.
 func (be *baseExporter) run(targets core.BuildLabels) {
+	go be.startMonitor()
+	go be.startStateMonitor()
 	be.exportPlzConfig()
-	be.impl.ExportPreloaded()
+	be.impl.exportPreloaded()
 	be.exportTargets(targets)
-	be.impl.WritePackageFiles()
+	be.impl.writePackageFiles()
+}
+
+func (be *baseExporter) startMonitor() {
+	for {
+		time.Sleep(10 * time.Second)
+		log.Warningf("Number of targets exported: %v", be.targetCounter)
+	}
+}
+
+func (be *baseExporter) startStateMonitor() {
+	for {
+		time.Sleep(1 * time.Minute)
+		log.Warningf("Targets in graph: %v", len(be.state.Graph.AllTargets()))
+	}
 }
 
 // exportPlzConfig exports the repository's configuration files (e.g., .plzconfig and its
@@ -133,16 +143,19 @@ func (be *baseExporter) exportPlzConfig() {
 // exportTargets exports the set of targets identified by the given build labels.
 func (be *baseExporter) exportTargets(labels core.BuildLabels) {
 	for _, l := range labels {
+		if be.exportedTargets[l] {
+			continue
+		}
 		target := be.getOrParseTarget(l)
 		if target == nil {
 			log.Errorf("Unable to lookup target %s", l)
 			continue
 		}
-		be.impl.ExportTarget(target)
+		be.impl.exportTarget(target)
 	}
 }
 
-// exportDependencies exports exportDependencies of a target.
+// exportDependencies exports dependencies of a target.
 func (be *baseExporter) exportDependencies(target *core.BuildTarget) {
 	deps := target.DeclaredDependencies()
 	log.Debugf("Exporting dependencies of (%v): %v", target.Label, deps)
@@ -157,7 +170,7 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 		}
 		for _, p := range src.Paths(be.state.Graph) {
 			if filepath.IsAbs(p) { // Don't copy system file deps.
-				log.Infof("System dependency detected, skipping...: %s", p)
+				log.Debugf("System dependency detected, skipping...: %s", p)
 				continue
 			}
 			if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
@@ -168,10 +181,10 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 	}
 }
 
-// getOrParseTarget attempts to look up a target in the build graph. If the target has not
+// getOrParseTarget attempts to lookup a target in the build graph. If the target has not
 // been parsed yet, it dynamically requests the package be parsed and blocks until the target is resolved.
 //
-// This occurs in trimmed-mode exports when walking dependencies of adjacent targets which were not
+// This occurs during the exports when walking dependencies of adjacent targets which were not
 // explicitly activated or resolved during the initial build/parse phase.
 //
 // This requires the background parser worker threads to be kept alive as daemons (controlled by the
@@ -186,10 +199,27 @@ func (be *baseExporter) getOrParseTarget(label core.BuildLabel) *core.BuildTarge
 	return target
 }
 
+// getOrParsePackage attempts to lookup a package in the build graph. If the package has not
+// been parsed yet, it dynamically requests the package be parsed and blocks until resolved.
+//
+// This requires the background parser worker threads to be kept alive as daemons (controlled by the
+// "KeepParserRunning" build state option).
+func (be *baseExporter) getOrParsePackage(label core.BuildLabel) *core.Package {
+	label.Name = "all"
+	pkg := be.state.Graph.PackageByLabel(label)
+	if pkg == nil {
+		log.Infof("Package %v not found in graph. Attempting to parse...", label)
+		parse.Parse(be.state, label, core.OriginalTarget, core.ParseModeNormal)
+		pkg = be.state.Graph.PackageByLabel(label)
+	}
+	return pkg
+}
+
 // checkAndSetVisited is a helper to ensure we only visit the same target once.
 // It returns true if this is the first time the target is being exported.
 func (be *baseExporter) checkAndSetVisited(target *core.BuildTarget) bool {
 	visited := be.exportedTargets[target.Label]
 	be.exportedTargets[target.Label] = true
+	be.targetCounter++
 	return !visited
 }
