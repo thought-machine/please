@@ -13,8 +13,8 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-// defaultExporter implements an exporter that trims packages to reach a minimal exported repo.
-type defaultExporter struct {
+// trimmedExporter implements an exporter that trims packages to reach a minimal exported repo.
+type trimmedExporter struct {
 	*baseExporter
 	// visitedPackages maintains a record of the packages visited during the export process.
 	visitedPackages map[core.BuildLabel]bool
@@ -24,8 +24,17 @@ type defaultExporter struct {
 	preloadedSubincludes map[core.BuildLabel]bool
 }
 
-// ExportPreloaded implements [Exporter].
-func (e *defaultExporter) ExportPreloaded() {
+func newTrimmedExporter(base *baseExporter) exporterImpl {
+	return &trimmedExporter{
+		baseExporter:         base,
+		visitedPackages:      map[core.BuildLabel]bool{},
+		requiredSubincludes:  map[core.BuildLabel]core.BuildLabels{},
+		preloadedSubincludes: map[core.BuildLabel]bool{},
+	}
+}
+
+// exportPreloaded implements [exporterImpl].
+func (e *trimmedExporter) exportPreloaded() {
 	// Write any preloaded build defs
 	for _, preload := range e.state.Config.Parse.PreloadBuildDefs {
 		if err := fs.RecursiveCopy(preload, filepath.Join(e.targetDir, preload), 0); err != nil {
@@ -42,8 +51,8 @@ func (e *defaultExporter) ExportPreloaded() {
 	}
 }
 
-// ExportTarget implements [Exporter].
-func (e *defaultExporter) ExportTarget(target *core.BuildTarget) {
+// exportTarget implements [exporterImpl].
+func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 	if !e.checkAndSetVisited(target) {
 		return
 	}
@@ -57,7 +66,7 @@ func (e *defaultExporter) ExportTarget(target *core.BuildTarget) {
 	// We want to export the package that made this subrepo available, but we still need to walk the
 	// target deps as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil && target.Subrepo.Target != nil {
-		e.ExportTarget(target.Subrepo.Target)
+		e.exportTarget(target.Subrepo.Target)
 		e.exportDependencies(target)
 		return
 	}
@@ -65,14 +74,18 @@ func (e *defaultExporter) ExportTarget(target *core.BuildTarget) {
 	e.exportSources(target)
 	e.exportDependencies(target)
 
-	pkg := e.state.Graph.PackageOrDie(target.Label)
+	pkg := e.getOrParsePackage(target.Label)
+	if pkg == nil {
+		log.Errorf("Unable to lookup package %s", target.Label)
+		return
+	}
 	e.exportSubincludes(pkg, target)
 	e.exportRelatedTargets(pkg, target)
 	e.visitedPackages[pkg.Label()] = true
 }
 
-// WritePackageFiles implements [Exporter].
-func (e *defaultExporter) WritePackageFiles() {
+// writePackageFiles implements [exporterImpl].
+func (e *trimmedExporter) writePackageFiles() {
 	p := asp.NewParserOnly()
 	for pkgLabel := range e.visitedPackages {
 		pkg := e.state.Graph.PackageOrDie(pkgLabel)
@@ -82,14 +95,13 @@ func (e *defaultExporter) WritePackageFiles() {
 			continue
 		}
 
-		filteredBytes = trimNewlines(filteredBytes)
-		e.writeExportedPackageFile(pkg, filteredBytes)
+		e.writeExportedPackageFile(pkg, trimNewlines(filteredBytes))
 	}
 }
 
 // exportSubincludes exports the subincluded targets required to generate the target and selects them to
 // later be written to the package as statements.
-func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.BuildTarget) {
+func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target *core.BuildTarget) {
 	subincludes := pkg.Metadata.FindRequiredSubincludes(target)
 	if len(subincludes) == 0 {
 		return
@@ -112,15 +124,18 @@ func (e *defaultExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 	e.exportTargets(subincludes)
 }
 
-// exportRelatedTargets exports build targets that are related to the build statement that generated.
-func (e *defaultExporter) exportRelatedTargets(pkg *core.Package, target *core.BuildTarget) {
+// exportRelatedTargets looks up and exports all build targets that were declared within the same
+// build statement (e.g., adjacent targets in build def) as the specified target. This ensures that
+// all co-defined targets are preserved in the exported BUILD file, preventing unresolved references
+// or partial declarations.
+func (e *trimmedExporter) exportRelatedTargets(pkg *core.Package, target *core.BuildTarget) {
 	relatedTargets := pkg.Metadata.FindRelatedTargets(target)
 	log.Debugf("Exporting targets related to %s: %v", target, relatedTargets)
 	e.exportTargets(relatedTargets)
 }
 
 // WriteExportedPackageFile creates a new package (BUILD) file in the exported dir and writes to it.
-func (e *defaultExporter) writeExportedPackageFile(pkg *core.Package, content []byte) {
+func (e *trimmedExporter) writeExportedPackageFile(pkg *core.Package, content []byte) {
 	filename := pkg.Filename
 	exportedFilename := filepath.Join(e.targetDir, filename)
 	f, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY, 0664)
@@ -135,7 +150,7 @@ func (e *defaultExporter) writeExportedPackageFile(pkg *core.Package, content []
 }
 
 // trimPackage filters the statements to be written to the exported BUILD file.
-func (e *defaultExporter) trimPackage(p *asp.Parser, pkg *core.Package) ([]byte, error) {
+func (e *trimmedExporter) trimPackage(p *asp.Parser, pkg *core.Package) ([]byte, error) {
 	parsed, err := p.ParseFileOnly(pkg.Filename)
 	if err != nil {
 		return nil, fmt.Errorf("Parsing original BUILD file: %v", err)

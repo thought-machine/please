@@ -18,7 +18,7 @@ go_library(
 
 go_test(
     name = "export_test",
-    srcs = glob("*_test.go"),
+    srcs = ["export_test.go"],
     data = ["test_data"],
     deps = [
         ":export",

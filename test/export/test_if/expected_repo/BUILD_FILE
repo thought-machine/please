@@ -5,4 +5,4 @@ if True:
         cmd = "echo a > $OUT",
     )
 else:
-    pass  #Trimmed during export
+    pass  # Trimmed during export

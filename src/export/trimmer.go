@@ -20,7 +20,7 @@ type trimmer struct {
 	bytes []byte
 	// exporter is used to lookup target related data from the export process, e.g. which targets are
 	// required.
-	exporter *defaultExporter
+	exporter *trimmedExporter
 }
 
 // statementConsumer defines the type for methods used to visit each statement during a
@@ -60,7 +60,7 @@ func (t *trimmer) trimBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Pos
 		} else if stmt.Ident != nil && stmt.Ident.Name == "subinclude" {
 			t.trimSubinclude(stmt)
 		} else if relatives := t.relatedTargets(stmt); len(relatives) > 0 {
-			// Meaning it is a build statement that generated/builds build targets.
+			// Meaning it is a build statement that creates build targets.
 			if t.anyExported(relatives) {
 				t.copy(stmt.Pos, stmt.EndPos)
 			}
@@ -154,7 +154,7 @@ func (t *trimmer) passBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Pos
 		// the "pass" primitive. This is useful when parsing inner blocks (e.g. if-else stmts).
 		if !passWritten {
 			passWritten = true
-			t.write([]byte("pass  #Trimmed during export"))
+			t.write([]byte("pass  # Trimmed during export"))
 		}
 	})
 }
@@ -225,6 +225,9 @@ func (t *trimmer) minimalSubincludeStatement(available core.BuildLabels) string 
 }
 
 func (t *trimmer) copy(start, end asp.Position) {
+	if start < 0 || start > end || int(end) > len(t.origin) {
+		return
+	}
 	t.bytes = append(t.bytes, t.origin[start:end]...)
 }
 

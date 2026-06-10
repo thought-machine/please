@@ -13,11 +13,18 @@ import (
 type noTrimExporter struct {
 	*baseExporter
 	// exportedPackages tracks which packages have already had their BUILD files exported.
-	exportedPackages map[string]bool
+	exportedPackages map[core.BuildLabel]bool
 }
 
-// ExportPreloaded implements [Exporter].
-func (nte *noTrimExporter) ExportPreloaded() {
+func newNoTrimExporter(base *baseExporter) exporterImpl {
+	return &noTrimExporter{
+		baseExporter:     base,
+		exportedPackages: map[core.BuildLabel]bool{},
+	}
+}
+
+// exportPreloaded implements [exporterImpl].
+func (nte *noTrimExporter) exportPreloaded() {
 	// Write any preloaded build defs
 	for _, preload := range nte.state.Config.Parse.PreloadBuildDefs {
 		if err := fs.RecursiveCopy(preload, filepath.Join(nte.targetDir, preload), 0); err != nil {
@@ -31,9 +38,14 @@ func (nte *noTrimExporter) ExportPreloaded() {
 	}
 }
 
-// ExportTarget implements [Exporter].
-func (nte *noTrimExporter) ExportTarget(target *core.BuildTarget) {
-	pkg := nte.state.Graph.PackageOrDie(target.Label)
+// exportTarget implements [exporterImpl].
+func (nte *noTrimExporter) exportTarget(target *core.BuildTarget) {
+	pkg := nte.getOrParsePackage(target.Label)
+	if pkg == nil {
+		log.Errorf("Unable to lookup package %s", target.Label)
+		return
+	}
+
 	if !nte.checkAndSetVisited(target) {
 		return
 	}
@@ -41,20 +53,31 @@ func (nte *noTrimExporter) ExportTarget(target *core.BuildTarget) {
 	// We want to export the package that made this subrepo available, but we still need to walk the target deps
 	// as it may depend on other subrepos or first party targets
 	if target.Subrepo != nil {
-		nte.ExportTarget(target.Subrepo.Target)
+		nte.exportTarget(target.Subrepo.Target)
 		nte.exportDependencies(target)
 		return
 	}
 
-	nte.exportPackage(pkg)
 	nte.exportSubincludes(pkg)
-	nte.exportAllTargets(pkg)
+	nte.exportPackage(pkg)
 	nte.exportSources(target)
 	nte.exportDependencies(target)
 }
 
-// WritePackageFiles implements [Exporter].
-func (nte *noTrimExporter) WritePackageFiles() {
+// writePackageFiles implements [exporterImpl].
+func (nte *noTrimExporter) writePackageFiles() {
+	for pkgLabel := range nte.exportedPackages {
+		pkg := nte.getOrParsePackage(pkgLabel)
+		if pkg == nil {
+			log.Errorf("Unable to lookup package %s", pkgLabel)
+			continue
+		}
+
+		exportedFilename := filepath.Join(nte.targetDir, pkg.Filename)
+		if err := fs.CopyFile(pkg.Filename, exportedFilename, 0); err != nil {
+			log.Errorf("failed to export package %s: %v", pkg.Name, err)
+		}
+	}
 }
 
 // exportPackage exports the package BUILD file.
@@ -65,14 +88,14 @@ func (nte *noTrimExporter) exportPackage(pkg *core.Package) {
 		return
 	}
 
-	if nte.exportedPackages[pkg.Name] {
+	if nte.exportedPackages[pkg.Label()] {
 		return
 	}
-	nte.exportedPackages[pkg.Name] = true
+	nte.exportedPackages[pkg.Label()] = true
 
-	exportedFilename := filepath.Join(nte.targetDir, pkg.Filename)
-	if err := fs.CopyFile(pkg.Filename, exportedFilename, 0); err != nil {
-		log.Errorf("failed to export package %s: %v", pkg.Name, err)
+	// Export all the targets in the provided package.
+	for _, target := range pkg.AllTargets() {
+		nte.exportTarget(target)
 	}
 }
 
@@ -80,11 +103,4 @@ func (nte *noTrimExporter) exportPackage(pkg *core.Package) {
 func (nte *noTrimExporter) exportSubincludes(pkg *core.Package) {
 	subincludes := pkg.AllSubincludes(nte.state.Graph)
 	nte.exportTargets(subincludes)
-}
-
-// exportAllTargets will export all the targets in the provided package.
-func (nte *noTrimExporter) exportAllTargets(pkg *core.Package) {
-	for _, target := range pkg.AllTargets() {
-		nte.ExportTarget(target)
-	}
 }
