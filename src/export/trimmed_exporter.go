@@ -110,7 +110,7 @@ func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 	log.Debugf("Subincludes required for %s: %v", target, subincludes)
 	for _, subinclude := range subincludes {
 		// skip for preloaded subincludes, these are handled separately at the start to ensure they are
-		// they are exported even if not directly used by an exported target.
+		// exported even if not directly used by an exported target.
 		if e.preloadedSubincludes[subinclude] {
 			continue
 		}
@@ -138,7 +138,10 @@ func (e *trimmedExporter) exportRelatedTargets(pkg *core.Package, target *core.B
 func (e *trimmedExporter) writeExportedPackageFile(pkg *core.Package, content []byte) {
 	filename := pkg.Filename
 	exportedFilename := filepath.Join(e.targetDir, filename)
-	f, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY, 0664)
+	if pkg.Subrepo != nil { // Adjusting fo for local subrepos
+		exportedFilename = filepath.Join(e.targetDir, pkg.Subrepo.Dir(filename))
+	}
+	f, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0664)
 	if err != nil {
 		log.Fatalf("Failed to create and open exported BUILD file for %s: %v", exportedFilename, err)
 	}
@@ -151,12 +154,17 @@ func (e *trimmedExporter) writeExportedPackageFile(pkg *core.Package, content []
 
 // trimPackage filters the statements to be written to the exported BUILD file.
 func (e *trimmedExporter) trimPackage(p *asp.Parser, pkg *core.Package) ([]byte, error) {
-	parsed, err := p.ParseFileOnly(pkg.Filename)
+	filename := pkg.Filename
+	if pkg.Subrepo != nil { // Adjusting fo for local subrepos
+		filename = pkg.Subrepo.Dir(filename)
+	}
+
+	parsed, err := p.ParseFileOnly(filename)
 	if err != nil {
 		return nil, fmt.Errorf("Parsing original BUILD file: %v", err)
 	}
 
-	content, err := os.ReadFile(pkg.Filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("Opening original BUILD file: %v", err)
 	}

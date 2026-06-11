@@ -74,6 +74,9 @@ func (nte *noTrimExporter) writePackageFiles() {
 		}
 
 		exportedFilename := filepath.Join(nte.targetDir, pkg.Filename)
+		if pkg.Subrepo != nil {
+			exportedFilename = filepath.Join(nte.targetDir, pkg.Subrepo.Dir(pkg.Filename))
+		}
 		if err := fs.CopyFile(pkg.Filename, exportedFilename, 0); err != nil {
 			log.Errorf("failed to export package %s: %v", pkg.Name, err)
 		}

@@ -1476,7 +1476,7 @@ func (target *BuildTarget) AllTestTools() []BuildInput {
 	if target.Test.namedTools == nil {
 		return target.Test.tools
 	}
-	return target.allBuildInputs(target.Test.tools, target.Test.namedTools)
+	return target.selectBuildInputs(target.Test.tools, target.Test.namedTools)
 }
 
 // NamedTestTools returns all named test tools
@@ -1492,7 +1492,7 @@ func (target *BuildTarget) AllDebugTools() []BuildInput {
 	if target.Debug.namedTools == nil {
 		return target.Debug.tools
 	}
-	return target.allBuildInputs(target.Debug.tools, target.Debug.namedTools)
+	return target.selectBuildInputs(target.Debug.tools, target.Debug.namedTools)
 }
 
 // AddDatum adds a new item of data to the target.
@@ -1647,21 +1647,39 @@ func (target *BuildTarget) getCommand(state *BuildState, commands map[string]str
 	return highestCommand
 }
 
+// AllBuildInputs returns all the inputs for this target.
+func (target *BuildTarget) AllBuildInputs() []BuildInput {
+	srcs := target.AllSources()
+	data := target.AllData()
+	tools := target.AllTools()
+
+	size := len(srcs) + len(data) + len(tools)
+	inputs := make([]BuildInput, 0, size)
+	inputs = append(inputs, srcs...)
+	inputs = append(inputs, data...)
+	inputs = append(inputs, tools...)
+	return inputs
+}
+
 // AllSources returns all the sources of this rule.
 func (target *BuildTarget) AllSources() []BuildInput {
 	if target.NamedSources == nil {
 		return target.Sources
 	}
-	return target.allBuildInputs(target.Sources, target.NamedSources)
+	return target.selectBuildInputs(target.Sources, target.NamedSources)
 }
 
-func (target *BuildTarget) allBuildInputs(unnamed []BuildInput, named map[string][]BuildInput) []BuildInput {
-	ret := unnamed
+func (target *BuildTarget) selectBuildInputs(unnamed []BuildInput, named map[string][]BuildInput) []BuildInput {
 	keys := make([]string, 0, len(named))
-	for k := range named {
+	size := len(unnamed)
+	for k, vals := range named {
 		keys = append(keys, k)
+		size += len(vals)
 	}
 	sort.Strings(keys)
+
+	ret := make([]BuildInput, 0, size)
+	ret = append(ret, unnamed...)
 	for _, k := range keys {
 		ret = append(ret, named[k]...)
 	}
@@ -1713,7 +1731,7 @@ func (target *BuildTarget) AllData() []BuildInput {
 		return target.Data
 	}
 
-	return target.allBuildInputs(target.Data, target.NamedData)
+	return target.selectBuildInputs(target.Data, target.NamedData)
 }
 
 // AllDebugData returns all the data for debugging this rule.
@@ -1724,7 +1742,7 @@ func (target *BuildTarget) AllDebugData() []BuildInput {
 	if target.Debug.namedData == nil {
 		return target.Debug.data
 	}
-	return target.allBuildInputs(target.Debug.data, target.Debug.namedData)
+	return target.selectBuildInputs(target.Debug.data, target.Debug.namedData)
 }
 
 // DebugData returns unnamed data for debugging this rule.
@@ -1748,7 +1766,7 @@ func (target *BuildTarget) AllTools() []BuildInput {
 	if target.namedTools == nil {
 		return target.Tools
 	}
-	return target.allBuildInputs(target.Tools, target.namedTools)
+	return target.selectBuildInputs(target.Tools, target.namedTools)
 }
 
 // ToolNames returns an ordered list of tool names.

@@ -101,7 +101,6 @@ type baseExporter struct {
 // run specifies the main steps when running an export.
 func (be *baseExporter) run(targets core.BuildLabels) {
 	go be.startMonitor()
-	go be.startStateMonitor()
 	be.exportPlzConfig()
 	be.impl.exportPreloaded()
 	be.exportTargets(targets)
@@ -112,13 +111,6 @@ func (be *baseExporter) startMonitor() {
 	for {
 		time.Sleep(10 * time.Second)
 		log.Warningf("Number of targets exported: %v", be.targetCounter)
-	}
-}
-
-func (be *baseExporter) startStateMonitor() {
-	for {
-		time.Sleep(1 * time.Minute)
-		log.Warningf("Targets in graph: %v", len(be.state.Graph.AllTargets()))
 	}
 }
 
@@ -173,7 +165,11 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 				log.Debugf("System dependency detected, skipping...: %s", p)
 				continue
 			}
-			if err := fs.RecursiveCopy(p, filepath.Join(be.targetDir, p), 0); err != nil {
+			dest := filepath.Join(be.targetDir, p)
+			if target.Subrepo != nil { // Adjusting fo for local subrepos
+				dest = filepath.Join(be.targetDir, target.Subrepo.Dir(p))
+			}
+			if err := fs.RecursiveCopy(p, dest, 0); err != nil {
 				log.Warningf("Error copying file, skipping...: %s", err)
 			}
 			log.Debugf("Writing exported source file: %s", p)
