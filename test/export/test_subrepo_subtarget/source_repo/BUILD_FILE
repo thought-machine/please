@@ -1,0 +1,17 @@
+subrepo(
+    name = "my_subrepo",
+    path = "subrepo",
+)
+
+filegroup(
+    name = "target",
+    srcs = [
+        "file.txt",
+        "///my_subrepo//:_foo#sub",
+    ],
+)
+
+filegroup(
+    name = "unneeded",
+    srcs = ["unneeded.txt"],
+)
