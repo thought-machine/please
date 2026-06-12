@@ -13,7 +13,7 @@ genrule(
 )
 
 genrule(
-    name = "dummy",
-    outs = ["dummy.out"],
-    cmd = "echo dummy > $OUT",
+    name = "unneded",
+    outs = ["unneded.out"],
+    cmd = "echo unneded > $OUT",
 )

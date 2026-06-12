@@ -5,7 +5,7 @@ filegroup(
 )
 
 filegroup(
-    name = "dummy_build_def",
-    srcs = ["dummy.build_defs"],
+    name = "unneded_build_def",
+    srcs = ["unneded.build_defs"],
     visibility = ["PUBLIC"],
 )

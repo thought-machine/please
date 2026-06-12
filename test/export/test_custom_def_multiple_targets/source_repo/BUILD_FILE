@@ -8,8 +8,8 @@ custom_target(
 )
 
 custom_target(
-    name = "dummy",
+    name = "unneded",
     srcs = ["file.txt"],
-    outs = ["dummy.out"],
-    outs_adjacent = ["dummy_adjacent.out"],
+    outs = ["unneded.out"],
+    outs_adjacent = ["unneded_adjacent.out"],
 )

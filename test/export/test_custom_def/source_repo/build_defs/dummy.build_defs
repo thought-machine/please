@@ -1,8 +1,8 @@
-def dummy_target(
+def unneded_target(
         name:str,
         outs:list=[]):
     return genrule(
         name = name,
         outs = outs,
-        cmd = "echo dummy > $OUT",
+        cmd = "echo unneded > $OUT",
     )

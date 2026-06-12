@@ -13,7 +13,7 @@ simple_custom_target(
 )
 
 simple_custom_target(
-    name = "dummy",
-    srcs = ["dummy.in"],
-    outs = ["dummy.out"],
+    name = "unneded",
+    srcs = ["unneded.in"],
+    outs = ["unneded.out"],
 )
