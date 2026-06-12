@@ -7,7 +7,7 @@ simple_custom_target(
 )
 
 simple_custom_target(
-    name = "dummy",
+    name = "unneded",
     srcs = ["file.txt"],
-    outs = ["dummy.out"],
+    outs = ["unneded.out"],
 )

@@ -1,0 +1,6 @@
+# unused build def content
+
+def unused_helper_method(name):
+    return filegroup(
+        name = name,
+    )

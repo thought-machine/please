@@ -1,0 +1,11 @@
+filegroup(
+    name = "preloaded_build_def",
+    srcs = ["preloaded.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "subincluded_build_def",
+    srcs = ["subincluded.build_defs"],
+    visibility = ["PUBLIC"],
+)

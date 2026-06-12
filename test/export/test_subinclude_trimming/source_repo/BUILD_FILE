@@ -10,6 +10,6 @@ simple_custom_target(
 )
 
 unused_target(
-    name = "dummy",
-    outs = ["dummy.out"],
+    name = "unneded",
+    outs = ["unneded.out"],
 )

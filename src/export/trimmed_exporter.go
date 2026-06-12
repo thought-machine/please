@@ -102,12 +102,29 @@ func (e *trimmedExporter) writePackageFiles() {
 // exportSubincludes exports the subincluded targets required to generate the target and selects them to
 // later be written to the package as statements.
 func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target *core.BuildTarget) {
-	subincludes := pkg.Metadata.FindRequiredSubincludes(target)
-	if len(subincludes) == 0 {
-		return
+	// Get the actively used subincludes of the target and propagate all transitive subincludes required
+	// by our used subinclude targets. FindRequiredSubincludes will report the required subincludes
+	// for this target at the package level but we need to propagate the subincluded targets inside
+	// build definitions since we are not trimming build_defs files.
+	usedSubincludes := pkg.Metadata.FindRequiredSubincludes(target)
+	e.setPackageSubincludes(pkg, usedSubincludes)
+
+	allSubincludes := usedSubincludes
+	for _, sub := range usedSubincludes {
+		for _, trans := range e.state.Graph.TransitiveSubincludes(sub) {
+			if !slices.Contains(allSubincludes, trans) {
+				allSubincludes = append(allSubincludes, trans)
+			}
+		}
 	}
 
-	log.Debugf("Subincludes required for %s: %v", target, subincludes)
+	log.Debugf("Subincludes required for %s: %v", target, allSubincludes)
+	e.exportTargets(allSubincludes)
+}
+
+// setPackageSubincludes marks the package-level required subincludes after the export. This will be
+// used for trimming subinclude statements with [trimmer].
+func (e *trimmedExporter) setPackageSubincludes(pkg *core.Package, subincludes core.BuildLabels) {
 	for _, subinclude := range subincludes {
 		// skip for preloaded subincludes, these are handled separately at the start to ensure they are
 		// exported even if not directly used by an exported target.
@@ -115,13 +132,13 @@ func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 			continue
 		}
 
-		required := e.requiredSubincludes[pkg.Label()]
+		pkgLabel := pkg.Label()
+		required := e.requiredSubincludes[pkgLabel]
 		if !slices.Contains(required, subinclude) {
 			required = append(required, subinclude)
 		}
-		e.requiredSubincludes[pkg.Label()] = required
+		e.requiredSubincludes[pkgLabel] = required
 	}
-	e.exportTargets(subincludes)
 }
 
 // exportRelatedTargets looks up and exports all build targets that were declared within the same
