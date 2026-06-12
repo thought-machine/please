@@ -101,7 +101,7 @@ type baseExporter struct {
 // run specifies the main steps when running an export.
 func (be *baseExporter) run(targets core.BuildLabels) {
 	go be.startMonitor()
-	be.exportPlzConfig()
+	be.exportRepoConfig()
 	be.impl.exportPreloaded()
 	be.exportTargets(targets)
 	be.impl.writePackageFiles()
@@ -110,24 +110,28 @@ func (be *baseExporter) run(targets core.BuildLabels) {
 func (be *baseExporter) startMonitor() {
 	for {
 		time.Sleep(10 * time.Second)
-		log.Warningf("Number of targets exported: %v", be.targetCounter)
+		log.Infof("Number of targets exported: %v", be.targetCounter)
 	}
 }
 
-// exportPlzConfig exports the repository's configuration files (e.g., .plzconfig and its
+// exportRepoConfig exports the repository's configuration files (e.g., .gitignore, .plzconfig and its
 // platform-specific variants) to the target export directory.
-func (be *baseExporter) exportPlzConfig() {
-	profiles, err := filepath.Glob(".plzconfig*")
+func (be *baseExporter) exportRepoConfig() {
+	files, err := filepath.Glob(".plzconfig*")
 	if err != nil {
 		log.Fatalf("failed to glob .plzconfig files: %v", err)
 	}
-	for _, file := range profiles {
+	if info, err := os.Stat(".gitignore"); err == nil {
+		files = append(files, info.Name())
+	}
+
+	for _, file := range files {
 		targetPath := filepath.Join(be.targetDir, file)
 		if err := os.RemoveAll(targetPath); err != nil {
-			log.Fatalf("failed to remove .plzconfig file %s: %v", file, err)
+			log.Fatalf("failed to remove file %s: %v", file, err)
 		}
 		if err := fs.CopyFile(file, targetPath, 0); err != nil {
-			log.Fatalf("failed to copy .plzconfig file %s: %v", file, err)
+			log.Fatalf("failed to copy file %s: %v", file, err)
 		}
 	}
 }
