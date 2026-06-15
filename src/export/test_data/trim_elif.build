@@ -1,0 +1,6 @@
+if False:
+    genrule(name = "a")
+elif True:
+    genrule(name = "b")
+else:
+    genrule(name = "c")

@@ -1,0 +1,8 @@
+for i in [
+    "a",
+    "b",
+]:
+    if i == "a":
+        genrule(name = "a")
+    elif i == "b":
+        genrule(name = "b")

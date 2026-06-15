@@ -1,0 +1,2 @@
+if True:
+  genrule(name = "a", cmd = "echo a > $OUT", outs = ["a"])
