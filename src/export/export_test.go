@@ -123,119 +123,72 @@ func TestFilterPackageFile(t *testing.T) {
 
 func TestStatementTrim(t *testing.T) {
 	testCases := []struct {
-		name       string
-		content    string
-		registered []string
-		required   []string
-		expected   string
+		name     string
+		content  string
+		required []string
+		expected string
 	}{
 		{
-			name: "Keep target in if",
-			content: `
-if True:
-  genrule(name = "a", cmd = "echo a > $OUT", outs = ["a"])
-`,
-			registered: []string{"a"},
-			required:   []string{"a"},
-			expected: `
-if True:
-  genrule(name = "a", cmd = "echo a > $OUT", outs = ["a"])
-`,
+			name:     "Keep target in if",
+			content:  "src/export/test_data/trim_if.build",
+			required: []string{"a"},
+			expected: "src/export/test_data/trim_if_expected_a.build",
 		},
 		{
-			name: "Target not required - all statements trimmed",
-			content: `
-if True:
-  genrule(name = "a", cmd = "echo a > $OUT", outs = ["a"])
-`,
-			registered: []string{"a"},
-			required:   []string{},
-			// Empty, all statements pruned. Blank space removal is not performed by trimBlock's implementation so expect the new lines.
-			expected: `
-
-`,
+			name:     "Target not required - all statements trimmed",
+			content:  "src/export/test_data/trim_if.build",
+			required: []string{},
+			expected: "src/export/test_data/trim_if_expected_none.build",
 		},
 		{
-			name: "Required target in elif",
-			content: `
-if False:
-    genrule(name = "a")
-elif True:
-    genrule(name = "b")
-else:
-    genrule(name = "c")
-`,
-			registered: []string{"b"},
-			required:   []string{"b"},
-			expected: `
-if False:
-    pass  # Trimmed during export
-elif True:
-    genrule(name = "b")
-else:
-    pass  # Trimmed during export
-`},
+			name:     "Required target in elif",
+			content:  "src/export/test_data/trim_elif.build",
+			required: []string{"b"},
+			expected: "src/export/test_data/trim_elif_expected_b.build",
+		},
 		{
-			name: "Required target in for",
-			content: `
-for i in range(0,2):
-    genrule(name = "a")
-`,
-			registered: []string{"a"},
-			required:   []string{"a"},
-			expected: `
-for i in range(0,2):
-    genrule(name = "a")
-`},
+			name:     "Required target in for",
+			content:  "src/export/test_data/trim_for.build",
+			required: []string{"a"},
+			expected: "src/export/test_data/trim_for_expected_a.build",
+		},
 		{
-			name: "Required if stmt in for",
-			content: `
-for i in [
-    "a",
-    "b",
-]:
-    if i == "a":
-        genrule(name = "a")
-    elif i == "b":
-        genrule(name = "b")
-`,
-			registered: []string{"a", "b"},
-			required:   []string{"a"},
-			expected: `
-for i in [
-    "a",
-    "b",
-]:
-    if i == "a":
-        genrule(name = "a")
-    elif i == "b":
-        pass  # Trimmed during export
-`},
+			name:     "Required if stmt in for",
+			content:  "src/export/test_data/trim_for_if.build",
+			required: []string{"a"},
+			expected: "src/export/test_data/trim_for_if_expected_a.build",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			p := asp.NewParserOnly()
-			statements, err := p.ParseData([]byte(tc.content), "BUILD")
+			statements, err := p.ParseFileOnly(tc.content)
 			assert.NoError(t, err)
 
 			pkg := core.NewPackage("test", core.WithPackageMetadata())
-			pkg.Filename = "BUILD"
+			pkg.Filename = tc.content
+			targetLabels := walkASTRegisterTargets(t, statements, pkg, nil)
 
-			targetLabels := walkASTRegisterTargets(t, statements, pkg, tc.registered)
 			e := newExporter(nil, "", false).impl.(*trimmedExporter)
 			for _, name := range tc.required {
 				e.exportedTargets[targetLabels[name]] = true
 			}
 
+			contentBytes, err := os.ReadFile(tc.content)
+			assert.NoError(t, err)
+
 			trimmer := &trimmer{
-				origin:   []byte(tc.content),
+				origin:   contentBytes,
 				pkg:      pkg,
 				exporter: e,
 			}
-			trimmer.trimBlock(statements, 0, asp.Position(len(tc.content)))
+			trimmer.trimBlock(statements, 0, asp.Position(len(contentBytes)))
 
-			assert.Equal(t, tc.expected, string(trimmer.bytes))
+			expectedBytes, err := os.ReadFile(tc.expected)
+			assert.NoError(t, err)
+
+			assert.Equal(t, string(expectedBytes), string(trimmer.bytes))
 		})
 	}
 }
