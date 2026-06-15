@@ -205,14 +205,7 @@ func (be *baseExporter) getOrParseTarget(label core.BuildLabel) *core.BuildTarge
 // This requires the background parser worker threads to be kept alive as daemons (controlled by the
 // "KeepParserRunning" build state option).
 func (be *baseExporter) getOrParsePackage(label core.BuildLabel) *core.Package {
-	label.Name = "all"
-	pkg := be.state.Graph.PackageByLabel(label)
-	if pkg == nil {
-		log.Infof("Package %v not found in graph. Attempting to parse...", label)
-		parse.Parse(be.state, label, core.OriginalTarget, core.ParseModeNormal)
-		pkg = be.state.Graph.PackageByLabel(label)
-	}
-	return pkg
+	return be.state.WaitForPackage(label, core.OriginalTarget, core.ParseModeNormal)
 }
 
 // checkAndSetVisited is a helper to ensure we only visit the same target once.
