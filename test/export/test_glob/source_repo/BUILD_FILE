@@ -1,0 +1,13 @@
+genrule(
+    name = "glob_target",
+    srcs = glob(["*.txt"], exclude = ["ignored.txt"]),
+    outs = ["out.txt"],
+    cmd = "cat $SRCS > $OUT",
+)
+
+genrule(
+    name = "unneeded",
+    srcs = ["unused.dat"],
+    outs = ["unneeded.out"],
+    cmd = "cat $SRCS > $OUT",
+)
