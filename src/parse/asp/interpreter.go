@@ -487,19 +487,19 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // Lookup looks up a variable name in this scope, walking back up its ancestor scopes as needed.
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
-	obj, origin := s.lookupWithOrigin(name)
-	s.metadata.SetRequiredOrigin(origin)
+	obj := s.lookup(name)
+	s.metadata.PushObjectStack(name)
 	return obj
 }
 
-// lookupWithOrigin is like Lookup but returns the origin label of the variable as well.
-func (s *scope) lookupWithOrigin(name string) (pyObject, *core.BuildLabel) {
+// lookup implements the recursive lookup over parent scopes.
+func (s *scope) lookup(name string) pyObject {
 	if obj, present := s.locals[name]; present {
-		return obj, s.metadata.Origin(s, name)
+		return obj
 	} else if s.parent != nil {
-		return s.parent.lookupWithOrigin(name)
+		return s.parent.lookup(name)
 	}
-	return s.Error("name '%s' is not defined", name), nil
+	return s.Error("name '%s' is not defined", name)
 }
 
 // LocalLookup looks up a variable name in the current scope.
@@ -1091,6 +1091,9 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	if !ok {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
+	sizeBeforeCall := s.metadata.SizeObjectStack()
+	// Pop the arguments visited during the call + the function object implicitly added by [Lookup] (-1).
+	defer s.metadata.ResizeObjectStack(sizeBeforeCall - 1)
 	return f.Call(s, c)
 }
 
@@ -1150,11 +1153,11 @@ func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
 	return func() core.BuildLabels {
 		// We walk back on the callstack. For each scope of a method call we lookup the
 		// subinclude labels marked as used, meaning values from those subincluded labels were used to generate this target, be it function defs or variables.
-		seen := map[core.BuildLabel]struct{}{}
+		collector := core.LabelSet{}
 		for callScope := s; callScope != nil; callScope = callScope.caller {
-			maps.Copy(seen, callScope.metadata.RequiredOrigins())
+			callScope.metadata.RequiredOrigins(callScope, &collector)
 		}
-		return slices.Collect(maps.Keys(seen))
+		return slices.Collect(maps.Keys(collector))
 	}
 }
 
@@ -1177,33 +1180,38 @@ type ScopeMetadata interface {
 	Cursor() *Statement
 	// Origin gets the origin of the object by name. Should return nil if not found or unimplemented.
 	Origin(scope *scope, name string) *core.BuildLabel
-	// RequiredOrigins returns a set of all the origins (subincluded labels) required by the current
-	// scope.
-	RequiredOrigins() map[core.BuildLabel]struct{}
+	// RequiredOrigins adds all the origins (subincluded labels) required by the current
+	// scope into the collector set.
+	RequiredOrigins(scope *scope, collector *core.LabelSet)
 	// SetCursor register the statement currently being interpreted.
 	SetCursor(stmt *Statement)
 	// SetObjectOrigin registers the origin for the given named object. The origin is the label of a
 	// subincluded target.
 	SetObjectOrigin(name string, origin core.BuildLabel)
-	// SetRequiredOrigin marks the named object as required by the current scope.
-	SetRequiredOrigin(origin *core.BuildLabel)
+	// PushObjectStack adds a named object to the stacks of used objects.
+	PushObjectStack(name string)
+	// ResizeObjectStack shrinks the stack to size n, removing the last objects from the stack.
+	ResizeObjectStack(n int)
+	// SizeObjectStack returns the size of the object stack, meaning the number of objects registered.
+	SizeObjectStack() int
 }
 
 type scopeMetadata struct {
-	// cursor points to the statement currently being interpreted
+	// cursor points to the statement currently being interpreted.
 	cursor *Statement
 	// objectOrigins tracks the subinclude label that each variable was originally defined in.
 	objectOrigins map[string]core.BuildLabel
-	// requiredOrigins tracks which subinclude labels have been used by looking up objects.
-	requiredOrigins map[core.BuildLabel]struct{}
+	// objectStack tracks which objects are in use for this scope. Objects are added to the stack
+	// after lookup and can be removed for example to cleanup arguments after a function call.
+	objectStack []string
 }
 
 // NewMetadata implements [ScopeMetadata].
 func (m *scopeMetadata) NewMetadata() ScopeMetadata {
 	return &scopeMetadata{
-		cursor:          m.cursor,
-		objectOrigins:   map[string]core.BuildLabel{},
-		requiredOrigins: map[core.BuildLabel]struct{}{},
+		cursor:        m.cursor,
+		objectOrigins: map[string]core.BuildLabel{},
+		objectStack:   []string{},
 	}
 }
 
@@ -1215,17 +1223,31 @@ func (m *scopeMetadata) Cursor() *Statement {
 // Origin implements [ScopeMetadata].
 func (m *scopeMetadata) Origin(scope *scope, name string) *core.BuildLabel {
 	if scope.interpreter != nil && scope.interpreter.preloaded.Contains(name) {
+		// Preloaded object.
 		return nil
 	}
 	if label, ok := m.objectOrigins[name]; ok {
+		// Object subincluded into current scope.
 		return &label
 	}
+	if scope != nil && scope.parent != nil {
+		// Recursive lookup in parent scopes (previously subincluded).
+		return scope.parent.metadata.Origin(scope.parent, name)
+	}
+
+	// The origin for a local object is set to nil
 	return nil
 }
 
 // RequiredOrigins implements [ScopeMetadata].
-func (m *scopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{} {
-	return m.requiredOrigins
+func (m *scopeMetadata) RequiredOrigins(scope *scope, collector *core.LabelSet) {
+	for _, object := range m.objectStack {
+		orig := m.Origin(scope, object)
+		if orig == nil {
+			continue
+		}
+		collector.Add(*orig)
+	}
 }
 
 // SetCursor implements [ScopeMetadata].
@@ -1238,12 +1260,22 @@ func (m *scopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {
 	m.objectOrigins[name] = origin
 }
 
-// SetRequiredOrigin implements [ScopeMetadata].
-func (m *scopeMetadata) SetRequiredOrigin(origin *core.BuildLabel) {
-	if origin == nil {
+// PushObjectStack implements [ScopeMetadata].
+func (m *scopeMetadata) PushObjectStack(name string) {
+	m.objectStack = append(m.objectStack, name)
+}
+
+// ResizeObjectStack implements [ScopeMetadata].
+func (m *scopeMetadata) ResizeObjectStack(size int) {
+	if size < 0 || size > len(m.objectOrigins) {
 		return
 	}
-	m.requiredOrigins[*origin] = struct{}{}
+	m.objectStack = m.objectStack[:size]
+}
+
+// SizeObjectStack implements [ScopeMetadata].
+func (m *scopeMetadata) SizeObjectStack() int {
+	return len(m.objectStack)
 }
 
 // noopScopeMetadata implements the ScopeMetadata interface with no-op methods. This is used to
@@ -1260,7 +1292,7 @@ func (nm *noopScopeMetadata) Cursor() *Statement { return nil }
 func (nm *noopScopeMetadata) Origin(scope *scope, name string) *core.BuildLabel { return nil }
 
 // RequiredOrigins implements [ScopeMetadata].
-func (nm *noopScopeMetadata) RequiredOrigins() map[core.BuildLabel]struct{} { return nil }
+func (nm *noopScopeMetadata) RequiredOrigins(scope *scope, collector *core.LabelSet) {}
 
 // SetCursor implements [ScopeMetadata].
 func (nm *noopScopeMetadata) SetCursor(stmt *Statement) {}
@@ -1268,8 +1300,14 @@ func (nm *noopScopeMetadata) SetCursor(stmt *Statement) {}
 // SetObjectOrigin implements [ScopeMetadata].
 func (nm *noopScopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {}
 
-// SetRequiredOrigin implements [ScopeMetadata].
-func (nm *noopScopeMetadata) SetRequiredOrigin(origin *core.BuildLabel) {}
+// PushObjectStack implements [ScopeMetadata].
+func (nm *noopScopeMetadata) PushObjectStack(name string) {}
+
+// ResizeObjectStack implements [ScopeMetadata].
+func (m *noopScopeMetadata) ResizeObjectStack(n int) {}
+
+// SizeObjectStack implements [ScopeMetadata].
+func (nm *noopScopeMetadata) SizeObjectStack() int { return 0 }
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {
