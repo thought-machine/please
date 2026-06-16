@@ -1,4 +1,7 @@
-subinclude("///go//build_defs:go")
+subinclude(
+    "///go//build_defs:go",
+    "//third_party/common:version",
+)
 
 package(default_visibility = ["PUBLIC"])
 
@@ -22,4 +25,11 @@ go_stdlib(
 go_repo(
     module = "github.com/google/go-cmp",
     version = "v0.5.6",
+)
+
+go_repo(
+    # unneeded, unused target
+    name = "uuid",
+    module = "github.com/google/uuid",
+    version = f"{LIB_VERSION}",
 )

@@ -27,7 +27,7 @@ go_repo(
 )
 
 go_repo(
-    # unneded, unused target
+    # unneeded, unused target
     name = "uuid",
     module = "github.com/google/uuid",
     version = "v1.6.0",
