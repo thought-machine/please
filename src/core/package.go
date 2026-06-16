@@ -128,11 +128,11 @@ func (pkg *Package) RegisterSubinclude(label BuildLabel) {
 
 // AllSubincludes returns the full set of subincludes needed for this package, including transitive subincludes
 func (pkg *Package) AllSubincludes(graph *BuildGraph) []BuildLabel {
-	includes := make(labelSet, len(pkg.Subincludes))
+	includes := make(LabelSet, len(pkg.Subincludes))
 
 	for _, s := range pkg.Subincludes {
 		for _, inc := range append(graph.TransitiveSubincludes(s), s) {
-			includes.add(inc)
+			includes.Add(inc)
 		}
 	}
 

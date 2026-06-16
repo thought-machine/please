@@ -23,13 +23,13 @@ go_stdlib(
 )
 
 go_repo(
-    module = "github.com/google/go-cmp",
-    version = "v0.5.6",
-)
-
-go_repo(
     # unneeded, unused target
     name = "uuid",
     module = "github.com/google/uuid",
     version = f"{LIB_VERSION}",
+)
+
+go_repo(
+    module = "github.com/google/go-cmp",
+    version = "v0.5.6",
 )
