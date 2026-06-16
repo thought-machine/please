@@ -1,8 +1,8 @@
-def unneded_target(
+def unneeded_target(
         name:str,
         outs:list=[]):
     return genrule(
         name = name,
         outs = outs,
-        cmd = "echo unneded > $OUT",
+        cmd = "echo unneeded > $OUT",
     )

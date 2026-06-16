@@ -1,13 +1,21 @@
-subinclude("//build_defs:simple_build_def")
+subinclude(
+    "//build_defs:simple_build_def",
+    "//build_defs:unneeded_build_def",
+)
+
+simple_custom_target(
+    name = "unneeded",
+    srcs = ["file.txt"],
+    outs = ["unneeded.out"],
+)
+
+unneeded_target(
+    name = "unneeded2",
+    outs = ["unneeded2.out"],
+)
 
 simple_custom_target(
     name = "simple_custom_target",
     srcs = ["file.txt"],
     outs = ["file_simple.out"],
-)
-
-simple_custom_target(
-    name = "unneded",
-    srcs = ["file.txt"],
-    outs = ["unneded.out"],
 )

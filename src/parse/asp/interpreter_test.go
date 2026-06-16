@@ -814,6 +814,10 @@ func TestCurrentBuildStatement(t *testing.T) {
 	}
 	defsNestedScope.metadata.SetCursor(defsNestedStmt)
 
+	// A scope that has no pkg/filename context
+	standaloneScope := &scope{metadata: newScopeMetadata()}
+	standaloneScope.metadata.SetCursor(rootStmt)
+
 	t.Run("FindsRootStatementFromBUILD", func(t *testing.T) {
 		// Calling it from buildNestedScope should walk back to buildRootScope
 		stmt := nestedScope.CurrentBuildStatement()()
@@ -827,9 +831,6 @@ func TestCurrentBuildStatement(t *testing.T) {
 	})
 
 	t.Run("HandlesNoPackageFileInStack", func(t *testing.T) {
-		// A scope that has no pkg/filename context
-		standaloneScope := &scope{metadata: newScopeMetadata()}
-		standaloneScope.metadata.SetCursor(rootStmt)
 		stmt := standaloneScope.CurrentBuildStatement()()
 		assert.Equal(t, NewBuildStatement(rootStmt), stmt)
 	})
@@ -930,7 +931,7 @@ func TestActiveSubincludes(t *testing.T) {
 
 func newScopeMetadata() ScopeMetadata {
 	return &scopeMetadata{
-		objectOrigins:   map[string]core.BuildLabel{},
-		requiredOrigins: map[core.BuildLabel]struct{}{},
+		objectOrigins: map[string]core.BuildLabel{},
+		objectStack:   []string{},
 	}
 }
