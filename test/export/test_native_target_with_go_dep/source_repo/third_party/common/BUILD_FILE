@@ -1,0 +1,7 @@
+export_file(
+  name = "version",
+  src = "version.build_defs",
+  visibility = [
+    "//third_party/...",
+  ],
+)
