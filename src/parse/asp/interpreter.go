@@ -1152,10 +1152,10 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 	}
 }
 
-// ActiveSubincludes creates a provider that reports the active/required subincluded targets for a
+// RequiredSubincludes creates a provider that reports the active/required subincluded targets for a
 // certain scope. This gives the explicitly subincluded targets that generate the methods we used
 // in the current callstack, actively executing to define this target.
-func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
+func (s *scope) RequiredSubincludes() core.SubincludesLabelProvider {
 	return func() core.BuildLabels {
 		// We walk back on the callstack. For each scope of a method call we lookup the
 		// subinclude labels marked as used, meaning values from those subincluded labels were used to generate this target, be it function defs or variables.

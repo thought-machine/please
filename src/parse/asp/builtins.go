@@ -211,7 +211,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	populateTarget(s, target, args)
 	s.state.AddTarget(s.pkg, target)
 	s.pkg.Metadata.RegisterStatementTarget(target, s.CurrentBuildStatement())
-	s.pkg.Metadata.RegisterRequiredSubinclude(target, s.ActiveSubincludes())
+	s.pkg.Metadata.RegisterRequiredSubinclude(target, s.RequiredSubincludes())
 
 	if s.Callback {
 		target.AddedPostBuild = true
