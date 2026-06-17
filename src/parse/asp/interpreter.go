@@ -50,7 +50,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		metadata: &noopScopeMetadata{},
 	}
 	if state.ParseMetadata {
-		s.metadata = &scopeMetadata{}
+		s.metadata = newTrackingScopeMetadata()
 	}
 
 	i := &interpreter{
@@ -339,7 +339,7 @@ type scope struct {
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 	mode     core.ParseMode
-	metadata ScopeMetadata
+	metadata scopeMetadata
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -456,7 +456,7 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		config:      s.config,
 		Callback:    s.Callback,
 		mode:        mode,
-		metadata:    s.metadata.NewMetadata(),
+		metadata:    s.metadata.newMetadata(),
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -487,19 +487,19 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // Lookup looks up a variable name in this scope, walking back up its ancestor scopes as needed.
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
-	obj := s.lookup(name)
-	s.metadata.PushObjectStack(name)
+	obj, orig := s.lookupWithOrigin(name)
+	s.metadata.pushSymbol(name, orig)
 	return obj
 }
 
 // lookup implements the recursive lookup over parent scopes.
-func (s *scope) lookup(name string) pyObject {
+func (s *scope) lookupWithOrigin(name string) (pyObject, *core.BuildLabel) {
 	if obj, present := s.locals[name]; present {
-		return obj
+		return obj, s.metadata.origin(s, name)
 	} else if s.parent != nil {
-		return s.parent.lookup(name)
+		return s.parent.lookupWithOrigin(name)
 	}
-	return s.Error("name '%s' is not defined", name)
+	return s.Error("name '%s' is not defined", name), nil
 }
 
 // LocalLookup looks up a variable name in the current scope.
@@ -532,7 +532,7 @@ func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLa
 		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
 			if origin != nil {
-				s.metadata.SetObjectOrigin(k, *origin)
+				s.metadata.setSymbolOrigin(k, *origin)
 			}
 		}
 	}
@@ -571,7 +571,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 	}()
 	for _, stmt = range statements {
-		s.metadata.SetCursor(stmt)
+		s.metadata.setCursor(stmt)
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -1091,9 +1091,15 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 	if !ok {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
-	sizeBeforeCall := s.metadata.SizeObjectStack()
-	// Pop the arguments visited during the call + the function object implicitly added by [Lookup] (-1).
-	defer s.metadata.ResizeObjectStack(sizeBeforeCall - 1)
+
+	// Restore the pre-call checkpoint first, then pop the function object itself to ensure explicit sequential cleanup.
+	// Remove the arguments visited during the call + the function object implicitly added by [Lookup].
+	checkpoint := s.metadata.checkpointSymbolStack()
+	defer func() {
+		s.metadata.restoreCheckpoint(checkpoint)
+		s.metadata.popSymbol(name)
+	}()
+
 	return f.Call(s, c)
 }
 
@@ -1141,8 +1147,8 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 				stmtScope = curr
 			}
 		}
-		s.NAssert(stmtScope.metadata.Cursor() == nil, "Cursor is not pointing to a statement")
-		return NewBuildStatement(stmtScope.metadata.Cursor())
+		s.NAssert(stmtScope.metadata.cursor() == nil, "Cursor is not pointing to a statement")
+		return NewBuildStatement(stmtScope.metadata.cursor())
 	}
 }
 
@@ -1155,7 +1161,7 @@ func (s *scope) ActiveSubincludes() core.SubincludesLabelProvider {
 		// subinclude labels marked as used, meaning values from those subincluded labels were used to generate this target, be it function defs or variables.
 		collector := core.LabelSet{}
 		for callScope := s; callScope != nil; callScope = callScope.caller {
-			callScope.metadata.RequiredOrigins(callScope, &collector)
+			callScope.metadata.requiredOrigins(callScope, &collector)
 		}
 		return slices.Collect(maps.Keys(collector))
 	}
@@ -1169,145 +1175,177 @@ func (s *scope) pkgFilename() string {
 	return ""
 }
 
-// scopeMetadata maintains additional information generated during the interpretation phase.
+// scopeMetadata defines an interface for tracking evaluation metadata (such as AST cursor position
+// and symbol subinclude origins) across interpreter scopes.
 // This is optionally used for operations (e.g. export) that require more details on the relation
 // between targets and statements. The no-op implementation should be used for most operations to
 // avoid any computational overhead.
-type ScopeMetadata interface {
-	// NewMetadata creates a new instance of the same ScopeMetadata implementation type.
-	NewMetadata() ScopeMetadata
-	// Cursor returns the statement being currently interpreted.
-	Cursor() *Statement
-	// Origin gets the origin of the object by name. Should return nil if not found or unimplemented.
-	Origin(scope *scope, name string) *core.BuildLabel
-	// RequiredOrigins adds all the origins (subincluded labels) required by the current
-	// scope into the collector set.
-	RequiredOrigins(scope *scope, collector *core.LabelSet)
-	// SetCursor register the statement currently being interpreted.
-	SetCursor(stmt *Statement)
-	// SetObjectOrigin registers the origin for the given named object. The origin is the label of a
-	// subincluded target.
-	SetObjectOrigin(name string, origin core.BuildLabel)
-	// PushObjectStack adds a named object to the stacks of used objects.
-	PushObjectStack(name string)
-	// ResizeObjectStack shrinks the stack to size n, removing the last objects from the stack.
-	ResizeObjectStack(n int)
-	// SizeObjectStack returns the size of the object stack, meaning the number of objects registered.
-	SizeObjectStack() int
+type scopeMetadata interface {
+	// newMetadata creates a new instance of the same scopeMetadata implementation type.
+	newMetadata() scopeMetadata
+	// cursor returns the statement currently being interpreted.
+	cursor() *Statement
+	// origin returns the subinclude origin label of a tracked symbol by name. Returns nil if the
+	// symbol is local (defined in the package) or has no origin/not tracked.
+	origin(scope *scope, name string) *core.BuildLabel
+	// requiredOrigins aggregates all subinclude origins currently in the active symbol stack
+	// into the provided label set.
+	requiredOrigins(scope *scope, collector *core.LabelSet)
+	// setCursor registers the statement currently being interpreted.
+	setCursor(stmt *Statement)
+	// setSymbolOrigin registers the subinclude origin label for a defined symbol.
+	setSymbolOrigin(name string, origin core.BuildLabel)
+	// pushSymbol pushes a symbol name and its subinclude origin onto the active tracking stack.
+	pushSymbol(name string, origin *core.BuildLabel)
+	// popSymbol pops the specified symbol from the top of the tracking stack if it matches the name.
+	popSymbol(name string)
+	// checkpointSymbolStack checkpoints the current size of the symbol tracking stack.
+	checkpointSymbolStack() int
+	// restoreCheckpoint restores the symbol tracking stack back to the given checkpoint size,
+	// discarding any symbols pushed after the checkpoint was taken.
+	restoreCheckpoint(checkpoint int)
 }
 
-type scopeMetadata struct {
+// trackingScopeMetadata implements the interface [scopeMetadata].
+type trackingScopeMetadata struct {
 	// cursor points to the statement currently being interpreted.
-	cursor *Statement
-	// objectOrigins tracks the subinclude label that each variable was originally defined in.
-	objectOrigins map[string]core.BuildLabel
-	// objectStack tracks which objects are in use for this scope. Objects are added to the stack
-	// after lookup and can be removed for example to cleanup arguments after a function call.
-	objectStack []string
+	cursorField *Statement
+	// symbolOrigins tracks the subinclude label that each symbol was originally defined in.
+	symbolOrigins map[string]core.BuildLabel
+	// symbolStack tracks which symbols are actively in use during evaluation.
+	// Symbols are pushed onto the stack during lookups and popped or truncated (restored) after
+	// function calls.
+	symbolStack []trackedSymbol
 }
 
-// NewMetadata implements [ScopeMetadata].
-func (m *scopeMetadata) NewMetadata() ScopeMetadata {
-	return &scopeMetadata{
-		cursor:        m.cursor,
-		objectOrigins: map[string]core.BuildLabel{},
-		objectStack:   []string{},
-	}
+type trackedSymbol struct {
+	name   string
+	origin *core.BuildLabel
 }
 
-// Cursor implements [ScopeMetadata].
-func (m *scopeMetadata) Cursor() *Statement {
-	return m.cursor
+// newMetadata implements [scopeMetadata].
+func (m *trackingScopeMetadata) newMetadata() scopeMetadata {
+	meta := newTrackingScopeMetadata()
+	meta.cursorField = m.cursorField
+	return meta
 }
 
-// Origin implements [ScopeMetadata].
-func (m *scopeMetadata) Origin(scope *scope, name string) *core.BuildLabel {
+// cursor implements [scopeMetadata].
+func (m *trackingScopeMetadata) cursor() *Statement {
+	return m.cursorField
+}
+
+// origin implements [scopeMetadata].
+func (m *trackingScopeMetadata) origin(scope *scope, name string) *core.BuildLabel {
 	if scope.interpreter != nil && scope.interpreter.preloaded.Contains(name) {
-		// Preloaded object.
+		// Preloaded symbols are treated as local (returning nil origin) because they are implicitly
+		// available across all package scopes in the repository.
+		//
+		// This also prevents erroneous subinclude propagation: since symbol resolution recursively
+		// traverses the parent scope chain from bottom to top, where the preoloaded symbols are
+		// defined at the top, if a target subincludes a preloaded target again it will be prefered
+		// over the preloaded and will potetntially include unwanted symbols so we enforce a
+		// preference for the preloaded symbols. This could cause issues if our repo relies on
+		// redefining preloaded symbols.
 		return nil
 	}
-	if label, ok := m.objectOrigins[name]; ok {
+	if label, ok := m.symbolOrigins[name]; ok {
 		// Object subincluded into current scope.
 		return &label
 	}
-	if scope != nil && scope.parent != nil {
-		// Recursive lookup in parent scopes (previously subincluded).
-		return scope.parent.metadata.Origin(scope.parent, name)
-	}
-
 	// The origin for a local object is set to nil
 	return nil
 }
 
-// RequiredOrigins implements [ScopeMetadata].
-func (m *scopeMetadata) RequiredOrigins(scope *scope, collector *core.LabelSet) {
-	for _, object := range m.objectStack {
-		orig := m.Origin(scope, object)
-		if orig == nil {
-			continue
-		}
-		collector.Add(*orig)
+// requiredOrigins implements [scopeMetadata].
+func (m *trackingScopeMetadata) requiredOrigins(scope *scope, collector *core.LabelSet) {
+	for _, v := range m.symbolStack {
+		collector.Add(*v.origin)
 	}
 }
 
-// SetCursor implements [ScopeMetadata].
-func (m *scopeMetadata) SetCursor(stmt *Statement) {
-	m.cursor = stmt
+// setCursor implements [scopeMetadata].
+func (m *trackingScopeMetadata) setCursor(stmt *Statement) {
+	m.cursorField = stmt
 }
 
-// SetObjectOrigin implements [ScopeMetadata].
-func (m *scopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {
-	m.objectOrigins[name] = origin
+// setSymbolOrigin implements [scopeMetadata].
+func (m *trackingScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel) {
+	m.symbolOrigins[name] = origin
 }
 
-// PushObjectStack implements [ScopeMetadata].
-func (m *scopeMetadata) PushObjectStack(name string) {
-	m.objectStack = append(m.objectStack, name)
-}
-
-// ResizeObjectStack implements [ScopeMetadata].
-func (m *scopeMetadata) ResizeObjectStack(size int) {
-	if size < 0 || size > len(m.objectOrigins) {
+// pushSymbol implements [scopeMetadata].
+func (m *trackingScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {
+	if origin == nil {
 		return
 	}
-	m.objectStack = m.objectStack[:size]
+	m.symbolStack = append(m.symbolStack, trackedSymbol{name: name, origin: origin})
 }
 
-// SizeObjectStack implements [ScopeMetadata].
-func (m *scopeMetadata) SizeObjectStack() int {
-	return len(m.objectStack)
+// popSymbol implements [scopeMetadata].
+func (m *trackingScopeMetadata) popSymbol(name string) {
+	if name == "" || len(m.symbolStack) == 0 {
+		return
+	}
+	if m.symbolStack[len(m.symbolStack)-1].name == name {
+		m.symbolStack = m.symbolStack[:len(m.symbolStack)-1]
+	}
 }
 
-// noopScopeMetadata implements the ScopeMetadata interface with no-op methods. This is used to
+// checkpointSymbolStack implements [scopeMetadata].
+func (m *trackingScopeMetadata) checkpointSymbolStack() int {
+	return len(m.symbolStack)
+}
+
+// restoreCheckpoint implements [scopeMetadata].
+func (m *trackingScopeMetadata) restoreCheckpoint(checkpoint int) {
+	if checkpoint < 0 || checkpoint > len(m.symbolStack) {
+		return
+	}
+	m.symbolStack = m.symbolStack[:checkpoint]
+}
+
+// noopScopeMetadata implements the scopeMetadata interface with no-op methods. This is used to
 // avoid the overhead of storing metadata for operations that don't depend on it.
 type noopScopeMetadata struct{}
 
-// NewMetadata implements [ScopeMetadata].
-func (nm *noopScopeMetadata) NewMetadata() ScopeMetadata { return &noopScopeMetadata{} }
+// restoreCheckpoint implements [scopeMetadata].
+func (nm *noopScopeMetadata) restoreCheckpoint(checkpoint int) {}
 
-// Cursor implements [ScopeMetadata].
-func (nm *noopScopeMetadata) Cursor() *Statement { return nil }
+// checkpointSymbolStack implements [scopeMetadata].
+func (nm *noopScopeMetadata) checkpointSymbolStack() int { return 0 }
 
-// Origin implements [ScopeMetadata].
-func (nm *noopScopeMetadata) Origin(scope *scope, name string) *core.BuildLabel { return nil }
+// newMetadata implements [scopeMetadata].
+func (nm *noopScopeMetadata) newMetadata() scopeMetadata { return &noopScopeMetadata{} }
 
-// RequiredOrigins implements [ScopeMetadata].
-func (nm *noopScopeMetadata) RequiredOrigins(scope *scope, collector *core.LabelSet) {}
+// cursor implements [scopeMetadata].
+func (nm *noopScopeMetadata) cursor() *Statement { return nil }
 
-// SetCursor implements [ScopeMetadata].
-func (nm *noopScopeMetadata) SetCursor(stmt *Statement) {}
+// origin implements [scopeMetadata].
+func (nm *noopScopeMetadata) origin(scope *scope, name string) *core.BuildLabel { return nil }
 
-// SetObjectOrigin implements [ScopeMetadata].
-func (nm *noopScopeMetadata) SetObjectOrigin(name string, origin core.BuildLabel) {}
+// requiredOrigins implements [scopeMetadata].
+func (nm *noopScopeMetadata) requiredOrigins(scope *scope, collector *core.LabelSet) {}
 
-// PushObjectStack implements [ScopeMetadata].
-func (nm *noopScopeMetadata) PushObjectStack(name string) {}
+// setCursor implements [scopeMetadata].
+func (nm *noopScopeMetadata) setCursor(stmt *Statement) {}
 
-// ResizeObjectStack implements [ScopeMetadata].
-func (m *noopScopeMetadata) ResizeObjectStack(n int) {}
+// setSymbolOrigin implements [scopeMetadata].
+func (nm *noopScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel) {}
 
-// SizeObjectStack implements [ScopeMetadata].
-func (nm *noopScopeMetadata) SizeObjectStack() int { return 0 }
+// pushSymbol implements [scopeMetadata].
+func (nm *noopScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {}
+
+// popSymbol implements [scopeMetadata].
+func (nm *noopScopeMetadata) popSymbol(name string) {}
+
+// newTrackingScopeMetadata creates and returns a fully initialized trackingScopeMetadata instance.
+func newTrackingScopeMetadata() *trackingScopeMetadata {
+	return &trackingScopeMetadata{
+		symbolOrigins: map[string]core.BuildLabel{},
+		symbolStack:   []trackedSymbol{},
+	}
+}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {

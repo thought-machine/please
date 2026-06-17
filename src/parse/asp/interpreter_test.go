@@ -782,7 +782,7 @@ func TestCurrentBuildStatement(t *testing.T) {
 		filename: pkg.Filename,
 		metadata: newScopeMetadata(),
 	}
-	rootScope.metadata.SetCursor(rootStmt)
+	rootScope.metadata.setCursor(rootStmt)
 
 	// A nested call inside the same BUILD file (e.g. function def)
 	nestedStmt := &Statement{Pos: 30, EndPos: 40}
@@ -792,7 +792,7 @@ func TestCurrentBuildStatement(t *testing.T) {
 		caller:   rootScope,
 		metadata: newScopeMetadata(),
 	}
-	nestedScope.metadata.SetCursor(nestedStmt)
+	nestedScope.metadata.setCursor(nestedStmt)
 
 	// A call from a different file (e.g. a function inside a subincluded .build_defs file)
 	defsRootStmt := &Statement{Pos: 50, EndPos: 60}
@@ -802,7 +802,7 @@ func TestCurrentBuildStatement(t *testing.T) {
 		caller:   nestedScope,
 		metadata: newScopeMetadata(),
 	}
-	defsRootScope.metadata.SetCursor(defsRootStmt)
+	defsRootScope.metadata.setCursor(defsRootStmt)
 
 	// Another call deep in the other file
 	defsNestedStmt := &Statement{Pos: 70, EndPos: 80}
@@ -812,11 +812,11 @@ func TestCurrentBuildStatement(t *testing.T) {
 		caller:   defsRootScope,
 		metadata: newScopeMetadata(),
 	}
-	defsNestedScope.metadata.SetCursor(defsNestedStmt)
+	defsNestedScope.metadata.setCursor(defsNestedStmt)
 
 	// A scope that has no pkg/filename context
 	standaloneScope := &scope{metadata: newScopeMetadata()}
-	standaloneScope.metadata.SetCursor(rootStmt)
+	standaloneScope.metadata.setCursor(rootStmt)
 
 	t.Run("FindsRootStatementFromBUILD", func(t *testing.T) {
 		// Calling it from buildNestedScope should walk back to buildRootScope
@@ -929,9 +929,9 @@ func TestActiveSubincludes(t *testing.T) {
 	})
 }
 
-func newScopeMetadata() ScopeMetadata {
-	return &scopeMetadata{
-		objectOrigins: map[string]core.BuildLabel{},
-		objectStack:   []string{},
+func newScopeMetadata() scopeMetadata {
+	return &trackingScopeMetadata{
+		symbolOrigins: map[string]core.BuildLabel{},
+		symbolStack:   []trackedSymbol{},
 	}
 }
