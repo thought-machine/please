@@ -850,7 +850,7 @@ func TestActiveSubincludes(t *testing.T) {
 			caller:   scopeBUILD,
 			metadata: newScopeMetadata(),
 		}
-		labels := scopeFuncExec.ActiveSubincludes()()
+		labels := scopeFuncExec.RequiredSubincludes()()
 		assert.Empty(t, labels)
 	})
 
@@ -882,7 +882,7 @@ func TestActiveSubincludes(t *testing.T) {
 		// Lookup triggers tracking of required subincludes
 		scopeFuncExec.Lookup("foo")
 
-		labels := scopeFuncExec.ActiveSubincludes()()
+		labels := scopeFuncExec.RequiredSubincludes()()
 		assert.Equal(t, core.BuildLabels{labelA}, labels)
 	})
 
@@ -924,7 +924,7 @@ func TestActiveSubincludes(t *testing.T) {
 		scopeFuncExec.Lookup("varA")
 		scopeFuncExec.Lookup("varB")
 
-		labels := scopeFuncExec.ActiveSubincludes()()
+		labels := scopeFuncExec.RequiredSubincludes()()
 		assert.ElementsMatch(t, core.BuildLabels{labelA, labelB}, labels)
 	})
 }
