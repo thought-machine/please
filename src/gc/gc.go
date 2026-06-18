@@ -173,7 +173,7 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 	for _, dep := range target.Dependencies() {
 		addTarget(graph, m, dep)
 	}
-	if target.Subrepo != nil && target.Subrepo.Target != nil {
+	if target.Subrepo.IsExternal() {
 		addTarget(graph, m, target.Subrepo.Target)
 	}
 }
@@ -208,7 +208,7 @@ func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*cor
 			}
 		}
 	}
-	if target.Subrepo != nil && target.Subrepo.Target != nil {
+	if target.Subrepo.IsExternal() {
 		ret = append(ret, target.Subrepo.Target)
 	}
 	return ret

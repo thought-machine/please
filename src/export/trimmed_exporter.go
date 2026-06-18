@@ -65,7 +65,7 @@ func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 	}
 	// We want to export the package that made this subrepo available, but we still need to walk the
 	// target deps as it may depend on other subrepos or first party targets
-	if target.Subrepo != nil && target.Subrepo.Target != nil {
+	if target.Subrepo.IsExternal() {
 		e.exportTarget(target.Subrepo.Target)
 		e.exportDependencies(target)
 		return
