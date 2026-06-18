@@ -456,10 +456,16 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		config:      s.config,
 		Callback:    s.Callback,
 		mode:        mode,
-		metadata:    s.metadata.newMetadata(),
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
+	}
+	if pkg != nil && pkg.Subrepo.IsExternal() {
+		// Skip metadata tracking for external/remote subrepos. We never trim these, so avoiding
+		// tracking saves CPU and memory.
+		s2.metadata = &noopScopeMetadata{}
+	} else {
+		s2.metadata = s.metadata.newMetadata()
 	}
 	return s2
 }
@@ -1143,7 +1149,7 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 		// package level that generated the current build target.
 		stmtScope := s
 		for curr := s; curr != nil; curr = curr.caller {
-			if curr.pkg != nil && curr.filename == s.pkg.Filename {
+			if curr.pkg != nil && curr.pkg.Filename == s.pkg.Filename {
 				stmtScope = curr
 			}
 		}
