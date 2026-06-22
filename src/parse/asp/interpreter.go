@@ -44,14 +44,11 @@ type interpreter struct {
 // It loads all the builtin rules at this point.
 func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	s := &scope{
-		ctx:      context.Background(),
-		state:    state,
-		locals:   map[string]pyObject{},
-		metadata: &noopScopeMetadata{},
+		ctx:    context.Background(),
+		state:  state,
+		locals: map[string]pyObject{},
 	}
-	if state.ParseMetadata {
-		s.metadata = newTrackingScopeMetadata()
-	}
+	s.metadata = s.newScopeMetadata()
 
 	i := &interpreter{
 		scope:      s,
@@ -460,13 +457,8 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
 	}
-	if pkg != nil && pkg.Subrepo.IsExternal() {
-		// Skip metadata tracking for external/remote subrepos. We never trim these, so avoiding
-		// tracking saves CPU and memory.
-		s2.metadata = &noopScopeMetadata{}
-	} else {
-		s2.metadata = s.metadata.newMetadata()
-	}
+	s2.metadata = s2.newScopeMetadata()
+	s2.metadata.setCursor(s.metadata.cursor())
 	return s2
 }
 
@@ -1098,13 +1090,17 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
 
-	// Restore the pre-call checkpoint first, then pop the function object itself to ensure explicit sequential cleanup.
-	// Remove the arguments visited during the call + the function object implicitly added by [Lookup].
-	checkpoint := s.metadata.checkpointSymbolStack()
-	defer func() {
-		s.metadata.restoreCheckpoint(checkpoint)
-		s.metadata.popSymbol(name)
-	}()
+	// Restore the pre-call checkpoint first, then pop the function object itself to ensure explicit
+	// sequential cleanup. Remove the arguments visited during the call + the function object
+	// implicitly added by [Lookup]. We only pop from the symbol stack when interpreting Package level
+	// calls to keep track of required symbols a few calls deep.
+	if s.IsPackageScope() {
+		checkpoint := s.metadata.checkpointSymbolStack()
+		defer func() {
+			s.metadata.restoreCheckpoint(checkpoint)
+			s.metadata.popSymbol(name)
+		}()
+	}
 
 	return f.Call(s, c)
 }
@@ -1149,7 +1145,7 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 		// package level that generated the current build target.
 		stmtScope := s
 		for curr := s; curr != nil; curr = curr.caller {
-			if curr.pkg != nil && curr.pkg.Filename == s.pkg.Filename {
+			if curr.pkg != nil && curr.pkg == s.pkg {
 				stmtScope = curr
 			}
 		}
@@ -1181,14 +1177,39 @@ func (s *scope) pkgFilename() string {
 	return ""
 }
 
+// IsPackageScope returns true if this scope is the package scope
+// (i.e. we are interpreting the build file directly and not inside any call).
+func (s *scope) IsPackageScope() bool {
+	return s.caller == nil && s.subincludeLabel == nil && s.pkg != nil
+}
+
+// newScopeMetadata creates and returns a initialized scopeMetadata instance. It will return
+// a no-op implementation if state.ParseMetadata is not set or if we simply want to skip the
+// tracking for a certain scope.
+func (s *scope) newScopeMetadata() scopeMetadata {
+	if !s.state.ParseMetadata ||
+		s.pkg == nil ||
+		s.pkg.Subrepo.IsExternal() {
+		// Skip metadata tracking if:
+		// 1. ParseMetadata flag is disabled;
+		// 2. Not interpreting a package (e.g. in subincluded targets)
+		// 3. Any external/remote subrepos.
+		// For 2 and 3, we never trim these, so avoiding tracking saves CPU and memory.
+		return &noopScopeMetadata{}
+	}
+
+	return &trackingScopeMetadata{
+		symbolOrigins: map[string]core.BuildLabel{},
+		symbolStack:   []trackedSymbol{},
+	}
+}
+
 // scopeMetadata defines an interface for tracking evaluation metadata (such as AST cursor position
 // and symbol subinclude origins) across interpreter scopes.
 // This is optionally used for operations (e.g. export) that require more details on the relation
 // between targets and statements. The no-op implementation should be used for most operations to
 // avoid any computational overhead.
 type scopeMetadata interface {
-	// newMetadata creates a new instance of the same scopeMetadata implementation type.
-	newMetadata() scopeMetadata
 	// cursor returns the statement currently being interpreted.
 	cursor() *Statement
 	// origin returns the subinclude origin label of a tracked symbol by name. Returns nil if the
@@ -1227,13 +1248,6 @@ type trackingScopeMetadata struct {
 type trackedSymbol struct {
 	name   string
 	origin *core.BuildLabel
-}
-
-// newMetadata implements [scopeMetadata].
-func (m *trackingScopeMetadata) newMetadata() scopeMetadata {
-	meta := newTrackingScopeMetadata()
-	meta.cursorField = m.cursorField
-	return meta
 }
 
 // cursor implements [scopeMetadata].
@@ -1321,9 +1335,6 @@ func (nm *noopScopeMetadata) restoreCheckpoint(checkpoint int) {}
 // checkpointSymbolStack implements [scopeMetadata].
 func (nm *noopScopeMetadata) checkpointSymbolStack() int { return 0 }
 
-// newMetadata implements [scopeMetadata].
-func (nm *noopScopeMetadata) newMetadata() scopeMetadata { return &noopScopeMetadata{} }
-
 // cursor implements [scopeMetadata].
 func (nm *noopScopeMetadata) cursor() *Statement { return nil }
 
@@ -1344,14 +1355,6 @@ func (nm *noopScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {}
 
 // popSymbol implements [scopeMetadata].
 func (nm *noopScopeMetadata) popSymbol(name string) {}
-
-// newTrackingScopeMetadata creates and returns a fully initialized trackingScopeMetadata instance.
-func newTrackingScopeMetadata() *trackingScopeMetadata {
-	return &trackingScopeMetadata{
-		symbolOrigins: map[string]core.BuildLabel{},
-		symbolStack:   []trackedSymbol{},
-	}
-}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {
