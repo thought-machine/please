@@ -834,7 +834,8 @@ func (f *pyFunc) Member(obj pyObject) pyObject {
 	}
 }
 
-// validateType validates that this argument matches the given type
+// validateType validates that this argument matches the given type. It interprets the expression and
+// returns its value.
 func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	val := s.interpretExpression(expr)
 	if i >= len(f.types) && (f.varargs || f.kwargs) {
