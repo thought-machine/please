@@ -1199,8 +1199,8 @@ func (s *scope) newScopeMetadata() scopeMetadata {
 	}
 
 	return &trackingScopeMetadata{
-		symbolOrigins: map[string]core.BuildLabel{},
-		symbolStack:   []trackedSymbol{},
+		// symbolOrigins is lazy initialized in [setSymbolOrigin]
+		symbolStack: []trackedSymbol{},
 	}
 }
 
@@ -1262,13 +1262,14 @@ func (m *trackingScopeMetadata) origin(scope *scope, name string) *core.BuildLab
 		// available across all package scopes in the repository.
 		//
 		// This also prevents erroneous subinclude propagation: since symbol resolution recursively
-		// traverses the parent scope chain from bottom to top, where the preoloaded symbols are
-		// defined at the top, if a target subincludes a preloaded target again it will be prefered
-		// over the preloaded and will potetntially include unwanted symbols so we enforce a
+		// traverses the parent scope chain from bottom to top, where the preloaded symbols are
+		// defined at the top, if a target subincludes a preloaded target again it will be preferred
+		// over the preloaded and will potentially include unwanted symbols so we enforce a
 		// preference for the preloaded symbols. This could cause issues if our repo relies on
 		// redefining preloaded symbols.
 		return nil
 	}
+
 	if label, ok := m.symbolOrigins[name]; ok {
 		// Object subincluded into current scope.
 		return &label
@@ -1291,6 +1292,11 @@ func (m *trackingScopeMetadata) setCursor(stmt *Statement) {
 
 // setSymbolOrigin implements [scopeMetadata].
 func (m *trackingScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel) {
+	if m.symbolOrigins == nil {
+		// lazy initialization to avoid unnecessary allocation of a map in smaller scopes (no subinclude).
+		m.symbolOrigins = map[string]core.BuildLabel{}
+	}
+
 	m.symbolOrigins[name] = origin
 }
 
