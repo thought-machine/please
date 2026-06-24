@@ -1090,14 +1090,17 @@ func (s *scope) callObject(name string, obj pyObject, c *Call) pyObject {
 		s.Error("Non-callable object '%s' (is a %s)", name, obj.Type())
 	}
 
-	// Restore the pre-call checkpoint first, then pop the function object itself to ensure explicit
-	// sequential cleanup. Remove the arguments visited during the call + the function object
-	// implicitly added by [Lookup]. We only pop from the symbol stack when interpreting Package level
-	// calls to keep track of required symbols a few calls deep.
-	if s.IsPackageScope() {
-		checkpoint := s.metadata.checkpointSymbolStack()
+	// Ensure explicit sequential cleanup of the symbol stack. We only pop from the symbol stack when
+	// interpreting Package level calls to keep track of required symbols a few calls deep, for
+	// example argument lookup. The function object implicitly added by [Lookup] is also removed from
+	// the stack. We only pop from the symbol stack when interpreting Package level calls to keep
+	// track of required symbols a few calls deep, for example argument lookup.
+	s.metadata.incrementCallDepth()
+	defer s.metadata.decrementCallDepth()
+	if s.IsPackageScope() && s.metadata.isTopLevelCall() {
+		checkpoint := s.metadata.getSymbolStackCheckpoint()
 		defer func() {
-			s.metadata.restoreCheckpoint(checkpoint)
+			s.metadata.restoreSymbolStack(checkpoint)
 			s.metadata.popSymbol(name)
 		}()
 	}
@@ -1226,11 +1229,17 @@ type scopeMetadata interface {
 	pushSymbol(name string, origin *core.BuildLabel)
 	// popSymbol pops the specified symbol from the top of the tracking stack if it matches the name.
 	popSymbol(name string)
-	// checkpointSymbolStack checkpoints the current size of the symbol tracking stack.
-	checkpointSymbolStack() int
-	// restoreCheckpoint restores the symbol tracking stack back to the given checkpoint size,
-	// discarding any symbols pushed after the checkpoint was taken.
-	restoreCheckpoint(checkpoint int)
+	// isTopLevelCall returns true if the interpreter is currently executing at the top level
+	// of the package scope (not inside any function calls).
+	isTopLevelCall() bool
+	// incrementCallDepth increments the current function call depth.
+	incrementCallDepth()
+	// decrementCallDepth decrements the current function call depth.
+	decrementCallDepth()
+	// getSymbolStackCheckpoint returns the current size of the symbol tracking stack.
+	getSymbolStackCheckpoint() int
+	// restoreSymbolStack restores the symbol tracking stack back to the given checkpoint size.
+	restoreSymbolStack(checkpoint int)
 }
 
 // trackingScopeMetadata implements the interface [scopeMetadata].
@@ -1243,6 +1252,7 @@ type trackingScopeMetadata struct {
 	// Symbols are pushed onto the stack during lookups and popped or truncated (restored) after
 	// function calls.
 	symbolStack []trackedSymbol
+	callDepth   int
 }
 
 type trackedSymbol struct {
@@ -1318,28 +1328,36 @@ func (m *trackingScopeMetadata) popSymbol(name string) {
 	}
 }
 
-// checkpointSymbolStack implements [scopeMetadata].
-func (m *trackingScopeMetadata) checkpointSymbolStack() int {
+// isTopLevelCall implements [scopeMetadata].
+func (m *trackingScopeMetadata) isTopLevelCall() bool {
+	return m.callDepth == 1
+}
+
+// incrementCallDepth implements [scopeMetadata].
+func (m *trackingScopeMetadata) incrementCallDepth() {
+	m.callDepth++
+}
+
+// decrementCallDepth implements [scopeMetadata].
+func (m *trackingScopeMetadata) decrementCallDepth() {
+	m.callDepth--
+}
+
+// getSymbolStackCheckpoint implements [scopeMetadata].
+func (m *trackingScopeMetadata) getSymbolStackCheckpoint() int {
 	return len(m.symbolStack)
 }
 
-// restoreCheckpoint implements [scopeMetadata].
-func (m *trackingScopeMetadata) restoreCheckpoint(checkpoint int) {
-	if checkpoint < 0 || checkpoint > len(m.symbolStack) {
-		return
+// restoreSymbolStack implements [scopeMetadata].
+func (m *trackingScopeMetadata) restoreSymbolStack(checkpoint int) {
+	if checkpoint >= 0 && checkpoint <= len(m.symbolStack) {
+		m.symbolStack = m.symbolStack[:checkpoint]
 	}
-	m.symbolStack = m.symbolStack[:checkpoint]
 }
 
 // noopScopeMetadata implements the scopeMetadata interface with no-op methods. This is used to
 // avoid the overhead of storing metadata for operations that don't depend on it.
 type noopScopeMetadata struct{}
-
-// restoreCheckpoint implements [scopeMetadata].
-func (nm *noopScopeMetadata) restoreCheckpoint(checkpoint int) {}
-
-// checkpointSymbolStack implements [scopeMetadata].
-func (nm *noopScopeMetadata) checkpointSymbolStack() int { return 0 }
 
 // cursor implements [scopeMetadata].
 func (nm *noopScopeMetadata) cursor() *Statement { return nil }
@@ -1361,6 +1379,21 @@ func (nm *noopScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {}
 
 // popSymbol implements [scopeMetadata].
 func (nm *noopScopeMetadata) popSymbol(name string) {}
+
+// isTopLevelCall implements [scopeMetadata].
+func (nm *noopScopeMetadata) isTopLevelCall() bool { return false }
+
+// incrementCallDepth implements [scopeMetadata].
+func (nm *noopScopeMetadata) incrementCallDepth() {}
+
+// decrementCallDepth implements [scopeMetadata].
+func (nm *noopScopeMetadata) decrementCallDepth() {}
+
+// getSymbolStackCheckpoint implements [scopeMetadata].
+func (nm *noopScopeMetadata) getSymbolStackCheckpoint() int { return 0 }
+
+// restoreSymbolStack implements [scopeMetadata].
+func (nm *noopScopeMetadata) restoreSymbolStack(checkpoint int) {}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {
