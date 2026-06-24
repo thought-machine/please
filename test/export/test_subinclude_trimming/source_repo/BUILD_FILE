@@ -13,3 +13,38 @@ unused_target(
     name = "unneded",
     outs = ["unneded.out"],
 )
+
+subinclude(
+    "//build_defs:var1_build_def",
+    "//build_defs:var2_build_def",
+)
+
+comma_separated_vars = ",".join([var1, var2])
+
+genrule(
+    name = "variables_target",
+    outs = ["variable.out"],
+    cmd = f'echo "{comma_separated_vars}" > $OUT',
+)
+
+
+genrule(
+    name = "unused_variables_target",
+    outs = ["unused_variable.out"],
+    cmd = f'echo "{unused_var}" > $OUT',
+)
+
+subinclude(
+    "//build_defs:var3_build_def",
+)
+
+message = "Testing {service} on {env}".format(
+    env = "production",
+    service = var3,
+)
+
+genrule(
+    name = "format_target",
+    outs = ["format.out"],
+    cmd = f'echo "{message}" > $OUT',
+)
