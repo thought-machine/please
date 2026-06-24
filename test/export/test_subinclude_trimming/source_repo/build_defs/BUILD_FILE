@@ -5,6 +5,24 @@ filegroup(
 )
 
 filegroup(
+    name = "var1_build_def",
+    srcs = ["var1.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "var2_build_def",
+    srcs = ["var2.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "var3_build_def",
+    srcs = ["var3.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
     name = "unused_build_def",
     srcs = ["unused.build_defs"],
     visibility = ["PUBLIC"],

@@ -694,7 +694,9 @@ func (f *pyFunc) String() string {
 func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
-			return f.callNative(s.NewScope("<builtin code>", 0), c)
+			callScope := s.NewScope("<builtin code>", 0)
+			callScope.caller = s
+			return f.callNative(callScope, c)
 		}
 		return f.callNative(s, c)
 	}

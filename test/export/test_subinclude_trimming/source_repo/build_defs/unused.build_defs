@@ -4,5 +4,7 @@ def unused_target(
     return genrule(
         name = name,
         outs = outs,
-        cmd = "echo unneded > $OUT",
+        cmd = "echo unneeded > $OUT",
     )
+
+unused_var = "Unused Variable"
