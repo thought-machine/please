@@ -635,6 +635,23 @@ func (state *BuildState) LogTestResult(target *BuildTarget, run int, status Buil
 
 // LogBuildError logs a failure for a target to parse, build or test.
 func (state *BuildState) LogBuildError(label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
+	if status == ParseFailed {
+		// Force close package wait channels to avoid deadlocks when calling waitForPackage() after
+		// the initial parse, for example when KeepParserRunning is set.
+		key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+		if ch := state.progress.pendingPackages.Get(key); ch != nil {
+			func() {
+				defer func() { recover() }() // recover if attempted to close a closed channel.
+				close(ch)                    // This signals to anyone waiting that it's done (failed, but completed).
+			}()
+		}
+		if ch := state.progress.packageWaits.Get(key); ch != nil {
+			func() {
+				defer func() { recover() }() // recover if attempted to close a closed channel.
+				close(ch)                    // This signals to anyone waiting that it's done (failed, but completed).
+			}()
+		}
+	}
 	state.logResult(&BuildResult{
 		Label:       label,
 		Status:      status,
