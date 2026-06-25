@@ -48,7 +48,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
-	s.metadata = s.newScopeMetadata()
+	s.packageMetadata = s.newScopeMetadata()
 
 	i := &interpreter{
 		scope:      s,
@@ -251,6 +251,8 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 			mode |= core.ParseModeForPreload
 		}
 		s := i.scope.NewScope(path, mode)
+		// // Skip metadata tracking for subincludes since these are not trimmed
+		// s.metadata = &noopScopeMetadata{}
 
 		s.state = pkgScope.state
 		// Scope needs a local version of CONFIG
@@ -334,9 +336,9 @@ type scope struct {
 	config  *pyConfig
 	globber *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
-	Callback bool
-	mode     core.ParseMode
-	metadata scopeMetadata
+	Callback        bool
+	mode            core.ParseMode
+	packageMetadata scopeMetadata
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -437,7 +439,19 @@ func (s *scope) NewScope(filename string, mode core.ParseMode) *scope {
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint int) *scope {
-	return s.newScope(pkg, mode, pkg.Filename, hint)
+	newScope := s.newScope(pkg, mode, pkg.Filename, hint)
+	newScope.packageMetadata = newScope.newScopeMetadata()
+	return newScope
+}
+
+func (s *scope) NewScopeWithCaller(filename string, mode core.ParseMode, caller *scope) *scope {
+	return s.newScopeWithCaller(s.pkg, mode, filename, 0, caller)
+}
+
+func (s *scope) newScopeWithCaller(pkg *core.Package, mode core.ParseMode, filename string, hint int, caller *scope) *scope {
+	ns := s.newScope(pkg, mode, filename, hint)
+	ns.caller = caller
+	return ns
 }
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
@@ -453,13 +467,20 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		config:      s.config,
 		Callback:    s.Callback,
 		mode:        mode,
+		// We only track metadata at the top level scope created with [scope.NewPackagedScope], every
+		// other child scope or non-packaged (e.g. subincludes) defaults to a noop implementation.
+		packageMetadata: &noopScopeMetadata{},
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
 	}
-	s2.metadata = s2.newScopeMetadata()
-	s2.metadata.setCursor(s.metadata.cursor())
 	return s2
+}
+
+// IsPackageScope returns true if this scope is the package scope
+// (i.e. we are interpreting the build file directly and not inside any call).
+func (s *scope) IsPackageScope() bool {
+	return s.caller == nil && s.subincludeLabel == nil && s.pkg != nil
 }
 
 // Error emits an error that stops further interpretation.
@@ -486,8 +507,8 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
 	if obj, present := s.locals[name]; present {
-		orig := s.metadata.origin(s, name)
-		s.metadata.pushSymbol(name, orig)
+		orig := s.packageMetadata.origin(s, name)
+		s.packageMetadata.pushSymbol(name, orig)
 		return obj
 	} else if s.parent != nil {
 		return s.parent.Lookup(name)
@@ -525,7 +546,7 @@ func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLa
 		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
 			if origin != nil {
-				s.metadata.setSymbolOrigin(k, *origin)
+				s.packageMetadata.setSymbolOrigin(k, *origin)
 			}
 		}
 	}
@@ -564,7 +585,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 	}()
 	for _, stmt = range statements {
-		s.metadata.setCursor(stmt)
+		s.packageMetadata.setCursor(stmt)
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -608,8 +629,8 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		} else {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
 		}
-		s.metadata.registerBuildStatement(s.pkg)
-		s.metadata.resetSymbolStack()
+		s.packageMetadata.registerBuildStatement(s.pkg)
+		s.packageMetadata.resetSymbolStack()
 	}
 	return nil
 }
@@ -751,7 +772,7 @@ func (s *scope) interpretJoin(base string, list *List) pyObject {
 	}
 	// Has a comprehension. Note that there is only ever one level; by the anecdata, two-level ones
 	// are rare in this context so not worth worrying about here.
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScopeWithCaller(s.filename, s.mode, s)
 	it := s.iterable(list.Comprehension.Expr)
 	first := true
 	cs.evaluateComprehension(it, list.Comprehension, func(li pyObject) {
@@ -974,7 +995,7 @@ func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScopeWithCaller(s.filename, s.mode, s)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyList, 0, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
@@ -995,7 +1016,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScopeWithCaller(s.filename, s.mode, s)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyDict, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
@@ -1128,13 +1149,11 @@ func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 		// This statement should be the root method call, from a possibly long callstack, at the original
 		// package level that generated the current build target.
 		stmtScope := s
-		for curr := s; curr != nil; curr = curr.caller {
-			if curr.pkg != nil && curr.pkg == s.pkg {
-				stmtScope = curr
-			}
+		for stmtScope.caller != nil {
+			stmtScope = stmtScope.caller
 		}
-		s.NAssert(stmtScope.metadata.cursor() == nil, "Cursor is not pointing to a statement")
-		return NewBuildStatement(stmtScope.metadata.cursor())
+		s.NAssert(stmtScope.packageMetadata.cursor() == nil, "Cursor is not pointing to a statement")
+		return NewBuildStatement(stmtScope.packageMetadata.cursor())
 	}
 }
 
@@ -1199,8 +1218,7 @@ type trackingScopeMetadata struct {
 	// symbolOrigins tracks the subinclude label that each symbol was originally defined in.
 	symbolOrigins map[string]core.BuildLabel
 	// symbolStack tracks which symbols are actively in use during evaluation.
-	// Symbols are pushed onto the stack during lookups and popped or truncated (restored) after
-	// function calls.
+	// Symbols are pushed onto the stack during lookups and popped/truncated after each statement.
 	symbolStack []trackedSymbol
 	callDepth   int
 }
@@ -1248,6 +1266,8 @@ func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package) {
 	for _, v := range m.symbolStack {
 		set.Add(v.origin)
 	}
+	// fmt.Printf("Symbol stack: %v\nSymbol Origins: %v\n", m.symbolStack, m.symbolOrigins)
+
 	deps := slices.Collect(maps.Keys(set))
 	pkg.Metadata.RegisterStatement(NewBuildStatement(m.stmtCursor), deps)
 }

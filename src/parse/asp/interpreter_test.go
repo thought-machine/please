@@ -778,45 +778,45 @@ func TestCurrentBuildStatement(t *testing.T) {
 	// Root statement in the BUILD file (e.g. a macro call)
 	rootStmt := &Statement{Pos: 10, EndPos: 20}
 	rootScope := &scope{
-		pkg:      pkg,
-		filename: pkg.Filename,
-		metadata: newScopeMetadata(),
+		pkg:             pkg,
+		filename:        pkg.Filename,
+		packageMetadata: newScopeMetadata(),
 	}
-	rootScope.metadata.setCursor(rootStmt)
+	rootScope.packageMetadata.setCursor(rootStmt)
 
 	// A nested call inside the same BUILD file (e.g. function def)
 	nestedStmt := &Statement{Pos: 30, EndPos: 40}
 	nestedScope := &scope{
-		pkg:      pkg,
-		filename: pkg.Filename,
-		caller:   rootScope,
-		metadata: newScopeMetadata(),
+		pkg:             pkg,
+		filename:        pkg.Filename,
+		caller:          rootScope,
+		packageMetadata: newScopeMetadata(),
 	}
-	nestedScope.metadata.setCursor(nestedStmt)
+	nestedScope.packageMetadata.setCursor(nestedStmt)
 
 	// A call from a different file (e.g. a function inside a subincluded .build_defs file)
 	defsRootStmt := &Statement{Pos: 50, EndPos: 60}
 	defsRootScope := &scope{
-		pkg:      pkg,
-		filename: "other/file.build_defs",
-		caller:   nestedScope,
-		metadata: newScopeMetadata(),
+		pkg:             pkg,
+		filename:        "other/file.build_defs",
+		caller:          nestedScope,
+		packageMetadata: newScopeMetadata(),
 	}
-	defsRootScope.metadata.setCursor(defsRootStmt)
+	defsRootScope.packageMetadata.setCursor(defsRootStmt)
 
 	// Another call deep in the other file
 	defsNestedStmt := &Statement{Pos: 70, EndPos: 80}
 	defsNestedScope := &scope{
-		pkg:      pkg,
-		filename: "other/file.build_defs",
-		caller:   defsRootScope,
-		metadata: newScopeMetadata(),
+		pkg:             pkg,
+		filename:        "other/file.build_defs",
+		caller:          defsRootScope,
+		packageMetadata: newScopeMetadata(),
 	}
-	defsNestedScope.metadata.setCursor(defsNestedStmt)
+	defsNestedScope.packageMetadata.setCursor(defsNestedStmt)
 
 	// A scope that has no pkg/filename context
-	standaloneScope := &scope{metadata: newScopeMetadata()}
-	standaloneScope.metadata.setCursor(rootStmt)
+	standaloneScope := &scope{packageMetadata: newScopeMetadata()}
+	standaloneScope.packageMetadata.setCursor(rootStmt)
 
 	t.Run("FindsRootStatementFromBUILD", func(t *testing.T) {
 		// Calling it from buildNestedScope should walk back to buildRootScope
@@ -839,59 +839,74 @@ func TestCurrentBuildStatement(t *testing.T) {
 func TestActiveSubincludes(t *testing.T) {
 	labelA := core.ParseBuildLabel("//pkg:labelA", "")
 	labelB := core.ParseBuildLabel("//pkg:labelB", "")
+	stmt := &Statement{Pos: 1, EndPos: 10}
 
 	t.Run("NoSubincludes", func(t *testing.T) {
+		pkg := core.NewPackage("pkg", core.WithPackageMetadata())
+		meta := newScopeMetadata()
 		// BUILD scope
 		scopeBUILD := &scope{
-			metadata: newScopeMetadata(),
+			packageMetadata: meta,
 		}
 		// Function execution
 		scopeFuncExec := &scope{
-			caller:   scopeBUILD,
-			metadata: newScopeMetadata(),
+			caller:          scopeBUILD,
+			packageMetadata: meta,
 		}
-		labels := scopeFuncExec.RequiredSubincludes()()
+		scopeFuncExec.packageMetadata.setCursor(stmt)
+		scopeFuncExec.packageMetadata.registerBuildStatement(pkg)
+
+		labels := pkg.Metadata.FindPackageRequiredSubincludes()
 		assert.Empty(t, labels)
 	})
 
 	t.Run("SingleSubinclude", func(t *testing.T) {
+		pkg := core.NewPackage("pkg", core.WithPackageMetadata())
+		meta := newScopeMetadata()
+
 		// File A scope
 		scopeA := &scope{
 			subincludeLabel: &labelA,
 			locals:          make(pyDict),
-			metadata:        newScopeMetadata(),
+			packageMetadata: meta,
 		}
 		scopeA.SetAllWithOrigin(pyDict{"foo": pyString("val")}, false, &labelA)
 
 		// Function defined in File A
 		scopeFuncDef := &scope{
-			parent:   scopeA,
-			metadata: newScopeMetadata(),
+			parent:          scopeA,
+			packageMetadata: meta,
 		}
 		// BUILD scope
 		scopeBUILD := &scope{
-			metadata: newScopeMetadata(),
+			packageMetadata: meta,
 		}
 		// Function execution
 		scopeFuncExec := &scope{
-			parent:   scopeFuncDef,
-			caller:   scopeBUILD,
-			metadata: newScopeMetadata(),
+			parent:          scopeFuncDef,
+			caller:          scopeBUILD,
+			packageMetadata: meta,
 		}
 
 		// Lookup triggers tracking of required subincludes
 		scopeFuncExec.Lookup("foo")
 
-		labels := scopeFuncExec.RequiredSubincludes()()
+		scopeFuncExec.packageMetadata.setCursor(stmt)
+		scopeFuncExec.packageMetadata.registerBuildStatement(pkg)
+
+		labels := pkg.Metadata.FindPackageRequiredSubincludes()
 		assert.Equal(t, core.BuildLabels{labelA}, labels)
 	})
 
 	t.Run("NestedSubincludes", func(t *testing.T) {
+		pkg := core.NewPackage("pkg", core.WithPackageMetadata())
+		meta := newScopeMetadata()
+
 		// File A scope
 		scopeA := &scope{
 			subincludeLabel: &labelA,
 			locals:          make(pyDict),
-			metadata:        newScopeMetadata(),
+			packageMetadata: meta,
 		}
 		scopeA.SetAllWithOrigin(pyDict{"varA": pyString("valA")}, false, &labelA)
 
@@ -900,31 +915,34 @@ func TestActiveSubincludes(t *testing.T) {
 			subincludeLabel: &labelB,
 			parent:          scopeA,
 			locals:          make(pyDict),
-			metadata:        newScopeMetadata(),
+			packageMetadata: meta,
 		}
 		scopeB.SetAllWithOrigin(pyDict{"varB": pyString("valB")}, false, &labelB)
 
 		// Function defined in File B
 		scopeFuncDef := &scope{
-			parent:   scopeB,
-			metadata: newScopeMetadata(),
+			parent:          scopeB,
+			packageMetadata: meta,
 		}
 		// BUILD scope
 		scopeBUILD := &scope{
-			metadata: newScopeMetadata(),
+			packageMetadata: meta,
 		}
 		// Function execution
 		scopeFuncExec := &scope{
-			parent:   scopeFuncDef,
-			caller:   scopeBUILD,
-			metadata: newScopeMetadata(),
+			parent:          scopeFuncDef,
+			caller:          scopeBUILD,
+			packageMetadata: meta,
 		}
 
 		// Lookups trigger tracking of required subincludes
 		scopeFuncExec.Lookup("varA")
 		scopeFuncExec.Lookup("varB")
 
-		labels := scopeFuncExec.RequiredSubincludes()()
+		scopeFuncExec.packageMetadata.setCursor(stmt)
+		scopeFuncExec.packageMetadata.registerBuildStatement(pkg)
+
+		labels := pkg.Metadata.FindPackageRequiredSubincludes()
 		assert.ElementsMatch(t, core.BuildLabels{labelA, labelB}, labels)
 	})
 }
