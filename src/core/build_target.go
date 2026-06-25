@@ -418,7 +418,7 @@ func (target *BuildTarget) String() string {
 
 // hashBuildTarget returns a mostly unique hash of a BuildTarget by relying on the BuildLabel hash.
 func hashBuildTarget(target *BuildTarget) uint64 {
-	return hashBuildLabel(target.Label)
+	return HashBuildLabel(target.Label)
 }
 
 // TmpDir returns the temporary working directory for this target, eg.

@@ -38,6 +38,8 @@ type interpreter struct {
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
+	// packageMetadata store scope level metadata for each package.
+	packageMetadata *cmap.Map[core.BuildLabel, scopeMetadata]
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -48,7 +50,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
-	s.packageMetadata = s.newScopeMetadata()
+	s.metadata = &noopScopeMetadata{}
 
 	i := &interpreter{
 		scope:      s,
@@ -66,6 +68,11 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		i.subincludes = cmap.NewErrMap[string, pyDict](cmap.SmallShardCount, cmap.XXHash, i.limiter)
 		i.asts = cmap.NewErrMap[string, []*Statement](cmap.SmallShardCount, cmap.XXHash, i.limiter)
 	}
+
+	if state.ParseMetadata {
+		i.packageMetadata = cmap.New[core.BuildLabel, scopeMetadata](cmap.SmallShardCount, core.HashBuildLabel)
+	}
+
 	s.interpreter = i
 	s.LoadSingletons(state)
 	return i
@@ -328,17 +335,14 @@ type scope struct {
 	parsingFor      *parseTarget
 	// parent points to the lexical parent of this scope. It is used for variable resolution
 	// and is nil for the root scope.
-	parent *scope
-	// caller points to the scope that initiated the call which created this scope.
-	// It is used to trace the call stack and is nil if not in a call stack.
-	caller  *scope
+	parent  *scope
 	locals  pyDict
 	config  *pyConfig
 	globber *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
-	Callback        bool
-	mode            core.ParseMode
-	packageMetadata scopeMetadata
+	Callback bool
+	mode     core.ParseMode
+	metadata scopeMetadata
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -440,18 +444,8 @@ func (s *scope) NewScope(filename string, mode core.ParseMode) *scope {
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint int) *scope {
 	newScope := s.newScope(pkg, mode, pkg.Filename, hint)
-	newScope.packageMetadata = newScope.newScopeMetadata()
+	newScope.metadata = newScope.getOrNewMetadata(pkg)
 	return newScope
-}
-
-func (s *scope) NewScopeWithCaller(filename string, mode core.ParseMode, caller *scope) *scope {
-	return s.newScopeWithCaller(s.pkg, mode, filename, 0, caller)
-}
-
-func (s *scope) newScopeWithCaller(pkg *core.Package, mode core.ParseMode, filename string, hint int, caller *scope) *scope {
-	ns := s.newScope(pkg, mode, filename, hint)
-	ns.caller = caller
-	return ns
 }
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
@@ -469,18 +463,12 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		mode:        mode,
 		// We only track metadata at the top level scope created with [scope.NewPackagedScope], every
 		// other child scope or non-packaged (e.g. subincludes) defaults to a noop implementation.
-		packageMetadata: &noopScopeMetadata{},
+		metadata: &noopScopeMetadata{},
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
 	}
 	return s2
-}
-
-// IsPackageScope returns true if this scope is the package scope
-// (i.e. we are interpreting the build file directly and not inside any call).
-func (s *scope) IsPackageScope() bool {
-	return s.caller == nil && s.subincludeLabel == nil && s.pkg != nil
 }
 
 // Error emits an error that stops further interpretation.
@@ -507,8 +495,8 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
 	if obj, present := s.locals[name]; present {
-		orig := s.packageMetadata.origin(s, name)
-		s.packageMetadata.pushSymbol(name, orig)
+		orig := s.metadata.origin(s, name)
+		s.metadata.pushSymbol(name, orig)
 		return obj
 	} else if s.parent != nil {
 		return s.parent.Lookup(name)
@@ -546,7 +534,7 @@ func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLa
 		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
 			if origin != nil {
-				s.packageMetadata.setSymbolOrigin(k, *origin)
+				s.metadata.setSymbolOrigin(k, *origin)
 			}
 		}
 	}
@@ -585,7 +573,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 	}()
 	for _, stmt = range statements {
-		s.packageMetadata.setCursor(stmt)
+		s.metadata.setCursor(stmt)
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -629,8 +617,8 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		} else {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
 		}
-		s.packageMetadata.registerBuildStatement(s.pkg)
-		s.packageMetadata.resetSymbolStack()
+		s.metadata.registerBuildStatement(s.pkg)
+		s.metadata.resetSymbolStack()
 	}
 	return nil
 }
@@ -772,7 +760,7 @@ func (s *scope) interpretJoin(base string, list *List) pyObject {
 	}
 	// Has a comprehension. Note that there is only ever one level; by the anecdata, two-level ones
 	// are rare in this context so not worth worrying about here.
-	cs := s.NewScopeWithCaller(s.filename, s.mode, s)
+	cs := s.NewScope(s.filename, s.mode)
 	it := s.iterable(list.Comprehension.Expr)
 	first := true
 	cs.evaluateComprehension(it, list.Comprehension, func(li pyObject) {
@@ -995,7 +983,7 @@ func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
-	cs := s.NewScopeWithCaller(s.filename, s.mode, s)
+	cs := s.NewScope(s.filename, s.mode)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyList, 0, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
@@ -1016,7 +1004,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	cs := s.NewScopeWithCaller(s.filename, s.mode, s)
+	cs := s.NewScope(s.filename, s.mode)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyDict, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
@@ -1145,15 +1133,11 @@ func (s *scope) Constant(expr *Expression) pyObject {
 // metadata is not being tracked.
 func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 	return func() core.BuildStatement {
-		// We walk back on the callstack until we find the highest-level function call in the package file.
-		// This statement should be the root method call, from a possibly long callstack, at the original
-		// package level that generated the current build target.
-		stmtScope := s
-		for stmtScope.caller != nil {
-			stmtScope = stmtScope.caller
-		}
-		s.NAssert(stmtScope.packageMetadata.cursor() == nil, "Cursor is not pointing to a statement")
-		return NewBuildStatement(stmtScope.packageMetadata.cursor())
+		// We lookup the package metadata from the interpreter table no matter how deep we are in the
+		// call stack. We do this to avoid a recursive lookup from leaf scopes to the top level package scope.
+		meta := s.interpreter.packageMetadata.Get(s.pkg.Label())
+		s.NAssert(meta.cursor() == nil, "Cursor is not pointing to a statement")
+		return NewBuildStatement(meta.cursor())
 	}
 }
 
@@ -1165,25 +1149,32 @@ func (s *scope) pkgFilename() string {
 	return ""
 }
 
-// newScopeMetadata creates and returns a initialized scopeMetadata instance. It will return
-// a no-op implementation if state.ParseMetadata is not set or if we simply want to skip the
-// tracking for a certain scope.
-func (s *scope) newScopeMetadata() scopeMetadata {
-	if !s.state.ParseMetadata ||
-		s.pkg == nil ||
-		s.pkg.Subrepo.IsExternal() {
-		// Skip metadata tracking if:
-		// 1. ParseMetadata flag is disabled;
-		// 2. Not interpreting a package (e.g. in subincluded targets)
-		// 3. Any external/remote subrepos.
-		// For 2 and 3, we never trim these, so avoiding tracking saves CPU and memory.
-		return &noopScopeMetadata{}
+// getOrNewMetadata creates and returns a initialized scopeMetadata instance, or pulls an existing
+// metadata instance for that package from the interpreter package metadata table. It will return
+// a no-op implementation if we simply want to skip tracking for a certain scope.
+func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
+	// Skip metadata tracking if:
+	// 1. ParseMetadata flag is disabled;
+	// 2. Not interpreting a package (e.g. in subincluded targets)
+	// 3. Any external/remote subrepos.
+	// For 2 and 3, we never trim these, so avoiding tracking saves CPU and memory.
+	var meta scopeMetadata = &noopScopeMetadata{}
+	if s.interpreter.packageMetadata == nil { // This will be initialized if ParseMetadata is set.
+		return meta
 	}
 
-	return &trackingScopeMetadata{
-		// symbolOrigins is lazy initialized in [setSymbolOrigin]
-		symbolStack: []trackedSymbol{},
+	if pkg == nil || pkg.Subrepo.IsExternal() {
+		return meta
 	}
+
+	meta, _ = s.interpreter.packageMetadata.AddOrGet(pkg.Label(), func() scopeMetadata {
+		return &trackingScopeMetadata{
+			// symbolOrigins is lazy initialized in [setSymbolOrigin]
+			symbolStack: []trackedSymbol{},
+		}
+	})
+	return meta
+
 }
 
 // scopeMetadata defines an interface for tracking evaluation metadata (such as AST cursor position
