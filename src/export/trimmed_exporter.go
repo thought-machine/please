@@ -112,7 +112,10 @@ func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 	// by our used subinclude targets. FindRequiredSubincludes will report the required subincludes
 	// for this target at the package level but we need to propagate the subincluded targets inside
 	// build definitions since we are not trimming build_defs files.
-	usedSubincludes := pkg.Metadata.FindRequiredSubincludes(target)
+	usedSubincludes, err := pkg.Metadata.FindRequiredSubincludes(target)
+	if err != nil {
+		log.Fatalf("failed to find required subincludes for target %s: %s", target, err)
+	}
 	e.setPackageSubincludes(pkg, usedSubincludes)
 
 	allSubincludes := usedSubincludes
@@ -160,7 +163,10 @@ func (e *trimmedExporter) setPackageSubincludes(pkg *core.Package, subincludes c
 // all co-defined targets are preserved in the exported BUILD file, preventing unresolved references
 // or partial declarations.
 func (e *trimmedExporter) exportRelatedTargets(pkg *core.Package, target *core.BuildTarget) {
-	relatedTargets := pkg.Metadata.FindRelatedTargets(target)
+	relatedTargets, err := pkg.Metadata.FindRelatedTargets(target)
+	if err != nil {
+		log.Fatalf("failed to find related targets for %s: %s", target, err)
+	}
 	log.Debugf("Exporting targets related to %s: %v", target, relatedTargets)
 	e.exportTargets(relatedTargets)
 }

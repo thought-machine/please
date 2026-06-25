@@ -140,7 +140,7 @@ func (t *trimmer) trimFor(stmt *asp.Statement) {
 
 func (t *trimmer) trimSubinclude(stmt *asp.Statement) {
 	bStmt := asp.NewBuildStatement(stmt)
-	stmtLabels := t.pkg.Metadata.GetSubincludedLabels(&bStmt)
+	stmtLabels := t.pkg.Metadata.GetSubincludedLabels(bStmt)
 	subStmt := t.minimalSubincludeStatement(stmtLabels)
 	t.write([]byte(subStmt))
 }
@@ -189,7 +189,7 @@ func (t *trimmer) isRequiredStatement(stmt *asp.Statement) bool {
 
 func (t *trimmer) relatedTargets(stmt *asp.Statement) []*core.BuildTarget {
 	bStmt := asp.NewBuildStatement(stmt)
-	return t.pkg.Metadata.FindTargets(&bStmt)
+	return t.pkg.Metadata.FindTargets(bStmt)
 }
 
 func (t *trimmer) anyExported(targets []*core.BuildTarget) bool {

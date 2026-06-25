@@ -16,7 +16,7 @@ custom(
 )
 
 custom(
-    name = "unneded",
-    srcs = ["unneded.in"],
-    outs = ["unneded.out"],
+    name = "unused",
+    srcs = ["unused.in"],
+    outs = ["unused.out"],
 )

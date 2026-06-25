@@ -694,19 +694,19 @@ func (f *pyFunc) String() string {
 func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
-			callScope := s.NewScope("<builtin code>", 0)
-			callScope.caller = s
-			return f.callNative(callScope, c)
+			cs := s.NewScope("<builtin code>", 0)
+			cs.caller = s
+			return f.callNative(cs, c)
 		}
 		return f.callNative(s, c)
 	}
 
-	callScope := f.scope.newScope(s.pkg, s.mode, f.scope.filename, len(f.args)+1)
-	callScope.caller = s // registering previous scope as caller
-	callScope.config = s.config
-	callScope.Set("CONFIG", s.config) // This needs to be copied across too :(
-	callScope.Callback = s.Callback
-	callScope.parsingFor = s.parsingFor
+	cs := f.scope.newScope(s.pkg, s.mode, f.scope.filename, len(f.args)+1)
+	cs.caller = s // registering previous scope as caller
+	cs.config = s.config
+	cs.Set("CONFIG", s.config) // This needs to be copied across too :(
+	cs.Callback = s.Callback
+	cs.parsingFor = s.parsingFor
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments
 	if f.self != nil {
@@ -724,23 +724,23 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 			if present {
 				name = f.args[idx]
 			}
-			callScope.Set(name, f.validateType(s, idx, &a.Value))
+			cs.Set(name, f.validateType(s, idx, &a.Value))
 		} else {
 			if i >= len(f.args) {
 				s.Error("Too many arguments to %s", f.name)
 			} else if f.kwargsonly {
 				s.Error("Function %s can only be called with keyword arguments", f.name)
 			}
-			callScope.Set(f.args[i], f.validateType(s, i, &a.Value))
+			cs.Set(f.args[i], f.validateType(s, i, &a.Value))
 		}
 	}
 	// Now make sure any arguments with defaults are set, and check any others have been passed.
 	for i, a := range f.args {
-		if callScope.LocalLookup(a) == nil {
-			callScope.Set(a, f.defaultArg(s, i, a))
+		if cs.LocalLookup(a) == nil {
+			cs.Set(a, f.defaultArg(s, i, a))
 		}
 	}
-	ret := callScope.interpretStatements(f.code)
+	ret := cs.interpretStatements(f.code)
 	if ret == nil {
 		return None // Implicit 'return None' in any function that didn't do that itself.
 	}
