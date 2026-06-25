@@ -695,14 +695,12 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
 			cs := s.NewScope("<builtin code>", 0)
-			cs.caller = s
 			return f.callNative(cs, c)
 		}
 		return f.callNative(s, c)
 	}
 
 	cs := f.scope.newScope(s.pkg, s.mode, f.scope.filename, len(f.args)+1)
-	cs.caller = s // registering previous scope as caller
 	cs.config = s.config
 	cs.Set("CONFIG", s.config) // This needs to be copied across too :(
 	cs.Callback = s.Callback

@@ -473,7 +473,8 @@ func subrepoLabel(subrepoName, arch string) BuildLabel {
 	return BuildLabel{Name: subrepoName, Subrepo: arch}
 }
 
-func hashBuildLabel(l BuildLabel) uint64 {
+// HashBuildLabel calculates an hash of Build Label, suitable to use for map indexing.
+func HashBuildLabel(l BuildLabel) uint64 {
 	return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
 }
 
