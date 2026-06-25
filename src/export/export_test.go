@@ -153,6 +153,12 @@ func TestStatementTrim(t *testing.T) {
 			expected: "src/export/test_data/trim_for_expected_a.build",
 		},
 		{
+			name:     "Target not required in for - loop body has a pass",
+			content:  "src/export/test_data/trim_for.build",
+			required: []string{},
+			expected: "src/export/test_data/trim_for_expected_none.build",
+		},
+		{
 			name:     "Required if stmt in for",
 			content:  "src/export/test_data/trim_for_if.build",
 			required: []string{"a"},

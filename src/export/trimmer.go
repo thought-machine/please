@@ -10,6 +10,8 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
+var passExpression = []byte("pass  # Trimmed during export")
+
 // trimmer implements the filtering logic for statements in package files.
 type trimmer struct {
 	// origin are the bytes from the original package file.
@@ -51,26 +53,35 @@ func (t *trimmer) walkFile(stmts []*asp.Statement, start, end asp.Position, cons
 }
 
 // trimBlock visits all the statements in a block and trims undesired statements.
-func (t *trimmer) trimBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Position) {
+func (t *trimmer) trimBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Position) bool {
+	var written bool
 	t.walkFile(stmts, blockStart, blockEnd, func(stmt *asp.Statement) {
 		if stmt.If != nil {
-			t.trimIf(stmt)
+			if t.trimIf(stmt) {
+				written = true
+			}
 		} else if stmt.For != nil {
-			t.trimFor(stmt)
+			if t.trimFor(stmt) {
+				written = true
+			}
 		} else if stmt.Ident != nil && stmt.Ident.Name == "subinclude" {
 			t.trimSubinclude(stmt)
+			written = true
 		} else if relatives := t.relatedTargets(stmt); len(relatives) > 0 {
 			// Meaning it is a build statement that creates build targets.
 			if t.anyExported(relatives) {
 				t.copy(stmt.Pos, stmt.EndPos)
+				written = true
 			}
 		} else {
 			// Write every other statement.
 			// If the statement didn't generate any targets (e.g. variable assignments, package() calls),
 			// we keep it to ensure the BUILD file remains valid.
 			t.copy(stmt.Pos, stmt.EndPos)
+			written = true
 		}
 	})
+	return written
 }
 
 // trimIf will trim an if-else statement by exporting only the required targets, but keeping the
@@ -127,15 +138,19 @@ func (t *trimmer) trimIf(stmt *asp.Statement) bool {
 	return true
 }
 
-func (t *trimmer) trimFor(stmt *asp.Statement) {
-	if len(stmt.For.Statements) == 0 || !t.isRequiredStatement(stmt) {
-		return
+func (t *trimmer) trimFor(stmt *asp.Statement) bool {
+	if len(stmt.For.Statements) == 0 {
+		return false
 	}
 
 	hStart, hEnd := stmt.Pos, stmt.For.Statements[0].Pos
 	t.copy(hStart, hEnd)
 
-	t.trimBlock(stmt.For.Statements, hEnd, stmt.EndPos)
+	written := t.trimBlock(stmt.For.Statements, hEnd, stmt.EndPos)
+	if !written {
+		t.write(passExpression)
+	}
+	return true
 }
 
 func (t *trimmer) trimSubinclude(stmt *asp.Statement) {
@@ -154,7 +169,7 @@ func (t *trimmer) passBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Pos
 		// the "pass" primitive. This is useful when parsing inner blocks (e.g. if-else stmts).
 		if !passWritten {
 			passWritten = true
-			t.write([]byte("pass  # Trimmed during export"))
+			t.write(passExpression)
 		}
 	})
 }
