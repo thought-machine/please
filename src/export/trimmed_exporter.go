@@ -79,8 +79,8 @@ func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 		log.Errorf("Unable to lookup package %s", target.Label)
 		return
 	}
-	e.exportSubincludes(pkg, target)
-	e.exportRelatedTargets(pkg, target)
+	e.exportSubincludes(pkg, target.Label)
+	e.exportRelatedTargets(pkg, target.Label)
 
 	if !e.visitedPackages[pkg.Label()] {
 		// Export subincluded targets required for other package statements, e.g. variable
@@ -107,7 +107,7 @@ func (e *trimmedExporter) writePackageFiles() {
 
 // exportSubincludes exports the subincluded targets required to generate the target and selects them to
 // later be written to the package as statements.
-func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target *core.BuildTarget) {
+func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target core.BuildLabel) {
 	// Get the actively used subincludes of the target and propagate all transitive subincludes required
 	// by our used subinclude targets. FindRequiredSubincludes will report the required subincludes
 	// for this target at the package level but we need to propagate the subincluded targets inside
@@ -163,7 +163,7 @@ func (e *trimmedExporter) setPackageSubincludes(pkg *core.Package, subincludes c
 // build statement (e.g., adjacent targets in build def) as the specified target. This ensures that
 // all co-defined targets are preserved in the exported BUILD file, preventing unresolved references
 // or partial declarations.
-func (e *trimmedExporter) exportRelatedTargets(pkg *core.Package, target *core.BuildTarget) {
+func (e *trimmedExporter) exportRelatedTargets(pkg *core.Package, target core.BuildLabel) {
 	relatedTargets, err := pkg.Metadata.FindRelatedTargets(target)
 	if err != nil {
 		log.Fatalf("failed to find related targets for %s: %s", target, err)

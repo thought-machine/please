@@ -218,7 +218,7 @@ func walkASTRegisterTargets(t *testing.T, stmts []*asp.Statement, pkg *core.Pack
 		label := core.NewBuildLabel(pkg.Name, name)
 		targetLabels[name] = label
 		target := &core.BuildTarget{Label: label}
-		pkg.Metadata.RegisterStatementTarget(target, func() core.BuildStatement {
+		pkg.Metadata.RegisterStatementTarget(target.Label, func() core.BuildStatement {
 			return asp.NewBuildStatement(stmt)
 		})
 		return true
