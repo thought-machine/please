@@ -167,7 +167,7 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 		paths := src.Paths(be.state.Graph)
 		if target.Subrepo != nil { // Adjusting fo for local subrepos
 			for i, p := range paths {
-				paths[i] = filepath.Join(be.targetDir, target.Subrepo.Dir(p))
+				paths[i] = target.Subrepo.Dir(p)
 			}
 		}
 		be.exportFiles(paths)

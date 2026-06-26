@@ -67,9 +67,9 @@ func (t *trimmer) trimBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Pos
 		} else if stmt.Ident != nil && stmt.Ident.Name == "subinclude" {
 			t.trimSubinclude(stmt)
 			written = true
-		} else if relatives := t.relatedTargets(stmt); len(relatives) > 0 {
+		} else if targets := t.statementTargets(stmt); len(targets) > 0 {
 			// Meaning it is a build statement that creates build targets.
-			if t.anyExported(relatives) {
+			if t.anyExported(targets) {
 				t.copy(stmt.Pos, stmt.EndPos)
 				written = true
 			}
@@ -81,6 +81,9 @@ func (t *trimmer) trimBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Pos
 			written = true
 		}
 	})
+	if !written {
+		t.write(passExpression)
+	}
 	return written
 }
 
@@ -106,18 +109,14 @@ func (t *trimmer) trimIf(stmt *asp.Statement) bool {
 	}
 
 	// In an if-else statement only the interpreted/evaluated block will generate targets, meaning
-	// that normally only one of the clauses is interpreted, however an if stmt could be inside of
+	// that normally only one of the clauses is interpreted, however an if statement could be inside of
 	// a loop where the clause condition depends on the iteration meaning more than one clause
 	// could end up being interpreted. Because of that we lookup all the required clauses before
-	// writing the statement.
+	// writing the statement. Any clauses with interpreted statements should be visited.
 	var requiredClauses = make([]bool, len(clauses))
 	for i, c := range clauses {
 		required := t.isRequiredStatements(c.stmts)
 		requiredClauses[i] = required
-	}
-	// No clause is required, skip the if-else stmt entirely
-	if !slices.Contains(requiredClauses, true) {
-		return false
 	}
 
 	for i, c := range clauses {
@@ -146,10 +145,7 @@ func (t *trimmer) trimFor(stmt *asp.Statement) bool {
 	hStart, hEnd := stmt.Pos, stmt.For.Statements[0].Pos
 	t.copy(hStart, hEnd)
 
-	written := t.trimBlock(stmt.For.Statements, hEnd, stmt.EndPos)
-	if !written {
-		t.write(passExpression)
-	}
+	t.trimBlock(stmt.For.Statements, hEnd, stmt.EndPos)
 	return true
 }
 
@@ -174,10 +170,15 @@ func (t *trimmer) passBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Pos
 	})
 }
 
+// isRequiredStatement determines if it is necessary to visit any of the statements. Refer to
+// [isRequiredStatement] for the decision logic.
 func (t *trimmer) isRequiredStatements(stmts []*asp.Statement) bool {
 	return slices.ContainsFunc(stmts, t.isRequiredStatement)
 }
 
+// isRequiredStatement determines if it is necessary to visit a statement. Any statement that was
+// interpreted needs to be visited but the trimming logic of the visitor should determine if we need
+// to write it or not.
 func (t *trimmer) isRequiredStatement(stmt *asp.Statement) bool {
 	if stmt.If != nil {
 		// If
@@ -199,10 +200,10 @@ func (t *trimmer) isRequiredStatement(stmt *asp.Statement) bool {
 	} else if stmt.For != nil {
 		return t.isRequiredStatements(stmt.For.Statements)
 	}
-	return t.anyExported(t.relatedTargets(stmt))
+	return t.pkg.Metadata.IsInterpretedStatement(asp.NewBuildStatement(stmt))
 }
 
-func (t *trimmer) relatedTargets(stmt *asp.Statement) core.BuildLabels {
+func (t *trimmer) statementTargets(stmt *asp.Statement) core.BuildLabels {
 	bStmt := asp.NewBuildStatement(stmt)
 	return t.pkg.Metadata.FindTargets(bStmt)
 }

@@ -82,6 +82,9 @@ type PackageMetadata interface {
 	// GetSubincludedLabels returns all build labels that were included by the given subinclude statement.
 	// Returns the labels or an empty slice if the statement wasn't found.
 	GetSubincludedLabels(stmt BuildStatement) BuildLabels
+	// IsInterpretedStatement returns true if the statement provided matches a registered build
+	// statement, meaning it was interpreted even if it doesn't generate any targets.
+	IsInterpretedStatement(stmt BuildStatement) bool
 }
 
 // packageMetadataImpl is the canonical implementation of the PackageMetadata interface.
@@ -127,6 +130,9 @@ func (m *packageMetadataImpl) RegisterStatement(stmt BuildStatement, deps BuildL
 	if len(files) > 0 {
 		m.stmtToRequiredFiles.Set(stmt, files)
 	}
+	// Even if the statement doesn't create any target, it is important to register so we now it was
+	// interpreted. We'll register the targets separately and use the Add() method to avoid overriding any existing statement to target mapping.
+	m.stmtToTarget.Add(stmt, BuildLabels{})
 }
 
 // RegisterStatementTarget implements [PackageMetadata].
@@ -180,7 +186,6 @@ func (m *packageMetadataImpl) FindRelatedTargets(target BuildLabel) (BuildLabels
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Printf("STMT to Target mapping %v\n", m.stmtToTarget.Values())
 	relatedTargets := m.FindTargets(stmt)
 	labels := make(BuildLabels, 0, len(relatedTargets))
 	for _, l := range relatedTargets {
@@ -197,7 +202,7 @@ func (m *packageMetadataImpl) FindPackageFileRequirements() (BuildLabels, []stri
 	m.stmtToRequiredSubincludes.Range(func(stmt BuildStatement, labels BuildLabels) {
 		// Look for build statements that are not registered in the statement to targets mapping,
 		// and so are unrelated to targets.
-		if !m.stmtToTarget.Contains(stmt) {
+		if len(m.stmtToTarget.Get(stmt)) == 0 {
 			for _, label := range labels {
 				subincludesSet.Add(label)
 			}
@@ -219,6 +224,11 @@ func (m *packageMetadataImpl) FindPackageFileRequirements() (BuildLabels, []stri
 // GetSubincludedLabels implements [PackageMetadata].
 func (m *packageMetadataImpl) GetSubincludedLabels(stmt BuildStatement) BuildLabels {
 	return m.labelsPerSubincludeStmt.Get(stmt)
+}
+
+// IsInterpretedStatement implements [PackageMetadata].
+func (m *packageMetadataImpl) IsInterpretedStatement(stmt BuildStatement) bool {
+	return m.stmtToTarget.Contains(stmt)
 }
 
 // noopPackageMetadata implements the PackageMetadata interface with no-op methods. This is the
