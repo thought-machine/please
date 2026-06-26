@@ -164,20 +164,27 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 		if _, ok := src.Label(); ok {
 			continue // These will be handled as dependencies later
 		}
-		for _, p := range src.Paths(be.state.Graph) {
-			if filepath.IsAbs(p) { // Don't copy system file deps.
-				log.Debugf("System dependency detected, skipping...: %s", p)
-				continue
+		paths := src.Paths(be.state.Graph)
+		if target.Subrepo != nil { // Adjusting fo for local subrepos
+			for i, p := range paths {
+				paths[i] = filepath.Join(be.targetDir, target.Subrepo.Dir(p))
 			}
-			dest := filepath.Join(be.targetDir, p)
-			if target.Subrepo != nil { // Adjusting fo for local subrepos
-				dest = filepath.Join(be.targetDir, target.Subrepo.Dir(p))
-			}
-			if err := fs.RecursiveCopy(p, dest, 0); err != nil {
-				log.Warningf("Error copying file, skipping...: %s", err)
-			}
-			log.Debugf("Writing exported source file: %s", p)
 		}
+		be.exportFiles(paths)
+	}
+}
+
+func (be *baseExporter) exportFiles(paths []string) {
+	for _, p := range paths {
+		if filepath.IsAbs(p) { // Don't copy system file deps.
+			log.Debugf("System dependency detected, skipping...: %s", p)
+			continue
+		}
+		dest := filepath.Join(be.targetDir, p)
+		if err := fs.RecursiveCopy(p, dest, 0); err != nil {
+			log.Warningf("Error copying file, skipping...: %s", err)
+		}
+		log.Debugf("Writing exported source file: %s", p)
 	}
 }
 
