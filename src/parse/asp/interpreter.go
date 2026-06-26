@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"maps"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -618,7 +619,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
 		}
 		s.metadata.registerBuildStatement(s.pkg)
-		s.metadata.resetSymbolStack()
+		s.metadata.resetStacks()
 	}
 	return nil
 }
@@ -1196,10 +1197,12 @@ type scopeMetadata interface {
 	registerBuildStatement(pkg *core.Package)
 	// setSymbolOrigin registers the subinclude origin label for a defined symbol.
 	setSymbolOrigin(name string, origin core.BuildLabel)
-	// resetSymbolStack cleans the symbol stack into an empty state.
-	resetSymbolStack()
+	// resetStacks cleans the symbol stack into an empty state.
+	resetStacks()
 	// pushSymbol pushes a symbol name and its subinclude origin onto the active tracking stack.
 	pushSymbol(name string, origin *core.BuildLabel)
+	// pushFiles pushes a slice of filenames onto the active tracking stack.
+	pushFiles(rootPath string, filenames []string)
 }
 
 // trackingScopeMetadata implements the interface [scopeMetadata].
@@ -1211,7 +1214,9 @@ type trackingScopeMetadata struct {
 	// symbolStack tracks which symbols are actively in use during evaluation.
 	// Symbols are pushed onto the stack during lookups and popped/truncated after each statement.
 	symbolStack []trackedSymbol
-	callDepth   int
+	// fileStack track which files are required during the evaluation of the current statement.
+	// These are pushed during native calls such as glob() and popped/truncated after each top level statement.
+	fileStack []string
 }
 
 type trackedSymbol struct {
@@ -1257,15 +1262,15 @@ func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package) {
 	for _, v := range m.symbolStack {
 		set.Add(v.origin)
 	}
-	// fmt.Printf("Symbol stack: %v\nSymbol Origins: %v\n", m.symbolStack, m.symbolOrigins)
 
 	deps := slices.Collect(maps.Keys(set))
-	pkg.Metadata.RegisterStatement(NewBuildStatement(m.stmtCursor), deps)
+	pkg.Metadata.RegisterStatement(NewBuildStatement(m.stmtCursor), deps, m.fileStack)
 }
 
-// resetSymbolStack implements [scopeMetadata].
-func (m *trackingScopeMetadata) resetSymbolStack() {
+// resetStacks implements [scopeMetadata].
+func (m *trackingScopeMetadata) resetStacks() {
 	m.symbolStack = m.symbolStack[:0]
+	m.fileStack = m.fileStack[:0]
 }
 
 // setCursor implements [scopeMetadata].
@@ -1291,6 +1296,13 @@ func (m *trackingScopeMetadata) pushSymbol(name string, origin *core.BuildLabel)
 	m.symbolStack = append(m.symbolStack, trackedSymbol{name: name, origin: *origin})
 }
 
+// pushFiles implements [scopeMetadata].
+func (m *trackingScopeMetadata) pushFiles(rootPath string, filenames []string) {
+	for _, filename := range filenames {
+		m.fileStack = append(m.fileStack, path.Join(rootPath, filename))
+	}
+}
+
 // noopScopeMetadata implements the scopeMetadata interface with no-op methods. This is used to
 // avoid the overhead of storing metadata for operations that don't depend on it.
 type noopScopeMetadata struct{}
@@ -1304,8 +1316,8 @@ func (nm *noopScopeMetadata) origin(scope *scope, name string) *core.BuildLabel 
 // registerBuildStatement implements [scopeMetadata].
 func (nm *noopScopeMetadata) registerBuildStatement(pkg *core.Package) {}
 
-// resetSymbolStack implements [scopeMetadata].
-func (nm *noopScopeMetadata) resetSymbolStack() {}
+// resetStacks implements [scopeMetadata].
+func (nm *noopScopeMetadata) resetStacks() {}
 
 // setCursor implements [scopeMetadata].
 func (nm *noopScopeMetadata) setCursor(stmt *Statement) {}
@@ -1315,6 +1327,9 @@ func (nm *noopScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel
 
 // pushSymbol implements [scopeMetadata].
 func (nm *noopScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {}
+
+// pushFiles implements [scopeMetadata].
+func (nm *noopScopeMetadata) pushFiles(rootPath string, filenames []string) {}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {

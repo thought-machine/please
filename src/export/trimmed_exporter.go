@@ -85,7 +85,7 @@ func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 	if !e.visitedPackages[pkg.Label()] {
 		// Export subincluded targets required for other package statements, e.g. variable
 		// declaration, during the first visit of a package.
-		e.exportPackageSubincludes(pkg)
+		e.exportPackageRequirements(pkg)
 		e.visitedPackages[pkg.Label()] = true
 	}
 }
@@ -131,12 +131,13 @@ func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target *core.Buil
 	e.exportTargets(allSubincludes)
 }
 
-// exportPackageSubincludes exports the subincluded targets that are required by package but are not
-// linked to any [core.BuildTarget].
-func (e *trimmedExporter) exportPackageSubincludes(pkg *core.Package) {
-	subincludes := pkg.Metadata.FindPackageRequiredSubincludes()
+// exportPackageRequirements exports any extra package requirements, for example the subincluded
+// targets and files that are required by package but are not linked to any [core.BuildTarget].
+func (e *trimmedExporter) exportPackageRequirements(pkg *core.Package) {
+	subincludes, files := pkg.Metadata.FindPackageFileRequirements()
 	e.setPackageSubincludes(pkg, subincludes)
 	e.exportTargets(subincludes)
+	e.exportFiles(files)
 }
 
 // setPackageSubincludes marks the package-level required subincludes after the export. This will be
