@@ -202,14 +202,14 @@ func (t *trimmer) isRequiredStatement(stmt *asp.Statement) bool {
 	return t.anyExported(t.relatedTargets(stmt))
 }
 
-func (t *trimmer) relatedTargets(stmt *asp.Statement) []*core.BuildTarget {
+func (t *trimmer) relatedTargets(stmt *asp.Statement) core.BuildLabels {
 	bStmt := asp.NewBuildStatement(stmt)
 	return t.pkg.Metadata.FindTargets(bStmt)
 }
 
-func (t *trimmer) anyExported(targets []*core.BuildTarget) bool {
-	required := slices.ContainsFunc(targets, func(target *core.BuildTarget) bool {
-		return t.exporter.exportedTargets[target.Label]
+func (t *trimmer) anyExported(labels core.BuildLabels) bool {
+	required := slices.ContainsFunc(labels, func(l core.BuildLabel) bool {
+		return t.exporter.exportedTargets[l]
 	})
 	return required
 }

@@ -210,7 +210,7 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
 	s.state.AddTarget(s.pkg, target)
-	s.pkg.Metadata.RegisterStatementTarget(target, s.CurrentBuildStatement())
+	s.pkg.Metadata.RegisterStatementTarget(target.Label, s.CurrentBuildStatement())
 
 	if s.Callback {
 		target.AddedPostBuild = true
