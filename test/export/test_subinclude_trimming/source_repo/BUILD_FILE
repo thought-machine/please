@@ -48,3 +48,14 @@ genrule(
     outs = ["format.out"],
     cmd = f'echo "{message}" > $OUT',
 )
+
+subinclude(
+    "//build_defs:versions_build_def",
+)
+
+for version, name in VERSIONS.items():
+    genrule(
+        name = f"version-{version}",
+        outs = [f"version-{version}.out"],
+        cmd = f'echo "{name}" > $OUT',
+    )

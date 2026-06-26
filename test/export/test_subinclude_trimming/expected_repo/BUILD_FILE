@@ -25,3 +25,8 @@ message = "Testing {service} on {env}".format(
     env = "production",
     service = var3,
 )
+
+subinclude("//build_defs:versions_build_def")
+
+for version, name in VERSIONS.items():
+    pass  # Trimmed during export
