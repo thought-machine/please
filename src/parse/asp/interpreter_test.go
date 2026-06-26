@@ -807,7 +807,7 @@ func TestActiveSubincludes(t *testing.T) {
 			metadata: meta,
 		}
 		scopeFuncExec.metadata.setCursor(stmt)
-		scopeFuncExec.metadata.registerBuildStatement(pkg)
+		scopeFuncExec.metadata.registerBuildStatement(pkg, stmt)
 
 		labels, _ := pkg.Metadata.FindPackageFileRequirements()
 		assert.Empty(t, labels)
@@ -841,7 +841,7 @@ func TestActiveSubincludes(t *testing.T) {
 		scopeFuncExec.Lookup("foo")
 
 		scopeFuncExec.metadata.setCursor(stmt)
-		scopeFuncExec.metadata.registerBuildStatement(pkg)
+		scopeFuncExec.metadata.registerBuildStatement(pkg, stmt)
 
 		labels, _ := pkg.Metadata.FindPackageFileRequirements()
 		assert.Equal(t, core.BuildLabels{labelA}, labels)
@@ -885,7 +885,7 @@ func TestActiveSubincludes(t *testing.T) {
 		scopeFuncExec.Lookup("varB")
 
 		scopeFuncExec.metadata.setCursor(stmt)
-		scopeFuncExec.metadata.registerBuildStatement(pkg)
+		scopeFuncExec.metadata.registerBuildStatement(pkg, stmt)
 
 		labels, _ := pkg.Metadata.FindPackageFileRequirements()
 		assert.ElementsMatch(t, core.BuildLabels{labelA, labelB}, labels)

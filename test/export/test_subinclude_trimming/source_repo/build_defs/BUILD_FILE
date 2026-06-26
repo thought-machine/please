@@ -27,3 +27,9 @@ filegroup(
     srcs = ["unused.build_defs"],
     visibility = ["PUBLIC"],
 )
+
+filegroup(
+    name = "versions_build_def",
+    srcs = ["versions.build_defs"],
+    visibility = ["PUBLIC"],
+)

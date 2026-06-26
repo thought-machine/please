@@ -575,6 +575,8 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 	}()
 	for _, stmt = range statements {
 		s.metadata.setCursor(stmt)
+		symbolStackCheckpoint, fileStackCheckpoint := s.metadata.checkpoint()
+
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
@@ -618,8 +620,9 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		} else {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
 		}
-		s.metadata.registerBuildStatement(s.pkg)
-		s.metadata.resetStacks()
+
+		s.metadata.registerBuildStatement(s.pkg, stmt)
+		s.metadata.restore(symbolStackCheckpoint, fileStackCheckpoint)
 	}
 	return nil
 }
@@ -1194,11 +1197,13 @@ type scopeMetadata interface {
 	// registerBuildStatement registers a new Build Statement in the given package. It will also
 	// register the required dependencies for interpreting that statement by looking up the required
 	// origins in the symbol stack.
-	registerBuildStatement(pkg *core.Package)
+	registerBuildStatement(pkg *core.Package, stmt *Statement)
 	// setSymbolOrigin registers the subinclude origin label for a defined symbol.
 	setSymbolOrigin(name string, origin core.BuildLabel)
-	// resetStacks cleans the symbol stack into an empty state.
-	resetStacks()
+	// checkpoint returns the current lengths of the symbol and file stacks.
+	checkpoint() (int, int)
+	// restore truncates the symbol and file stacks to the specified lengths.
+	restore(symbolLen, fileLen int)
 	// pushSymbol pushes a symbol name and its subinclude origin onto the active tracking stack.
 	pushSymbol(name string, origin *core.BuildLabel)
 	// pushFiles pushes a slice of filenames onto the active tracking stack.
@@ -1253,8 +1258,8 @@ func (m *trackingScopeMetadata) origin(scope *scope, name string) *core.BuildLab
 }
 
 // registerBuildStatement implements [scopeMetadata].
-func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package) {
-	if pkg == nil || m.stmtCursor == nil {
+func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *Statement) {
+	if pkg == nil || stmt == nil {
 		return
 	}
 
@@ -1264,13 +1269,22 @@ func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package) {
 	}
 
 	deps := slices.Collect(maps.Keys(set))
-	pkg.Metadata.RegisterStatement(NewBuildStatement(m.stmtCursor), deps, m.fileStack)
+	pkg.Metadata.RegisterStatement(NewBuildStatement(stmt), deps, m.fileStack)
 }
 
-// resetStacks implements [scopeMetadata].
-func (m *trackingScopeMetadata) resetStacks() {
-	m.symbolStack = m.symbolStack[:0]
-	m.fileStack = m.fileStack[:0]
+// checkpoint implements [scopeMetadata].
+func (m *trackingScopeMetadata) checkpoint() (int, int) {
+	return len(m.symbolStack), len(m.fileStack)
+}
+
+// restore implements [scopeMetadata].
+func (m *trackingScopeMetadata) restore(symbolLen, fileLen int) {
+	if symbolLen >= 0 && symbolLen <= len(m.symbolStack) {
+		m.symbolStack = m.symbolStack[:symbolLen]
+	}
+	if fileLen >= 0 && fileLen <= len(m.fileStack) {
+		m.fileStack = m.fileStack[:fileLen]
+	}
 }
 
 // setCursor implements [scopeMetadata].
@@ -1314,10 +1328,15 @@ func (nm *noopScopeMetadata) cursor() *Statement { return nil }
 func (nm *noopScopeMetadata) origin(scope *scope, name string) *core.BuildLabel { return nil }
 
 // registerBuildStatement implements [scopeMetadata].
-func (nm *noopScopeMetadata) registerBuildStatement(pkg *core.Package) {}
+func (nm *noopScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *Statement) {}
 
-// resetStacks implements [scopeMetadata].
-func (nm *noopScopeMetadata) resetStacks() {}
+// checkpoint implements [scopeMetadata].
+func (nm *noopScopeMetadata) checkpoint() (int, int) {
+	return 0, 0
+}
+
+// restore implements [scopeMetadata].
+func (nm *noopScopeMetadata) restore(symbolLen, fileLen int) {}
 
 // setCursor implements [scopeMetadata].
 func (nm *noopScopeMetadata) setCursor(stmt *Statement) {}
