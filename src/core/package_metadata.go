@@ -1,6 +1,7 @@
 package core
 
 import (
+	"cmp"
 	"fmt"
 	"maps"
 	"slices"
@@ -45,6 +46,14 @@ type BuildStatementProvider func() BuildStatement
 // unnecessary computation when using the no-op implementation.
 type SubincludesLabelProvider func() BuildLabels
 
+// StatementMetadata represents all parsed metadata associated with a single statement.
+type StatementMetadata struct {
+	Statement   BuildStatement
+	Subincludes BuildLabels
+	Files       []string
+	Targets     BuildLabels
+}
+
 // PackageMetadata stores metadata about parsed BUILD files, mapping statements and subincludes
 // to their respective targets. This supports additional logic for operations such as `plz export`
 // but should be disabled for most operations by using the no-op implementation to avoid the overhead.
@@ -85,9 +94,8 @@ type PackageMetadata interface {
 	// IsInterpretedStatement returns true if the statement provided matches a registered build
 	// statement, meaning it was interpreted even if it doesn't generate any targets.
 	IsInterpretedStatement(stmt BuildStatement) bool
-	// WriteMetadata writes a visualization of the metadata (statements and their required labels/files) to the writer.
-	// Only statements that generated the specified targets will be displayed.
-	WriteMetadata(w io.Writer, fileContent []byte, targets BuildLabels, includeSources, includeDeps, includeOutputs bool, resolver func(BuildLabel) *BuildTarget)
+	// Statements returns all statement metadata tracked in the package, sorted by BUILD file order.
+	Statements() []StatementMetadata
 }
 
 // packageMetadataImpl is the canonical implementation of the PackageMetadata interface. It tracks the relationships between BUILD file statements,
@@ -265,6 +273,43 @@ func (m *packageMetadataImpl) IsInterpretedStatement(stmt BuildStatement) bool {
 	return m.stmtToTarget.Contains(stmt)
 }
 
+// Statements implements [PackageMetadata].
+func (m *packageMetadataImpl) Statements() []StatementMetadata {
+	stmtsMap := map[BuildStatement]*StatementMetadata{}
+	getOrCreate := func(stmt BuildStatement) *StatementMetadata {
+		if sm, ok := stmtsMap[stmt]; ok {
+			return sm
+		}
+		sm := &StatementMetadata{Statement: stmt}
+		stmtsMap[stmt] = sm
+		return sm
+	}
+
+	m.stmtToRequiredSubincludes.Range(func(stmt BuildStatement, labels BuildLabels) {
+		getOrCreate(stmt).Subincludes = labels
+	})
+
+	m.stmtToRequiredFiles.Range(func(stmt BuildStatement, files []string) {
+		getOrCreate(stmt).Files = files
+	})
+
+	m.stmtToTarget.Range(func(stmt BuildStatement, labels BuildLabels) {
+		getOrCreate(stmt).Targets = labels
+	})
+
+	res := make([]StatementMetadata, 0, len(stmtsMap))
+	for _, sm := range stmtsMap {
+		res = append(res, *sm)
+	}
+
+	// Sort the statements to maintain BUILD file order
+	slices.SortFunc(res, func(i, j StatementMetadata) int {
+		return cmp.Compare(i.Statement.Start, j.Statement.Start)
+	})
+
+	return res
+}
+
 // noopPackageMetadata implements the PackageMetadata interface with no-op methods. This is the
 // default implementation and is used to avoid the overhead of parsing metadata for operations that
 // don't depend on it.
@@ -280,10 +325,6 @@ func (n *noopPackageMetadata) RegisterStatement(stmt BuildStatement, deps BuildL
 
 // RegisterStatementTarget implements [PackageMetadata].
 func (n *noopPackageMetadata) RegisterStatementTarget(target BuildLabel, stmtProvider BuildStatementProvider) {
-}
-
-// RegisterRequiredSubinclude implements [PackageMetadata].
-func (n *noopPackageMetadata) RegisterRequiredSubinclude(target BuildLabel, labelProvider SubincludesLabelProvider) {
 }
 
 // RegisterSubincludeStatement implements [PackageMetadata].
@@ -330,4 +371,10 @@ func (n *noopPackageMetadata) GetSubincludedLabels(stmt BuildStatement) BuildLab
 func (n *noopPackageMetadata) IsInterpretedStatement(stmt BuildStatement) bool {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return false
+}
+
+// Statements implements [PackageMetadata].
+func (n *noopPackageMetadata) Statements() []StatementMetadata {
+	log.Fatalf("metadata not tracked, using no-op implementation")
+	return nil
 }
