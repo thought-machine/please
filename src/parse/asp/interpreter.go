@@ -1180,16 +1180,30 @@ func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
 	return meta
 }
 
-func (s *scope) registerSubincludes(labels core.BuildLabels) {
+// getPackageMetadata returns the metadata for that current scope's package.
+func (s *scope) getPackageMetadata() scopeMetadata {
 	if s.pkg == nil || s.interpreter.packageMetadata == nil { // This will be initialized if ParseMetadata is set.
+		return nil
+	}
+	return s.interpreter.packageMetadata.Get(s.pkg.Label())
+}
+
+// metadataRegisterFiles adds the files to the scope's package metadata.
+func (s *scope) metadataRegisterFiles(rootPath string, files []string) {
+	meta := s.getPackageMetadata()
+	if meta == nil {
 		return
 	}
-	meta := s.interpreter.packageMetadata.Get(s.pkg.Label())
+	meta.pushFiles(rootPath, files)
+}
+
+// metadataRegisterSubincludes adds the subincluded labels to the scope's package metadata.
+func (s *scope) metadataRegisterSubincludes(labels core.BuildLabels) {
+	meta := s.getPackageMetadata()
 	if meta == nil {
 		return
 	}
 	meta.pushSubincludes(labels)
-
 }
 
 // scopeMetadata defines an interface for tracking evaluation metadata (such as AST cursor position
