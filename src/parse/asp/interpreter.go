@@ -575,7 +575,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 	}()
 	for _, stmt = range statements {
 		s.metadata.setCursor(stmt)
-		symbolStackCheckpoint, fileStackCheckpoint := s.metadata.checkpoint()
+		checkpoint := s.metadata.checkpoint()
 
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
@@ -622,7 +622,7 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 
 		s.metadata.registerBuildStatement(s.pkg, stmt)
-		s.metadata.restore(symbolStackCheckpoint, fileStackCheckpoint)
+		s.metadata.restore(checkpoint)
 	}
 	return nil
 }
@@ -1178,6 +1178,17 @@ func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
 		}
 	})
 	return meta
+}
+
+func (s *scope) registerSubincludes(labels core.BuildLabels) {
+	if s.pkg == nil || s.interpreter.packageMetadata == nil { // This will be initialized if ParseMetadata is set.
+		return
+	}
+	meta := s.interpreter.packageMetadata.Get(s.pkg.Label())
+	if meta == nil {
+		return
+	}
+	meta.pushSubincludes(labels)
 
 }
 
@@ -1200,14 +1211,16 @@ type scopeMetadata interface {
 	registerBuildStatement(pkg *core.Package, stmt *Statement)
 	// setSymbolOrigin registers the subinclude origin label for a defined symbol.
 	setSymbolOrigin(name string, origin core.BuildLabel)
-	// checkpoint returns the current lengths of the symbol and file stacks.
-	checkpoint() (int, int)
-	// restore truncates the symbol and file stacks to the specified lengths.
-	restore(symbolLen, fileLen int)
+	// checkpoint returns a checkpoint for the current tracking stacks.
+	checkpoint() metadataStackCheckpoint
+	// restore truncates the tracking stacks to the specified lengths from the checkpoint.
+	restore(cp metadataStackCheckpoint)
 	// pushSymbol pushes a symbol name and its subinclude origin onto the active tracking stack.
 	pushSymbol(name string, origin *core.BuildLabel)
 	// pushFiles pushes a slice of filenames onto the active tracking stack.
 	pushFiles(rootPath string, filenames []string)
+	// pushSubincludes pushes a label onto the tracking stack for subincludes.
+	pushSubincludes(labels core.BuildLabels)
 }
 
 // trackingScopeMetadata implements the interface [scopeMetadata].
@@ -1217,11 +1230,16 @@ type trackingScopeMetadata struct {
 	// symbolOrigins tracks the subinclude label that each symbol was originally defined in.
 	symbolOrigins map[string]core.BuildLabel
 	// symbolStack tracks which symbols are actively in use during evaluation.
-	// Symbols are pushed onto the stack during lookups and popped/truncated after each statement.
+	// Symbols are pushed onto the stack during lookups and truncated after each statement.
 	symbolStack []trackedSymbol
 	// fileStack track which files are required during the evaluation of the current statement.
-	// These are pushed during native calls such as glob() and popped/truncated after each top level statement.
+	// These are pushed during native calls such as glob() and truncated after each top level statement.
 	fileStack []string
+	// subincludesStack track subinclude calls dynamically made while evaluating a statement,
+	// this can happen for example when a custom target (function definition) subincludes a target as
+	// part of the function body. These are pushed during calls to subincludes() and truncated after
+	// each statement.
+	subincludesStack core.BuildLabels
 }
 
 type trackedSymbol struct {
@@ -1267,23 +1285,37 @@ func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *
 	for _, v := range m.symbolStack {
 		set.Add(v.origin)
 	}
-
+	for _, l := range m.subincludesStack {
+		set.Add(l)
+	}
 	deps := slices.Collect(maps.Keys(set))
+
 	pkg.Metadata.RegisterStatement(NewBuildStatement(stmt), deps, m.fileStack)
 }
 
+type metadataStackCheckpoint struct {
+	symbolCheckpoint, fileCheckpoint, subincludesCheckpoint int
+}
+
 // checkpoint implements [scopeMetadata].
-func (m *trackingScopeMetadata) checkpoint() (int, int) {
-	return len(m.symbolStack), len(m.fileStack)
+func (m *trackingScopeMetadata) checkpoint() metadataStackCheckpoint {
+	return metadataStackCheckpoint{
+		symbolCheckpoint:      len(m.symbolStack),
+		fileCheckpoint:        len(m.fileStack),
+		subincludesCheckpoint: len(m.subincludesStack),
+	}
 }
 
 // restore implements [scopeMetadata].
-func (m *trackingScopeMetadata) restore(symbolLen, fileLen int) {
-	if symbolLen >= 0 && symbolLen <= len(m.symbolStack) {
-		m.symbolStack = m.symbolStack[:symbolLen]
+func (m *trackingScopeMetadata) restore(cp metadataStackCheckpoint) {
+	if cp.symbolCheckpoint >= 0 && cp.symbolCheckpoint <= len(m.symbolStack) {
+		m.symbolStack = m.symbolStack[:cp.symbolCheckpoint]
 	}
-	if fileLen >= 0 && fileLen <= len(m.fileStack) {
-		m.fileStack = m.fileStack[:fileLen]
+	if cp.fileCheckpoint >= 0 && cp.fileCheckpoint <= len(m.fileStack) {
+		m.fileStack = m.fileStack[:cp.fileCheckpoint]
+	}
+	if cp.subincludesCheckpoint >= 0 && cp.subincludesCheckpoint <= len(m.subincludesStack) {
+		m.subincludesStack = m.subincludesStack[:cp.subincludesCheckpoint]
 	}
 }
 
@@ -1317,6 +1349,11 @@ func (m *trackingScopeMetadata) pushFiles(rootPath string, filenames []string) {
 	}
 }
 
+// pushSubincludes implements [scopeMetadata].
+func (m *trackingScopeMetadata) pushSubincludes(labels core.BuildLabels) {
+	m.subincludesStack = append(m.subincludesStack, labels...)
+}
+
 // noopScopeMetadata implements the scopeMetadata interface with no-op methods. This is used to
 // avoid the overhead of storing metadata for operations that don't depend on it.
 type noopScopeMetadata struct{}
@@ -1331,12 +1368,12 @@ func (nm *noopScopeMetadata) origin(scope *scope, name string) *core.BuildLabel 
 func (nm *noopScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *Statement) {}
 
 // checkpoint implements [scopeMetadata].
-func (nm *noopScopeMetadata) checkpoint() (int, int) {
-	return 0, 0
+func (nm *noopScopeMetadata) checkpoint() metadataStackCheckpoint {
+	return metadataStackCheckpoint{}
 }
 
 // restore implements [scopeMetadata].
-func (nm *noopScopeMetadata) restore(symbolLen, fileLen int) {}
+func (nm *noopScopeMetadata) restore(cp metadataStackCheckpoint) {}
 
 // setCursor implements [scopeMetadata].
 func (nm *noopScopeMetadata) setCursor(stmt *Statement) {}
@@ -1349,6 +1386,9 @@ func (nm *noopScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {}
 
 // pushFiles implements [scopeMetadata].
 func (nm *noopScopeMetadata) pushFiles(rootPath string, filenames []string) {}
+
+// pushSubincludes implements [scopeMetadata].
+func (nm *noopScopeMetadata) pushSubincludes(labels core.BuildLabels) {}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.
 func NewBuildStatement(stmt *Statement) core.BuildStatement {

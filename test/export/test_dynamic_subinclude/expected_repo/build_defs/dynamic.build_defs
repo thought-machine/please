@@ -1,0 +1,6 @@
+def dynamic_target(name: str, def_name: str):
+    subinclude(f"//build_defs:{def_name}")
+    if name == "a":
+        helper_a(name = name)
+    elif name == "b":
+        helper_b(name = name)
