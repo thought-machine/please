@@ -373,7 +373,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		}
 		labels = append(labels, t.Label)
 	}
-	s.registerSubincludes(labels)
+	s.metadataRegisterSubincludes(labels)
 	return None
 }
 
@@ -735,7 +735,7 @@ func glob(s *scope, args []pyObject) pyObject {
 		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]
 		log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
 	}
-	s.metadata.pushFiles(s.pkg.Name, glob)
+	s.metadataRegisterFiles(s.pkg.Name, glob)
 
 	return fromStringList(glob)
 }
