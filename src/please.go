@@ -462,6 +462,16 @@ var opts struct {
 				Options []string `positional-arg-name:"options" description:"Print specific options."`
 			} `positional-args:"true"`
 		} `command:"config" description:"Prints the configuration settings"`
+		Metadata struct {
+			Sources       bool `long:"sources" short:"s" description:"Include target sources in visualization"`
+			Deps          bool `long:"deps" short:"d" description:"Include target dependencies in visualization"`
+			Outputs       bool `long:"outputs" short:"o" description:"Include target outputs in visualization"`
+			All           bool `long:"all" short:"a" description:"Include all details (sources, deps, and outputs)"`
+			AllStatements bool `long:"all_statements" description:"Print all statements in the BUILD file, including those that didn't generate the specified targets"`
+			Args          struct {
+				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets or packages to display metadata for" required:"true"`
+			} `positional-args:"true" required:"true"`
+		} `command:"metadata" description:"Prints all metadata (code statements, generated targets and their required subincludes/files) of a package."`
 	} `command:"query" description:"Queries information about the build state"`
 	Generate struct {
 		Gitignore string `long:"update_gitignore" description:"The gitignore file to write the generated sources to"`
@@ -835,6 +845,19 @@ var buildFunctions = map[string]func() int{
 		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
 			query.TargetOutputs(state.Graph, state.ExpandOriginalLabels(), opts.Query.Output.JSON)
 		})
+	},
+	"query.metadata": func() int {
+		if success, state := runBuild(opts.Query.Metadata.Args.Targets, buildOpts{ParseMetadata: true, IsQuery: true}); success {
+			m := opts.Query.Metadata
+			query.Metadata(state, state.ExpandOriginalLabels(), query.WriteMetadataOpts{
+				IncludeSources:       m.Sources || m.All,
+				IncludeDeps:          m.Deps || m.All,
+				IncludeOutputs:       m.Outputs || m.All,
+				IncludeAllStatements: m.AllStatements,
+			})
+			return 0
+		}
+		return 1
 	},
 	"query.completions": func() int {
 		// Somewhat fiddly because the inputs are not necessarily well-formed at this point.
