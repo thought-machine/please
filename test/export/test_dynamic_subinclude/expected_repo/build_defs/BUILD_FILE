@@ -1,0 +1,17 @@
+filegroup(
+    name = "dynamic_build_def",
+    srcs = ["dynamic.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "a_build_def",
+    srcs = ["a.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "b_build_def",
+    srcs = ["b.build_defs"],
+    visibility = ["PUBLIC"],
+)

@@ -1,0 +1,6 @@
+def helper_b(name: str):
+    genrule(
+        name = name,
+        outs = [f"{name}.out"],
+        cmd = f"echo {name} > $OUT",
+    )

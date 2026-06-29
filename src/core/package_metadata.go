@@ -85,11 +85,20 @@ type PackageMetadata interface {
 	// IsInterpretedStatement returns true if the statement provided matches a registered build
 	// statement, meaning it was interpreted even if it doesn't generate any targets.
 	IsInterpretedStatement(stmt BuildStatement) bool
+	// WriteMetadata writes a visualization of the metadata (statements and their required labels/files) to the writer.
+	// Only statements that generated the specified targets will be displayed.
+	WriteMetadata(w io.Writer, fileContent []byte, targets BuildLabels, includeSources, includeDeps, includeOutputs bool, resolver func(BuildLabel) *BuildTarget)
 }
 
-// packageMetadataImpl is the canonical implementation of the PackageMetadata interface.
-// It uses sharded concurrent maps [cmap.Map] to track the relationships between BUILD file statements,
-// subincludes, and the build targets they define without the contention of a global read-write lock.
+// packageMetadataImpl is the canonical implementation of the PackageMetadata interface. It tracks the relationships between BUILD file statements,
+// subincludes, and the build targets they define.
+//
+// Note: this implementation uses sharded concurrent maps [cmap.Map], however writes (interpreter
+// phase) are performed on a single-thread per package. Please guarantees that each package's BUILD file
+// and its subincludes are interpreted on exactly one parser thread at a time (enforced by
+// SyncParsePackage). Because of this guarantee, non-atomic write methods (like the Get-then-Set
+// sequence in RegisterStatement) are safe and wont suffer from write-write race conditions.
+// Nevertheless we use concurrent maps to support concurrent reads.
 type packageMetadataImpl struct {
 	// stmtToTarget maps each build statement (identified by its byte range in a BUILD file)
 	// to the targets it produced. Since a single statement (like a custom target or loop)
@@ -125,14 +134,39 @@ func newPackageMetadata() PackageMetadata {
 // RegisterStatement implements [PackageMetadata].
 func (m *packageMetadataImpl) RegisterStatement(stmt BuildStatement, deps BuildLabels, files []string) {
 	if len(deps) > 0 {
-		m.stmtToRequiredSubincludes.Set(stmt, deps)
+		existingDeps := m.stmtToRequiredSubincludes.Get(stmt)
+		if len(existingDeps) == 0 {
+			m.stmtToRequiredSubincludes.Set(stmt, deps)
+		} else {
+			mergedDeps := mergeSlices(existingDeps, deps)
+			m.stmtToRequiredSubincludes.Set(stmt, mergedDeps)
+		}
 	}
 	if len(files) > 0 {
-		m.stmtToRequiredFiles.Set(stmt, files)
+		existingFiles := m.stmtToRequiredFiles.Get(stmt)
+		if len(existingFiles) == 0 {
+			m.stmtToRequiredFiles.Set(stmt, files)
+		} else {
+			mergedFiles := mergeSlices(existingFiles, files)
+			m.stmtToRequiredFiles.Set(stmt, mergedFiles)
+		}
 	}
 	// Even if the statement doesn't create any target, it is important to register so we now it was
 	// interpreted. We'll register the targets separately and use the Add() method to avoid overriding any existing statement to target mapping.
 	m.stmtToTarget.Add(stmt, BuildLabels{})
+}
+
+// mergeSlices merges two slices of any comparable type. It de-duplicates elements using
+// slices.Contains so it should be used for small slices. A set/map approach should be preferred for
+// larger slices.
+func mergeSlices[T comparable](existing []T, newElements []T) []T {
+	merged := append([]T(nil), existing...)
+	for _, el := range newElements {
+		if !slices.Contains(merged, el) {
+			merged = append(merged, el)
+		}
+	}
+	return merged
 }
 
 // RegisterStatementTarget implements [PackageMetadata].
@@ -201,8 +235,8 @@ func (m *packageMetadataImpl) FindPackageFileRequirements() (BuildLabels, []stri
 	subincludesSet := LabelSet{}
 	m.stmtToRequiredSubincludes.Range(func(stmt BuildStatement, labels BuildLabels) {
 		// Look for build statements that are not registered in the statement to targets mapping,
-		// and so are unrelated to targets.
-		if len(m.stmtToTarget.Get(stmt)) == 0 {
+		// and so are unrelated to targets or are subincludes() statements.
+		if len(m.stmtToTarget.Get(stmt)) == 0 && len(m.labelsPerSubincludeStmt.Get(stmt)) == 0 {
 			for _, label := range labels {
 				subincludesSet.Add(label)
 			}
@@ -290,4 +324,10 @@ func (n *noopPackageMetadata) FindPackageFileRequirements() (BuildLabels, []stri
 func (n *noopPackageMetadata) GetSubincludedLabels(stmt BuildStatement) BuildLabels {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return nil
+}
+
+// IsInterpretedStatement implements [PackageMetadata].
+func (n *noopPackageMetadata) IsInterpretedStatement(stmt BuildStatement) bool {
+	log.Fatalf("metadata not tracked, using no-op implementation")
+	return false
 }

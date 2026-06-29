@@ -349,6 +349,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 			s.Error("cannot subinclude type %s", arg.Type())
 		}
 	}
+	var labels core.BuildLabels
 	for _, arg := range si {
 		label, annotation := core.SplitLabelAnnotation(arg)
 		t := subincludeTarget(s, s.parseLabelInContextPkg(label))
@@ -370,7 +371,9 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		for _, out := range outs {
 			s.SetAllWithOrigin(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false, &t.Label)
 		}
+		labels = append(labels, t.Label)
 	}
+	s.registerSubincludes(labels)
 	return None
 }
 
