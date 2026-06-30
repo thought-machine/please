@@ -577,23 +577,21 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		s.metadata.setCursor(stmt)
 		checkpoint := s.metadata.checkpoint()
 
+		var ret pyObject
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
-			if ret := s.interpretIf(stmt.If); ret != nil {
-				return ret
-			}
+			ret = s.interpretIf(stmt.If)
 		} else if stmt.For != nil {
-			if ret := s.interpretFor(stmt.For); ret != nil {
-				return ret
-			}
+			ret = s.interpretFor(stmt.For)
 		} else if stmt.Return != nil {
 			if len(stmt.Return.Values) == 0 {
-				return None
+				ret = None
 			} else if len(stmt.Return.Values) == 1 {
-				return s.interpretExpression(stmt.Return.Values[0])
+				ret = s.interpretExpression(stmt.Return.Values[0])
+			} else {
+				ret = pyList(s.evaluateExpressions(stmt.Return.Values))
 			}
-			return pyList(s.evaluateExpressions(stmt.Return.Values))
 		} else if stmt.Ident != nil {
 			s.interpretIdentStatement(stmt.Ident)
 		} else if stmt.Assert != nil {
@@ -611,18 +609,22 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			s.interpretExpression(stmt.Literal)
 		} else if stmt.Continue {
 			// This is definitely awkward since we need to control a for loop that's happening in a function outside this scope.
-			return continueIteration
+			ret = continueIteration
 		} else if stmt.Break {
 			// Similar to above, although CPython does do this the same way...
-			return stopIteration
+			ret = stopIteration
 		} else if stmt.Pass {
-			continue // Nothing to do...
+			// Nothing to do...
 		} else {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
 		}
 
 		s.metadata.registerBuildStatement(s.pkg, stmt)
 		s.metadata.restore(checkpoint)
+
+		if ret != nil {
+			return ret
+		}
 	}
 	return nil
 }

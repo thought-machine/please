@@ -111,11 +111,15 @@ func (t *trimmer) trimIf(stmt *asp.Statement) bool {
 	// In an if-else statement only the interpreted/evaluated block will generate targets, meaning
 	// that normally only one of the clauses is interpreted, however an if statement could be inside of
 	// a loop where the clause condition depends on the iteration meaning more than one clause
-	// could end up being interpreted. Because of that we lookup all the required clauses before
-	// writing the statement. Any clauses with interpreted statements should be visited.
+	// could end up being interpreted. Because of that we'll visit all the clauses, writing only the
+	// required statements -- any clauses with interpreted statements should be visited.
 	var requiredClauses = make([]bool, len(clauses))
 	for i, c := range clauses {
-		required := t.isRequiredStatements(c.stmts)
+		if len(c.stmts) == 0 {
+			continue
+		}
+		bStmt := asp.NewBuildStatement(c.stmts[0])
+		required := t.pkg.Metadata.IsInterpretedStatement(bStmt)
 		requiredClauses[i] = required
 	}
 
@@ -168,39 +172,6 @@ func (t *trimmer) passBlock(stmts []*asp.Statement, blockStart, blockEnd asp.Pos
 			t.write(passExpression)
 		}
 	})
-}
-
-// isRequiredStatement determines if it is necessary to visit any of the statements. Refer to
-// [isRequiredStatement] for the decision logic.
-func (t *trimmer) isRequiredStatements(stmts []*asp.Statement) bool {
-	return slices.ContainsFunc(stmts, t.isRequiredStatement)
-}
-
-// isRequiredStatement determines if it is necessary to visit a statement. Any statement that was
-// interpreted needs to be visited but the trimming logic of the visitor should determine if we need
-// to write it or not.
-func (t *trimmer) isRequiredStatement(stmt *asp.Statement) bool {
-	if stmt.If != nil {
-		// If
-		if t.isRequiredStatements(stmt.If.Statements) {
-			return true
-		}
-		// Elif
-		if len(stmt.If.Elif) > 0 {
-			for _, elif := range stmt.If.Elif {
-				if t.isRequiredStatements(elif.Statements) {
-					return true
-				}
-			}
-		}
-		// Else
-		if len(stmt.If.ElseStatements) > 0 && t.isRequiredStatements(stmt.If.ElseStatements) {
-			return true
-		}
-	} else if stmt.For != nil {
-		return t.isRequiredStatements(stmt.For.Statements)
-	}
-	return t.pkg.Metadata.IsInterpretedStatement(asp.NewBuildStatement(stmt))
 }
 
 func (t *trimmer) statementTargets(stmt *asp.Statement) core.BuildLabels {
