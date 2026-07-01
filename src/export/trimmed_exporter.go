@@ -57,8 +57,6 @@ func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 		return
 	}
 
-	log.Debugf("Exporting target: %v", target.Label)
-
 	// Skip export for internal packages
 	if target.Label.PackageName == parse.InternalPackageName {
 		return
@@ -127,7 +125,6 @@ func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target core.Build
 		}
 	}
 
-	log.Debugf("Subincludes required for %s: %v", target, allSubincludes)
 	e.exportTargets(allSubincludes)
 }
 
@@ -168,7 +165,6 @@ func (e *trimmedExporter) exportRelatedTargets(pkg *core.Package, target core.Bu
 	if err != nil {
 		log.Fatalf("failed to find related targets for %s: %s", target, err)
 	}
-	log.Debugf("Exporting targets related to %s: %v", target, relatedTargets)
 	e.exportTargets(relatedTargets)
 }
 

@@ -8,6 +8,7 @@ go_library(
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_please-build_buildtools//build",
+        "//src/cli",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
