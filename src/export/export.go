@@ -4,10 +4,12 @@
 package export
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -100,22 +102,60 @@ type baseExporter struct {
 
 // run specifies the main steps when running an export.
 func (be *baseExporter) run(targets core.BuildLabels) {
-	go be.startMonitor()
+	stop := make(chan struct{})
+	go be.startMonitor(stop)
+	defer close(stop)
+
 	be.exportRepoConfig()
 	be.impl.exportPreloaded()
 	be.exportTargets(targets)
 	be.impl.writePackageFiles()
 }
 
-func (be *baseExporter) startMonitor() {
+func (be *baseExporter) startMonitor(stop chan struct{}) {
+	// this total is meant to provide some general idea of the progress but in reality we might
+	// visit more than the targets currently in the build graph (those will have to be parsed
+	// adhoc).
+	total := len(be.state.Graph.AllTargets())
+	startTime := time.Now()
+	isTerminal := cli.StdErrIsATerminal
+
+	if isTerminal {
+		cli.CurrentBackend.SetPassthrough(false, 1, false)
+		defer cli.CurrentBackend.SetPassthrough(true, 1, false)
+	}
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
-		time.Sleep(10 * time.Second)
-		log.Infof("Number of targets exported: %v", be.targetCounter)
+		select {
+		case <-stop:
+			log.Infof("Exported %d targets (%.1fs)...", be.targetCounter, time.Since(startTime).Seconds())
+			return
+		case <-ticker.C:
+			done := be.targetCounter
+			elapsed := time.Since(startTime).Seconds()
+			stats := be.state.SystemStats()
+
+			if isTerminal {
+				logs := cli.CurrentBackend.FlushOutput()
+				if len(logs) > 0 {
+					// Remove footer line before writing logs.
+					cli.Fprintf(os.Stderr, "${RESETLN}")
+					for _, line := range logs {
+						fmt.Fprintln(os.Stderr, line)
+					}
+				}
+				cli.Fprintf(os.Stderr, "${RESETLN}${BOLD_WHITE}Exporting${RESET} [${BOLD_GREEN}%d${RESET}/${BOLD_GREEN}%d${RESET}, ${BOLD_YELLOW}%.1fs${RESET}]:: CPU: %5.1f%%  Mem: %5.1f%%  IO: %5.1f%%${RESET}",
+					done, total, elapsed, stats.CPU.Used, stats.Memory.UsedPercent, stats.CPU.IOWait)
+			}
+		}
 	}
 }
 
-// exportRepoConfig exports the repository's configuration files (e.g., .gitignore, .plzconfig and its
-// platform-specific variants) to the target export directory.
+// exportRepoConfig exports the repository's configuration files (e.g., .gitignore, .plzconfig and
+// its platform-specific variants) to the target export directory.
 func (be *baseExporter) exportRepoConfig() {
 	files, err := filepath.Glob(".plzconfig*")
 	if err != nil {
@@ -154,7 +194,6 @@ func (be *baseExporter) exportTargets(labels core.BuildLabels) {
 // exportDependencies exports dependencies of a target.
 func (be *baseExporter) exportDependencies(target *core.BuildTarget) {
 	deps := target.DeclaredDependencies()
-	log.Debugf("Exporting dependencies of (%v): %v", target.Label, deps)
 	be.exportTargets(deps)
 }
 
@@ -184,7 +223,6 @@ func (be *baseExporter) exportFiles(paths []string) {
 		if err := fs.RecursiveCopy(p, dest, 0); err != nil {
 			log.Warningf("Error copying file, skipping...: %s", err)
 		}
-		log.Debugf("Writing exported source file: %s", p)
 	}
 }
 
