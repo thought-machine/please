@@ -2,7 +2,6 @@ package export
 
 import (
 	"slices"
-	"sort"
 
 	"github.com/please-build/buildtools/build"
 
@@ -156,7 +155,7 @@ func (t *trimmer) trimFor(stmt *asp.Statement) bool {
 func (t *trimmer) trimSubinclude(stmt *asp.Statement) {
 	bStmt := asp.NewBuildStatement(stmt)
 	stmtLabels := t.pkg.Metadata.GetSubincludedLabels(bStmt)
-	subStmt := t.minimalSubincludeStatement(stmtLabels)
+	subStmt := t.minimalSubincludeStatement(stmt, stmtLabels)
 	t.write([]byte(subStmt))
 }
 
@@ -187,19 +186,22 @@ func (t *trimmer) anyExported(labels core.BuildLabels) bool {
 }
 
 // minimalSubincludeStatement generates a subinclude statement containing only the required labels.
-func (t *trimmer) minimalSubincludeStatement(available core.BuildLabels) string {
+func (t *trimmer) minimalSubincludeStatement(stmt *asp.Statement, available core.BuildLabels) string {
 	var filteredLabels core.BuildLabels
-	for _, required := range t.exporter.requiredSubincludes[t.pkg.Label()] {
-		if slices.Contains(available, required) {
-			filteredLabels = append(filteredLabels, required)
+	required := t.exporter.requiredSubincludes[t.pkg.Label()]
+	for _, label := range available {
+		if slices.Contains(required, label) {
+			filteredLabels = append(filteredLabels, label)
 		}
 	}
 
 	if len(filteredLabels) == 0 {
 		return ""
 	}
-
-	sort.Sort(filteredLabels)
+	if len(available) == len(filteredLabels) {
+		// If all labels are required just keep the statement as is.
+		return string(t.origin[stmt.Pos:stmt.EndPos])
+	}
 
 	call := &build.CallExpr{
 		X: &build.Ident{Name: "subinclude"},

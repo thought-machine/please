@@ -333,24 +333,13 @@ func subinclude(s *scope, args []pyObject) pyObject {
 	if s.contextPackage() == nil {
 		s.Error("cannot subinclude from this scope")
 	}
-	var si []string
-	for _, arg := range args {
-		if l, ok := arg.(pyList); ok {
-			for _, e := range l {
-				if l, ok := e.(pyString); ok {
-					si = append(si, string(l))
-				} else {
-					s.Error("cannot subinclude type %s", e.Type())
-				}
-			}
-		} else if l, ok := arg.(pyString); ok {
-			si = append(si, string(l))
-		} else {
-			s.Error("cannot subinclude type %s", arg.Type())
-		}
+	stringArgs, err := subincludeArgs(args)
+	if err != nil {
+		s.Error("%s", err.Error())
 	}
-	var labels = make(core.BuildLabels, 0, len(si))
-	for _, arg := range si {
+
+	var labels = make(core.BuildLabels, 0, len(stringArgs))
+	for _, arg := range stringArgs {
 		label, annotation := core.SplitLabelAnnotation(arg)
 		t := subincludeTarget(s, s.parseLabelInContextPkg(label))
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
@@ -374,7 +363,32 @@ func subinclude(s *scope, args []pyObject) pyObject {
 		labels = append(labels, t.Label)
 	}
 	s.metadataRegisterSubincludes(labels)
+	if s.pkg != nil {
+		s.pkg.Metadata.RegisterSubincludeStatement(s.CurrentBuildStatement())
+	}
 	return None
+}
+
+// subincludeArgs extracts and validates the arguments from a subinclude() call. Acceptable values
+// are strings and lists of strings.
+func subincludeArgs(args []pyObject) ([]string, error) {
+	var si []string
+	for _, arg := range args {
+		if l, ok := arg.(pyList); ok {
+			for _, e := range l {
+				if l, ok := e.(pyString); ok {
+					si = append(si, string(l))
+				} else {
+					return nil, fmt.Errorf("cannot subinclude type %s", e.Type())
+				}
+			}
+		} else if l, ok := arg.(pyString); ok {
+			si = append(si, string(l))
+		} else {
+			return nil, fmt.Errorf("cannot subinclude type %s", arg.Type())
+		}
+	}
+	return si, nil
 }
 
 // subincludeTarget returns the target for a subinclude() call to a label.
@@ -421,7 +435,6 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	t = s.WaitForSubincludedTarget(l, pkgLabel)
 	if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
-		s.pkg.Metadata.RegisterSubincludeStatement(l, s.CurrentBuildStatement())
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude
 		s.state.Graph.RegisterTransitiveSubinclude(*s.subincludeLabel, l)
 	}
