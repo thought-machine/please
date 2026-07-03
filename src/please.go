@@ -468,7 +468,7 @@ var opts struct {
 			Outputs       bool `long:"outputs" short:"o" description:"Include target outputs in visualization"`
 			All           bool `long:"all" short:"a" description:"Include all details (sources, deps, and outputs)"`
 			AllStatements bool `long:"all_statements" description:"Print all statements in the BUILD file, including those that didn't generate the specified targets"`
-			JSON          bool `long:"json" short:"j" description:"Output metadata as JSON"`
+			Hidden        bool `long:"hidden" description:"Show hidden targets"`
 			Args          struct {
 				Targets []core.BuildLabel `positional-arg-name:"targets" description:"Targets or packages to display metadata for" required:"true"`
 			} `positional-args:"true" required:"true"`
@@ -855,7 +855,7 @@ var buildFunctions = map[string]func() int{
 				IncludeDeps:          m.Deps || m.All,
 				IncludeOutputs:       m.Outputs || m.All,
 				IncludeAllStatements: m.AllStatements,
-				FormatJSON:           m.JSON,
+				ShowHidden:           m.Hidden,
 			})
 			return 0
 		}
