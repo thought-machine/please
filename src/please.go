@@ -780,7 +780,7 @@ var buildFunctions = map[string]func() int{
 	"export": func() int {
 		success, state := runBuild(opts.Export.Args.Targets, buildOpts{ParseMetadata: true, KeepParserRunning: true})
 		// Required cleanup due to running parser in background
-		defer state.CleanUp()
+		defer state.Cleanup()
 
 		if success {
 			export.Repo(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())

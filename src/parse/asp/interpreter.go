@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"maps"
 	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime/debug"
 	"runtime/pprof"
-	"slices"
 	"strings"
 	"sync"
 
@@ -27,7 +25,7 @@ type interpreter struct {
 	parser      *Parser
 	subincludes *cmap.ErrMap[string, pyDict]
 	asts        *cmap.ErrMap[string, []*Statement]
-	// preloaded is a set to register all preloaded objects.
+	// preloaded is a set to register all preloaded symbols (variables and function names).
 	preloaded *cmap.Map[string, struct{}]
 
 	configs      map[*core.BuildState]*pyConfig
@@ -1297,14 +1295,21 @@ func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *
 		return
 	}
 
-	set := core.LabelSet{}
-	for _, v := range m.symbolStack {
-		set.Add(v.origin)
-	}
+	var deps core.BuildLabels
+	seen := make(map[core.BuildLabel]struct{})
 	for _, l := range m.subincludesStack {
-		set.Add(l)
+		if _, ok := seen[l]; !ok {
+			deps = append(deps, l)
+			seen[l] = struct{}{}
+		}
 	}
-	deps := slices.Collect(maps.Keys(set))
+	for _, v := range m.symbolStack {
+		l := v.origin
+		if _, ok := seen[l]; !ok {
+			deps = append(deps, l)
+			seen[l] = struct{}{}
+		}
+	}
 
 	pkg.Metadata.RegisterStatement(NewBuildStatement(stmt), deps, m.fileStack)
 }

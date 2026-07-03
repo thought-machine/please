@@ -451,8 +451,8 @@ func (state *BuildState) CloseResults() {
 	}
 }
 
-// CleanUp cleans up and shuts down the build state.
-func (state *BuildState) CleanUp() {
+// Cleanup cleans up and shuts down the build state.
+func (state *BuildState) Cleanup() {
 	state.CloseResults()
 
 	if state.WaitForDisplay != nil {

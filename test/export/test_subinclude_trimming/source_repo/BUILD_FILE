@@ -34,9 +34,7 @@ genrule(
     cmd = f'echo "{unused_var}" > $OUT',
 )
 
-subinclude(
-    "//build_defs:var3_build_def",
-)
+subinclude("//build_defs:var3_build_def")
 
 message = "Testing {service} on {env}".format(
     env = "production",
@@ -49,9 +47,7 @@ genrule(
     cmd = f'echo "{message}" > $OUT',
 )
 
-subinclude(
-    "//build_defs:versions_build_def",
-)
+subinclude("//build_defs:versions_build_def")
 
 for version, name in VERSIONS.items():
     genrule(

@@ -67,9 +67,9 @@ type PackageMetadata interface {
 	// RegisterStatementTarget records that the given build target was created as a result of the
 	// given statement being executed. This should only be called for statements in BUILD files.
 	RegisterStatementTarget(target BuildLabel, stmtProvider BuildStatementProvider)
-	// RegisterSubincludeStatement records that the given subinclude statement (provided by stmtProvider)
-	// includes the given build label. This should only be called for statements in BUILD files.
-	RegisterSubincludeStatement(label BuildLabel, stmtProvider BuildStatementProvider)
+	// RegisterSubincludeStatement records the given build statement (provided by stmtProvider)
+	// as being a subincluded statement. This should only be called for statements in BUILD files.
+	RegisterSubincludeStatement(stmtProvider BuildStatementProvider)
 	// FindStatement returns the build statement that was responsible for generating the given target.
 	// Returns an error if the target was not found in the recorded metadata.
 	FindStatement(target BuildLabel) (BuildStatement, error)
@@ -124,9 +124,9 @@ type packageMetadataImpl struct {
 	// stmtToRequiredFiles tracks the file paths that were required during interpretation of the
 	// statement (e.g. glob)
 	stmtToRequiredFiles *cmap.Map[BuildStatement, []string]
-	// labelsPerSubincludeStmt maps a subinclude statement (identified by its position
-	// in the BUILD file) to the labels it explicitly subincludes.
-	labelsPerSubincludeStmt *cmap.Map[BuildStatement, BuildLabels]
+	// subincludeStmts tracks which build statements (identified by its position in the BUILD file)
+	// are subinclude calls.
+	subincludeStmts *cmap.Map[BuildStatement, struct{}]
 }
 
 func newPackageMetadata() PackageMetadata {
@@ -135,7 +135,7 @@ func newPackageMetadata() PackageMetadata {
 		targetToStmt:              cmap.New[BuildLabel, BuildStatement](cmap.SmallShardCount, HashBuildLabel),
 		stmtToRequiredSubincludes: cmap.New[BuildStatement, BuildLabels](cmap.SmallShardCount, hashBuildStatement),
 		stmtToRequiredFiles:       cmap.New[BuildStatement, []string](cmap.SmallShardCount, hashBuildStatement),
-		labelsPerSubincludeStmt:   cmap.New[BuildStatement, BuildLabels](cmap.SmallShardCount, hashBuildStatement),
+		subincludeStmts:           cmap.New[BuildStatement, struct{}](cmap.SmallShardCount, hashBuildStatement),
 	}
 }
 
@@ -186,10 +186,9 @@ func (m *packageMetadataImpl) RegisterStatementTarget(target BuildLabel, stmtPro
 }
 
 // RegisterSubincludeStatement implements [PackageMetadata].
-func (m *packageMetadataImpl) RegisterSubincludeStatement(label BuildLabel, stmtProvider BuildStatementProvider) {
+func (m *packageMetadataImpl) RegisterSubincludeStatement(stmtProvider BuildStatementProvider) {
 	stmt := stmtProvider()
-	existing := m.labelsPerSubincludeStmt.Get(stmt)
-	m.labelsPerSubincludeStmt.Set(stmt, append(existing, label))
+	m.subincludeStmts.Set(stmt, struct{}{})
 }
 
 // FindStatement implements [PackageMetadata].
@@ -240,17 +239,17 @@ func (m *packageMetadataImpl) FindRelatedTargets(target BuildLabel) (BuildLabels
 
 // FindPackageFileRequirements implements [PackageMetadata].
 func (m *packageMetadataImpl) FindPackageFileRequirements() (BuildLabels, []string) {
-	subincludesSet := LabelSet{}
+	requiredSet := LabelSet{}
 	m.stmtToRequiredSubincludes.Range(func(stmt BuildStatement, labels BuildLabels) {
 		// Look for build statements that are not registered in the statement to targets mapping,
-		// and so are unrelated to targets or are subincludes() statements.
-		if len(m.stmtToTarget.Get(stmt)) == 0 && len(m.labelsPerSubincludeStmt.Get(stmt)) == 0 {
+		// and so are unrelated to targets and are not subinclude statements.
+		if len(m.stmtToTarget.Get(stmt)) == 0 && !m.subincludeStmts.Contains(stmt) {
 			for _, label := range labels {
-				subincludesSet.Add(label)
+				requiredSet.Add(label)
 			}
 		}
 	})
-	subincludes := slices.Collect(maps.Keys(subincludesSet))
+	origins := slices.Collect(maps.Keys(requiredSet))
 
 	filesSet := map[string]struct{}{}
 	m.stmtToRequiredFiles.Range(func(stmt BuildStatement, files []string) {
@@ -260,12 +259,17 @@ func (m *packageMetadataImpl) FindPackageFileRequirements() (BuildLabels, []stri
 		}
 	})
 	files := slices.Collect(maps.Keys(filesSet))
-	return subincludes, files
+	return origins, files
 }
 
 // GetSubincludedLabels implements [PackageMetadata].
 func (m *packageMetadataImpl) GetSubincludedLabels(stmt BuildStatement) BuildLabels {
-	return m.labelsPerSubincludeStmt.Get(stmt)
+	if !m.subincludeStmts.Contains(stmt) {
+		return nil
+	}
+	// After determining that this is a subincludes statement we can return the required subincludes
+	// registered in the general statement mapping.
+	return m.stmtToRequiredSubincludes.Get(stmt)
 }
 
 // IsInterpretedStatement implements [PackageMetadata].
@@ -328,7 +332,7 @@ func (n *noopPackageMetadata) RegisterStatementTarget(target BuildLabel, stmtPro
 }
 
 // RegisterSubincludeStatement implements [PackageMetadata].
-func (n *noopPackageMetadata) RegisterSubincludeStatement(label BuildLabel, stmtProvider BuildStatementProvider) {
+func (n *noopPackageMetadata) RegisterSubincludeStatement(stmtProvider BuildStatementProvider) {
 }
 
 // FindStatement implements [PackageMetadata].

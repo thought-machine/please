@@ -123,7 +123,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	// The last task should call state.Close() and close the queue channels.
 	wg.Wait()
 	reportResults(state, config)
-	state.CleanUp()
+	state.Cleanup()
 }
 
 // reportResults reports on metrics and results at the end of the build.
