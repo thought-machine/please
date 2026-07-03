@@ -1,7 +1,6 @@
 package query
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -16,7 +15,7 @@ type WriteMetadataOpts struct {
 	IncludeDeps          bool
 	IncludeOutputs       bool
 	IncludeAllStatements bool
-	FormatJSON           bool
+	ShowHidden           bool
 }
 
 // any reports true if any of the options are set to true.
@@ -25,28 +24,24 @@ func (wmo WriteMetadataOpts) any() bool {
 }
 
 // Metadata prints out a visualization of the parsed build statement metadata for the given targets.
-func Metadata(state *core.BuildState, targets []core.BuildLabel, opts WriteMetadataOpts) {
+func Metadata(state *core.BuildState, targets core.BuildLabels, opts WriteMetadataOpts) {
 	if !cli.ShowColouredOutput || !cli.IsATerminal(os.Stdout) {
 		cli.ShowColouredOutput = false
 	}
 
 	// Group requested targets by their package
-	packageTargets := map[*core.Package][]core.BuildLabel{}
+	packageTargets := map[*core.Package]core.BuildLabels{}
 	for _, label := range targets {
 		pkg := state.Graph.PackageOrDie(label)
 		packageTargets[pkg] = append(packageTargets[pkg], label)
 	}
 
-	if opts.FormatJSON {
-		printJSON(state, packageTargets, opts)
-	} else {
-		printTerminal(state, packageTargets, opts)
-	}
+	printTerminal(state, packageTargets, opts)
 }
 
 // printTerminal formats and draws the metadata as a beautiful colorized terminal tree-box layout.
-func printTerminal(state *core.BuildState, packageTargets map[*core.Package][]core.BuildLabel, opts WriteMetadataOpts) {
-	// itemDetail holds the text to print and its optional ANSI color formatting string
+func printTerminal(state *core.BuildState, packageTargets map[*core.Package]core.BuildLabels, opts WriteMetadataOpts) {
+	// itemDetail holds the text to print and its optional color formatting string
 	type itemDetail struct {
 		text  string
 		color string
@@ -102,7 +97,7 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package][]co
 		return res
 	}
 
-	for pkg, label := range packageTargets {
+	for pkg, labels := range packageTargets {
 		fmt.Printf("=== Package: %s (File: %s) ===\n", pkg.Label(), pkg.Filename)
 
 		content, err := os.ReadFile(pkg.Filename)
@@ -112,10 +107,13 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package][]co
 		}
 
 		allStatements := pkg.Metadata.Statements()
-		writeAll, filterStmts := filterStatements(pkg, label, opts.IncludeAllStatements)
+		var filterStmts map[core.BuildStatement]struct{}
+		if !opts.IncludeAllStatements {
+			filterStmts = filterStatements(pkg, labels)
+		}
 
 		for _, sm := range allStatements {
-			if !writeAll {
+			if filterStmts != nil {
 				if _, ok := filterStmts[sm.Statement]; !ok {
 					continue
 				}
@@ -130,9 +128,19 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package][]co
 				cli.Fprintf(os.Stdout, "    %s\n", line)
 			}
 
+			targets := sm.Targets
+			if !opts.ShowHidden {
+				targets = make(core.BuildLabels, 0, len(sm.Targets))
+				for _, t := range sm.Targets {
+					if !t.IsHidden() {
+						targets = append(targets, t)
+					}
+				}
+			}
+
 			hasSubincludes := len(sm.Subincludes) > 0
 			hasFiles := len(sm.Files) > 0
-			hasTargets := len(sm.Targets) > 0
+			hasTargets := len(targets) > 0
 
 			var lastSection string
 			if hasTargets {
@@ -161,10 +169,10 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package][]co
 				}
 				cli.Fprintf(os.Stdout, "%s%s ${CYAN}Generated Targets:${RESET}\n", basePrefix, branch)
 
-				for i, t := range sm.Targets {
+				for i, t := range targets {
 					targetBranch := "├──"
 					targetChildPrefix := childPrefix + "│   "
-					if i == len(sm.Targets)-1 {
+					if i == len(targets)-1 {
 						targetBranch = "└──"
 						targetChildPrefix = childPrefix + "    "
 					}
@@ -200,133 +208,14 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package][]co
 	}
 }
 
-type jsonTargetMetadata struct {
-	Name         string   `json:"name"`
-	Sources      []string `json:"sources,omitempty"`
-	Dependencies []string `json:"dependencies,omitempty"`
-	Outputs      []string `json:"outputs,omitempty"`
-}
-
-type jsonStatementMetadata struct {
-	Start       int                  `json:"start"`
-	End         int                  `json:"end"`
-	Code        string               `json:"code"`
-	Subincludes []string             `json:"subincludes,omitempty"`
-	Files       []string             `json:"files,omitempty"`
-	Targets     []jsonTargetMetadata `json:"targets,omitempty"`
-}
-
-type jsonPackageMetadata struct {
-	Package    string                  `json:"package"`
-	BuildFile  string                  `json:"build_file"`
-	Statements []jsonStatementMetadata `json:"statements"`
-}
-
-// printJSON formats and serializes the metadata to stdout as indented JSON.
-func printJSON(state *core.BuildState, packageTargets map[*core.Package][]core.BuildLabel, opts WriteMetadataOpts) {
-	var jsonOutput []jsonPackageMetadata
-
-	for pkg, label := range packageTargets {
-		content, err := os.ReadFile(pkg.Filename)
-		if err != nil {
-			continue
-		}
-
-		allStatements := pkg.Metadata.Statements()
-		writeAll, filterStmts := filterStatements(pkg, label, opts.IncludeAllStatements)
-
-		var packageMeta jsonPackageMetadata
-		packageMeta.Package = pkg.Label().String()
-		packageMeta.BuildFile = pkg.Filename
-
-		for _, sm := range allStatements {
-			if !writeAll {
-				if _, ok := filterStmts[sm.Statement]; !ok {
-					continue
-				}
-			}
-
-			code := string(content[sm.Statement.Start:sm.Statement.End])
-			var stmtMeta jsonStatementMetadata
-			stmtMeta.Start = sm.Statement.Start
-			stmtMeta.End = sm.Statement.End
-			stmtMeta.Code = code
-
-			if len(sm.Subincludes) > 0 {
-				stmtMeta.Subincludes = make([]string, len(sm.Subincludes))
-				for idx, sub := range sm.Subincludes {
-					stmtMeta.Subincludes[idx] = sub.String()
-				}
-			}
-
-			if len(sm.Files) > 0 {
-				stmtMeta.Files = sm.Files
-			}
-
-			if len(sm.Targets) > 0 {
-				stmtMeta.Targets = make([]jsonTargetMetadata, len(sm.Targets))
-				for idx, t := range sm.Targets {
-					var tMeta jsonTargetMetadata
-					tMeta.Name = t.String()
-
-					if opts.any() {
-						if target := state.Graph.Target(t); target != nil {
-							if opts.IncludeSources && len(target.AllSources()) > 0 {
-								tMeta.Sources = make([]string, len(target.AllSources()))
-								for i, src := range target.AllSources() {
-									tMeta.Sources[i] = src.String()
-								}
-							}
-							if opts.IncludeDeps && len(target.DeclaredDependencies()) > 0 {
-								tMeta.Dependencies = make([]string, len(target.DeclaredDependencies()))
-								for i, dep := range target.DeclaredDependencies() {
-									tMeta.Dependencies[i] = dep.String()
-								}
-							}
-							if opts.IncludeOutputs && len(target.Outputs()) > 0 {
-								tMeta.Outputs = target.Outputs()
-							}
-						}
-					}
-					stmtMeta.Targets[idx] = tMeta
-				}
-			}
-
-			packageMeta.Statements = append(packageMeta.Statements, stmtMeta)
-		}
-		jsonOutput = append(jsonOutput, packageMeta)
-	}
-
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "    ")
-	if err := enc.Encode(jsonOutput); err != nil {
-		panic(err)
-	}
-}
-
-// filterStatements calculates if all statements should be written, and computes the targeted filterStmts list.
-func filterStatements(pkg *core.Package, labels []core.BuildLabel, includeAll bool) (bool, map[core.BuildStatement]struct{}) {
-	writeAll := includeAll
-	if !writeAll {
-		for _, l := range labels {
-			if l.IsAllTargets() {
-				writeAll = true
-				break
-			}
+// filterStatements calculates if all statements should be written.
+func filterStatements(pkg *core.Package, labels core.BuildLabels) map[core.BuildStatement]struct{} {
+	filterStmts := map[core.BuildStatement]struct{}{}
+	for _, target := range labels {
+		stmt, err := pkg.Metadata.FindStatement(target)
+		if err == nil && stmt != (core.BuildStatement{}) {
+			filterStmts[stmt] = struct{}{}
 		}
 	}
-
-	var filterStmts map[core.BuildStatement]struct{}
-	if !writeAll && len(labels) > 0 {
-		filterStmts = map[core.BuildStatement]struct{}{}
-		for _, target := range labels {
-			stmt, err := pkg.Metadata.FindStatement(target)
-			if err == nil && stmt != (core.BuildStatement{}) {
-				filterStmts[stmt] = struct{}{}
-			}
-		}
-	}
-
-	return writeAll, filterStmts
+	return filterStmts
 }
