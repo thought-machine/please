@@ -508,6 +508,8 @@ var buildFunctions = map[string]func() int{
 			}
 			if opts.Hash.Update {
 				hashes.RewriteHashes(state, state.ExpandOriginalLabels())
+			} else {
+				clean.Targets(state, state.ExpandOriginalLabels())
 			}
 		}
 		return toExitCode(success, state)
