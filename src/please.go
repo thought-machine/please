@@ -509,9 +509,10 @@ var buildFunctions = map[string]func() int{
 			if opts.Hash.Update {
 				hashes.RewriteHashes(state, state.ExpandOriginalLabels())
 			} else {
-				// plz hash was building targets to the cache and tagging it with a valid
-				// user.plz_build xattr even if the computed hash didn't match the hash in the rule.
-				// Make sure we clean up any built targets if we aren't updating the hash aswell
+				// The code above will build the target(s) and unconditionally write to
+				// the cache. If we're not updating the hash, we need to clear the target(s)
+				// from the cache again to ensure that future builds depending on the
+				// target(s) are not able to proceed despite a potentially mismatched hash.
 				clean.Targets(state, state.ExpandOriginalLabels())
 			}
 		}
