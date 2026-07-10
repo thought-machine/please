@@ -508,6 +508,12 @@ var buildFunctions = map[string]func() int{
 			}
 			if opts.Hash.Update {
 				hashes.RewriteHashes(state, state.ExpandOriginalLabels())
+			} else {
+				// The code above will build the target(s) and unconditionally write to
+				// the cache. If we're not updating the hash, we need to clear the target(s)
+				// from the cache again to ensure that future builds depending on the
+				// target(s) are not able to proceed despite a potentially mismatched hash.
+				clean.Targets(state, state.ExpandOriginalLabels())
 			}
 		}
 		return toExitCode(success, state)
