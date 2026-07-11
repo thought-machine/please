@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alessio/shellescape"
+	cpb "github.com/bazelbuild/remote-apis-sdks/go/api/command"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/command"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
@@ -538,7 +539,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), ".", target.Outputs(), filemetadata.NewNoopCache(), command.PreserveSymlink)
+	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), ".", target.Outputs(), filemetadata.NewNoopCache(), command.PreserveSymlink, map[string]*cpb.NodeProperties{})
 	if err != nil {
 		return err
 	}

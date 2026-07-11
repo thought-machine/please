@@ -275,7 +275,7 @@ func (c *Client) initExec() error {
 	c.platform = convertPlatform(c.state.Config.Remote.Platform)
 	log.Debug("Remote execution client initialised")
 	if c.state.Config.Remote.AssetURL == "" {
-		c.fetchClient = fpb.NewFetchClient(client.Connection)
+		c.fetchClient = fpb.NewFetchClient(client.Connection())
 	}
 	return nil
 }

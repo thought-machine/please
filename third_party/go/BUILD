@@ -5,14 +5,14 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "65773dab2f8cc4cd23d93ba6d0a805de150ca0b78378879292be0b903b8cdd08",  # go1.26.1.darwin-amd64.tar.gz
-        "353df43a7811ce284c8938b5f3c7df40b7bfb6f56cb165b150bc40b5e2dd541f",  # go1.26.1.darwin-arm64.tar.gz
-        "d89034a0b54fdc234815fecfb76d7d06a7d180d7a6124aa47715a4cacc9fe999",  # go1.26.1.freebsd-amd64.tar.gz
-        "031f088e5d955bab8657ede27ad4e3bc5b7c1ba281f05f245bcc304f327c987a",  # go1.26.1.linux-amd64.tar.gz
-        "a290581cfe4fe28ddd737dde3095f3dbeb7f2e4065cab4eae44dfc53b760c2f7",  # go1.26.1.linux-arm64.tar.gz
+        "6231d8d3b8f5552ec6cbf6d685bdd5482e1e703214b120e89b3bf0d7bf1ef725",  # go1.26.1.darwin-amd64.tar.gz
+        "efb87ff28af9a188d0536ef5d42e63dd52ba8263cd7344a993cc48dd11dedb6a",  # go1.26.1.darwin-arm64.tar.gz
+        "0e5ddc51a62018211d461d6bf409939b04eaa4d6dd6d7097910090ef755ed947",  # go1.26.1.freebsd-amd64.tar.gz
+        "5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053",  # go1.26.1.linux-amd64.tar.gz
+        "fe4789e92b1f33358680864bbe8704289e7bb5fc207d80623c308935bd696d49",  # go1.26.1.linux-arm64.tar.gz
     ],
     install_std = False,
-    version = "1.26.1",
+    version = "1.26.5",
 )
 
 go_stdlib(
@@ -35,12 +35,12 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/text",
-    version = "v0.31.0",
+    version = "v0.40.0",
 )
 
 go_repo(
     module = "golang.org/x/tools",
-    version = "v0.38.0",
+    version = "v0.48.0",
 )
 
 go_repo(
@@ -61,7 +61,7 @@ go_repo(
 
 go_repo(
     module = "github.com/shirou/gopsutil/v3",
-    version = "v3.24.2",
+    version = "v3.24.5",
 )
 
 go_repo(
@@ -76,12 +76,12 @@ go_repo(
 
 go_repo(
     module = "github.com/Masterminds/semver/v3",
-    version = "v3.2.1",
+    version = "v3.5.0",
 )
 
 go_repo(
     module = "github.com/stretchr/testify",
-    version = "v1.9.0",
+    version = "v1.11.1",
 )
 
 go_repo(
@@ -96,7 +96,7 @@ go_repo(
 
 go_repo(
     module = "github.com/klauspost/compress",
-    version = "v1.17.7",
+    version = "v1.19.0",
 )
 
 go_repo(
@@ -111,17 +111,17 @@ go_repo(
 
 go_repo(
     module = "github.com/ProtonMail/go-crypto",
-    version = "v0.0.0-20210920135941-2c5829bbf927",
+    version = "v1.4.1",
 )
 
 go_repo(
     module = "golang.org/x/net",
-    version = "v0.52.0",
+    version = "v0.57.0",
 )
 
 go_repo(
     module = "github.com/prometheus/client_model",
-    version = "v0.6.0",
+    version = "v0.6.2",
 )
 
 go_repo(
@@ -131,12 +131,12 @@ go_repo(
 
 go_repo(
     module = "github.com/zeebo/blake3",
-    version = "v0.2.3",
+    version = "v0.2.4",
 )
 
 go_repo(
     module = "github.com/thought-machine/go-flags",
-    version = "v1.6.3",
+    version = "v1.7.0",
 )
 
 go_repo(
@@ -146,7 +146,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/oauth2",
-    version = "v0.27.0",
+    version = "v0.36.0",
 )
 
 go_repo(
@@ -161,7 +161,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/genproto",
-    version = "v0.0.0-20240304212257-790db918fca8",
+    version = "v0.0.0-20260706201446-f0a921348800",
 )
 
 go_repo(
@@ -171,7 +171,7 @@ go_repo(
 
 go_repo(
     module = "github.com/hashicorp/go-retryablehttp",
-    version = "v0.7.7",
+    version = "v0.7.8",
 )
 
 go_repo(
@@ -186,32 +186,32 @@ go_repo(
 
 go_repo(
     module = "github.com/tklauser/go-sysconf",
-    version = "v0.3.13",
+    version = "v0.4.0",
 )
 
 go_repo(
     module = "github.com/ulikunitz/xz",
-    version = "v0.5.14",
+    version = "v0.5.15",
 )
 
 go_repo(
     module = "github.com/google/go-containerregistry",
-    version = "v0.19.0",
+    version = "v0.21.7",
 )
 
 go_repo(
     module = "github.com/tklauser/numcpus",
-    version = "v0.7.0",
+    version = "v0.12.0",
 )
 
 go_repo(
     module = "github.com/prometheus/client_golang",
-    version = "v1.19.0",
+    version = "v1.23.2",
 )
 
 go_repo(
     module = "golang.org/x/term",
-    version = "v0.37.0",
+    version = "v0.45.0",
 )
 
 go_repo(
@@ -236,7 +236,7 @@ go_repo(
 
 go_repo(
     module = "github.com/sigstore/sigstore",
-    version = "v1.8.2",
+    version = "v1.10.8",
 )
 
 go_repo(
@@ -251,7 +251,7 @@ go_repo(
 
 go_repo(
     module = "github.com/googleapis/gax-go/v2",
-    version = "v2.12.2",
+    version = "v2.23.0",
 )
 
 go_repo(
@@ -271,7 +271,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sync",
-    version = "v0.18.0",
+    version = "v0.22.0",
 )
 
 go_repo(
@@ -286,7 +286,7 @@ go_repo(
 
 go_repo(
     module = "github.com/googleapis/enterprise-certificate-proxy",
-    version = "v0.3.2",
+    version = "v0.3.18",
 )
 
 go_repo(
@@ -296,12 +296,12 @@ go_repo(
 
 go_repo(
     module = "cloud.google.com/go",
-    version = "v0.65.0",
+    version = "v0.123.0",
 )
 
 go_repo(
     module = "cloud.google.com/go/compute/metadata",
-    version = "v0.3.0",
+    version = "v0.9.0",
 )
 
 go_repo(
@@ -326,12 +326,12 @@ go_repo(
 
 go_repo(
     module = "github.com/davecgh/go-spew",
-    version = "v1.1.1",
+    version = "v1.1.2-0.20180830191138-d8f796af33cc",
 )
 
 go_repo(
     module = "golang.org/x/sys",
-    version = "v0.38.0",
+    version = "v0.47.0",
 )
 
 go_repo(
@@ -351,12 +351,12 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/grpc",
-    version = "v1.62.1",
+    version = "v1.82.0",
 )
 
 go_repo(
     module = "github.com/sourcegraph/jsonrpc2",
-    version = "v0.2.0",
+    version = "v0.2.1",
 )
 
 go_repo(
@@ -366,7 +366,7 @@ go_repo(
 
 go_repo(
     module = "github.com/cespare/xxhash/v2",
-    version = "v2.2.0",
+    version = "v2.3.0",
 )
 
 go_repo(
@@ -376,7 +376,7 @@ go_repo(
 
 go_repo(
     module = "github.com/klauspost/cpuid/v2",
-    version = "v2.2.7",
+    version = "v2.4.0",
 )
 
 go_repo(
@@ -391,7 +391,7 @@ go_repo(
 
 go_repo(
     module = "github.com/bazelbuild/remote-apis-sdks",
-    version = "v0.0.0-20221114180157-e62cf9b8696a",
+    version = "v0.0.0-20260610142741-7ffd493e6686",
 )
 
 go_repo(
@@ -401,18 +401,18 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.45.0",
+    version = "v0.54.0",
 )
 
 go_repo(
     module = "google.golang.org/protobuf",
-    version = "v1.33.0",
+    version = "v1.36.11",
 )
 
 go_repo(
     module = "github.com/golang/glog",
     patch = ["glog_disable.patch"],
-    version = "v1.2.4",
+    version = "v1.2.5",
 )
 
 go_repo(
@@ -422,22 +422,22 @@ go_repo(
 
 go_repo(
     module = "github.com/pkg/xattr",
-    version = "v0.4.9",
+    version = "v0.4.12",
 )
 
 go_repo(
     module = "cloud.google.com/go/iam",
-    version = "v1.1.6",
+    version = "v1.11.0",
 )
 
 go_repo(
     module = "go.uber.org/automaxprocs",
-    version = "v1.5.3",
+    version = "v1.6.0",
 )
 
 go_repo(
     module = "github.com/pmezard/go-difflib",
-    version = "v1.0.0",
+    version = "v1.0.1-0.20181226105442-5d4384ee4fb2",
 )
 
 go_repo(
@@ -448,7 +448,7 @@ go_repo(
 
 go_repo(
     module = "github.com/prometheus/common",
-    version = "v0.50.0",
+    version = "v0.70.0",
 )
 
 go_repo(
@@ -458,7 +458,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/api",
-    version = "v0.168.0",
+    version = "v0.288.0",
 )
 
 go_repo(
@@ -473,12 +473,12 @@ go_repo(
 
 go_repo(
     module = "cloud.google.com/go/longrunning",
-    version = "v0.5.5",
+    version = "v1.2.0",
 )
 
 go_repo(
     module = "github.com/prometheus/procfs",
-    version = "v0.13.0",
+    version = "v0.21.1",
 )
 
 go_repo(
@@ -503,12 +503,12 @@ go_repo(
 
 go_repo(
     module = "github.com/fsnotify/fsnotify",
-    version = "v1.7.0",
+    version = "v1.10.1",
 )
 
 go_repo(
     module = "github.com/bazelbuild/remote-apis",
-    version = "v0.0.0-20240409135018-1f36c310b28d",
+    version = "v0.0.0-20260331222004-becdd8f9ff81",
 )
 
 go_repo(
@@ -518,17 +518,17 @@ go_repo(
 
 go_repo(
     module = "cloud.google.com/go/kms",
-    version = "v1.15.7",
+    version = "v1.31.0",
 )
 
 go_repo(
     module = "github.com/sourcegraph/go-diff",
-    version = "v0.7.0",
+    version = "v0.8.0",
 )
 
 go_repo(
     module = "golang.org/x/exp",
-    version = "v0.0.0-20240222234643-814bf88cf225",
+    version = "v0.0.0-20260709172345-9ea1abe57597",
 )
 
 go_repo(
@@ -550,13 +550,13 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/rpc",
-    version = "v0.0.0-20240304212257-790db918fca8",
+    version = "v0.0.0-20260706201446-f0a921348800",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/secure-systems-lab/go-securesystemslib",
-    version = "v0.8.0",
+    version = "v0.11.0",
 )
 
 go_repo(
@@ -568,31 +568,31 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/api",
-    version = "v0.0.0-20240304212257-790db918fca8",
+    version = "v0.0.0-20260706201446-f0a921348800",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/bytestream",
-    version = "v0.0.0-20240304212257-790db918fca8",
+    version = "v0.0.0-20260706201446-f0a921348800",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/sigstore/sigstore/pkg/signature/kms/gcp",
-    version = "v1.8.2",
+    version = "v1.10.8",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/felixge/httpsnoop",
-    version = "v1.0.4",
+    version = "v1.1.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/go-logr/logr",
-    version = "v1.4.1",
+    version = "v1.4.3",
 )
 
 go_repo(
@@ -604,55 +604,55 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/google/s2a-go",
-    version = "v0.1.7",
+    version = "v0.1.9",
 )
 
 go_repo(
     licences = ["MIT"],
     module = "github.com/jellydator/ttlcache/v3",
-    version = "v3.2.0",
+    version = "v3.4.1",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
-    version = "v0.49.0",
+    version = "v0.69.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-    version = "v0.49.0",
+    version = "v0.69.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel",
-    version = "v1.24.0",
+    version = "v1.44.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/metric",
-    version = "v1.24.0",
+    version = "v1.44.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/trace",
-    version = "v1.24.0",
+    version = "v1.44.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "golang.org/x/time",
-    version = "v0.5.0",
+    version = "v0.15.0",
 )
 
 go_repo(
     licences = ["BSD-3-Clause"],
     module = "github.com/lufia/plan9stats",
-    version = "v0.0.0-20240226150601-1dcf7310316a",
+    version = "v0.0.0-20260627054121-477a66015f15",
 )
 
 go_repo(
@@ -664,7 +664,7 @@ go_repo(
 go_repo(
     licences = ["MPL-2.0"],
     module = "github.com/shoenig/go-m1cpu",
-    version = "v0.1.6",
+    version = "v0.2.2",
 )
 
 go_repo(
@@ -683,4 +683,49 @@ go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/sdk",
     version = "v1.22.0",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "cloud.google.com/go/auth",
+    version = "v0.21.0",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "cloud.google.com/go/auth/oauth2adapt",
+    version = "v0.2.8",
+)
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "github.com/cloudflare/circl",
+    version = "v1.6.4",
+)
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "github.com/munnerz/goautoneg",
+    version = "v0.0.0-20191010083416-a7dc8b61c822",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "github.com/sigstore/protobuf-specs",
+    strip = [
+        "protoc-builder/Dockerfile.go",
+    ],
+    version = "v0.5.1",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/youmark/pkcs8",
+    version = "v0.0.0-20240726163527-a2c0da244d78",
+)
+
+go_repo(
+    licences = ["Apache-2.0"],
+    module = "go.opentelemetry.io/auto/sdk",
+    version = "v1.2.1",
 )

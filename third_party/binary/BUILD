@@ -13,7 +13,7 @@ remote_file(
     ),
 )
 
-PUKU_VERSION = "1.14.0"
+PUKU_VERSION = "1.17.1"
 
 remote_file(
     name = "puku",

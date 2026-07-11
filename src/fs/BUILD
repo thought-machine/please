@@ -26,10 +26,8 @@ go_test(
     data = ["test_data"],
     deps = [
         ":fs",
-        "///third_party/go/github.com_cespare_xxhash_v2//:v2",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
-        "///third_party/go/github.com_zeebo_blake3//:blake3",
     ],
 )
 
