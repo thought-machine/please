@@ -359,7 +359,7 @@ func isZero(v reflect.Value) bool {
 	case reflect.Struct, reflect.Interface:
 		_, ok := v.Interface().(fmt.Stringer)
 		return !ok
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return v.IsNil()
 	}
 	return true
@@ -390,7 +390,7 @@ func (p *printer) genericPrint(v reflect.Value) (string, bool) {
 			secs := v.Interface().(time.Duration).Seconds()
 			return fmt.Sprintf("%0.0f", secs), secs > 0.0
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if v.IsNil() {
 			return "", false
 		}

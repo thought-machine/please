@@ -98,7 +98,7 @@ func walkAST(v reflect.Value, types []reflect.Type, callbacks []reflect.Value) {
 		return true
 	}
 
-	if v.Kind() == reflect.Ptr && !v.IsNil() {
+	if v.Kind() == reflect.Pointer && !v.IsNil() {
 		walkAST(v.Elem(), types, callbacks)
 	} else if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {

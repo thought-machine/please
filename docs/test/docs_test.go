@@ -161,7 +161,7 @@ func findConfigFields(path string, configType reflect.Type) []string {
 
 func fieldElem(t reflect.Type) reflect.Type {
 	kind := t.Kind()
-	if kind == reflect.Ptr || kind == reflect.Map || kind == reflect.Array || kind == reflect.Slice {
+	if kind == reflect.Pointer || kind == reflect.Map || kind == reflect.Array || kind == reflect.Slice {
 		return fieldElem(t.Elem())
 	}
 	return t
