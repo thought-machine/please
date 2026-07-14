@@ -9,6 +9,7 @@ go_library(
     deps = [
         "///third_party/go/cloud.google.com_go_longrunning//autogen/longrunningpb",
         "///third_party/go/github.com_alessio_shellescape//:shellescape",
+        "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/api/command",
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/client",
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/command",
         "///third_party/go/github.com_bazelbuild_remote-apis-sdks//go/pkg/digest",

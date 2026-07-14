@@ -161,6 +161,14 @@ func (s *testServer) GetTree(*pb.GetTreeRequest, pb.ContentAddressableStorage_Ge
 	return status.Errorf(codes.Unimplemented, "GetTree not implemented for test")
 }
 
+func (s *testServer) SpliceBlob(context.Context, *pb.SpliceBlobRequest) (*pb.SpliceBlobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "not implemented")
+}
+
+func (s *testServer) SplitBlob(context.Context, *pb.SplitBlobRequest) (*pb.SplitBlobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "not implemented")
+}
+
 func (s *testServer) Read(req *bs.ReadRequest, srv bs.ByteStream_ReadServer) error {
 	blobName, err := s.bytestreamBlobName(req.ResourceName)
 	if err != nil {

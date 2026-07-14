@@ -275,7 +275,7 @@ func (c *Client) initExec() error {
 	c.platform = convertPlatform(c.state.Config.Remote.Platform)
 	log.Debug("Remote execution client initialised")
 	if c.state.Config.Remote.AssetURL == "" {
-		c.fetchClient = fpb.NewFetchClient(client.Connection)
+		c.fetchClient = fpb.NewFetchClient(client.Connection())
 	}
 	return nil
 }
@@ -291,7 +291,7 @@ func (c *Client) initFetch() error {
 	} else {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
-	conn, err := grpc.Dial(c.state.Config.Remote.AssetURL, append(dialOpts, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))...)
+	conn, err := grpc.NewClient(c.state.Config.Remote.AssetURL, append(dialOpts, grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor()))...)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to the remote fetch server: %s", err)
 	}
