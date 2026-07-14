@@ -1,0 +1,4 @@
+plugin_repo(
+    name = "foo",
+    revision = "v1.0.0",
+)
