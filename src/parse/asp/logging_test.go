@@ -5,6 +5,7 @@
 package asp
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ type record struct { //nolint:unused
 }
 
 func parseFile2(filename string) (*scope, error) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(context.Background())
 	pkg := core.NewPackage("test/package")
 	pkg.Filename = "test/package/BUILD"
 	parser := NewParser(state)

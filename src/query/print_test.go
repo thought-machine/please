@@ -2,6 +2,7 @@ package query
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 	"github.com/thought-machine/please/src/parse"
 )
 
-var order = parse.BuildRuleArgOrder(core.NewDefaultBuildState())
+var order = parse.BuildRuleArgOrder(core.NewDefaultBuildState(context.Background()))
 
 func TestAllFieldsArePresentAndAccountedFor(t *testing.T) {
 	target := &core.BuildTarget{}

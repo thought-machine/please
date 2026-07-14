@@ -149,14 +149,14 @@ func runCommand(cmd *exec.Cmd, ch chan<- error) {
 // ExecWithTimeoutShell runs an external command within a Bash shell.
 // Other arguments are as ExecWithTimeout.
 // Note that the command is deliberately a single string.
-func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string, timeout time.Duration, showOutput, foreground bool, sandbox SandboxConfig, cmd string) ([]byte, []byte, error) {
-	return e.ExecWithTimeoutShellStdStreams(target, dir, env, timeout, showOutput, foreground, sandbox, cmd, false)
+func (e *Executor) ExecWithTimeoutShell(ctx context.Context, target Target, dir string, env []string, timeout time.Duration, showOutput, foreground bool, sandbox SandboxConfig, cmd string) ([]byte, []byte, error) {
+	return e.ExecWithTimeoutShellStdStreams(ctx, target, dir, env, timeout, showOutput, foreground, sandbox, cmd, false)
 }
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
-func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput, foreground bool, sandbox SandboxConfig, cmd string, attachStdStreams bool) ([]byte, []byte, error) {
+func (e *Executor) ExecWithTimeoutShellStdStreams(ctx context.Context, target Target, dir string, env []string, timeout time.Duration, showOutput, foreground bool, sandbox SandboxConfig, cmd string, attachStdStreams bool) ([]byte, []byte, error) {
 	c := BashCommand("bash", cmd, target.ShouldExitOnError())
-	return e.ExecWithTimeout(context.Background(), target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, foreground, sandbox, c)
+	return e.ExecWithTimeout(ctx, target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, foreground, sandbox, c)
 }
 
 // KillProcess kills a process, attempting to send it a SIGTERM first followed by a SIGKILL

@@ -9,7 +9,7 @@ import (
 )
 
 func TestReverseDeps(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	graph := state.Graph
 
 	root := core.NewBuildTarget(core.ParseBuildLabel("//package:root", ""))
@@ -35,7 +35,7 @@ func TestReverseDeps(t *testing.T) {
 }
 
 func TestReverseDepsWithHidden(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	graph := state.Graph
 
 	foo := core.NewBuildTarget(core.ParseBuildLabel("//package:foo", ""))

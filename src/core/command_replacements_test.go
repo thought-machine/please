@@ -3,6 +3,7 @@
 package core
 
 import (
+	"context"
 	"encoding/base64"
 	"os"
 	"path/filepath"
@@ -18,7 +19,7 @@ var state *BuildState
 const testHash = "gB4sUwsLkB1ODYKUxYrKGlpdYUI"
 
 func init() {
-	state = NewDefaultBuildState()
+	state = NewDefaultBuildState(context.Background())
 	state.TargetHasher = &testHasher{}
 	wd, _ = os.Getwd()
 }
@@ -161,7 +162,7 @@ func TestBazelCompatReplacements(t *testing.T) {
 	target := makeTarget2("//path/to:target", "cp $< $@", nil)
 	assert.Equal(t, "cp $< $@", replaceSequences(state, target))
 	// In Bazel compat mode we do though.
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(t.Context())
 	state.Config.Bazel.Compatibility = true
 	assert.Equal(t, "cp $SRCS $OUTS", replaceSequences(state, target))
 	// @D is the output dir, for us it's the tmp dir.

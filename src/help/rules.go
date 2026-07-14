@@ -1,6 +1,7 @@
 package help
 
 import (
+	"context"
 	"encoding/json"
 	iofs "io/fs"
 	"os"
@@ -41,13 +42,14 @@ func PrintRuleArgs(files cli.StdinStrings) {
 }
 
 func newState() *core.BuildState {
+	ctx := context.TODO()
 	// If we're in a repo, we might be able to read some stuff from there.
 	if core.FindRepoRoot() {
 		if config, err := core.ReadDefaultConfigFiles(fs.HostFS, nil); err == nil {
-			return core.NewBuildState(config)
+			return core.NewBuildState(ctx, config)
 		}
 	}
-	return core.NewDefaultBuildState()
+	return core.NewDefaultBuildState(ctx)
 }
 
 // AllBuiltinFunctions returns all the builtin functions, including any defined

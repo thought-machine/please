@@ -4,6 +4,7 @@
 package asp
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -19,7 +20,7 @@ func parseFileToStatements(filename string) (*scope, []*Statement, error) {
 }
 
 func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*Statement, error) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(context.Background())
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
 	parser := NewParser(state)
 
@@ -592,7 +593,7 @@ func TestIsSemver(t *testing.T) {
 }
 
 func TestJSON(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	parser := NewParser(state)
 
 	src, err := rules.ReadAsset("builtins.build_defs")
@@ -657,7 +658,7 @@ func TestSemverCheck(t *testing.T) {
 }
 
 func TestLogConfigVariable(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	parser := NewParser(state)
 
 	src, err := rules.ReadAsset("builtins.build_defs")

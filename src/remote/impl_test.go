@@ -28,11 +28,13 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-func newClient() *Client {
-	return newClientInstance("wibble")
+func newClient(t *testing.T) *Client {
+	t.Helper()
+	return newClientInstance(t, "wibble")
 }
 
-func newClientInstance(name string) *Client {
+func newClientInstance(t *testing.T, name string) *Client {
+	t.Helper()
 	config := core.DefaultConfiguration()
 	config.Build.Path = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 	config.Build.HashFunction = "sha256"
@@ -40,7 +42,7 @@ func newClientInstance(name string) *Client {
 	config.Remote.Instance = name
 	config.Remote.Secure = false
 	config.Remote.Platform = []string{"OSFamily=linux"}
-	state := core.NewBuildState(config)
+	state := core.NewBuildState(t.Context(), config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
 	state.Config.Remote.AssetURL = state.Config.Remote.URL
 	state.Cache = cache.NewCache(state)
