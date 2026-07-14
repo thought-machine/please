@@ -76,7 +76,10 @@ type Client struct {
 	subrepoTrees map[core.BuildLabel]*pb.Tree
 	outputMutex  sync.RWMutex
 
-	// The unstamped build action digests. Stamped and test digests are not stored.
+	// The cache-key build action digests. Stamped and test digests are not stored.
+	// For most targets this is the plain (unstamped) action digest, but for stamped targets and those
+	// whose PassUnsafeEnv values are excluded from the digest it is the canonical digest that omits those
+	// volatile inputs (see Client.build); that is the digest results are stored & looked up under.
 	// This isn't just a cache - it is needed because building a target can modify the target and things like plz hash
 	// --detailed and --shell will fail to get the right action digest.
 	unstampedBuildActionDigests actionDigestMap
@@ -412,36 +415,40 @@ func (c *Client) Run(target *core.BuildTarget) error {
 // build implements the actual build of a target.
 func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.ActionResult, *pb.Digest, error) {
 	needStdout := target.PostBuildFunction != nil
-	// If we're gonna stamp the target, first check the unstamped equivalent that we store results under.
-	// This implements the rules of stamp whereby we don't force rebuilds every time e.g. the SCM revision changes.
-	var unstampedDigest *pb.Digest
-	if target.Stamp {
-		command, digest, err := c.buildAction(target, false, false, 0)
+	// Some targets carry volatile inputs that we deliberately keep out of the cache key: the stamp
+	// (e.g. the SCM revision) and the values of PassUnsafeEnv variables (when configured). For these we
+	// store & look up results under a "cache-key" action digest that omits those inputs, while still
+	// executing the real action that includes them. This implements the rule whereby e.g. the SCM
+	// revision or an unsafe env var changing doesn't force a rebuild.
+	useCacheKeyDigest := target.Stamp || c.excludesUnsafeEnv(c.state.ForTarget(target), target)
+	var cacheKeyDigest *pb.Digest
+	if useCacheKeyDigest {
+		command, digest, err := c.buildAction(target, false, false, true, 0)
 		if err != nil {
 			return nil, nil, nil, err
 		} else if metadata, ar := c.maybeRetrieveResults(target, command, digest, false, needStdout, 0); metadata != nil {
 			c.unstampedBuildActionDigests.Put(target.Label, digest)
 			return metadata, ar, digest, nil
 		}
-		unstampedDigest = digest
+		cacheKeyDigest = digest
 	}
-	command, stampedDigest, err := c.buildAction(target, false, true, 0)
+	command, stampedDigest, err := c.buildAction(target, false, true, false, 0)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	metadata, ar, err := c.execute(target, command, stampedDigest, false, needStdout, 0)
-	if target.Stamp && err == nil {
-		err = c.verifyActionResult(target, command, unstampedDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
+	if useCacheKeyDigest && err == nil {
+		err = c.verifyActionResult(target, command, cacheKeyDigest, ar, c.state.Config.Remote.VerifyOutputs, false)
 		if err == nil {
-			// Store results under unstamped digest too.
-			c.locallyCacheResults(target, unstampedDigest, metadata)
+			// Store results under the cache-key digest too.
+			c.locallyCacheResults(target, cacheKeyDigest, metadata)
 		}
 		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
 			InstanceName: c.instance,
-			ActionDigest: unstampedDigest,
+			ActionDigest: cacheKeyDigest,
 			ActionResult: ar,
 		})
-		c.unstampedBuildActionDigests.Put(target.Label, unstampedDigest)
+		c.unstampedBuildActionDigests.Put(target.Label, cacheKeyDigest)
 	} else {
 		c.unstampedBuildActionDigests.Put(target.Label, stampedDigest)
 	}
@@ -608,11 +615,34 @@ func (c *Client) Test(target *core.BuildTarget, run int) (metadata *core.BuildMe
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
 	}
-	command, digest, err := c.buildAction(target, true, false, run)
-	if err != nil {
-		return nil, err
+	// As in build(), if PassUnsafeEnv values are excluded from the digest we look results up under a
+	// cache-key digest that omits them, while executing the real action that includes them.
+	var ar *pb.ActionResult
+	var cacheKeyDigest *pb.Digest
+	if c.excludesUnsafeEnv(c.state.ForTarget(target), target) {
+		command, digest, cErr := c.buildAction(target, true, false, true, run)
+		if cErr != nil {
+			return nil, cErr
+		}
+		if metadata, ar = c.maybeRetrieveResults(target, command, digest, true, false, run); ar == nil {
+			cacheKeyDigest = digest // Cache miss; remember to backfill once we've executed the real action.
+		}
 	}
-	metadata, ar, err := c.execute(target, command, digest, true, false, run)
+	if ar == nil {
+		command, digest, bErr := c.buildAction(target, true, false, false, run)
+		if bErr != nil {
+			return nil, bErr
+		}
+		metadata, ar, err = c.execute(target, command, digest, true, false, run)
+		if err == nil && ar != nil && cacheKeyDigest != nil {
+			// Backfill the cache-key digest so later runs with differing PassUnsafeEnv values hit.
+			c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
+				InstanceName: c.instance,
+				ActionDigest: cacheKeyDigest,
+				ActionResult: ar,
+			})
+		}
+	}
 
 	if ar != nil {
 		_, dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)

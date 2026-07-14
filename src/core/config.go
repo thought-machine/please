@@ -518,7 +518,7 @@ type Configuration struct {
 		Xattrs               bool         `help:"True (the default) to attempt to use xattrs to record file metadata. If false Please will fall back to using additional files where needed, which is more compatible but has slightly worse performance."`
 		Nonce                string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
-		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
+		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes. For remote execution this is controlled by Remote.ExcludePassUnsafeEnvVarsFromDigest, which by default also keeps these values out of the remote action cache key."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
 		HashCheckers         []string     `help:"Set of hash algos supported by the 'hashes' argument on build rules. Defaults to: sha1,sha256,blake3." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
@@ -562,23 +562,24 @@ type Configuration struct {
 		ExcludeableTargets []BuildLabel `help:"If set, only targets that match these wildcards will be allowed to opt out of the sandbox"`
 	} `help:"A config section describing settings relating to sandboxing of build actions."`
 	Remote struct {
-		URL                     string       `help:"URL for the remote server."`
-		CASURL                  string       `help:"URL for the CAS service, if it is different to the main one."`
-		AssetURL                string       `help:"URL for the remote asset server, if it is different to the main one."`
-		NumExecutors            int          `help:"Maximum number of remote executors to use simultaneously."`
-		Instance                string       `help:"Remote instance name to request; depending on the server this may be required."`
-		Name                    string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
-		DisplayURL              string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
-		TokenFile               string       `help:"A file containing a token that is attached to outgoing RPCs to authenticate them. This is somewhat bespoke; we are still investigating further options for authentication."`
-		Timeout                 cli.Duration `help:"Timeout for connections made to the remote server."`
-		Secure                  bool         `help:"Whether to use TLS for communication or not."`
-		VerifyOutputs           bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
-		UploadDirs              bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
-		OptionalOutputsRequired bool         `help:"Requires that any optional outputs of build actions (optional test outputs, coverage when not opted out of) are produced. By default this is a non-fatal failure, but the actions may not cache remotely."`
-		Shell                   string       `help:"Path to the shell to use to execute actions in. Default is 'bash' which will be looked up by the server."`
-		Platform                []string     `help:"Platform properties to request from remote workers, in the format key=value."`
-		CacheDuration           cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
-		BuildID                 string       `help:"ID of the build action that's being run, to attach to remote requests. If not set then one is automatically generated."`
+		URL                                string       `help:"URL for the remote server."`
+		CASURL                             string       `help:"URL for the CAS service, if it is different to the main one."`
+		AssetURL                           string       `help:"URL for the remote asset server, if it is different to the main one."`
+		NumExecutors                       int          `help:"Maximum number of remote executors to use simultaneously."`
+		Instance                           string       `help:"Remote instance name to request; depending on the server this may be required."`
+		Name                               string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
+		DisplayURL                         string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
+		TokenFile                          string       `help:"A file containing a token that is attached to outgoing RPCs to authenticate them. This is somewhat bespoke; we are still investigating further options for authentication."`
+		Timeout                            cli.Duration `help:"Timeout for connections made to the remote server."`
+		Secure                             bool         `help:"Whether to use TLS for communication or not."`
+		VerifyOutputs                      bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`
+		ExcludePassUnsafeEnvVarsFromDigest bool         `help:"Whether to exclude the values of PassUnsafeEnv environment variables from the remote action digest. When enabled, PassUnsafeEnv values are still passed to the executed action but do not contribute to the cache key, so changing them does not cause remote cache misses (matching local cache behaviour). This is disabled by default; note that enabling it means a cached result may be reused (and shared between users) even if the PassUnsafeEnv values differ from those it was built with."`
+		UploadDirs                         bool         `help:"Uploads individual directory blobs after build actions. This might not be necessary with some servers, but if you aren't sure, you should leave it on."`
+		OptionalOutputsRequired            bool         `help:"Requires that any optional outputs of build actions (optional test outputs, coverage when not opted out of) are produced. By default this is a non-fatal failure, but the actions may not cache remotely."`
+		Shell                              string       `help:"Path to the shell to use to execute actions in. Default is 'bash' which will be looked up by the server."`
+		Platform                           []string     `help:"Platform properties to request from remote workers, in the format key=value."`
+		CacheDuration                      cli.Duration `help:"Length of time before we re-check locally cached build actions. Default is unlimited."`
+		BuildID                            string       `help:"ID of the build action that's being run, to attach to remote requests. If not set then one is automatically generated."`
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {

@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,7 +167,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 	target.AddOutput("remote_test")
 	target.AddSource(core.FileLabel{Package: "package", File: "file"})
 	target.AddTool(tool.Label)
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	testDir := os.Getenv("TEST_DIR")
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
@@ -185,7 +186,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
 	target.AddOutput("remote_test")
 	target.AddTool(core.SystemPathLabel{Path: []string{os.Getenv("TMP_DIR")}, Name: "remote_test"})
-	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, _ := c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	for _, env := range cmd.EnvironmentVariables {
 		if !strings.HasPrefix(env.Value, "//") {
 			assert.False(t, filepath.IsAbs(env.Value), "Env var %s has an absolute path: %s", env.Name, env.Value)
@@ -199,15 +200,179 @@ func TestRemoteFilesHashConsistently(t *testing.T) {
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "download"})
 	target.IsRemoteFile = true
 	target.AddSource(core.URLLabel("https://localhost/file"))
-	cmd, digest, err := c.buildAction(target, false, false, 0)
+	cmd, digest, err := c.buildAction(target, false, false, false, 0)
 	assert.NoError(t, err)
 	// After we change this path, the rule should still give back the same protos since it is
 	// not relevant to how we fetch a remote asset.
 	c.state.Config.Build.Path = []string{"/usr/bin/nope"}
-	cmd2, digest2, err := c.buildAction(target, false, false, 0)
+	cmd2, digest2, err := c.buildAction(target, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, cmd, cmd2)
 	assert.Equal(t, digest, digest2)
+}
+
+// envContainsValue reports whether any environment variable in the command has the given value.
+func envContainsValue(cmd *pb.Command, value string) bool {
+	for _, e := range cmd.EnvironmentVariables {
+		if e.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
+func TestPassUnsafeEnvExcludedFromDigest(t *testing.T) {
+	c := newClientInstance("unsafe_env")
+	assert.False(t, c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest, "should default to false")
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "unsafe"})
+	target.AddOutput("out.txt")
+	target.Command = "echo hello > $OUT"
+	unsafe := []string{"MY_UNSAFE_VAR"}
+	target.PassUnsafeEnv = &unsafe
+	target.BuildTimeout = time.Minute
+
+	// With the feature disabled (the default) the value contributes to the cache-key digest.
+	t.Setenv("MY_UNSAFE_VAR", "first")
+	_, disabledDigest1, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	t.Setenv("MY_UNSAFE_VAR", "second")
+	_, disabledDigest2, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	assert.NotEqual(t, disabledDigest1.Hash, disabledDigest2.Hash)
+
+	// Enable the feature; now the value must be excluded from the cache-key digest.
+	c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
+
+	t.Setenv("MY_UNSAFE_VAR", "first")
+	canon1, canonDigest1, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	real1, realDigest1, err := c.buildAction(target, false, true, false, 0)
+	require.NoError(t, err)
+
+	t.Setenv("MY_UNSAFE_VAR", "second")
+	canon2, canonDigest2, err := c.buildAction(target, false, false, true, 0)
+	require.NoError(t, err)
+	_, realDigest2, err := c.buildAction(target, false, true, false, 0)
+	require.NoError(t, err)
+
+	// The cache-key (canonical) digest is stable across changes to the PassUnsafeEnv value, and the value
+	// never appears in the canonical command's environment.
+	assert.Equal(t, canonDigest1.Hash, canonDigest2.Hash)
+	assert.False(t, envContainsValue(canon1, "first"))
+	assert.False(t, envContainsValue(canon2, "second"))
+
+	// The executed action still includes the real value, so its digest changes when the value changes.
+	assert.NotEqual(t, realDigest1.Hash, realDigest2.Hash)
+	assert.True(t, envContainsValue(real1, "first"))
+}
+
+// TestStripUnsafeEnvConfigLevel checks the stripping logic removes values from the global [Build]
+// PassUnsafeEnv config keyword while retaining PassEnv values (which are intentionally part of the cache key).
+func TestStripUnsafeEnvConfigLevel(t *testing.T) {
+	c := newClientInstance("strip")
+	c.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
+	c.state.Config.Build.PassUnsafeEnv = []string{"CFG_UNSAFE"}
+	c.state.Config.Build.PassEnv = []string{"CFG_SAFE"}
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "x"})
+	unsafe := []string{"TGT_UNSAFE"}
+	target.PassUnsafeEnv = &unsafe
+
+	env := core.BuildEnv{
+		"CFG_UNSAFE": "secret",
+		"CFG_SAFE":   "keep",
+		"TGT_UNSAFE": "alsosecret",
+		"OTHER":      "v",
+	}
+	c.stripUnsafeEnv(c.state.ForTarget(target), target, env)
+
+	_, cfgUnsafePresent := env["CFG_UNSAFE"]
+	_, tgtUnsafePresent := env["TGT_UNSAFE"]
+	assert.False(t, cfgUnsafePresent, "config-level PassUnsafeEnv should be stripped")
+	assert.False(t, tgtUnsafePresent, "target-level PassUnsafeEnv should be stripped")
+	assert.Equal(t, "keep", env["CFG_SAFE"], "PassEnv must be retained")
+	assert.Equal(t, "v", env["OTHER"], "unrelated env must be retained")
+}
+
+// TestConfigPassUnsafeEnvExcludedFromDigest checks that values declared via the global [Build]
+// PassUnsafeEnv config keyword (not just the per-target attribute) are excluded from the cache-key digest.
+// Because config-level values are captured once per config object, this uses a separate client per value
+// and sets the config before the client (and its async init) is created.
+func TestConfigPassUnsafeEnvExcludedFromDigest(t *testing.T) {
+	canonicalAndReal := func(value string) (string, string) {
+		t.Setenv("MY_CFG_UNSAFE", value)
+		c := newClientInstanceWith(fmt.Sprintf("cfg-unsafe-%d", time.Now().UnixNano()), func(config *core.Configuration) {
+			config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
+			config.Build.PassUnsafeEnv = []string{"MY_CFG_UNSAFE"}
+		})
+		target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "cfgunsafe"})
+		target.AddOutput("out.txt")
+		target.Command = "echo hello > $OUT"
+		target.BuildTimeout = time.Minute
+		canon, canonDigest, err := c.buildAction(target, false, false, true, 0)
+		require.NoError(t, err)
+		require.False(t, envContainsValue(canon, value), "config-level PassUnsafeEnv value must not be in the canonical command")
+		real, realDigest, err := c.buildAction(target, false, true, false, 0)
+		require.NoError(t, err)
+		require.True(t, envContainsValue(real, value), "executed action should include the config-level value")
+		return canonDigest.Hash, realDigest.Hash
+	}
+
+	canonFirst, realFirst := canonicalAndReal("first")
+	canonSecond, realSecond := canonicalAndReal("second")
+
+	assert.Equal(t, canonFirst, canonSecond, "config-level PassUnsafeEnv value must not affect the cache-key digest")
+	assert.NotEqual(t, realFirst, realSecond, "the executed action should still include the config-level value")
+}
+
+// TestPassUnsafeEnvRemoteCacheHitAcrossValues is an end-to-end test against the in-process testServer
+// that proves changing a PassUnsafeEnv value does not re-execute the action: the first build executes
+// and backfills the cache-key digest, and a second build with a *different* value (and a fresh client,
+// so a cold local cache) is served from the remote action cache instead of being re-executed.
+func TestPassUnsafeEnvRemoteCacheHitAcrossValues(t *testing.T) {
+	server.Reset()
+	defer server.Reset()
+
+	// Use unique instance names per run so each client's (disk-backed) local metadata store is empty.
+	// This guarantees the first build is a cold miss and forces the second build through the shared
+	// remote action cache (which is keyed by digest only, so it is shared across instances). Both names
+	// are something other than "test"/"mock" so the test server takes its default execution branch.
+	base := fmt.Sprintf("unsafe-%d", time.Now().UnixNano())
+
+	newTarget := func() *core.BuildTarget {
+		target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target2"})
+		target.AddSource(core.FileLabel{File: "src1.txt", Package: "package"})
+		target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
+		target.AddOutput("out2.txt")
+		target.BuildTimeout = time.Minute
+		target.Command = "echo hello && echo test > $OUT"
+		unsafe := []string{"MY_UNSAFE_VAR"}
+		target.PassUnsafeEnv = &unsafe
+		return target
+	}
+
+	// First build: cold cache, so the action is executed once and the result is backfilled under the
+	// value-independent cache-key digest.
+	c1 := newClientInstance(base + "-a")
+	c1.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
+	require.NoError(t, c1.CheckInitialised())
+	t.Setenv("MY_UNSAFE_VAR", "first")
+	md1, _, _, err := c1.build(newTarget())
+	require.NoError(t, err)
+	assert.False(t, md1.Cached, "first build should not be cached")
+	assert.EqualValues(t, 1, server.executions.Load(), "first build should execute the action once")
+
+	// Second build: different PassUnsafeEnv value and a separate client with an empty local cache. It
+	// must be a remote cache hit on the cache-key digest, not a re-execution.
+	c2 := newClientInstance(base + "-b")
+	c2.state.Config.Remote.ExcludePassUnsafeEnvVarsFromDigest = true
+	require.NoError(t, c2.CheckInitialised())
+	t.Setenv("MY_UNSAFE_VAR", "second")
+	md2, _, _, err := c2.build(newTarget())
+	require.NoError(t, err)
+	assert.True(t, md2.Cached, "build with a different PassUnsafeEnv value should be a cache hit")
+	assert.EqualValues(t, 1, server.executions.Load(), "changing only PassUnsafeEnv must not re-execute the action")
 }
 
 func TestOutDirsSetOutsOnTarget(t *testing.T) {
@@ -318,7 +483,7 @@ func TestTargetPlatform(t *testing.T) {
 	c := newClientInstance("platform_test")
 	c.platform = convertPlatform(c.state.Config.Remote.Platform) // Bit of a hack but we can't go through the normal path.
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target"})
-	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, &pb.Platform{
 		Properties: []*pb.Platform_Property{
@@ -330,7 +495,7 @@ func TestTargetPlatform(t *testing.T) {
 	}, cmd.Platform) //nolint:staticcheck
 
 	target.Labels = []string{"remote-platform-property:size=chomky"}
-	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false, false, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, &pb.Platform{
 		Properties: []*pb.Platform_Property{

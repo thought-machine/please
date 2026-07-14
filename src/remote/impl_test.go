@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
@@ -33,6 +34,13 @@ func newClient() *Client {
 }
 
 func newClientInstance(name string) *Client {
+	return newClientInstanceWith(name, nil)
+}
+
+// newClientInstanceWith builds a client, optionally applying configure to the configuration before the
+// build state (and the client's async initialisation) is created. This matters for config values that are
+// captured once, e.g. the build environment derived from PassUnsafeEnv.
+func newClientInstanceWith(name string, configure func(*core.Configuration)) *Client {
 	config := core.DefaultConfiguration()
 	config.Build.Path = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 	config.Build.HashFunction = "sha256"
@@ -40,6 +48,9 @@ func newClientInstance(name string) *Client {
 	config.Remote.Instance = name
 	config.Remote.Secure = false
 	config.Remote.Platform = []string{"OSFamily=linux"}
+	if configure != nil {
+		configure(config)
+	}
 	state := core.NewBuildState(config)
 	state.Config.Remote.URL = "127.0.0.1:9987"
 	state.Config.Remote.AssetURL = state.Config.Remote.URL
@@ -55,6 +66,7 @@ type testServer struct {
 	blobs                         map[string][]byte
 	bytestreams                   map[string][]byte
 	mockActionResult              *pb.ActionResult
+	executions                    atomic.Int64
 }
 
 func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitiesRequest) (*pb.ServerCapabilities, error) {
@@ -86,6 +98,7 @@ func (s *testServer) Reset() {
 	s.blobs = map[string][]byte{}
 	s.bytestreams = map[string][]byte{}
 	s.mockActionResult = nil
+	s.executions.Store(0)
 }
 
 func (s *testServer) GetActionResult(ctx context.Context, req *pb.GetActionResultRequest) (*pb.ActionResult, error) {
@@ -257,6 +270,7 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 }
 
 func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteServer) error {
+	s.executions.Add(1)
 	mm := func(msg protoreflect.ProtoMessage) *anypb.Any {
 		a := &anypb.Any{}
 		a.MarshalFrom(msg)
