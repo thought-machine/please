@@ -441,3 +441,55 @@ func TestPluginConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
 }
+
+func TestShouldLinkGeneratedSources(t *testing.T) {
+	t.Run("default is false", func(t *testing.T) {
+		config := DefaultConfiguration()
+		assert.False(t, config.ShouldLinkGeneratedSources())
+	})
+
+	t.Run("new field LinkGeneratedSourcesOnBuild", func(t *testing.T) {
+		config := DefaultConfiguration()
+		config.Build.LinkGeneratedSourcesOnBuild = true
+		assert.True(t, config.ShouldLinkGeneratedSources())
+	})
+
+	t.Run("deprecated field normalised at load time", func(t *testing.T) {
+		config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/linkgeneratedsources.plzconfig"}, nil)
+		assert.NoError(t, err)
+		assert.True(t, config.ShouldLinkGeneratedSources())
+		assert.True(t, config.Build.LinkGeneratedSourcesOnBuild)
+		assert.Equal(t, "hard", config.Build.GeneratedSourcesLinkType)
+	})
+
+	t.Run("error when deprecated and LinkGeneratedSourcesOnBuild both set", func(t *testing.T) {
+		_, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/linkgeneratedsources_conflict_build.plzconfig"}, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be used together")
+	})
+
+	t.Run("error when deprecated and GeneratedSourcesLinkType both set", func(t *testing.T) {
+		_, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/linkgeneratedsources_conflict_type.plzconfig"}, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be used together")
+	})
+}
+
+func TestGetGeneratedSourcesLinkType(t *testing.T) {
+	t.Run("default is soft", func(t *testing.T) {
+		config := DefaultConfiguration()
+		assert.Equal(t, "soft", config.GetGeneratedSourcesLinkType())
+	})
+
+	t.Run("new field hard", func(t *testing.T) {
+		config := DefaultConfiguration()
+		config.Build.GeneratedSourcesLinkType = "hard"
+		assert.Equal(t, "hard", config.GetGeneratedSourcesLinkType())
+	})
+
+	t.Run("new field soft", func(t *testing.T) {
+		config := DefaultConfiguration()
+		config.Build.GeneratedSourcesLinkType = "soft"
+		assert.Equal(t, "soft", config.GetGeneratedSourcesLinkType())
+	})
+}
