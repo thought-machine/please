@@ -1,7 +1,7 @@
 Version 17.31.0
 ---------------
     * Allow `__TEST_ARGS__` placeholder in test commands (#3547)
-		* Upgrade all the Go toolchain, packages and Please plugin (#3546)
+    * Upgrade all the Go toolchain, packages and Please plugin (#3546)
 
 Version 17.30.1
 ---------------
