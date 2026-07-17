@@ -252,6 +252,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 			}
 			hashOptionalBool(h, target.Test.Sandbox)
 			h.Write([]byte(target.GetTestCommand(state)))
+			h.Write([]byte(target.Test.ArgsPlaceholder))
 		}
 	}
 

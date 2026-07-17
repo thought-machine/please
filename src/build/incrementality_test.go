@@ -58,12 +58,13 @@ var KnownFields = map[string]bool{
 	"Test": true, // We hash the children of this
 
 	// Contribute to the runtime hash
-	"Test.Sandbox":    true,
-	"Test.Commands":   true,
-	"Test.Command":    true,
-	"Test.tools":      true,
-	"Test.namedTools": true,
-	"Test.Outputs":    true,
+	"Test.Sandbox":         true,
+	"Test.Commands":        true,
+	"Test.Command":         true,
+	"Test.ArgsPlaceholder": true,
+	"Test.tools":           true,
+	"Test.namedTools":      true,
+	"Test.Outputs":         true,
 
 	// These don't need to be hashed
 	"Test.NoOutput":   true,
