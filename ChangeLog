@@ -1,3 +1,10 @@
+Version 17.31.0
+---------------
+    * Allow `__TEST_ARGS__` placeholder in test commands (#3547)
+    * Upgrade all the Go toolchain, packages and Please plugin (#3546)
+    * Make the test args placeholder configurable
+(#3549)
+
 Version 17.30.1
 ---------------
     * `hash`: Stop building to local cache unless using update mode (#3543)
