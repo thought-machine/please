@@ -407,8 +407,10 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 	}
 	// Clean up the temporary directory once it's done.
 	if state.CleanWorkdirs {
-		if err := fs.RemoveAll(target.TmpDir()); err != nil {
-			log.Warning("Failed to remove temporary directory for %s: %s", target.Label, err)
+		tmpDir := target.TmpDir()
+		if err := cleanTmpDir(tmpDir); err != nil {
+			log.Warning("Failed to remove temporary directory for %q: %v", target.Label, err)
+			logStaleDirectoryContents(tmpDir)
 		}
 	}
 	if outputsChanged {
@@ -1230,4 +1232,31 @@ func build(state *core.BuildState, target *core.BuildTarget, inputHash []byte) (
 		return metadata, err
 	}
 	return nil, fmt.Errorf("Persistent workers are no longer supported, found worker command: %s", workerCmd)
+}
+
+// logStaleDirectoryContents recursively logs the remaining contents of a
+// directory that os.RemoveAll failed to remove. This helps diagnose what is
+// still holding files open or creating files during cleanup.
+func logStaleDirectoryContents(dir string) {
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			log.Debug("  stale (walk error): %s: %v", path, err)
+			return nil
+		}
+		if path == dir {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, path)
+		info, ierr := d.Info()
+		if ierr != nil {
+			log.Debug("  stale: %s (stat failed: %v)", rel, ierr)
+			return nil
+		}
+		log.Debug("  stale: %s (type=%s, size=%d, mtime=%s)",
+			rel, d.Type(), info.Size(), info.ModTime().Format("15:04:05.000"))
+		return nil
+	})
+	if err != nil {
+		log.Debug("  could not walk remaining contents of %s: %v", dir, err)
+	}
 }
