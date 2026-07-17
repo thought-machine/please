@@ -59,6 +59,7 @@ def build_rule(
     _subrepo:bool=False,
     no_test_coverage:bool=False,
     src_list_files:bool=False,
+    test_cmd_args_placeholder:str=None,
 ):
     pass
 

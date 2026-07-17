@@ -87,6 +87,8 @@ type TestFields struct {
 	// Default is false, where tests are expected to, but we don't error if it's not there;
 	// this is mostly relevant for remote execution.
 	NoCoverage bool `name:"no_test_coverage"`
+	// The placeholder for test arguments. If not set, test args are appended to the command.
+	ArgsPlaceholder string `name:"test_cmd_args_placeholder"`
 }
 
 type DebugFields struct {
