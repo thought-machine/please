@@ -348,8 +348,7 @@ func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int
 		if len(state.TestArgs) > 0 {
 			args = strings.Join(state.TestArgs, " ")
 		}
-		newCmd := strings.ReplaceAll(replacedCmd, "__TEST_ARGS__", args)
-		replacedCmd = newCmd
+		replacedCmd = strings.ReplaceAll(replacedCmd, "__TEST_ARGS__", args)
 	} else if len(state.TestArgs) > 0 {
 		replacedCmd += " " + strings.Join(state.TestArgs, " ")
 	}
