@@ -343,7 +343,13 @@ func pluralise(word string, quantity int) string {
 func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int) (string, core.BuildEnv, error) {
 	replacedCmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
 	env := core.TestEnvironment(state, target, filepath.Join(core.RepoRoot, target.TestDir(run)), run)
-	if len(state.TestArgs) > 0 {
+	if strings.Contains(replacedCmd, "__TEST_ARGS__") {
+		args := ""
+		if len(state.TestArgs) > 0 {
+			args = strings.Join(state.TestArgs, " ")
+		}
+		replacedCmd = strings.ReplaceAll(replacedCmd, "__TEST_ARGS__", args)
+	} else if len(state.TestArgs) > 0 {
 		replacedCmd += " " + strings.Join(state.TestArgs, " ")
 	}
 	return replacedCmd, env, err
