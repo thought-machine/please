@@ -1,3 +1,7 @@
+Version 17.31.1
+---------------
+    * Always move test outs even if there are test args or failures (#3550)
+
 Version 17.31.0
 ---------------
     * Allow `__TEST_ARGS__` placeholder in test commands (#3547)
