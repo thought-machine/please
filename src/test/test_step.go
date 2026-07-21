@@ -94,27 +94,14 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 		return &results
 	}
 
-	moveAndCacheOutputFiles := func(results *core.TestSuite, coverage *core.TestCoverage) bool {
-		// Never cache test results when given arguments; the results may be incomplete.
-		if len(state.TestArgs) > 0 {
-			log.Debug("Not caching results for %s, we passed it arguments", label)
-			return true
-		}
-		// Never cache test results if there were failures (usually flaky tests).
-		if results.Failures() > 0 {
-			log.Debug("Not caching results for %s, test had failures", label)
-			return true
-		}
-		outs := []string{filepath.Base(target.TestResultsFile())}
-		if err := moveOutputFile(state, hash, outputFile, target.TestResultsFile(), dummyOutput); err != nil {
-			state.LogTestResult(target, run, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
-			return false
-		}
+	// This moves all files OTHER THAN the result file to the plz-out/bin dir.
+	moveOutputFiles := func(results *core.TestSuite, coverage *core.TestCoverage) []string {
+		outs := []string{}
 
 		if needCoverage || core.PathExists(coverageFile) {
 			if err := moveOutputFile(state, hash, coverageFile, target.CoverageFile(), dummyCoverage); err != nil {
 				state.LogTestResult(target, run, core.TargetTestFailed, results, coverage, err, "Failed to move test coverage file")
-				return false
+				return nil
 			}
 			outs = append(outs, filepath.Base(target.CoverageFile()))
 		}
@@ -123,12 +110,33 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 			outFile := filepath.Join(target.OutDir(), output)
 			if err := moveOutputFile(state, hash, tmpFile, outFile, ""); err != nil {
 				state.LogTestResult(target, run, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
-				return false
+				return nil
 			}
 			outs = append(outs, output)
 		}
+		return outs
+	}
+
+	cacheOutputFiles := func(results *core.TestSuite, coverage *core.TestCoverage, outs []string) bool {
+		// Never cache test results when given arguments; the results may be incomplete.
+		if len(state.TestArgs) > 0 {
+			log.Debug("Not caching results for %s, we passed it arguments", label)
+			return false
+		}
+		// Never cache test results if there were failures (usually flaky tests).
+		if results.Failures() > 0 {
+			log.Debug("Not caching results for %s, test had failures", label)
+			return false
+		}
+
+		// The test result file is moved here rather than in moveOutputFiles because it is
+		// effectively a cache of the test result.
+		if err := moveOutputFile(state, hash, outputFile, target.TestResultsFile(), dummyOutput); err != nil {
+			state.LogTestResult(target, run, core.TargetTestFailed, results, coverage, err, "Failed to move test output file")
+			return false
+		}
 		if state.Cache != nil && !runRemotely {
-			state.Cache.Store(target, hash, outs)
+			state.Cache.Store(target, hash, append(outs, filepath.Base(target.TestResultsFile())))
 		}
 		return true
 	}
@@ -189,9 +197,11 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 		results, coverage = doFlakeRun(state, target, run, runRemotely)
 		target.AddTestResults(results)
 
+		outs := moveOutputFiles(target.Test.Results, coverage)
+
 		if target.Test.Results.TestCases.AllSucceeded() {
 			// Success, store in cache
-			moveAndCacheOutputFiles(target.Test.Results, coverage)
+			cacheOutputFiles(target.Test.Results, coverage, outs)
 		}
 	} else if state.TestSequentially {
 		for run := 1; run <= int(state.NumTestRuns); run++ {
