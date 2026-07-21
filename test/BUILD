@@ -62,11 +62,41 @@ gentest(
     test_cmd = "cp $(location test_output_test_2.xml) test.results",
 )
 
+# Test that when test arguments are supplied, other output files are still moved to bin/.
+plz_e2e_test(
+    name = "test_outputs_move_test",
+    cmd = "plz test //test:test_outputs_move_test_case -- some_test_arg",
+    expect_output_contains = "4 passed.",
+    expect_file_exists = "plz-out/bin/test/foo.txt",
+)
+
+gentest(
+    name = "test_outputs_move_test_case",
+    data = ["test_output_test_1.txt"],
+    labels = ["manual"],
+    test_outputs = ["foo.txt"],
+    test_cmd = "cp $(location test_output_test_1.txt) test.results && echo 'hello' > foo.txt #",
+)
+
 # Test that on re-running a test it is cached.
 plz_e2e_test(
     name = "test_caching_test",
     cmd = "plz test //test:caching_test && plz test -v 4 //test:caching_test",
     expect_output_contains = "Not re-running test //test:caching_test",
+)
+
+# Test that on running a test with args, it is NOT cached.
+plz_e2e_test(
+    name = "test_nocache_with_args_test",
+    cmd = "plz test --rerun //test:nocache_test -- some_arg && plz test -v 4 //test:nocache_test",
+    expect_output_doesnt_contain = "Not re-running test //test:nocache_test",
+)
+
+gentest(
+    name = "nocache_test",
+    labels = ["manual"],
+    no_test_output = True,
+    test_cmd = "true",
 )
 
 gentest(
