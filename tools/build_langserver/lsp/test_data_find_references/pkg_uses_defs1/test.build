@@ -1,0 +1,3 @@
+subinclude("//defs1")
+
+duplicate_func(name = "from_defs1")
