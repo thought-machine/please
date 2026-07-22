@@ -299,37 +299,87 @@ func (h *testHasher) SetHash(target *BuildTarget, hash []byte) {
 }
 
 func TestTestCommand(t *testing.T) {
-	// Let's create a target and state
-	target := makeTarget2("//path/to:target1", "python -m unittest", nil)
-	target.Test = &TestFields{
-		Command: "python -m unittest",
-	}
-
 	state := NewDefaultBuildState()
 
-	// Case 1: No TestArgs
-	cmd, err := TestCommand(state, target)
-	assert.NoError(t, err)
-	assert.Equal(t, "python -m unittest", cmd)
+	t.Run("Case 1: No TestArgs", func(t *testing.T) {
+		target := makeTarget2("//path/to:target1", "python -m unittest", nil)
+		target.Test = &TestFields{
+			Command: "python -m unittest",
+		}
+		cmd, err := TestCommand(state, target)
+		assert.NoError(t, err)
+		assert.Equal(t, "python -m unittest", cmd)
+	})
 
-	// Case 2: Appending TestArgs when ArgsPlaceholder is empty
-	state.TestArgs = []string{"foo", "bar"}
-	cmd, err = TestCommand(state, target)
-	assert.NoError(t, err)
-	assert.Equal(t, "python -m unittest foo bar", cmd)
+	t.Run("Case 2: Appending TestArgs when ArgsPlaceholder is empty", func(t *testing.T) {
+		target := makeTarget2("//path/to:target1", "python -m unittest", nil)
+		target.Test = &TestFields{
+			Command: "python -m unittest",
+		}
+		state.TestArgs = []string{"foo", "bar"}
+		cmd, err := TestCommand(state, target)
+		assert.NoError(t, err)
+		assert.Equal(t, "python -m unittest foo bar", cmd)
+	})
 
-	// Case 3: Replacing placeholder with TestArgs
-	target.Test.ArgsPlaceholder = "__TEST_ARGS__"
-	target.Test.Command = "python -m unittest __TEST_ARGS__"
-	target.Command = "python -m unittest __TEST_ARGS__"
-	cmd, err = TestCommand(state, target)
-	assert.NoError(t, err)
-	assert.Equal(t, "python -m unittest foo bar", cmd)
+	t.Run("Case 3: Replacing placeholder with TestArgs in the middle of a command", func(t *testing.T) {
+		target := makeTarget2("//path/to:target1", "python -m unittest __TEST_ARGS__ 2>&1", nil)
+		target.Test = &TestFields{
+			Command:         "python -m unittest __TEST_ARGS__ 2>&1",
+			ArgsPlaceholder: "__TEST_ARGS__",
+		}
+		state.TestArgs = []string{"foo", "bar"}
+		cmd, err := TestCommand(state, target)
+		assert.NoError(t, err)
+		assert.Equal(t, "python -m unittest foo bar 2>&1", cmd)
+	})
 
-	// Case 4: Placeholder is specified but not present in the command
-	target.Test.Command = "python -m unittest"
-	target.Command = "python -m unittest"
-	cmd, err = TestCommand(state, target)
-	assert.NoError(t, err)
-	assert.Equal(t, "python -m unittest", cmd)
+	t.Run("Case 4: Placeholder is specified but not present in the command", func(t *testing.T) {
+		target := makeTarget2("//path/to:target1", "python -m unittest", nil)
+		target.Test = &TestFields{
+			Command:         "python -m unittest",
+			ArgsPlaceholder: "__TEST_ARGS__",
+		}
+		state.TestArgs = []string{"foo", "bar"}
+		cmd, err := TestCommand(state, target)
+		assert.NoError(t, err)
+		assert.Equal(t, "python -m unittest", cmd)
+	})
+
+	t.Run("Case 5: Multiple occurrences of placeholder", func(t *testing.T) {
+		target := makeTarget2("//path/to:target1", "echo __TEST_ARGS__ and __TEST_ARGS__", nil)
+		target.Test = &TestFields{
+			Command:         "echo __TEST_ARGS__ and __TEST_ARGS__",
+			ArgsPlaceholder: "__TEST_ARGS__",
+		}
+		state.TestArgs = []string{"foo", "bar"}
+		cmd, err := TestCommand(state, target)
+		assert.NoError(t, err)
+		assert.Equal(t, "echo foo bar and foo bar", cmd)
+	})
+
+	t.Run("Case 6: Combined sequence and placeholder replacement", func(t *testing.T) {
+		target2 := makeTarget2("//path/to:target2", "", nil)
+		target1 := makeTarget2("//path/to:target1", "$(location //path/to:target2) __TEST_ARGS__", target2)
+		target1.Test = &TestFields{
+			Command:         "$(location //path/to:target2) __TEST_ARGS__",
+			ArgsPlaceholder: "__TEST_ARGS__",
+		}
+		state.TestArgs = []string{"--verbose"}
+		cmd, err := TestCommand(state, target1)
+		assert.NoError(t, err)
+		assert.Equal(t, "path/to/target2.py --verbose", cmd)
+	})
+
+	t.Run("Case 7: Empty test command fallback (defaults to target binary) and appending", func(t *testing.T) {
+		target := makeTarget2("//path/to:target1", "", nil)
+		target.IsBinary = true
+		target.Test = &TestFields{
+			Command: "",
+		}
+		state.TestArgs = []string{"--foo", "--bar"}
+		cmd, err := TestCommand(state, target)
+		assert.NoError(t, err)
+		assert.Equal(t, "./target1.py --foo --bar", cmd)
+	})
 }
