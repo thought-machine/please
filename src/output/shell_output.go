@@ -421,20 +421,22 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 	state = state.ForArch(state.TargetArch)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
-		cmd := target.GetCommand(state)
+		var cmd string
 		dir := target.TmpDir()
 		env := core.StampedBuildEnvironment(state, target, nil, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 		shouldSandbox := target.Sandbox
 		if state.NeedTests {
-			cmd = target.GetTestCommand(state)
+			cmd, _ = core.TestCommand(state, target)
 			dir = filepath.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir, 1)
 			shouldSandbox = target.Test.Sandbox
 			if len(state.TestArgs) > 0 {
 				env["TESTS"] = strings.Join(state.TestArgs, " ")
 			}
+		} else {
+			cmd = target.GetCommand(state)
+			cmd, _ = core.ReplaceSequences(state, target, cmd)
 		}
-		cmd, _ = core.ReplaceSequences(state, target, cmd)
 		env["CMD"] = cmd
 		fmt.Printf("  %s: %s\n", label, dir)
 		fmt.Printf("    Command: %s\n", cmd)

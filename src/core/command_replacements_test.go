@@ -297,3 +297,39 @@ func (h *testHasher) OutputHash(target *BuildTarget) ([]byte, error) {
 
 func (h *testHasher) SetHash(target *BuildTarget, hash []byte) {
 }
+
+func TestTestCommand(t *testing.T) {
+	// Let's create a target and state
+	target := makeTarget2("//path/to:target1", "python -m unittest", nil)
+	target.Test = &TestFields{
+		Command: "python -m unittest",
+	}
+
+	state := NewDefaultBuildState()
+
+	// Case 1: No TestArgs
+	cmd, err := TestCommand(state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, "python -m unittest", cmd)
+
+	// Case 2: Appending TestArgs when ArgsPlaceholder is empty
+	state.TestArgs = []string{"foo", "bar"}
+	cmd, err = TestCommand(state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, "python -m unittest foo bar", cmd)
+
+	// Case 3: Replacing placeholder with TestArgs
+	target.Test.ArgsPlaceholder = "__TEST_ARGS__"
+	target.Test.Command = "python -m unittest __TEST_ARGS__"
+	target.Command = "python -m unittest __TEST_ARGS__"
+	cmd, err = TestCommand(state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, "python -m unittest foo bar", cmd)
+
+	// Case 4: Placeholder is specified but not present in the command
+	target.Test.Command = "python -m unittest"
+	target.Command = "python -m unittest"
+	cmd, err = TestCommand(state, target)
+	assert.NoError(t, err)
+	assert.Equal(t, "python -m unittest", cmd)
+}

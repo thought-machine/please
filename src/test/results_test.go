@@ -185,60 +185,13 @@ func TestParseGoFileWithLogging(t *testing.T) {
 func TestTestCommandAndEnv(t *testing.T) {
 	state := core.NewBuildState(core.DefaultConfiguration())
 
-	t.Run("with configured __TEST_ARGS__ placeholder and test args", func(t *testing.T) {
-		target := core.NewBuildTarget(core.ParseBuildLabel("//src/test:placeholder_test", ""))
-		target.Test = &core.TestFields{
-			Command:         "./my_test_binary __TEST_ARGS__ 2>&1",
-			ArgsPlaceholder: "__TEST_ARGS__",
-		}
-		state.TestArgs = []string{"--flag1", "--flag2"}
-		cmd, _, err := testCommandAndEnv(state, target, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, "./my_test_binary --flag1 --flag2 2>&1", cmd)
-	})
-
-	t.Run("with configured __TEST_ARGS__ placeholder and no test args", func(t *testing.T) {
-		target := core.NewBuildTarget(core.ParseBuildLabel("//src/test:placeholder_test", ""))
-		target.Test = &core.TestFields{
-			Command:         "./my_test_binary __TEST_ARGS__ 2>&1",
-			ArgsPlaceholder: "__TEST_ARGS__",
-		}
-		state.TestArgs = nil
-		cmd, _, err := testCommandAndEnv(state, target, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, "./my_test_binary  2>&1", cmd)
-	})
-
-	t.Run("without placeholder but with __TEST_ARGS__ string present and test args", func(t *testing.T) {
-		target := core.NewBuildTarget(core.ParseBuildLabel("//src/test:placeholder_test", ""))
-		target.Test = &core.TestFields{
-			Command: "./my_test_binary __TEST_ARGS__ 2>&1",
-		}
-		state.TestArgs = []string{"--flag1", "--flag2"}
-		cmd, _, err := testCommandAndEnv(state, target, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, "./my_test_binary __TEST_ARGS__ 2>&1 --flag1 --flag2", cmd)
-	})
-
-	t.Run("without placeholder and test args", func(t *testing.T) {
-		target := core.NewBuildTarget(core.ParseBuildLabel("//src/test:placeholder_test", ""))
-		target.Test = &core.TestFields{
-			Command: "./my_test_binary 2>&1",
-		}
-		state.TestArgs = []string{"--flag1", "--flag2"}
-		cmd, _, err := testCommandAndEnv(state, target, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, "./my_test_binary 2>&1 --flag1 --flag2", cmd)
-	})
-
-	t.Run("without placeholder and no test args", func(t *testing.T) {
-		target := core.NewBuildTarget(core.ParseBuildLabel("//src/test:placeholder_test", ""))
-		target.Test = &core.TestFields{
-			Command: "./my_test_binary 2>&1",
-		}
-		state.TestArgs = nil
-		cmd, _, err := testCommandAndEnv(state, target, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, "./my_test_binary 2>&1", cmd)
-	})
+	target := core.NewBuildTarget(core.ParseBuildLabel("//src/test:placeholder_test", ""))
+	target.Test = &core.TestFields{
+		Command:         "./my_test_binary __TEST_ARGS__ 2>&1",
+		ArgsPlaceholder: "__TEST_ARGS__",
+	}
+	state.TestArgs = []string{"--flag1", "--flag2"}
+	cmd, _, err := testCommandAndEnv(state, target, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, "./my_test_binary --flag1 --flag2 2>&1", cmd)
 }

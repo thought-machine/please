@@ -351,20 +351,8 @@ func pluralise(word string, quantity int) string {
 
 // testCommandAndEnv returns the test command & environment for a target.
 func testCommandAndEnv(state *core.BuildState, target *core.BuildTarget, run int) (string, core.BuildEnv, error) {
-	replacedCmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	replacedCmd, err := core.TestCommand(state, target)
 	env := core.TestEnvironment(state, target, filepath.Join(core.RepoRoot, target.TestDir(run)), run)
-	if target.Test != nil && target.Test.ArgsPlaceholder != "" {
-		placeholder := target.Test.ArgsPlaceholder
-		if strings.Contains(replacedCmd, placeholder) {
-			args := ""
-			if len(state.TestArgs) > 0 {
-				args = strings.Join(state.TestArgs, " ")
-			}
-			replacedCmd = strings.ReplaceAll(replacedCmd, placeholder, args)
-		}
-	} else if len(state.TestArgs) > 0 {
-		replacedCmd += " " + strings.Join(state.TestArgs, " ")
-	}
 	return replacedCmd, env, err
 }
 
