@@ -160,6 +160,22 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
 	}
 	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	if err == nil {
+		// If an args placeholder has been defined, then replace it with any provided test arguments...
+		if target.Test != nil && target.Test.ArgsPlaceholder != "" {
+			placeholder := target.Test.ArgsPlaceholder
+			if strings.Contains(cmd, placeholder) {
+				args := ""
+				if len(state.TestArgs) > 0 {
+					args = strings.Join(state.TestArgs, " ")
+				}
+				cmd = strings.ReplaceAll(cmd, placeholder, args)
+			}
+		} else if len(state.TestArgs) > 0 {
+			// ...otherwise, just append them to the command.
+			cmd += " " + strings.Join(state.TestArgs, " ")
+		}
+	}
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{

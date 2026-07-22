@@ -353,3 +353,70 @@ func (c *Client) Store(target *core.BuildTarget) error {
 	}
 	return c.uploadLocalTarget(target)
 }
+
+func TestBuildTestCommand_WithPlaceholder(t *testing.T) {
+	c := newClientInstance("test")
+	state := c.state
+	state.TestArgs = []string{"--foo", "--bar"}
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target_placeholder"})
+	target.AddOutput("remote_test")
+	target.Test = &core.TestFields{
+		Timeout:         time.Minute,
+		Command:         "$TEST __TEST_ARGS__ 2>&1",
+		ArgsPlaceholder: "__TEST_ARGS__",
+	}
+	target.IsBinary = true
+
+	cmd, err := c.buildTestCommand(state, target, 1)
+	assert.NoError(t, err)
+
+	assert.True(t,
+		strings.HasSuffix(cmd.Arguments[len(cmd.Arguments)-1], "$TEST --foo --bar 2>&1"),
+		"incorrect suffix on %q", cmd.Arguments[len(cmd.Arguments)-1],
+	)
+}
+
+func TestBuildTestCommand_WithPlaceholderAndNoArguments(t *testing.T) {
+	c := newClientInstance("test")
+	state := c.state
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target_placeholder"})
+	target.AddOutput("remote_test")
+	target.Test = &core.TestFields{
+		Timeout:         time.Minute,
+		Command:         "$TEST __TEST_ARGS__ 2>&1",
+		ArgsPlaceholder: "__TEST_ARGS__",
+	}
+	target.IsBinary = true
+
+	cmd, err := c.buildTestCommand(state, target, 1)
+	assert.NoError(t, err)
+
+	assert.True(t,
+		strings.HasSuffix(cmd.Arguments[len(cmd.Arguments)-1], "$TEST  2>&1"),
+		"incorrect suffix on %q", cmd.Arguments[len(cmd.Arguments)-1],
+	)
+}
+
+func TestBuildTestCommand_WithoutPlaceholder(t *testing.T) {
+	c := newClientInstance("test")
+	state := c.state
+	state.TestArgs = []string{"--foo", "--bar"}
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target_no_placeholder"})
+	target.AddOutput("remote_test")
+	target.Test = &core.TestFields{
+		Timeout: time.Minute,
+		Command: "$TEST",
+	}
+	target.IsBinary = true
+
+	cmd, err := c.buildTestCommand(state, target, 1)
+	assert.NoError(t, err)
+
+	assert.True(t,
+		strings.HasSuffix(cmd.Arguments[len(cmd.Arguments)-1], "$TEST --foo --bar"),
+		"incorrect suffix on %q", cmd.Arguments[len(cmd.Arguments)-1],
+	)
+}
