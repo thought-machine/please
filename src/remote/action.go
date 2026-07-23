@@ -159,7 +159,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 	if outs := target.Outputs(); len(outs) > 0 {
 		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
 	}
-	cmd, err := core.ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	cmd, err := core.TestCommand(state, target)
 	return &pb.Command{
 		Platform: &pb.Platform{
 			Properties: []*pb.Platform_Property{

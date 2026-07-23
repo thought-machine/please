@@ -59,7 +59,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/peterebden/go-deferred-regex"
+	deferredregex "github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/fs"
 )
@@ -90,6 +90,28 @@ func ReplaceTestSequences(state *BuildState, target *BuildTarget, command string
 		return cmd, err
 	}
 	return replaceSequencesInternal(state, target, command, true)
+}
+
+// TestCommand returns the command to run for a test target, with all sequences and test arguments processed.
+func TestCommand(state *BuildState, target *BuildTarget) (string, error) {
+	cmd, err := ReplaceTestSequences(state, target, target.GetTestCommand(state))
+	if err != nil {
+		return cmd, err
+	}
+	if target.Test != nil && target.Test.ArgsPlaceholder != "" {
+		placeholder := target.Test.ArgsPlaceholder
+		if !strings.Contains(cmd, placeholder) {
+			return "", fmt.Errorf("command %q does not contain expected arguments placeholder %q", cmd, target.Test.ArgsPlaceholder)
+		}
+		args := ""
+		if len(state.TestArgs) > 0 {
+			args = strings.Join(state.TestArgs, " ")
+		}
+		cmd = strings.ReplaceAll(cmd, placeholder, args)
+	} else if len(state.TestArgs) > 0 {
+		cmd += " " + strings.Join(state.TestArgs, " ")
+	}
+	return cmd, nil
 }
 
 // TestWorkerCommand returns the worker & its arguments (if any) for a test, and the command to run for the test itself.
