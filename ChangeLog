@@ -1,3 +1,7 @@
+Version 17.31.2
+---------------
+    * Support test argument placeholder in remote commands and --shell (#3552)
+
 Version 17.31.1
 ---------------
     * Always move test outs even if there are test args or failures (#3550)
