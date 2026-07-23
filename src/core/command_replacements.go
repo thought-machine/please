@@ -100,15 +100,14 @@ func TestCommand(state *BuildState, target *BuildTarget) (string, error) {
 	}
 	if target.Test != nil && target.Test.ArgsPlaceholder != "" {
 		placeholder := target.Test.ArgsPlaceholder
-		if strings.Contains(cmd, placeholder) {
-			args := ""
-			if len(state.TestArgs) > 0 {
-				args = strings.Join(state.TestArgs, " ")
-			}
-			cmd = strings.ReplaceAll(cmd, placeholder, args)
-		} else {
+		if !strings.Contains(cmd, placeholder) {
 			return "", fmt.Errorf("command %q does not contain expected arguments placeholder %q", cmd, target.Test.ArgsPlaceholder)
 		}
+		args := ""
+		if len(state.TestArgs) > 0 {
+			args = strings.Join(state.TestArgs, " ")
+		}
+		cmd = strings.ReplaceAll(cmd, placeholder, args)
 	} else if len(state.TestArgs) > 0 {
 		cmd += " " + strings.Join(state.TestArgs, " ")
 	}
