@@ -212,7 +212,7 @@ jobs:
       steps:
        - checkout
        - restore_cache:
-           key: go-mod-darwin-arm64-v8-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-arm64-v8-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-darwin-arm64-go123-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
