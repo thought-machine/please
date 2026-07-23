@@ -1,4 +1,7 @@
-subinclude("///go//build_defs:go")
+subinclude(
+    "///go//build_defs:go",
+    "//third_party/common:version",
+)
 
 package(default_visibility = ["PUBLIC"])
 
@@ -17,6 +20,13 @@ go_toolchain(
 
 go_stdlib(
     name = "std",
+)
+
+go_repo(
+    # unneeded, unused target
+    name = "uuid",
+    module = "github.com/google/uuid",
+    version = f"{LIB_VERSION}",
 )
 
 go_repo(

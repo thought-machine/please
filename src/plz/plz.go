@@ -111,15 +111,27 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		wg.Done()
 	}()
 	// Wait until they've all exited, which they'll do once they have no tasks left.
-	wg.Wait()
-	if state.Cache != nil {
-		state.Cache.Shutdown()
+	if state.KeepParserRunning {
+		// Even though we keep the workers running, we wait for the initial build to finish before
+		// proceeding with the specific op for the graph to be complete.
+		state.WaitForBuildToComplete()
+		reportResults(state, config)
+		// state.CleanUp() needs to be called at the end of the CLI run when KeepParserRunning is enabled.
+		return
 	}
+	// Wait for all worker to finish. This should happen as soon as we no longer have pending tasks.
+	// The last task should call state.Close() and close the queue channels.
+	wg.Wait()
+	reportResults(state, config)
+	state.Cleanup()
+}
+
+// reportResults reports on metrics and results at the end of the build.
+func reportResults(state *core.BuildState, config *core.Configuration) {
 	if state.RemoteClient != nil {
 		_, _, in, out := state.RemoteClient.DataRate()
 		log.Info("Total remote RPC data in: %d out: %d", in, out)
 	}
-	state.CloseResults()
 	metrics.Push(config.Metrics, config.IsRemoteExecution())
 }
 

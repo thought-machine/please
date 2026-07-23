@@ -770,3 +770,131 @@ func TestStrRjust(t *testing.T) {
 	_, err = parseFile("src/parse/asp/test_data/interpreter/str/rjust_multiple_fillchars.build")
 	assert.Error(t, err, "fillchar must be exactly one character long")
 }
+
+func TestCurrentBuildStatement(t *testing.T) {
+	pkg := core.NewPackage("test/package", core.WithPackageMetadata())
+	pkg.Filename = "test/package/BUILD"
+
+	state := core.NewBuildState(core.DefaultConfiguration())
+	state.ParseMetadata = true
+
+	parser := &Parser{}
+	interpreter := newInterpreter(state, parser)
+
+	rootScope := interpreter.scope.NewPackagedScope(pkg, 0, 0)
+
+	// Root statement in the BUILD file (e.g. a macro call)
+	rootStmt := &Statement{Pos: 10, EndPos: 20}
+	rootScope.metadata.setCursor(rootStmt)
+
+	t.Run("FindsRootStatement", func(t *testing.T) {
+		stmt := rootScope.CurrentBuildStatement()()
+		assert.Equal(t, NewBuildStatement(rootStmt), stmt)
+	})
+}
+
+func TestActiveSubincludes(t *testing.T) {
+	labelA := core.ParseBuildLabel("//pkg:labelA", "")
+	labelB := core.ParseBuildLabel("//pkg:labelB", "")
+	stmt := &Statement{Pos: 1, EndPos: 10}
+
+	t.Run("NoSubincludes", func(t *testing.T) {
+		pkg := core.NewPackage("pkg", core.WithPackageMetadata())
+		meta := newScopeMetadata()
+
+		// Function execution
+		scopeFuncExec := &scope{
+			metadata: meta,
+		}
+		scopeFuncExec.metadata.setCursor(stmt)
+		scopeFuncExec.metadata.registerBuildStatement(pkg, stmt)
+
+		labels, _ := pkg.Metadata.FindPackageFileRequirements()
+		assert.Empty(t, labels)
+	})
+
+	t.Run("SingleSubinclude", func(t *testing.T) {
+		pkg := core.NewPackage("pkg", core.WithPackageMetadata())
+		meta := newScopeMetadata()
+
+		// File A scope
+		scopeA := &scope{
+			subincludeLabel: &labelA,
+			locals:          make(pyDict),
+			metadata:        meta,
+		}
+		scopeA.SetAllWithOrigin(pyDict{"foo": pyString("val")}, false, &labelA)
+
+		// Function defined in File A
+		scopeFuncDef := &scope{
+			parent:   scopeA,
+			metadata: meta,
+		}
+
+		// Function execution
+		scopeFuncExec := &scope{
+			parent:   scopeFuncDef,
+			metadata: meta,
+		}
+
+		// Lookup triggers tracking of required subincludes
+		scopeFuncExec.Lookup("foo")
+
+		scopeFuncExec.metadata.setCursor(stmt)
+		scopeFuncExec.metadata.registerBuildStatement(pkg, stmt)
+
+		labels, _ := pkg.Metadata.FindPackageFileRequirements()
+		assert.Equal(t, core.BuildLabels{labelA}, labels)
+	})
+
+	t.Run("NestedSubincludes", func(t *testing.T) {
+		pkg := core.NewPackage("pkg", core.WithPackageMetadata())
+		meta := newScopeMetadata()
+
+		// File A scope
+		scopeA := &scope{
+			subincludeLabel: &labelA,
+			locals:          make(pyDict),
+			metadata:        meta,
+		}
+		scopeA.SetAllWithOrigin(pyDict{"varA": pyString("valA")}, false, &labelA)
+
+		// File B scope (subincluded by A)
+		scopeB := &scope{
+			subincludeLabel: &labelB,
+			parent:          scopeA,
+			locals:          make(pyDict),
+			metadata:        meta,
+		}
+		scopeB.SetAllWithOrigin(pyDict{"varB": pyString("valB")}, false, &labelB)
+
+		// Function defined in File B
+		scopeFuncDef := &scope{
+			parent:   scopeB,
+			metadata: meta,
+		}
+
+		// Function execution
+		scopeFuncExec := &scope{
+			parent:   scopeFuncDef,
+			metadata: meta,
+		}
+
+		// Lookups trigger tracking of required subincludes
+		scopeFuncExec.Lookup("varA")
+		scopeFuncExec.Lookup("varB")
+
+		scopeFuncExec.metadata.setCursor(stmt)
+		scopeFuncExec.metadata.registerBuildStatement(pkg, stmt)
+
+		labels, _ := pkg.Metadata.FindPackageFileRequirements()
+		assert.ElementsMatch(t, core.BuildLabels{labelA, labelB}, labels)
+	})
+}
+
+func newScopeMetadata() scopeMetadata {
+	return &trackingScopeMetadata{
+		symbolOrigins: map[string]core.BuildLabel{},
+		symbolStack:   []trackedSymbol{},
+	}
+}

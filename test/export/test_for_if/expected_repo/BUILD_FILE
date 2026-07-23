@@ -1,0 +1,10 @@
+for i in ["a", "b"]:
+    if i == "a":
+        genrule(
+            name = "a",
+            srcs = ["a.src"],
+            outs = ["a.txt"],
+            cmd = "cat $SRCS > $OUT",
+        )
+    elif i == "b":
+        pass  # Trimmed during export

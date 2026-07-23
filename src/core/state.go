@@ -240,6 +240,15 @@ type BuildState struct {
 	// NeedDebugDeps is true if we're doing a `plz debug` and we need to build the debug tools and
 	// data
 	NeedDebugDeps bool
+	// ParseMetadata is true if we want to store build file metadata
+	ParseMetadata bool
+	// KeepParserRunning prevents closing task workers (parse and build channels) to support later
+	// calls to the parser. This is needed to support the export operation since the export logic will
+	// attempt to export targets that have not been parsed during the normal build phase. An example
+	// is when exporting dependencies of targets that are not explicitly used but adjacent/related.
+	KeepParserRunning bool
+	// WaitForDisplay is a function that blocks until the display thread has finished.
+	WaitForDisplay func()
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
@@ -281,13 +290,14 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 // This is split out from above so we can share it between multiple instances.
 type stateProgress struct {
 	// Used to count the number of currently active/pending targets
-	numActive  int64
-	numPending int64
-	numDone    int64
-	numParses  atomic.Int64
-	mutex      sync.Mutex
-	closeOnce  sync.Once
-	resultOnce sync.Once
+	numActive     int64
+	numPending    int64
+	numDone       int64
+	numParses     atomic.Int64
+	mutex         sync.Mutex
+	closeOnce     sync.Once
+	resultOnce    sync.Once
+	buildDoneOnce sync.Once
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
 	pendingTargets *cmap.Map[BuildLabel, chan struct{}]
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
@@ -310,6 +320,8 @@ type stateProgress struct {
 	internalResults chan *BuildResult
 	// The cycle checker itself.
 	cycleDetector cycleDetector
+	// buildDone is closed when numPending drops to 0 or less
+	buildDone chan struct{}
 }
 
 // SystemStats stores information about the system.
@@ -409,7 +421,13 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 		atomic.AddInt64(&state.progress.numDone, 1)
 	}
 	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
-		state.Stop()
+		state.progress.buildDoneOnce.Do(func() {
+			close(state.progress.buildDone)
+		})
+
+		if !state.KeepParserRunning {
+			state.Stop()
+		}
 	}
 }
 
@@ -430,6 +448,22 @@ func (state *BuildState) CloseResults() {
 		state.progress.resultOnce.Do(func() {
 			close(state.progress.results)
 		})
+	}
+}
+
+// Cleanup cleans up and shuts down the build state.
+func (state *BuildState) Cleanup() {
+	state.CloseResults()
+
+	if state.WaitForDisplay != nil {
+		state.WaitForDisplay()
+	}
+
+	if state.Cache != nil {
+		state.Cache.Shutdown()
+	}
+	if state.RemoteClient != nil {
+		state.RemoteClient.Disconnect()
 	}
 }
 
@@ -601,6 +635,23 @@ func (state *BuildState) LogTestResult(target *BuildTarget, run int, status Buil
 
 // LogBuildError logs a failure for a target to parse, build or test.
 func (state *BuildState) LogBuildError(label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
+	if status == ParseFailed {
+		// Force close package wait channels to avoid deadlocks when calling waitForPackage() after
+		// the initial parse, for example when KeepParserRunning is set.
+		key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+		if ch := state.progress.pendingPackages.Get(key); ch != nil {
+			func() {
+				defer func() { recover() }() // recover if attempted to close a closed channel.
+				close(ch)                    // This signals to anyone waiting that it's done (failed, but completed).
+			}()
+		}
+		if ch := state.progress.packageWaits.Get(key); ch != nil {
+			func() {
+				defer func() { recover() }() // recover if attempted to close a closed channel.
+				close(ch)                    // This signals to anyone waiting that it's done (failed, but completed).
+			}()
+		}
+	}
 	state.logResult(&BuildResult{
 		Label:       label,
 		Status:      status,
@@ -665,11 +716,17 @@ func (state *BuildState) forwardResults() {
 				delete(activeTargets, target)
 			}
 		}
-		state.progress.mutex.Lock()
-		if state.progress.results != nil {
-			state.progress.results <- result
-		}
-		state.progress.mutex.Unlock()
+		state.sendResult(result)
+	}
+}
+
+// sendResult sends a unique result to the channel. A simple method that is mostly useful for a
+// deferring the mutex close and avoid deadlocks even when we attempt to write to a closed channel.
+func (state *BuildState) sendResult(result *BuildResult) {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+	if state.progress.results != nil {
+		state.progress.results <- result
 	}
 }
 
@@ -918,6 +975,11 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	// a potential race condition if the target was built between us checking earlier and registering
 	// the channel just now.
 	return state.WaitForBuiltTarget(l, dependent, mode)
+}
+
+// WaitForBuildToComplete blocks until all pending tasks are finished.
+func (state *BuildState) WaitForBuildToComplete() {
+	<-state.progress.buildDone
 }
 
 // AddTarget adds a new target to the build graph.
@@ -1480,12 +1542,13 @@ func NewBuildState(config *Configuration) *BuildState {
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
-			pendingTargets:  cmap.New[BuildLabel, chan struct{}](cmap.DefaultShardCount, hashBuildLabel),
+			pendingTargets:  cmap.New[BuildLabel, chan struct{}](cmap.DefaultShardCount, HashBuildLabel),
 			pendingPackages: cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			packageWaits:    cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 			originalTargets: NewTargetSet(),
+			buildDone:       make(chan struct{}),
 		},
 		initOnce:            new(sync.Once),
 		preloadDownloadOnce: new(sync.Once),

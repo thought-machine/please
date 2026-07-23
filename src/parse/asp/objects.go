@@ -694,15 +694,17 @@ func (f *pyFunc) String() string {
 func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
-			return f.callNative(s.NewScope("<builtin code>", 0), c)
+			cs := s.NewScope("<builtin code>", 0)
+			return f.callNative(cs, c)
 		}
 		return f.callNative(s, c)
 	}
-	s2 := f.scope.newScope(s.pkg, s.mode, f.scope.filename, len(f.args)+1)
-	s2.config = s.config
-	s2.Set("CONFIG", s.config) // This needs to be copied across too :(
-	s2.Callback = s.Callback
-	s2.parsingFor = s.parsingFor
+
+	cs := f.scope.newScope(s.pkg, s.mode, f.scope.filename, len(f.args)+1)
+	cs.config = s.config
+	cs.Set("CONFIG", s.config) // This needs to be copied across too :(
+	cs.Callback = s.Callback
+	cs.parsingFor = s.parsingFor
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments
 	if f.self != nil {
@@ -720,23 +722,23 @@ func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 			if present {
 				name = f.args[idx]
 			}
-			s2.Set(name, f.validateType(s, idx, &a.Value))
+			cs.Set(name, f.validateType(s, idx, &a.Value))
 		} else {
 			if i >= len(f.args) {
 				s.Error("Too many arguments to %s", f.name)
 			} else if f.kwargsonly {
 				s.Error("Function %s can only be called with keyword arguments", f.name)
 			}
-			s2.Set(f.args[i], f.validateType(s, i, &a.Value))
+			cs.Set(f.args[i], f.validateType(s, i, &a.Value))
 		}
 	}
 	// Now make sure any arguments with defaults are set, and check any others have been passed.
 	for i, a := range f.args {
-		if s2.LocalLookup(a) == nil {
-			s2.Set(a, f.defaultArg(s, i, a))
+		if cs.LocalLookup(a) == nil {
+			cs.Set(a, f.defaultArg(s, i, a))
 		}
 	}
-	ret := s2.interpretStatements(f.code)
+	ret := cs.interpretStatements(f.code)
 	if ret == nil {
 		return None // Implicit 'return None' in any function that didn't do that itself.
 	}
@@ -832,7 +834,8 @@ func (f *pyFunc) Member(obj pyObject) pyObject {
 	}
 }
 
-// validateType validates that this argument matches the given type
+// validateType validates that this argument matches the given type. It interprets the expression and
+// returns its value.
 func (f *pyFunc) validateType(s *scope, i int, expr *Expression) pyObject {
 	val := s.interpretExpression(expr)
 	if i >= len(f.types) && (f.varargs || f.kwargs) {

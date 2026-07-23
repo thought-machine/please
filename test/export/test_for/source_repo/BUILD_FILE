@@ -1,0 +1,17 @@
+for i in [
+    "a",
+    "b",
+    "c",
+]:
+    genrule(
+        name = i,
+        srcs = [f"{i}.src"],
+        outs = [f"{i}.txt"],
+        cmd = f"cat $SRCS > $OUT",
+    )
+
+genrule(
+    name = "d",
+    outs = ["d.txt"],
+    cmd = "echo d > $OUT",
+)

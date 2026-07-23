@@ -1,0 +1,6 @@
+if False:
+    pass  # Trimmed during export
+elif True:
+    genrule(name = "b")
+else:
+    pass  # Trimmed during export

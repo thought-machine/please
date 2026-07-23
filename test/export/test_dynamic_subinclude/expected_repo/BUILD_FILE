@@ -1,0 +1,7 @@
+subinclude("//build_defs:dynamic_build_def")
+
+for i in [
+    "a",
+    "b",
+]:
+    dynamic_target(name = i, def_name = f"{i}_build_def")

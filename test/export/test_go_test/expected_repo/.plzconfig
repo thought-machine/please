@@ -1,0 +1,10 @@
+[Parse]
+BuildFileName = BUILD # required by subrepos
+BuildFileName = BUILD_FILE
+preloadsubincludes = ///go//build_defs:go
+
+[Plugin "go"]
+Target = //plugins:go
+GoTool = //third_party/go:toolchain|go
+STDLib = //third_party/go:std
+ModFile = //:go_mod

@@ -1,0 +1,10 @@
+def unused_target(
+        name:str,
+        outs:list=[]):
+    return genrule(
+        name = name,
+        outs = outs,
+        cmd = "echo unneeded > $OUT",
+    )
+
+unused_var = "Unused Variable"

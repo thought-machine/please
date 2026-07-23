@@ -210,6 +210,8 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	s.Assert(s.pkg.Target(target.Label.Name) == nil, "Duplicate build target in %s: %s", s.pkg.Name, target.Label.Name)
 	populateTarget(s, target, args)
 	s.state.AddTarget(s.pkg, target)
+	s.pkg.Metadata.RegisterStatementTarget(target.Label, s.CurrentBuildStatement())
+
 	if s.Callback {
 		target.AddedPostBuild = true
 	}
@@ -307,7 +309,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 		}
 		filename = subrepo.Dir(filename)
 	}
-	s.SetAll(s.interpreter.Subinclude(s, filename, l, false), false)
+	s.SetAllWithOrigin(s.interpreter.Subinclude(s, filename, l, false), false, &l)
 	return None
 }
 
@@ -331,23 +333,13 @@ func subinclude(s *scope, args []pyObject) pyObject {
 	if s.contextPackage() == nil {
 		s.Error("cannot subinclude from this scope")
 	}
-	var si []string
-	for _, arg := range args {
-		if l, ok := arg.(pyList); ok {
-			for _, e := range l {
-				if l, ok := e.(pyString); ok {
-					si = append(si, string(l))
-				} else {
-					s.Error("cannot subinclude type %s", e.Type())
-				}
-			}
-		} else if l, ok := arg.(pyString); ok {
-			si = append(si, string(l))
-		} else {
-			s.Error("cannot subinclude type %s", arg.Type())
-		}
+	stringArgs, err := subincludeArgs(args)
+	if err != nil {
+		s.Error("%s", err.Error())
 	}
-	for _, arg := range si {
+
+	var labels = make(core.BuildLabels, 0, len(stringArgs))
+	for _, arg := range stringArgs {
 		label, annotation := core.SplitLabelAnnotation(arg)
 		t := subincludeTarget(s, s.parseLabelInContextPkg(label))
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
@@ -366,10 +358,37 @@ func subinclude(s *scope, args []pyObject) pyObject {
 			outs = t.Outputs()
 		}
 		for _, out := range outs {
-			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false)
+			s.SetAllWithOrigin(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false, &t.Label)
 		}
+		labels = append(labels, t.Label)
+	}
+	s.metadataRegisterSubincludes(labels)
+	if s.pkg != nil {
+		s.pkg.Metadata.RegisterSubincludeStatement(s.CurrentBuildStatement())
 	}
 	return None
+}
+
+// subincludeArgs extracts and validates the arguments from a subinclude() call. Acceptable values
+// are strings and lists of strings.
+func subincludeArgs(args []pyObject) ([]string, error) {
+	var si []string
+	for _, arg := range args {
+		if l, ok := arg.(pyList); ok {
+			for _, e := range l {
+				if l, ok := e.(pyString); ok {
+					si = append(si, string(l))
+				} else {
+					return nil, fmt.Errorf("cannot subinclude type %s", e.Type())
+				}
+			}
+		} else if l, ok := arg.(pyString); ok {
+			si = append(si, string(l))
+		} else {
+			return nil, fmt.Errorf("cannot subinclude type %s", arg.Type())
+		}
+	}
+	return si, nil
 }
 
 // subincludeTarget returns the target for a subinclude() call to a label.
@@ -729,6 +748,7 @@ func glob(s *scope, args []pyObject) pyObject {
 		exclude = exclude[:len(exclude)-len(s.state.Config.Parse.BuildFileName)]
 		log.Fatalf("glob(include=%s, exclude=%s) in %s returned no files. If this is intended, set allow_empty=True on the glob.", include, exclude, s.pkg.Filename)
 	}
+	s.metadataRegisterFiles(s.pkg.Name, glob)
 
 	return fromStringList(glob)
 }

@@ -35,14 +35,14 @@ type Parser struct {
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
 func NewParser(state *core.BuildState) *Parser {
-	p := newParser()
+	p := NewParserOnly()
 	p.interpreter = newInterpreter(state, p)
 	p.limiter = p.interpreter.limiter
 	return p
 }
 
-// newParser creates just the parser with no interpreter.
-func newParser() *Parser {
+// NewParserOnly creates just the parser with no interpreter.
+func NewParserOnly() *Parser {
 	return &Parser{
 		builtins: map[string][]byte{},
 		limiter:  make(semaphore, 10),

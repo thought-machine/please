@@ -1,0 +1,15 @@
+subinclude("//build_defs:custom_build_def")
+
+custom_target(
+    name = "custom_target",
+    srcs = ["file.txt"],
+    outs = ["file.out"],
+    outs_adjacent = ["file_adjacent.out"],
+)
+
+custom_target(
+    name = "unneded",
+    srcs = ["file.txt"],
+    outs = ["unneded.out"],
+    outs_adjacent = ["unneded_adjacent.out"],
+)

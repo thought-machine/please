@@ -1,0 +1,32 @@
+subinclude("//build_defs:simple_build_def")
+
+simple_custom_target(
+    name = "simple_custom_target",
+    srcs = ["file.txt"],
+    outs = ["file_simple.out"],
+)
+
+subinclude(
+    "//build_defs:var1_build_def",
+    "//build_defs:var2_build_def",
+)
+
+comma_separated_vars = ",".join([var1, var2])
+
+genrule(
+    name = "variables_target",
+    outs = ["variable.out"],
+    cmd = f'echo "{comma_separated_vars}" > $OUT',
+)
+
+subinclude("//build_defs:var3_build_def")
+
+message = "Testing {service} on {env}".format(
+    env = "production",
+    service = var3,
+)
+
+subinclude("//build_defs:versions_build_def")
+
+for version, name in VERSIONS.items():
+    pass  # Trimmed during export

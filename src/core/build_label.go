@@ -473,7 +473,8 @@ func subrepoLabel(subrepoName, arch string) BuildLabel {
 	return BuildLabel{Name: subrepoName, Subrepo: arch}
 }
 
-func hashBuildLabel(l BuildLabel) uint64 {
+// HashBuildLabel calculates an hash of Build Label, suitable to use for map indexing.
+func HashBuildLabel(l BuildLabel) uint64 {
 	return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
 }
 
@@ -621,4 +622,16 @@ func (slice BuildLabels) String() string {
 		s[i] = l.String()
 	}
 	return strings.Join(s, ", ")
+}
+
+// LabelSet defines a set of labels implemented using a map.
+type LabelSet map[BuildLabel]struct{}
+
+func (ls LabelSet) Add(l BuildLabel) {
+	ls[l] = struct{}{}
+}
+
+func (ls LabelSet) Contains(l BuildLabel) bool {
+	_, ok := ls[l]
+	return ok
 }

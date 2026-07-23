@@ -13,17 +13,6 @@ import (
 	"github.com/thought-machine/please/src/cmap"
 )
 
-type labelSet map[BuildLabel]struct{}
-
-func (ls labelSet) add(l BuildLabel) {
-	ls[l] = struct{}{}
-}
-
-func (ls labelSet) contains(l BuildLabel) bool {
-	_, ok := ls[l]
-	return ok
-}
-
 // A BuildGraph contains all the loaded targets and packages and maintains their
 // relationships, especially reverse dependencies which are calculated here.
 type BuildGraph struct {
@@ -34,8 +23,8 @@ type BuildGraph struct {
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.Map[string, *Subrepo]
 	// Subincludes that are subincluded by other subincludes
-	subincludeSubincludes map[BuildLabel]labelSet
-	// Use a mutex as a labelSet isn't atomic. We need to guard against inserting as well as mutating the value.
+	subincludeSubincludes map[BuildLabel]LabelSet
+	// Use a mutex as a LabelSet isn't atomic. We need to guard against inserting as well as mutating the value.
 	subincMux sync.Mutex
 }
 
@@ -165,10 +154,10 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 // NewGraph constructs and returns a new BuildGraph.
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
-		targets:               cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, hashBuildLabel),
+		targets:               cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, HashBuildLabel),
 		packages:              cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
 		subrepos:              cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
-		subincludeSubincludes: map[BuildLabel]labelSet{},
+		subincludeSubincludes: map[BuildLabel]LabelSet{},
 	}
 	return g
 }
@@ -188,7 +177,7 @@ func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
 	graph.subincMux.Lock()
 	defer graph.subincMux.Unlock()
 
-	incs := labelSet{}
+	incs := LabelSet{}
 	graph.findTransitiveSubincludes(l, incs)
 
 	ls := slices.Collect(maps.Keys(incs))
@@ -196,11 +185,11 @@ func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
 	return ls
 }
 
-func (graph *BuildGraph) findTransitiveSubincludes(label BuildLabel, includes labelSet) {
-	if includes.contains(label) {
+func (graph *BuildGraph) findTransitiveSubincludes(label BuildLabel, includes LabelSet) {
+	if includes.Contains(label) {
 		return
 	}
-	includes.add(label)
+	includes.Add(label)
 	for l := range graph.subincludeSubincludes[label] {
 		graph.findTransitiveSubincludes(l, includes)
 	}
@@ -212,8 +201,8 @@ func (graph *BuildGraph) RegisterTransitiveSubinclude(from, to BuildLabel) {
 
 	incs, ok := graph.subincludeSubincludes[from]
 	if !ok {
-		incs = labelSet{}
+		incs = LabelSet{}
 		graph.subincludeSubincludes[from] = incs
 	}
-	incs.add(to)
+	incs.Add(to)
 }

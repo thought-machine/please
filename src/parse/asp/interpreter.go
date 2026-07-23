@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -24,6 +25,8 @@ type interpreter struct {
 	parser      *Parser
 	subincludes *cmap.ErrMap[string, pyDict]
 	asts        *cmap.ErrMap[string, []*Statement]
+	// preloaded is a set to register all preloaded symbols (variables and function names).
+	preloaded *cmap.Map[string, struct{}]
 
 	configs      map[*core.BuildState]*pyConfig
 	configsMutex sync.RWMutex
@@ -34,6 +37,8 @@ type interpreter struct {
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
+	// packageMetadata store scope level metadata for each package.
+	packageMetadata *cmap.Map[core.BuildLabel, scopeMetadata]
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -44,9 +49,12 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		state:  state,
 		locals: map[string]pyObject{},
 	}
+	s.metadata = &noopScopeMetadata{}
+
 	i := &interpreter{
 		scope:      s,
 		parser:     p,
+		preloaded:  cmap.New[string, struct{}](cmap.SmallShardCount, cmap.XXHash),
 		configs:    map[*core.BuildState]*pyConfig{},
 		limiter:    make(semaphore, state.Config.Parse.NumThreads),
 		regexCache: cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
@@ -59,6 +67,11 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		i.subincludes = cmap.NewErrMap[string, pyDict](cmap.SmallShardCount, cmap.XXHash, i.limiter)
 		i.asts = cmap.NewErrMap[string, []*Statement](cmap.SmallShardCount, cmap.XXHash, i.limiter)
 	}
+
+	if state.ParseMetadata {
+		i.packageMetadata = cmap.New[core.BuildLabel, scopeMetadata](cmap.SmallShardCount, core.HashBuildLabel)
+	}
+
 	s.interpreter = i
 	s.LoadSingletons(state)
 	return i
@@ -155,9 +168,23 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 
 	s.interpreter.loadPluginConfig(s, includeState)
 	for _, out := range t.FullOutputs() {
-		s.SetAll(s.interpreter.Subinclude(s, out, t.Label, true), false)
+		globals := s.interpreter.Subinclude(s, out, t.Label, true)
+		s.interpreter.registerPreloaded(globals)
+		s.SetAllWithOrigin(globals, false, &t.Label)
 	}
 	return nil
+}
+
+// registerPreloaded marks objects as preloaded for later reference.
+func (i *interpreter) registerPreloaded(d pyDict) {
+	for k := range d {
+		if k == "CONFIG" {
+			// Config will be set for each scope instance from global config. Skipping since every preload
+			// will override this value and will never use it.
+			continue
+		}
+		i.preloaded.Add(k, struct{}{})
+	}
 }
 
 // interpretAll runs a series of statements in the scope of the given package.
@@ -230,6 +257,8 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 			mode |= core.ParseModeForPreload
 		}
 		s := i.scope.NewScope(path, mode)
+		// // Skip metadata tracking for subincludes since these are not trimmed
+		// s.metadata = &noopScopeMetadata{}
 
 		s.state = pkgScope.state
 		// Scope needs a local version of CONFIG
@@ -303,13 +332,16 @@ type scope struct {
 	pkg             *core.Package
 	subincludeLabel *core.BuildLabel // If set, label of the subinclude we're currently interpreting
 	parsingFor      *parseTarget
-	parent          *scope
-	locals          pyDict
-	config          *pyConfig
-	globber         *fs.Globber
+	// parent points to the lexical parent of this scope. It is used for variable resolution
+	// and is nil for the root scope.
+	parent  *scope
+	locals  pyDict
+	config  *pyConfig
+	globber *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
 	mode     core.ParseMode
+	metadata scopeMetadata
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -397,7 +429,7 @@ func (s *scope) subincludePackage() *core.Package {
 			return pkg
 		}
 		// We're probably doing a local subinclude so the package isn't ready yet
-		return core.NewPackageSubrepo(s.subincludeLabel.PackageName, s.subincludeLabel.Subrepo)
+		return core.NewPackage(s.subincludeLabel.PackageName, core.WithPackageSubrepo(s.subincludeLabel.Subrepo))
 	}
 	return nil
 }
@@ -410,7 +442,9 @@ func (s *scope) NewScope(filename string, mode core.ParseMode) *scope {
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint int) *scope {
-	return s.newScope(pkg, mode, pkg.Filename, hint)
+	newScope := s.newScope(pkg, mode, pkg.Filename, hint)
+	newScope.metadata = newScope.getOrNewMetadata(pkg)
+	return newScope
 }
 
 func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
@@ -426,6 +460,9 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		config:      s.config,
 		Callback:    s.Callback,
 		mode:        mode,
+		// We only track metadata at the top level scope created with [scope.NewPackagedScope], every
+		// other child scope or non-packaged (e.g. subincludes) defaults to a noop implementation.
+		metadata: &noopScopeMetadata{},
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -457,6 +494,8 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
 	if obj, present := s.locals[name]; present {
+		orig := s.metadata.origin(s, name)
+		s.metadata.pushSymbol(name, orig)
 		return obj
 	} else if s.parent != nil {
 		return s.parent.Lookup(name)
@@ -480,6 +519,11 @@ func (s *scope) Set(name string, value pyObject) {
 // SetAll sets all contents of the given dict in this scope.
 // Optionally it can filter to just public objects (i.e. those not prefixed with an underscore)
 func (s *scope) SetAll(d pyDict, publicOnly bool) {
+	s.SetAllWithOrigin(d, publicOnly, nil)
+}
+
+// SetAllWithOrigin is like SetAll but also records the origin label for all variables.
+func (s *scope) SetAllWithOrigin(d pyDict, publicOnly bool, origin *core.BuildLabel) {
 	for k, v := range d {
 		if k == "CONFIG" {
 			// Special case; need to merge config entries rather than overwriting the entire object.
@@ -488,6 +532,9 @@ func (s *scope) SetAll(d pyDict, publicOnly bool) {
 			s.config.Merge(c)
 		} else if !publicOnly || k[0] != '_' {
 			s.locals[k] = v
+			if origin != nil {
+				s.metadata.setSymbolOrigin(k, *origin)
+			}
 		}
 	}
 }
@@ -525,23 +572,24 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 		}
 	}()
 	for _, stmt = range statements {
+		s.metadata.setCursor(stmt)
+		checkpoint := s.metadata.checkpoint()
+
+		var ret pyObject
 		if stmt.FuncDef != nil {
 			s.Set(stmt.FuncDef.Name, newPyFunc(s, stmt.FuncDef))
 		} else if stmt.If != nil {
-			if ret := s.interpretIf(stmt.If); ret != nil {
-				return ret
-			}
+			ret = s.interpretIf(stmt.If)
 		} else if stmt.For != nil {
-			if ret := s.interpretFor(stmt.For); ret != nil {
-				return ret
-			}
+			ret = s.interpretFor(stmt.For)
 		} else if stmt.Return != nil {
 			if len(stmt.Return.Values) == 0 {
-				return None
+				ret = None
 			} else if len(stmt.Return.Values) == 1 {
-				return s.interpretExpression(stmt.Return.Values[0])
+				ret = s.interpretExpression(stmt.Return.Values[0])
+			} else {
+				ret = pyList(s.evaluateExpressions(stmt.Return.Values))
 			}
-			return pyList(s.evaluateExpressions(stmt.Return.Values))
 		} else if stmt.Ident != nil {
 			s.interpretIdentStatement(stmt.Ident)
 		} else if stmt.Assert != nil {
@@ -559,14 +607,21 @@ func (s *scope) interpretStatements(statements []*Statement) pyObject {
 			s.interpretExpression(stmt.Literal)
 		} else if stmt.Continue {
 			// This is definitely awkward since we need to control a for loop that's happening in a function outside this scope.
-			return continueIteration
+			ret = continueIteration
 		} else if stmt.Break {
 			// Similar to above, although CPython does do this the same way...
-			return stopIteration
+			ret = stopIteration
 		} else if stmt.Pass {
-			continue // Nothing to do...
+			// Nothing to do...
 		} else {
 			s.Error("Unknown statement") // Shouldn't happen, amirite?
+		}
+
+		s.metadata.registerBuildStatement(s.pkg, stmt)
+		s.metadata.restore(checkpoint)
+
+		if ret != nil {
+			return ret
 		}
 	}
 	return nil
@@ -1077,10 +1132,289 @@ func (s *scope) Constant(expr *Expression) pyObject {
 	return nil
 }
 
+// CurrentBuildStatement creates a provider for getting a BuildStatement from the statement
+// that is being currently interpreted. A closure is used to avoid unnecessary computation when the
+// metadata is not being tracked.
+func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
+	return func() core.BuildStatement {
+		// We lookup the package metadata from the interpreter table no matter how deep we are in the
+		// call stack. We do this to avoid a recursive lookup from leaf scopes to the top level package scope.
+		meta := s.interpreter.packageMetadata.Get(s.pkg.Label())
+		s.NAssert(meta.cursor() == nil, "Cursor is not pointing to a statement")
+		return NewBuildStatement(meta.cursor())
+	}
+}
+
 // pkgFilename returns the filename of the current package, or the empty string if there is none.
 func (s *scope) pkgFilename() string {
 	if s.pkg != nil {
 		return s.pkg.Filename
 	}
 	return ""
+}
+
+// getOrNewMetadata creates and returns a initialized scopeMetadata instance, or pulls an existing
+// metadata instance for that package from the interpreter package metadata table. It will return
+// a no-op implementation if we simply want to skip tracking for a certain scope.
+func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
+	// Skip metadata tracking if:
+	// 1. ParseMetadata flag is disabled;
+	// 2. Not interpreting a package (e.g. in subincluded targets)
+	// 3. Any external/remote subrepos.
+	// For 2 and 3, we never trim these, so avoiding tracking saves CPU and memory.
+	var meta scopeMetadata = &noopScopeMetadata{}
+	if s.interpreter.packageMetadata == nil { // This will be initialized if ParseMetadata is set.
+		return meta
+	}
+
+	if pkg == nil || pkg.Subrepo.IsExternal() {
+		return meta
+	}
+
+	meta, _ = s.interpreter.packageMetadata.AddOrGet(pkg.Label(), func() scopeMetadata {
+		return &trackingScopeMetadata{
+			// symbolOrigins is lazy initialized in [setSymbolOrigin]
+			symbolStack: []trackedSymbol{},
+		}
+	})
+	return meta
+}
+
+// getPackageMetadata returns the metadata for that current scope's package.
+func (s *scope) getPackageMetadata() scopeMetadata {
+	if s.pkg == nil || s.interpreter.packageMetadata == nil { // This will be initialized if ParseMetadata is set.
+		return nil
+	}
+	return s.interpreter.packageMetadata.Get(s.pkg.Label())
+}
+
+// metadataRegisterFiles adds the files to the scope's package metadata.
+func (s *scope) metadataRegisterFiles(rootPath string, files []string) {
+	meta := s.getPackageMetadata()
+	if meta == nil {
+		return
+	}
+	meta.pushFiles(rootPath, files)
+}
+
+// metadataRegisterSubincludes adds the subincluded labels to the scope's package metadata.
+func (s *scope) metadataRegisterSubincludes(labels core.BuildLabels) {
+	meta := s.getPackageMetadata()
+	if meta == nil {
+		return
+	}
+	meta.pushSubincludes(labels)
+}
+
+// scopeMetadata defines an interface for tracking evaluation metadata (such as AST cursor position
+// and symbol subinclude origins) across interpreter scopes.
+// This is optionally used for operations (e.g. export) that require more details on the relation
+// between targets and statements. The no-op implementation should be used for most operations to
+// avoid any computational overhead.
+type scopeMetadata interface {
+	// cursor returns the statement currently being interpreted.
+	cursor() *Statement
+	// origin returns the subinclude origin label of a tracked symbol by name. Returns nil if the
+	// symbol is local (defined in the package) or has no origin/not tracked.
+	origin(scope *scope, name string) *core.BuildLabel
+	// setCursor registers the statement currently being interpreted.
+	setCursor(stmt *Statement)
+	// registerBuildStatement registers a new Build Statement in the given package. It will also
+	// register the required dependencies for interpreting that statement by looking up the required
+	// origins in the symbol stack.
+	registerBuildStatement(pkg *core.Package, stmt *Statement)
+	// setSymbolOrigin registers the subinclude origin label for a defined symbol.
+	setSymbolOrigin(name string, origin core.BuildLabel)
+	// checkpoint returns a checkpoint for the current tracking stacks.
+	checkpoint() metadataStackCheckpoint
+	// restore truncates the tracking stacks to the specified lengths from the checkpoint.
+	restore(cp metadataStackCheckpoint)
+	// pushSymbol pushes a symbol name and its subinclude origin onto the active tracking stack.
+	pushSymbol(name string, origin *core.BuildLabel)
+	// pushFiles pushes a slice of filenames onto the active tracking stack.
+	pushFiles(rootPath string, filenames []string)
+	// pushSubincludes pushes a label onto the tracking stack for subincludes.
+	pushSubincludes(labels core.BuildLabels)
+}
+
+// trackingScopeMetadata implements the interface [scopeMetadata].
+type trackingScopeMetadata struct {
+	// stmtCursor points to the statement currently being interpreted.
+	stmtCursor *Statement
+	// symbolOrigins tracks the subinclude label that each symbol was originally defined in.
+	symbolOrigins map[string]core.BuildLabel
+	// symbolStack tracks which symbols are actively in use during evaluation.
+	// Symbols are pushed onto the stack during lookups and truncated after each statement.
+	symbolStack []trackedSymbol
+	// fileStack track which files are required during the evaluation of the current statement.
+	// These are pushed during native calls such as glob() and truncated after each top level statement.
+	fileStack []string
+	// subincludesStack track subinclude calls dynamically made while evaluating a statement,
+	// this can happen for example when a custom target (function definition) subincludes a target as
+	// part of the function body. These are pushed during calls to subincludes() and truncated after
+	// each statement.
+	subincludesStack core.BuildLabels
+}
+
+type trackedSymbol struct {
+	name   string
+	origin core.BuildLabel
+}
+
+// cursor implements [scopeMetadata].
+func (m *trackingScopeMetadata) cursor() *Statement {
+	return m.stmtCursor
+}
+
+// origin implements [scopeMetadata].
+func (m *trackingScopeMetadata) origin(scope *scope, name string) *core.BuildLabel {
+	if scope.interpreter != nil && scope.interpreter.preloaded.Contains(name) {
+		// Preloaded symbols are treated as local (returning nil origin) because they are implicitly
+		// available across all package scopes in the repository.
+		//
+		// This also prevents erroneous subinclude propagation: since symbol resolution recursively
+		// traverses the parent scope chain from bottom to top, where the preloaded symbols are
+		// defined at the top, if a target subincludes a preloaded target again it will be preferred
+		// over the preloaded and will potentially include unwanted symbols so we enforce a
+		// preference for the preloaded symbols. This could cause issues if our repo relies on
+		// redefining preloaded symbols.
+		return nil
+	}
+
+	if label, ok := m.symbolOrigins[name]; ok {
+		// Object subincluded into current scope.
+		return &label
+	}
+	// The origin for a local object is set to nil
+	return nil
+}
+
+// registerBuildStatement implements [scopeMetadata].
+func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *Statement) {
+	if pkg == nil || stmt == nil {
+		return
+	}
+
+	var deps core.BuildLabels
+	seen := make(map[core.BuildLabel]struct{})
+	for _, l := range m.subincludesStack {
+		if _, ok := seen[l]; !ok {
+			deps = append(deps, l)
+			seen[l] = struct{}{}
+		}
+	}
+	for _, v := range m.symbolStack {
+		l := v.origin
+		if _, ok := seen[l]; !ok {
+			deps = append(deps, l)
+			seen[l] = struct{}{}
+		}
+	}
+
+	pkg.Metadata.RegisterStatement(NewBuildStatement(stmt), deps, m.fileStack)
+}
+
+type metadataStackCheckpoint struct {
+	symbolCheckpoint, fileCheckpoint, subincludesCheckpoint int
+}
+
+// checkpoint implements [scopeMetadata].
+func (m *trackingScopeMetadata) checkpoint() metadataStackCheckpoint {
+	return metadataStackCheckpoint{
+		symbolCheckpoint:      len(m.symbolStack),
+		fileCheckpoint:        len(m.fileStack),
+		subincludesCheckpoint: len(m.subincludesStack),
+	}
+}
+
+// restore implements [scopeMetadata].
+func (m *trackingScopeMetadata) restore(cp metadataStackCheckpoint) {
+	if cp.symbolCheckpoint >= 0 && cp.symbolCheckpoint <= len(m.symbolStack) {
+		m.symbolStack = m.symbolStack[:cp.symbolCheckpoint]
+	}
+	if cp.fileCheckpoint >= 0 && cp.fileCheckpoint <= len(m.fileStack) {
+		m.fileStack = m.fileStack[:cp.fileCheckpoint]
+	}
+	if cp.subincludesCheckpoint >= 0 && cp.subincludesCheckpoint <= len(m.subincludesStack) {
+		m.subincludesStack = m.subincludesStack[:cp.subincludesCheckpoint]
+	}
+}
+
+// setCursor implements [scopeMetadata].
+func (m *trackingScopeMetadata) setCursor(stmt *Statement) {
+	m.stmtCursor = stmt
+}
+
+// setSymbolOrigin implements [scopeMetadata].
+func (m *trackingScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel) {
+	if m.symbolOrigins == nil {
+		// Lazy initialization to avoid unnecessary allocation of a map in smaller scopes (no subinclude).
+		m.symbolOrigins = map[string]core.BuildLabel{}
+	}
+
+	m.symbolOrigins[name] = origin
+}
+
+// pushSymbol implements [scopeMetadata].
+func (m *trackingScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {
+	if origin == nil {
+		return
+	}
+	m.symbolStack = append(m.symbolStack, trackedSymbol{name: name, origin: *origin})
+}
+
+// pushFiles implements [scopeMetadata].
+func (m *trackingScopeMetadata) pushFiles(rootPath string, filenames []string) {
+	for _, filename := range filenames {
+		m.fileStack = append(m.fileStack, path.Join(rootPath, filename))
+	}
+}
+
+// pushSubincludes implements [scopeMetadata].
+func (m *trackingScopeMetadata) pushSubincludes(labels core.BuildLabels) {
+	m.subincludesStack = append(m.subincludesStack, labels...)
+}
+
+// noopScopeMetadata implements the scopeMetadata interface with no-op methods. This is used to
+// avoid the overhead of storing metadata for operations that don't depend on it.
+type noopScopeMetadata struct{}
+
+// cursor implements [scopeMetadata].
+func (nm *noopScopeMetadata) cursor() *Statement { return nil }
+
+// origin implements [scopeMetadata].
+func (nm *noopScopeMetadata) origin(scope *scope, name string) *core.BuildLabel { return nil }
+
+// registerBuildStatement implements [scopeMetadata].
+func (nm *noopScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *Statement) {}
+
+// checkpoint implements [scopeMetadata].
+func (nm *noopScopeMetadata) checkpoint() metadataStackCheckpoint {
+	return metadataStackCheckpoint{}
+}
+
+// restore implements [scopeMetadata].
+func (nm *noopScopeMetadata) restore(cp metadataStackCheckpoint) {}
+
+// setCursor implements [scopeMetadata].
+func (nm *noopScopeMetadata) setCursor(stmt *Statement) {}
+
+// setSymbolOrigin implements [scopeMetadata].
+func (nm *noopScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel) {}
+
+// pushSymbol implements [scopeMetadata].
+func (nm *noopScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {}
+
+// pushFiles implements [scopeMetadata].
+func (nm *noopScopeMetadata) pushFiles(rootPath string, filenames []string) {}
+
+// pushSubincludes implements [scopeMetadata].
+func (nm *noopScopeMetadata) pushSubincludes(labels core.BuildLabels) {}
+
+// NewBuildStatement creates a new core.BuildStatement from an asp.statement.
+func NewBuildStatement(stmt *Statement) core.BuildStatement {
+	return core.BuildStatement{
+		Start: int(stmt.Pos),
+		End:   int(stmt.EndPos),
+	}
 }
