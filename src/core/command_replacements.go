@@ -59,7 +59,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/peterebden/go-deferred-regex"
+	deferredregex "github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/fs"
 )
@@ -106,6 +106,8 @@ func TestCommand(state *BuildState, target *BuildTarget) (string, error) {
 				args = strings.Join(state.TestArgs, " ")
 			}
 			cmd = strings.ReplaceAll(cmd, placeholder, args)
+		} else {
+			return "", fmt.Errorf("command %q does not contain expected arguments placeholder %q", cmd, target.Test.ArgsPlaceholder)
 		}
 	} else if len(state.TestArgs) > 0 {
 		cmd += " " + strings.Join(state.TestArgs, " ")

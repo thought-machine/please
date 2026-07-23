@@ -301,7 +301,7 @@ func (h *testHasher) SetHash(target *BuildTarget, hash []byte) {
 func TestTestCommand(t *testing.T) {
 	state := NewDefaultBuildState()
 
-	t.Run("Case 1: No TestArgs", func(t *testing.T) {
+	t.Run("No TestArgs", func(t *testing.T) {
 		target := makeTarget2("//path/to:target1", "python -m unittest", nil)
 		target.Test = &TestFields{
 			Command: "python -m unittest",
@@ -311,7 +311,7 @@ func TestTestCommand(t *testing.T) {
 		assert.Equal(t, "python -m unittest", cmd)
 	})
 
-	t.Run("Case 2: Appending TestArgs when ArgsPlaceholder is empty", func(t *testing.T) {
+	t.Run("Appending TestArgs when ArgsPlaceholder is empty", func(t *testing.T) {
 		target := makeTarget2("//path/to:target1", "python -m unittest", nil)
 		target.Test = &TestFields{
 			Command: "python -m unittest",
@@ -322,7 +322,7 @@ func TestTestCommand(t *testing.T) {
 		assert.Equal(t, "python -m unittest foo bar", cmd)
 	})
 
-	t.Run("Case 3: Replacing placeholder with TestArgs in the middle of a command", func(t *testing.T) {
+	t.Run("Replacing placeholder with TestArgs in the middle of a command", func(t *testing.T) {
 		target := makeTarget2("//path/to:target1", "python -m unittest __TEST_ARGS__ 2>&1", nil)
 		target.Test = &TestFields{
 			Command:         "python -m unittest __TEST_ARGS__ 2>&1",
@@ -334,7 +334,7 @@ func TestTestCommand(t *testing.T) {
 		assert.Equal(t, "python -m unittest foo bar 2>&1", cmd)
 	})
 
-	t.Run("Case 4: Placeholder is specified but not present in the command", func(t *testing.T) {
+	t.Run("Placeholder is specified but not present in the command", func(t *testing.T) {
 		target := makeTarget2("//path/to:target1", "python -m unittest", nil)
 		target.Test = &TestFields{
 			Command:         "python -m unittest",
@@ -342,11 +342,11 @@ func TestTestCommand(t *testing.T) {
 		}
 		state.TestArgs = []string{"foo", "bar"}
 		cmd, err := TestCommand(state, target)
-		assert.NoError(t, err)
-		assert.Equal(t, "python -m unittest", cmd)
+		assert.EqualError(t, err, `command "python -m unittest" does not contain expected arguments placeholder "__TEST_ARGS__"`)
+		assert.Empty(t, cmd)
 	})
 
-	t.Run("Case 5: Multiple occurrences of placeholder", func(t *testing.T) {
+	t.Run("Multiple occurrences of placeholder", func(t *testing.T) {
 		target := makeTarget2("//path/to:target1", "echo __TEST_ARGS__ and __TEST_ARGS__", nil)
 		target.Test = &TestFields{
 			Command:         "echo __TEST_ARGS__ and __TEST_ARGS__",
@@ -358,7 +358,7 @@ func TestTestCommand(t *testing.T) {
 		assert.Equal(t, "echo foo bar and foo bar", cmd)
 	})
 
-	t.Run("Case 6: Combined sequence and placeholder replacement", func(t *testing.T) {
+	t.Run("Combined sequence and placeholder replacement", func(t *testing.T) {
 		target2 := makeTarget2("//path/to:target2", "", nil)
 		target1 := makeTarget2("//path/to:target1", "$(location //path/to:target2) __TEST_ARGS__", target2)
 		target1.Test = &TestFields{
@@ -371,7 +371,7 @@ func TestTestCommand(t *testing.T) {
 		assert.Equal(t, "path/to/target2.py --verbose", cmd)
 	})
 
-	t.Run("Case 7: Empty test command fallback (defaults to target binary) and appending", func(t *testing.T) {
+	t.Run("Empty test command fallback (defaults to target binary) and appending", func(t *testing.T) {
 		target := makeTarget2("//path/to:target1", "", nil)
 		target.IsBinary = true
 		target.Test = &TestFields{

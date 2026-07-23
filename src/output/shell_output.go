@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/peterebden/go-deferred-regex"
+	deferredregex "github.com/peterebden/go-deferred-regex"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -422,11 +422,12 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		var cmd string
+		var err error
 		dir := target.TmpDir()
 		env := core.StampedBuildEnvironment(state, target, nil, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 		shouldSandbox := target.Sandbox
 		if state.NeedTests {
-			cmd, _ = core.TestCommand(state, target)
+			cmd, err = core.TestCommand(state, target)
 			dir = filepath.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir, 1)
 			shouldSandbox = target.Test.Sandbox
@@ -435,7 +436,10 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			}
 		} else {
 			cmd = target.GetCommand(state)
-			cmd, _ = core.ReplaceSequences(state, target, cmd)
+			cmd, err = core.ReplaceSequences(state, target, cmd)
+		}
+		if err != nil {
+			log.Errorf("Error pre-processing command: %s", err.Error())
 		}
 		env["CMD"] = cmd
 		fmt.Printf("  %s: %s\n", label, dir)

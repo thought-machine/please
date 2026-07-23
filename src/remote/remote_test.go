@@ -373,6 +373,6 @@ func TestBuildTestCommand(t *testing.T) {
 
 	assert.True(t,
 		strings.HasSuffix(cmd.Arguments[len(cmd.Arguments)-1], "$TEST --foo --bar 2>&1"),
-		"incorrect suffix on %q", cmd.Arguments[len(cmd.Arguments)-1],
+		`expected suffix "$TEST --foo --bar 2>&1" on %q`, cmd.Arguments[len(cmd.Arguments)-1],
 	)
 }
