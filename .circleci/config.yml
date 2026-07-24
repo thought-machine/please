@@ -222,7 +222,16 @@ jobs:
            command: ./.circleci/setup_osx.sh
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+           # TODO(#3556): fix the data race/segfaults and maybe remove this timeout
+           command: |
+             python3 -c "
+             import subprocess, sys
+             try:
+                 subprocess.run(['./bootstrap.sh', '--test_results_file', 'plz-out/results/please/test_results.xml'], timeout=900, check=True)
+             except subprocess.TimeoutExpired:
+                 print('Build timed out after 15 minutes', file=sys.stderr)
+                 sys.exit(1)
+             "
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
