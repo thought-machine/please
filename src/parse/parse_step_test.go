@@ -140,25 +140,17 @@ func assertPendingBuilds(t *testing.T, state *core.BuildState, targets ...string
 
 func getAllPending(state *core.BuildState) ([]string, []string) {
 	parses, builds := state.TaskQueues()
-	state.Stop()
 	var pendingParses, pendingBuilds []string
-	for parses != nil || builds != nil {
+	for {
 		select {
-		case p, ok := <-parses:
-			if !ok {
-				parses = nil
-				break
-			}
+		case p := <-parses:
 			pendingParses = append(pendingParses, p.Label.String())
-		case t, ok := <-builds:
-			if !ok {
-				builds = nil
-				break
-			}
+		case t := <-builds:
 			pendingBuilds = append(pendingBuilds, t.Target.Label.String())
+		default:
+			return pendingParses, pendingBuilds
 		}
 	}
-	return pendingParses, pendingBuilds
 }
 
 func buildLabel(bl string) core.BuildLabel {

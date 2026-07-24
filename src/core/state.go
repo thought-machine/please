@@ -310,6 +310,8 @@ type stateProgress struct {
 	internalResults chan *BuildResult
 	// The cycle checker itself.
 	cycleDetector cycleDetector
+	// Done channel to signal shutdown of the task queues.
+	done chan struct{}
 }
 
 // SystemStats stores information about the system.
@@ -349,10 +351,10 @@ func (state *BuildState) addPendingParse(label, dependent BuildLabel, mode Parse
 	atomic.AddInt64(&state.progress.numPending, 1)
 
 	go func() {
-		defer func() {
-			recover() // Prevent death on 'send on closed channel'
-		}()
-		state.pendingParses <- ParseTask{Label: label, Dependent: dependent, Mode: mode}
+		select {
+		case state.pendingParses <- ParseTask{Label: label, Dependent: dependent, Mode: mode}:
+		case <-state.Done():
+		}
 	}()
 }
 
@@ -360,10 +362,10 @@ func (state *BuildState) addPendingParse(label, dependent BuildLabel, mode Parse
 func (state *BuildState) addPendingBuild(target *BuildTarget) {
 	atomic.AddInt64(&state.progress.numPending, 1)
 	go func() {
-		defer func() {
-			recover() // Prevent death on 'send on closed channel'
-		}()
-		state.pendingActions <- Task{Target: target, Type: BuildTask}
+		select {
+		case state.pendingActions <- Task{Target: target, Type: BuildTask}:
+		case <-state.Done():
+		}
 	}()
 }
 
@@ -384,11 +386,12 @@ func (state *BuildState) Parses() *atomic.Int64 {
 func (state *BuildState) addPendingTest(target *BuildTarget, numRuns int) {
 	atomic.AddInt64(&state.progress.numPending, int64(numRuns))
 	go func() {
-		defer func() {
-			recover() // Prevent death on 'send on closed channel'
-		}()
 		for run := 1; run <= numRuns; run++ {
-			state.pendingActions <- Task{Target: target, Run: uint32(run), Type: TestTask}
+			select {
+			case state.pendingActions <- Task{Target: target, Run: uint32(run), Type: TestTask}:
+			case <-state.Done():
+				return
+			}
 		}
 	}()
 }
@@ -416,9 +419,13 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 // Stop stops the worker queues after any current tasks are done.
 func (state *BuildState) Stop() {
 	state.progress.closeOnce.Do(func() {
-		close(state.pendingParses)
-		close(state.pendingActions)
+		close(state.progress.done)
 	})
+}
+
+// Done returns a channel that is closed when the build state's queues have been stopped.
+func (state *BuildState) Done() <-chan struct{} {
+	return state.progress.done
 }
 
 // CloseResults closes the result channels.
@@ -1486,6 +1493,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 			originalTargets: NewTargetSet(),
+			done:            make(chan struct{}),
 		},
 		initOnce:            new(sync.Once),
 		preloadDownloadOnce: new(sync.Once),

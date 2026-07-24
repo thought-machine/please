@@ -80,35 +80,51 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
-		for task := range parses {
-			go func(task core.ParseTask) {
-				state.Parses().Add(1)
-				parse.Parse(state, task.Label, task.Dependent, task.Mode)
-				state.Parses().Add(-1)
-				state.TaskDone()
-			}(task)
+		defer wg.Done()
+		for {
+			select {
+			case <-state.Done():
+				return
+			case task, ok := <-parses:
+				if !ok {
+					return
+				}
+				go func(task core.ParseTask) {
+					state.Parses().Add(1)
+					parse.Parse(state, task.Label, task.Dependent, task.Mode)
+					state.Parses().Add(-1)
+					state.TaskDone()
+				}(task)
+			}
 		}
-		wg.Done()
 	}()
 	go func() {
-		for task := range actions {
-			wg.Add(1)
-			go func(task core.Task) {
-				defer wg.Done()
-
-				isRemote := anyRemote && !task.Target.Local
-				startAction(isRemote)
-				defer completeAction(isRemote, task)
-
-				switch task.Type {
-				case core.TestTask:
-					test.Test(state, task.Target, isRemote, int(task.Run))
-				case core.BuildTask:
-					build.Build(state, task.Target, isRemote)
+		defer wg.Done()
+		for {
+			select {
+			case <-state.Done():
+				return
+			case task, ok := <-actions:
+				if !ok {
+					return
 				}
-			}(task)
+				wg.Add(1)
+				go func(task core.Task) {
+					defer wg.Done()
+
+					isRemote := anyRemote && !task.Target.Local
+					startAction(isRemote)
+					defer completeAction(isRemote, task)
+
+					switch task.Type {
+					case core.TestTask:
+						test.Test(state, task.Target, isRemote, int(task.Run))
+					case core.BuildTask:
+						build.Build(state, task.Target, isRemote)
+					}
+				}(task)
+			}
 		}
-		wg.Done()
 	}()
 	// Wait until they've all exited, which they'll do once they have no tasks left.
 	wg.Wait()
