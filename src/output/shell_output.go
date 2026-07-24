@@ -427,6 +427,9 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 		env := core.StampedBuildEnvironment(state, target, nil, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp)
 		shouldSandbox := target.Sandbox
 		if state.NeedTests {
+			if !target.IsTest() {
+				continue
+			}
 			cmd, err = core.TestCommand(state, target)
 			dir = filepath.Join(core.RepoRoot, target.TestDir(1))
 			env = core.TestEnvironment(state, target, dir, 1)
