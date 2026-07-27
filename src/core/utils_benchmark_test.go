@@ -31,7 +31,6 @@ func BenchmarkIterInputsSimple(b *testing.B) {
 		}
 		state.Graph.AddTarget(dep)
 		target.AddDependency(dep.Label)
-		target.resolveDependency(target.Label, dep)
 	}
 
 	for i := 0; i < 25; i++ {
@@ -63,7 +62,6 @@ func BenchmarkIterInputsNamedSources(b *testing.B) {
 		}
 		state.Graph.AddTarget(dep)
 		target.AddDependency(dep.Label)
-		target.resolveDependency(target.Label, dep)
 	}
 
 	for i := 0; i < 5; i++ {

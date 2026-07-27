@@ -14,7 +14,7 @@ import (
 func TestStore(t *testing.T) {
 	mCache, aCache := makeCaches()
 	target := makeTarget1("//pkg1:test_store")
-	aCache.Store(target, nil, target.Outputs())
+	aCache.Store(target, nil, target.Outputs(nil))
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
 	assert.True(t, mCache.completed[target])
@@ -23,7 +23,7 @@ func TestStore(t *testing.T) {
 func TestRetrieve(t *testing.T) {
 	mCache, aCache := makeCaches()
 	target := makeTarget1("//pkg1:test_retrieve")
-	aCache.Retrieve(target, nil, target.Outputs())
+	aCache.Retrieve(target, nil, target.Outputs(nil))
 	aCache.Shutdown()
 	assert.False(t, mCache.inFlight[target])
 	assert.True(t, mCache.completed[target])

@@ -35,7 +35,10 @@ func (c *cycleDetector) Check() *errCycle {
 			return []*BuildTarget{target}, false
 		}
 		partial[target] = struct{}{}
-		for _, dep := range target.Dependencies() {
+		// Ignore anything we can't resolve; we run while the build is still going on so it's
+		// entirely normal for parts of the graph not to exist yet.
+		deps, _ := target.Dependencies(c.graph)
+		for _, dep := range deps {
 			if cycle, done := visit(dep); cycle != nil {
 				if done || target == cycle[len(cycle)-1] {
 					return cycle, true // This target is already in the cycle

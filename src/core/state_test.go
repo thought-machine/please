@@ -11,8 +11,8 @@ import (
 
 func TestExpandOriginalLabels(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"})
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"})
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 
@@ -36,7 +36,7 @@ func TestExpandOriginalLabels(t *testing.T) {
 
 func TestExpandOriginalTestLabels(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"})
 	state.NeedTests = true
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
@@ -52,7 +52,7 @@ func TestExpandOriginalTestLabels(t *testing.T) {
 
 func TestExpandVisibleOriginalTargets(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"})
 
 	addTarget(state, "//src/core:target1", "py")
 	addTarget(state, "//src/core:_target1#zip", "py")
@@ -61,8 +61,8 @@ func TestExpandVisibleOriginalTargets(t *testing.T) {
 
 func TestExpandOriginalSubLabels(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"})
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"})
 	state.Include = []string{"go"}
 	state.Exclude = []string{"py"}
 	addTarget(state, "//src/core:target1", "go")
@@ -78,10 +78,10 @@ func TestExpandOriginalSubLabels(t *testing.T) {
 
 func TestExpandOriginalLabelsOrdering(t *testing.T) {
 	state := NewDefaultBuildState()
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"}, true)
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"}, true)
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"}, true)
-	state.AddOriginalTarget(BuildLabel{PackageName: "src/build", Name: "build"}, true)
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/parse", Name: "parse"})
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core", Name: "all"})
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/core/tests", Name: "all"})
+	state.AddOriginalTarget(BuildLabel{PackageName: "src/build", Name: "build"})
 	addTarget(state, "//src/core:target1", "go")
 	addTarget(state, "//src/core:target2", "py")
 	addTarget(state, "//src/core/tests:target3", "go")
@@ -111,24 +111,6 @@ func TestAddTargetFilegroupPackageOutputs(t *testing.T) {
 	assert.True(t, exists)
 }
 
-func TestAddDepsToTarget(t *testing.T) {
-	state := NewDefaultBuildState()
-	_, builds := state.TaskQueues()
-	pkg := NewPackage("src/core")
-	target1 := addTargetDeps(state, pkg, "//src/core:target1", "//src/core:target2")
-	target2 := addTargetDeps(state, pkg, "//src/core:target2")
-	state.Graph.AddPackage(pkg)
-	state.QueueTarget(target1.Label, OriginalTarget, false, ParseModeNormal)
-	task := <-builds
-	assert.Equal(t, Task{Target: target2}, task)
-	// Now simulate target2 being built and adding a new dep to target1 in its post-build function.
-	target3 := addTargetDeps(state, pkg, "//src/core:target3")
-	target1.AddDependency(target3.Label)
-	target2.FinishBuild()
-	task = <-builds
-	assert.Equal(t, Task{Target: target3}, task)
-}
-
 func addTarget(state *BuildState, name string, labels ...string) {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Labels = labels
@@ -142,16 +124,6 @@ func addTarget(state *BuildState, name string, labels ...string) {
 	}
 	pkg.AddTarget(target)
 	state.Graph.AddTarget(target)
-}
-
-func addTargetDeps(state *BuildState, pkg *Package, name string, deps ...string) *BuildTarget {
-	target := NewBuildTarget(ParseBuildLabel(name, ""))
-	for _, d := range deps {
-		target.AddDependency(ParseBuildLabel(d, ""))
-	}
-	pkg.AddTarget(target)
-	state.Graph.AddTarget(target)
-	return target
 }
 
 func TestCopyPlugin(t *testing.T) {

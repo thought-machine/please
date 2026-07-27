@@ -111,7 +111,7 @@ func buildRevdeps(graph *core.BuildGraph, includeSubrepos bool) map[core.BuildLa
 	targets := graph.AllTargets()
 	revdeps := make(map[core.BuildLabel][]*core.BuildTarget, len(targets))
 	for _, t := range targets {
-		for _, d := range t.DeclaredDependencies() {
+		for d := range t.DeclaredDependencies() {
 			if t2 := graph.Target(d); t2 == nil {
 				revdeps[d] = append(revdeps[d], t2)
 			} else {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -132,13 +133,13 @@ func specialFields() specialFieldsMap {
 			return ""
 		},
 		"deps": func(target *core.BuildTarget) interface{} {
-			return target.DeclaredDependenciesStrict()
+			return slices.Collect(target.DeclaredDependenciesStrict())
 		},
 		"exported_deps": func(target *core.BuildTarget) interface{} {
-			return target.ExportedDependencies()
+			return slices.Collect(target.ExportedDependencies())
 		},
 		"runtime_deps": func(target *core.BuildTarget) interface{} {
-			return target.RuntimeDependencies()
+			return slices.Collect(target.RuntimeDependencies())
 		},
 		"visibility": func(target *core.BuildTarget) interface{} {
 			if len(target.Visibility) == 1 && target.Visibility[0] == core.WholeGraph[0] {

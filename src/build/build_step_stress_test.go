@@ -33,10 +33,10 @@ func TestBuildLotsOfTargets(t *testing.T) {
 	pkg := core.NewPackage("pkg")
 	state.Graph.AddPackage(pkg)
 
+	targets := []core.BuildLabel{}
 	for i := 1; i <= size; i++ {
-		addTarget(state, i)
+		targets = append(targets, addTarget(state, i).Label)
 	}
-	state.TaskDone() // Initial target adding counts as one.
 
 	results := state.Results()
 	// Consume and discard any results
@@ -47,14 +47,13 @@ func TestBuildLotsOfTargets(t *testing.T) {
 		}
 	}()
 
-	plz.RunHost(nil, state)
+	plz.RunHost(targets, state)
 }
 
 func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 	// Create and add a new target, with a parent and a dependency.
 	target := core.NewBuildTarget(label(i))
 	target.IsFilegroup = true // Will mean it doesn't have to shell out to anything.
-	target.SetState(core.Active)
 	target.Test = new(core.TestFields)
 	state.Graph.AddTarget(target)
 	if i <= size {
@@ -68,9 +67,6 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 				log.Info("Adding dependency %s -> %s", target.Label, dep)
 				target.AddDependency(dep)
 			}
-		} else {
-			// These are buildable now
-			state.QueueTarget(target.Label, core.OriginalTarget, false, core.ParseModeNormal)
 		}
 	}
 	return target
@@ -101,12 +97,8 @@ type fakeParser struct {
 	PostBuildFunctions buildFunctionMap
 }
 
-func (fake *fakeParser) RegisterPreload(core.BuildLabel) error {
-	return nil
-}
-
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
 	return nil
 }
 
@@ -125,7 +117,7 @@ func (fake *fakeParser) Init(state *core.BuildState) {
 }
 
 // ParseReader stub
-func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel, mode core.ParseMode) error {
+func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel) error {
 	return nil
 }
 
