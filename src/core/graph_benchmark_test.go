@@ -35,20 +35,10 @@ func BenchmarkTargetLookup(b *testing.B) {
 			graph.TargetOrDie(targets[i&targetIndexMask].Label)
 		}
 	})
-
-	// This benchmarks the best case of calling WaitForTarget, where the targets already exist,
-	// so it should perform identically to Simple above.
-	b.Run("WaitForTargetFast", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			graph.WaitForTarget(targets[i&targetIndexMask].Label)
-		}
-	})
 }
 
-// BenchmarkWaitForTargetSlow is a more complex benchmark that tests targets being added as they are
-// being waited on.
-func BenchmarkWaitForTargetSlow(b *testing.B) {
+// BenchmarkConcurrentTargetLookup tests targets being looked up at the same time as they're added.
+func BenchmarkConcurrentTargetLookup(b *testing.B) {
 	const parallelism = 8
 	var wg sync.WaitGroup
 	wg.Add(parallelism * 2)
@@ -67,7 +57,7 @@ func BenchmarkWaitForTargetSlow(b *testing.B) {
 
 	lookupTargets := func() {
 		for _, target := range targets {
-			graph.WaitForTarget(target.Label)
+			graph.Target(target.Label)
 		}
 		wg.Done()
 	}

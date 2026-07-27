@@ -106,8 +106,8 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 		}
 	}
 
-	outs := target.AllOutputs()
-	if len(target.Outputs()) == 1 { // $OUT is relative when running remotely; make it absolute
+	outs := target.AllOutputs(c.state.Graph)
+	if len(target.Outputs(c.state.Graph)) == 1 { // $OUT is relative when running remotely; make it absolute
 		commandPrefixBuilder.WriteString(`export OUT="$TMP_DIR/$OUT" && `)
 	}
 	if target.IsRemoteFile {
@@ -156,7 +156,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 		paths = append(paths, core.TestResultsFile)
 	}
 	commandPrefix := "export TMP_DIR=\"`pwd`\" TEST_DIR=\"`pwd`\" && "
-	if outs := target.Outputs(); len(outs) > 0 {
+	if outs := target.Outputs(state.Graph); len(outs) > 0 {
 		commandPrefix += `export TEST="$TEST_DIR/` + outs[0] + `" && `
 	}
 	cmd, err := core.TestCommand(state, target)
@@ -177,7 +177,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 
 // buildRunCommand builds the command to run a target remotely.
 func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarget) (*pb.Command, error) {
-	outs := target.Outputs()
+	outs := target.Outputs(state.Graph)
 	if len(outs) == 0 {
 		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
 	}
@@ -287,7 +287,7 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 		}
 	}
 	if !isTest && target.Stamp {
-		stamp := core.StampFile(c.state.Config, target)
+		stamp := core.StampFile(c.state, target)
 		entry := uploadinfo.EntryFromBlob(stamp)
 		if ch != nil {
 			ch <- entry
@@ -539,7 +539,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 
 // uploadLocalTarget uploads the outputs of a target that was built locally.
 func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
-	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), ".", target.Outputs(), filemetadata.NewNoopCache(), command.PreserveSymlink, map[string]*cpb.NodeProperties{})
+	m, ar, err := c.client.ComputeOutputsToUpload(target.OutDir(), ".", target.Outputs(c.state.Graph), filemetadata.NewNoopCache(), command.PreserveSymlink, map[string]*cpb.NodeProperties{})
 	if err != nil {
 		return err
 	}

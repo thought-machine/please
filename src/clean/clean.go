@@ -51,7 +51,7 @@ func Targets(state *core.BuildState, labels []core.BuildLabel) {
 }
 
 func cleanTarget(state *core.BuildState, target *core.BuildTarget) {
-	if err := build.RemoveOutputs(target); err != nil {
+	if err := build.RemoveOutputs(state, target); err != nil {
 		log.Fatalf("Failed to remove output: %s", err)
 	}
 	if target.IsTest() {

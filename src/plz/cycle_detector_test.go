@@ -1,45 +1,27 @@
-package core
+package plz
 
 import (
+	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestCycleDetector(t *testing.T) {
-	newTarget := func(state *BuildState, label string, deps ...string) *BuildTarget {
-		target := NewBuildTarget(ParseBuildLabel(label, ""))
+	newTarget := func(state *core.BuildState, label string, deps ...string) *core.BuildTarget {
+		target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 		for _, dep := range deps {
-			target.AddDependency(ParseBuildLabel(dep, ""))
+			target.AddDependency(core.ParseBuildLabel(dep, ""))
 		}
 		state.Graph.AddTarget(target)
-		state.QueueTarget(target.Label, OriginalTarget, true, ParseModeForSubinclude)
 		return target
 	}
 
-	waitForDeps := func(state *BuildState) {
-		// Wait for all targets to have resolved all their dependencies.
-		allDepsResolved := func() bool {
-			for _, target := range state.Graph.AllTargets() {
-				if len(target.DeclaredDependencies()) != len(target.Dependencies()) {
-					return false
-				}
-			}
-			return true
-		}
-		for i := 0; i < 1000; i++ {
-			if allDepsResolved() {
-				return
-			}
-			time.Sleep(2 * time.Millisecond)
-		}
-		panic("not all dependencies resolved")
-	}
-
 	t.Run("NoCycle", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := core.NewDefaultBuildState()
 		newTarget(state, "//src:a", "//src:b", "//src:c")
 		newTarget(state, "//src:b", "//src:d", "//src:e")
 		newTarget(state, "//src:c", "//src:b", "//src:f")
@@ -47,14 +29,13 @@ func TestCycleDetector(t *testing.T) {
 		newTarget(state, "//src:e", "//src:f")
 		newTarget(state, "//src:f", "//src:g")
 		newTarget(state, "//src:g")
-		waitForDeps(state)
 
 		detector := cycleDetector{graph: state.Graph}
 		assert.Nil(t, detector.Check())
 	})
 
 	t.Run("Cycle", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := core.NewDefaultBuildState()
 		newTarget(state, "//src:a", "//src:b", "//src:c")
 		newTarget(state, "//src:b", "//src:d", "//src:e")
 		newTarget(state, "//src:c", "//src:b", "//src:f")
@@ -62,13 +43,12 @@ func TestCycleDetector(t *testing.T) {
 		e := newTarget(state, "//src:e", "//src:f")
 		f := newTarget(state, "//src:f", "//src:g")
 		g := newTarget(state, "//src:g", "//src:e")
-		waitForDeps(state)
 
 		detector := cycleDetector{graph: state.Graph}
 		err := detector.Check()
-		require.NotNil(t, err)
-		require.Equal(t, 3, len(err.Cycle))
-		log.Warning("%s", err)
-		assert.Equal(t, []*BuildTarget{g, e, f}, err.Cycle)
+		require.Error(t, err)
+		cerr, ok := errors.AsType[*errCycle](err)
+		require.True(t, ok)
+		assert.Equal(t, []*core.BuildTarget{g, e, f}, cerr.Cycle)
 	})
 }

@@ -1,0 +1,20 @@
+# A subrepo defined in the host repo, backed by a build target (as http_archive et al do).
+# Building ///subrepo//... has to find this subrepo by name in order to know which directory
+# tree to walk; it previously looked at the package that defines it, which is in the host repo.
+build_file_name = CONFIG.BUILD_FILE_NAMES[0]
+
+build_rule(
+    name = "subrepo",
+    srcs = {
+        "root": ["files/root_build"],
+        "pkg": ["files/pkg_build"],
+    },
+    outs = ["subrepo"],
+    cmd = f'mkdir -p "$OUT/pkg" && cp "$SRCS_ROOT" "$OUT/{build_file_name}" && cp "$SRCS_PKG" "$OUT/pkg/{build_file_name}"',
+    _subrepo = True,
+)
+
+subrepo(
+    name = "subrepo",
+    dep = ":subrepo",
+)

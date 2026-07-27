@@ -1,0 +1,31 @@
+# The sleep widens the window during which the subrepo's package hasn't been parsed yet. The race is
+# real without it, but far harder to hit reliably.
+genrule(
+    name = "slowrepo_files",
+    srcs = [
+        "repo_src/build_file",
+        "repo_src/plzconfig",
+    ],
+    outs = ["slowrepo_files"],
+    cmd = "sleep 1 && mkdir -p $OUT && cp $PKG_DIR/repo_src/build_file $OUT/BUILD_FILE && cp $PKG_DIR/repo_src/plzconfig $OUT/.plzconfig",
+)
+
+subrepo(
+    name = "slowrepo",
+    dep = ":slowrepo_files",
+)
+
+def _check_labels(name):
+    labels = get_labels(name, "x:")
+    if labels != ["from_b", "from_subrepo"]:
+        fail("get_labels(%s) returned %s, expected [from_b, from_subrepo]" % (name, labels))
+
+# A pre-build function can walk the build graph to arbitrary depth, so everything reachable from the
+# target must be in the graph before it runs - including via data deps, which aren't needed to build.
+build_rule(
+    name = "a",
+    outs = ["a.txt"],
+    cmd = "echo a > $OUT",
+    data = ["//b:b"],
+    pre_build = _check_labels,
+)

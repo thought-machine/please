@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"runtime/debug"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -35,13 +34,16 @@ type interpreter struct {
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
+
 	// packageMetadata store scope level metadata for each package.
 	packageMetadata *cmap.Map[core.BuildLabel, scopeMetadata]
+
+	callbacks Callbacks
 }
 
 // newInterpreter creates and returns a new interpreter instance.
 // It loads all the builtin rules at this point.
-func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
+func newInterpreter(state *core.BuildState, p *Parser, callbacks Callbacks) *interpreter {
 	s := &scope{
 		ctx:    context.Background(),
 		state:  state,
@@ -55,6 +57,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		configs:    map[*core.BuildState]*pyConfig{},
 		limiter:    make(semaphore, state.Config.Parse.NumThreads),
 		regexCache: cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
+		callbacks:  callbacks,
 	}
 	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
 	if p.interpreter != nil {
@@ -97,7 +100,7 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 
 // LoadBuiltins loads a set of builtins from a file, optionally with its contents.
 func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*Statement) error {
-	s := i.scope.NewScope(filename, 0)
+	s := i.scope.NewScope(filename)
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
@@ -139,7 +142,9 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 }
 
 func (i *interpreter) preloadSubincludes(s *scope) error {
-	// We should have ensured these targets are downloaded by this point in `parse_step.go`
+	// N.B. These come from the scope's state, not ours; a package in a subrepo preloads whatever that
+	//      subrepo's config asks for, which isn't the same set as the host repo's.
+	//      The driver has ensured these are built before letting us start on this package.
 	for _, label := range s.state.GetPreloadedSubincludes() {
 		if err := i.preloadSubinclude(s, label); err != nil {
 			return err
@@ -164,7 +169,7 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 	}
 
 	s.interpreter.loadPluginConfig(s, includeState)
-	for _, out := range t.FullOutputs() {
+	for _, out := range t.FullOutputs(s.state.Graph) {
 		globals := s.interpreter.Subinclude(s, out, t.Label, true)
 		s.SetAllWithOrigin(globals, false, &t.Label)
 	}
@@ -173,8 +178,8 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, statements []*Statement) (*scope, error) {
-	s := i.scope.NewPackagedScope(pkg, mode, 1)
+func (i *interpreter) interpretAll(ctx context.Context, pkg *core.Package, forLabel, dependent *core.BuildLabel, statements []*Statement) (*scope, error) {
+	s := i.scope.NewPackagedScope(ctx, pkg, 1)
 	s.config = i.getConfig(s.state).Copy()
 
 	// Config needs a little separate tweaking.
@@ -191,7 +196,11 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 		defer pprof.SetGoroutineLabels(old)
 	}
 
-	if !mode.IsPreload() {
+	// If we're being parsed on behalf of resolving preloads then we mustn't apply them; they aren't built
+	// yet, and waiting for them would mean waiting on the thing that's waiting on us.
+	// N.B. We check the argument rather than s.ctx; scopes get captured by things that outlive the chain
+	//      they were created on, so only the context we were handed describes what we're actually doing.
+	if !core.IsPreloading(ctx) {
 		if err := i.preloadSubincludes(s); err != nil {
 			return nil, err
 		}
@@ -211,7 +220,6 @@ func handleErrors(r interface{}) (err error) {
 	} else {
 		err = fmt.Errorf("%s", r)
 	}
-	log.Debug("%v:\n %s", err, debug.Stack())
 	return
 }
 
@@ -236,11 +244,14 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 			return nil, err
 		}
 
-		mode := pkgScope.mode
-		if preload {
-			mode |= core.ParseModeForPreload
-		}
-		s := i.scope.NewScope(path, mode)
+		// N.B. This hangs off the interpreter's root scope so it sees the builtins rather than the
+		//      caller's locals, but the work belongs to the caller's chain, so it takes their context.
+		s := i.scope.newScope(pkgScope.ctx, nil, path, 0)
+		s.Preload = preload
+		// Whether this file gets preloads applied to it. Not if it is itself a preload, and not if we're
+		// resolving preloads at all - they aren't available yet, and reaching for one here would wait on
+		// a subinclude that the resolution we're part of is itself waiting to finish.
+		applyPreloads := !preload && !core.IsPreloading(pkgScope.ctx)
 
 		s.state = pkgScope.state
 		// Scope needs a local version of CONFIG
@@ -248,7 +259,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		s.Set("CONFIG", s.config)
 		s.subincludeLabel = &label
 
-		if !mode.IsPreload() {
+		if applyPreloads {
 			if err := i.preloadSubincludes(s); err != nil {
 				return nil, err
 			}
@@ -322,8 +333,9 @@ type scope struct {
 	globber *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
-	mode     core.ParseMode
 	metadata scopeMetadata
+	// True if this scope is from a preloaded subinclude
+	Preload bool
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -416,24 +428,26 @@ func (s *scope) subincludePackage() *core.Package {
 	return nil
 }
 
-// NewScope creates a new child scope of this one.
-func (s *scope) NewScope(filename string, mode core.ParseMode) *scope {
-	return s.newScope(s.pkg, mode, filename, 0)
+// NewScope creates a new child scope of this one, continuing on the same context.
+// Use newScope directly if the new scope belongs to a different chain of work to this one; the context
+// describes what we are currently doing, which isn't always the same as where a scope sits lexically.
+func (s *scope) NewScope(filename string) *scope {
+	return s.newScope(s.ctx, s.pkg, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
-func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint int) *scope {
-	newScope := s.newScope(pkg, mode, pkg.Filename, hint)
+func (s *scope) NewPackagedScope(ctx context.Context, pkg *core.Package, mode core.ParseMode, hint int) *scope {
+	newScope := s.newScope(ctx, pkg, mode, pkg.Filename, hint)
 	// Since we only want to track metadata for new top level packaged scopes, we explicitly add it here
 	// after creation.
 	newScope.metadata = newScope.getOrNewMetadata(pkg)
 	return newScope
 }
 
-func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
+func (s *scope) newScope(ctx context.Context, pkg *core.Package, filename string, hint int) *scope {
 	s2 := &scope{
-		ctx:         s.ctx,
+		ctx:         ctx,
 		filename:    filename,
 		interpreter: s.interpreter,
 		state:       s.state,
@@ -443,10 +457,10 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		locals:      make(pyDict, hint),
 		config:      s.config,
 		Callback:    s.Callback,
-		mode:        mode,
 		// We only track metadata at the top level scope created with [scope.NewPackagedScope]; Every
 		// other child scope or non-packaged (e.g. subincludes) defaults to a noop implementation.
 		metadata: &noopScopeMetadata{},
+		Preload:     s.Preload,
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -747,7 +761,7 @@ func (s *scope) interpretJoin(base string, list *List) pyObject {
 	}
 	// Has a comprehension. Note that there is only ever one level; by the anecdata, two-level ones
 	// are rare in this context so not worth worrying about here.
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScope(s.filename)
 	it := s.iterable(list.Comprehension.Expr)
 	first := true
 	cs.evaluateComprehension(it, list.Comprehension, func(li pyObject) {
@@ -970,7 +984,7 @@ func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScope(s.filename)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyList, 0, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
@@ -991,7 +1005,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScope(s.filename)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyDict, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {

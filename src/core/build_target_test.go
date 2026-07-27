@@ -131,12 +131,12 @@ func TestCheckDependencyVisibility(t *testing.T) {
 	assert.NoError(t, target7.CheckDependencyVisibility(state))
 
 	// Now if we add a dep on this mock library, lib2 will fail because it's not a test.
-	target2.resolveDependency(target5.Label, target5)
+	target2.AddDependency(target5.Label)
 	assert.Error(t, target2.CheckDependencyVisibility(state))
 
 	// Similarly to above test, if we add a dep on something that can't be seen, we should
 	// get errors back from this function.
-	target3.resolveDependency(target1.Label, target1)
+	target3.AddDependency(target1.Label)
 	assert.Error(t, target3.CheckDependencyVisibility(state))
 }
 
@@ -145,8 +145,8 @@ func TestAddOutput(t *testing.T) {
 	target.AddOutput("thingy.py")
 	target.AddOutput("thingy2.py")
 	target.AddOutput("thingy.py")
-	if len(target.Outputs()) != 2 {
-		t.Errorf("Incorrect output length; should be 2, was %d", len(target.Outputs()))
+	if len(target.Outputs(nil)) != 2 {
+		t.Errorf("Incorrect output length; should be 2, was %d", len(target.Outputs(nil)))
 	}
 }
 
@@ -165,7 +165,7 @@ func TestAddOutputSorting(t *testing.T) {
 		"3.py",
 		"x.pyx",
 	}
-	assert.Equal(t, expected, target.Outputs())
+	assert.Equal(t, expected, target.Outputs(nil))
 }
 
 func TestAddOutputPanics(t *testing.T) {
@@ -182,7 +182,7 @@ func TestAddSource(t *testing.T) {
 	target.AddSource(ParseBuildLabel("//src/test/python:lib3", ""))
 	target.AddSource(ParseBuildLabel("//src/test/python:lib2", ""))
 	assert.Equal(t, 2, len(target.Sources))
-	assert.Equal(t, 2, len(target.DeclaredDependencies()))
+	assert.Equal(t, 2, len(slices.Collect(target.DeclaredDependencies())))
 }
 
 func TestOutputs(t *testing.T) {
@@ -195,17 +195,18 @@ func TestOutputs(t *testing.T) {
 	target3 := makeFilegroup("//src/test:target3", "PUBLIC", target2)
 	target3.AddSource(target2.Label)
 	addFilegroupSource(target3, "file4.go")
+	graph := graphWith(target1, target2, target3)
 
-	assert.Equal(t, []string{"file1.go", "file2.go"}, target1.Outputs())
-	assert.Equal(t, []string{"file1.go", "file2.go", "file3.go"}, target2.Outputs())
-	assert.Equal(t, []string{"file1.go", "file2.go", "file3.go", "file4.go"}, target3.Outputs())
+	assert.Equal(t, []string{"file1.go", "file2.go"}, target1.Outputs(graph))
+	assert.Equal(t, []string{"file1.go", "file2.go", "file3.go"}, target2.Outputs(graph))
+	assert.Equal(t, []string{"file1.go", "file2.go", "file3.go", "file4.go"}, target3.Outputs(graph))
 }
 
 func TestFullOutputs(t *testing.T) {
 	target := makeTarget1("//src/core:target1", "PUBLIC")
 	target.AddOutput("file1.go")
 	target.AddOutput("file2.go")
-	assert.Equal(t, []string{"plz-out/gen/src/core/file1.go", "plz-out/gen/src/core/file2.go"}, target.FullOutputs())
+	assert.Equal(t, []string{"plz-out/gen/src/core/file1.go", "plz-out/gen/src/core/file2.go"}, target.FullOutputs(nil))
 }
 
 func TestAllOutputs(t *testing.T) {
@@ -213,7 +214,7 @@ func TestAllOutputs(t *testing.T) {
 	target.AddOutput("please")
 	target.AddOutput("plz")
 	target.AddOutputDirectory("dir")
-	assert.Equal(t, []string{"please.out", "plz", "dir"}, target.AllOutputs())
+	assert.Equal(t, []string{"please.out", "plz", "dir"}, target.AllOutputs(nil))
 }
 
 func TestProvideFor(t *testing.T) {
@@ -262,10 +263,10 @@ func TestAddDatum(t *testing.T) {
 	target2 := makeTarget1("//src/core:target2", "PUBLIC")
 	target1.AddDatum(target2.Label)
 	assert.Equal(t, target1.Data, []BuildInput{target2.Label})
-	assert.True(t, target1.dependencies[0].data)
+	assert.True(t, target1.dependencies[0].Data)
 	// Now we add it as a dependency too, which unsets the data label
 	target1.AddMaybeExportedDependency(target2.Label, false, false, false, false)
-	assert.False(t, target1.dependencies[0].data)
+	assert.False(t, target1.dependencies[0].Data)
 }
 
 func TestCheckDuplicateOutputs(t *testing.T) {
@@ -274,14 +275,15 @@ func TestCheckDuplicateOutputs(t *testing.T) {
 	target2 := makeFilegroup("//src/core:target2", "PUBLIC", target1, target3)
 	addFilegroupSource(target1, "thingy.txt")
 	addFilegroupSource(target3, "thingy.txt")
-	assert.NoError(t, target1.CheckDuplicateOutputs())
+	graph := graphWith(target1, target2, target3)
+	assert.NoError(t, target1.CheckDuplicateOutputs(graph))
 	target2.AddSource(target1.Label)
 	target2.AddSource(target1.Label)
 	// Not an error yet because AddOutput deduplicates trivially identical outputs.
-	assert.NoError(t, target2.CheckDuplicateOutputs())
+	assert.NoError(t, target2.CheckDuplicateOutputs(graph))
 	// Will fail now we add the same output to another target.
 	target2.AddSource(target3.Label)
-	assert.Error(t, target2.CheckDuplicateOutputs())
+	assert.Error(t, target2.CheckDuplicateOutputs(graph))
 }
 
 func TestLabels(t *testing.T) {
@@ -396,8 +398,8 @@ func TestToolPath(t *testing.T) {
 	wd, _ := os.Getwd()
 	RepoRoot = wd
 	root := wd + "/plz-out/gen/src/core"
-	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath(true, ""))
-	assert.Equal(t, "src/core/file1.go src/core/file2.go", target.toolPath(false, ""))
+	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath(nil, true, ""))
+	assert.Equal(t, "src/core/file1.go src/core/file2.go", target.toolPath(nil, false, ""))
 }
 
 func TestToolPathWithEntryPoint(t *testing.T) {
@@ -408,20 +410,21 @@ func TestToolPathWithEntryPoint(t *testing.T) {
 	wd, _ := os.Getwd()
 	RepoRoot = wd
 	root := wd + "/plz-out/gen/src/core"
-	assert.Equal(t, root+"/file1.go", target.toolPath(true, "f1"))
-	assert.Equal(t, "src/core/file1.go", target.toolPath(false, "f1"))
+	assert.Equal(t, root+"/file1.go", target.toolPath(nil, true, "f1"))
+	assert.Equal(t, "src/core/file1.go", target.toolPath(nil, false, "f1"))
 }
 
 func TestDependencies(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
 	target3 := makeTarget1("//src/core:target3", "", target1, target2)
-	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependencies())
-	assert.Equal(t, []*BuildTarget{}, target1.Dependencies())
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
-	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
-	assert.Equal(t, []BuildLabel{target1.Label, target2.Label}, target3.DeclaredDependencies())
-	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies())
+	graph := graphWith(target1, target2, target3)
+	assert.Empty(t, slices.Collect(target1.DeclaredDependencies()))
+	assert.Empty(t, resolved(target1.Dependencies(graph)))
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.DeclaredDependencies()))
+	assert.Equal(t, []*BuildTarget{target1}, resolved(target2.Dependencies(graph)))
+	assert.Equal(t, []BuildLabel{target1.Label, target2.Label}, slices.Collect(target3.DeclaredDependencies()))
+	assert.Equal(t, []*BuildTarget{target1, target2}, resolved(target3.Dependencies(graph)))
 }
 
 func TestBuildDependencies(t *testing.T) {
@@ -434,10 +437,10 @@ func TestBuildDependencies(t *testing.T) {
 	// BuildDependencies shouldn't return run-time dependencies:
 	target5.IsBinary = true
 	target5.AddMaybeExportedDependency(target4.Label, false, false, false, true) // runtime
-	assert.Equal(t, []*BuildTarget{}, target1.BuildDependencies())
-	assert.Equal(t, []*BuildTarget{target1}, target2.BuildDependencies())
-	assert.Equal(t, []*BuildTarget{target2}, target3.BuildDependencies())
-	assert.Equal(t, []*BuildTarget{}, target5.BuildDependencies())
+	assert.Empty(t, slices.Collect(target1.BuildDependencies()))
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.BuildDependencies()))
+	assert.Equal(t, []BuildLabel{target2.Label}, slices.Collect(target3.BuildDependencies()))
+	assert.Empty(t, slices.Collect(target5.BuildDependencies()))
 }
 
 func TestDeclaredDependenciesStrict(t *testing.T) {
@@ -450,10 +453,10 @@ func TestDeclaredDependenciesStrict(t *testing.T) {
 	// DeclaredDependenciesStrict shouldn't return run-time dependencies:
 	target5.IsBinary = true
 	target5.AddMaybeExportedDependency(target4.Label, false, false, false, true) // runtime
-	assert.Equal(t, []BuildLabel{}, target1.DeclaredDependenciesStrict())
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependenciesStrict())
-	assert.Equal(t, []BuildLabel{target2.Label}, target3.DeclaredDependenciesStrict())
-	assert.Equal(t, []*BuildTarget{}, target5.BuildDependencies())
+	assert.Empty(t, slices.Collect(target1.DeclaredDependenciesStrict()))
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.DeclaredDependenciesStrict()))
+	assert.Equal(t, []BuildLabel{target2.Label}, slices.Collect(target3.DeclaredDependenciesStrict()))
+	assert.Empty(t, slices.Collect(target5.DeclaredDependenciesStrict()))
 }
 
 func TestRuntimeDependencies(t *testing.T) {
@@ -465,9 +468,9 @@ func TestRuntimeDependencies(t *testing.T) {
 	target3.IsBinary = true
 	target3.AddMaybeExportedDependency(target2.Label, false, false, false, true) // runtime
 	// RuntimeDependencies shouldn't return transitive run-time dependencies.
-	assert.Equal(t, []BuildLabel{}, target1.RuntimeDependencies())
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.RuntimeDependencies())
-	assert.Equal(t, []BuildLabel{target2.Label}, target3.RuntimeDependencies())
+	assert.Empty(t, slices.Collect(target1.RuntimeDependencies()))
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.RuntimeDependencies()))
+	assert.Equal(t, []BuildLabel{target2.Label}, slices.Collect(target3.RuntimeDependencies()))
 }
 
 func TestIterAllRuntimeDependencies(t *testing.T) {
@@ -491,17 +494,15 @@ func TestIterAllRuntimeDependencies(t *testing.T) {
 func TestAddDependency(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "")
-	assert.Equal(t, []BuildLabel{}, target2.DeclaredDependencies())
-	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
+	assert.Empty(t, slices.Collect(target2.DeclaredDependencies()))
+	assert.Empty(t, slices.Collect(target2.ExportedDependencies()))
 	target2.AddDependency(target1.Label)
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
-	assert.Equal(t, []BuildLabel{}, target2.ExportedDependencies())
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.DeclaredDependencies()))
+	assert.Empty(t, slices.Collect(target2.ExportedDependencies()))
 	target2.AddMaybeExportedDependency(target1.Label, true, false, false, false)
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.DeclaredDependencies())
-	assert.Equal(t, []BuildLabel{target1.Label}, target2.ExportedDependencies())
-	assert.Equal(t, []*BuildTarget{}, target2.Dependencies())
-	target2.resolveDependency(target1.Label, target1)
-	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies())
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.DeclaredDependencies()))
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.ExportedDependencies()))
+	assert.Equal(t, []*BuildTarget{target1}, resolved(target2.Dependencies(graphWith(target1, target2))))
 }
 
 func TestAddRuntimeDependency(t *testing.T) {
@@ -510,10 +511,10 @@ func TestAddRuntimeDependency(t *testing.T) {
 	target1.IsBinary = true
 	target1.AddMaybeExportedDependency(target2.Label, false, false, false, true) // runtime
 	assert.Equal(t, target1.runtimeDependencies, []BuildLabel{target2.Label})
-	assert.True(t, target1.dependencies[0].runtime)
+	assert.True(t, target1.dependencies[0].Runtime)
 	// Now we add it as a build-time dependency too, which should unset the runtime flag.
 	target1.AddMaybeExportedDependency(target2.Label, false, false, false, false)
-	assert.False(t, target1.dependencies[0].runtime)
+	assert.False(t, target1.dependencies[0].Runtime)
 }
 
 func TestAddDependencySource(t *testing.T) {
@@ -526,11 +527,14 @@ func TestAddDependencySource(t *testing.T) {
 	assert.False(t, target2.IsSourceOnlyDep(target1.Label))
 }
 
-func TestDependencyFor(t *testing.T) {
+func TestResolveDependencySubrepo(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)
-	assert.Equal(t, []*BuildTarget{target1}, target2.DependenciesFor(target1.Label))
-	assert.Equal(t, []*BuildTarget(nil), target2.DependenciesFor(target2.Label))
+	l, ok := target2.ResolveDependencySubrepo(target1.Label)
+	assert.True(t, ok)
+	assert.Equal(t, target1.Label, l)
+	_, ok = target2.ResolveDependencySubrepo(target2.Label)
+	assert.False(t, ok)
 	assert.Equal(t, 1, len(target2.dependencies))
 }
 
@@ -582,7 +586,7 @@ func TestOutputOrdering(t *testing.T) {
 	target2.AddOutput("file2.txt")
 	target2.AddOutput("file1.txt")
 	assert.Equal(t, target1.DeclaredOutputs(), target2.DeclaredOutputs())
-	assert.Equal(t, target1.Outputs(), target2.Outputs())
+	assert.Equal(t, target1.Outputs(nil), target2.Outputs(nil))
 }
 
 func TestNamedOutputs(t *testing.T) {
@@ -594,12 +598,12 @@ func TestNamedOutputs(t *testing.T) {
 	target.AddNamedOutput("hdrs", "hdr1.h")
 	target.AddNamedOutput("hdrs", "hdr2.h")
 	target.AddNamedOutput("hdrs", "hdr2.h") // deliberate duplicate
-	assert.Equal(t, []string{"a.txt", "hdr1.h", "hdr2.h", "src1.c", "src2.c", "z.txt"}, target.Outputs())
+	assert.Equal(t, []string{"a.txt", "hdr1.h", "hdr2.h", "src1.c", "src2.c", "z.txt"}, target.Outputs(nil))
 	assert.Equal(t, []string{"a.txt", "z.txt"}, target.DeclaredOutputs())
 	assert.Equal(t, map[string][]string{"srcs": {"src1.c", "src2.c"}, "hdrs": {"hdr1.h", "hdr2.h"}}, target.DeclaredNamedOutputs())
-	assert.Equal(t, []string{"hdr1.h", "hdr2.h"}, target.NamedOutputs("hdrs"))
-	assert.Equal(t, []string{"src1.c", "src2.c"}, target.NamedOutputs("srcs"))
-	assert.Equal(t, 0, len(target.NamedOutputs("go_srcs")))
+	assert.Equal(t, []string{"hdr1.h", "hdr2.h"}, target.NamedOutputs(nil, "hdrs"))
+	assert.Equal(t, []string{"src1.c", "src2.c"}, target.NamedOutputs(nil, "srcs"))
+	assert.Equal(t, 0, len(target.NamedOutputs(nil, "go_srcs")))
 	assert.Equal(t, []string{"hdrs", "srcs"}, target.DeclaredOutputNames())
 }
 
@@ -743,7 +747,8 @@ func TestExternalDependencies(t *testing.T) {
 	t1 := makeTarget1("//src/core:target1", "PUBLIC", t1a)
 	t2a := makeTarget1("//src/core:_target2#a", "PUBLIC", t1)
 	t2 := makeTarget1("//src/core:target2", "PUBLIC", t2a)
-	assert.Equal(t, []*BuildTarget{t1}, t2.ExternalDependencies())
+	graph := graphWith(t1a, t1, t2a, t2)
+	assert.Equal(t, []*BuildTarget{t1}, resolved(t2.ExternalDependencies(graph)))
 }
 
 func TestBuildTargetOwnBuildInputs(t *testing.T) {
@@ -1035,9 +1040,26 @@ func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 	}
 	for _, dep := range deps {
 		target.AddDependency(dep.Label)
-		target.resolveDependency(dep.Label, dep)
 	}
 	return target
+}
+
+// resolved unwraps a call to Dependencies / ExternalDependencies, requiring that everything resolved.
+func resolved(deps []*BuildTarget, unresolved []BuildLabel) []*BuildTarget {
+	if len(unresolved) > 0 {
+		panic(fmt.Sprintf("dependencies not in graph: %s", unresolved))
+	}
+	return deps
+}
+
+// graphWith returns a graph populated with the given targets, for tests that need dependency
+// resolution (which now happens against the graph rather than being cached on the target).
+func graphWith(targets ...*BuildTarget) *BuildGraph {
+	graph := NewGraph()
+	for _, target := range targets {
+		graph.AddTarget(target)
+	}
+	return graph
 }
 
 func makeTarget1WithLabels(name string, labels ...string) *BuildTarget {

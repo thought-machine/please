@@ -26,47 +26,38 @@ func TestMap(t *testing.T) {
 	assert.Equal(t, []int{5, 7}, vals)
 }
 
+// TestWait covers the awaiting primitive directly; it's only reachable through ErrMap now,
+// but it's the bit with the interesting concurrency so it's worth pinning down here.
 func TestWait(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
-	v, ch, first := m.GetOrWait(5)
+	v, ch, first := m.getOrWait(5)
 	assert.Equal(t, 0, v) // Should be the zero value
 	assert.True(t, first) // We're the first to request it
 	go func() {
 		m.Set(5, 7)
 	}()
 	<-ch
-	v, ch, first = m.GetOrWait(5)
+	v, ch, first = m.getOrWait(5)
 	assert.Nil(t, ch)
 	assert.Equal(t, 7, v)
 	assert.False(t, first)
+}
+
+func TestGetDoesntInsert(t *testing.T) {
+	m := New[int, int](DefaultShardCount, hashInts)
+	assert.Equal(t, 0, m.Get(5))
+	// A failed lookup must not leave an entry behind; anything that later tries to set this key
+	// would find something already waiting on it and never get to do the work.
+	assert.False(t, m.Contains(5))
 }
 
 func TestReAdd(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
 	assert.True(t, m.Add(5, 7))
 	assert.False(t, m.Add(5, 7))
-	v, ch, first := m.GetOrWait(5)
-	assert.Nil(t, ch)
-	assert.Equal(t, 7, v)
-	assert.False(t, first)
+	assert.Equal(t, 7, m.Get(5))
 	m.Set(5, 8)
-	v, ch, first = m.GetOrWait(5)
-	assert.Nil(t, ch)
-	assert.Equal(t, 8, v)
-	assert.False(t, first)
-}
-
-func TestAddOrGet(t *testing.T) {
-	m := New[int, int](DefaultShardCount, hashInts)
-	x, inserted := m.AddOrGet(5, func() int { return 7 })
-	assert.True(t, inserted)
-	assert.Equal(t, 7, x)
-	x, inserted = m.AddOrGet(5, func() int { return 8 })
-	assert.False(t, inserted)
-	assert.Equal(t, 7, x)
-	x, inserted = m.AddOrGet(8, func() int { return 9 })
-	assert.True(t, inserted)
-	assert.Equal(t, 9, x)
+	assert.Equal(t, 8, m.Get(5))
 }
 
 func TestShardCount(t *testing.T) {
@@ -91,10 +82,7 @@ func TestResize(t *testing.T) {
 				m.Set(i, i)
 			}
 			for i := 0; i < n; i++ {
-				v, ch, first := m.GetOrWait(i)
-				assert.Equal(t, i, v, "Key %d appears to be not set or set incorrectly", i)
-				assert.Nil(t, ch)
-				assert.False(t, first)
+				assert.Equal(t, i, m.Get(i), "Key %d appears to be not set or set incorrectly", i)
 			}
 		})
 	}

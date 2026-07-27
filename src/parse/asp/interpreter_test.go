@@ -4,6 +4,7 @@
 package asp
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -21,7 +22,7 @@ func parseFileToStatements(filename string) (*scope, []*Statement, error) {
 func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*Statement, error) {
 	state := core.NewDefaultBuildState()
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
-	parser := NewParser(state)
+	parser := NewParser(state, nil)
 
 	src, err := rules.ReadAsset("builtins.build_defs")
 	if err != nil {
@@ -34,7 +35,7 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 	}
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
-	s, err := parser.interpreter.interpretAll(pkg, nil, nil, 0, statements)
+	s, err := parser.interpreter.interpretAll(context.Background(), pkg, nil, nil, statements)
 	return s, statements, err
 }
 
@@ -593,7 +594,7 @@ func TestIsSemver(t *testing.T) {
 
 func TestJSON(t *testing.T) {
 	state := core.NewDefaultBuildState()
-	parser := NewParser(state)
+	parser := NewParser(state, nil)
 
 	src, err := rules.ReadAsset("builtins.build_defs")
 	if err != nil {
@@ -607,7 +608,7 @@ func TestJSON(t *testing.T) {
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
 
-	s := parser.interpreter.scope.NewScope("BUILD", core.ParseModeNormal)
+	s := parser.interpreter.scope.NewScope("BUILD")
 
 	list := pyList{pyString("foo"), pyInt(5)}
 	dict := pyDict{"foo": pyString("bar")}
@@ -658,7 +659,7 @@ func TestSemverCheck(t *testing.T) {
 
 func TestLogConfigVariable(t *testing.T) {
 	state := core.NewDefaultBuildState()
-	parser := NewParser(state)
+	parser := NewParser(state, nil)
 
 	src, err := rules.ReadAsset("builtins.build_defs")
 	if err != nil {
@@ -677,7 +678,7 @@ func TestLogConfigVariable(t *testing.T) {
 	confBase := &pyConfigBase{dict: dict}
 	config := &pyConfig{base: confBase, overlay: pyDict{"baz": pyInt(6)}}
 
-	s := parser.interpreter.scope.NewScope("BUILD", core.ParseModeNormal)
+	s := parser.interpreter.scope.NewScope("BUILD")
 	s.config = config
 	s.Set("CONFIG", config)
 

@@ -270,16 +270,13 @@ func makeTarget2(name string, command string, dep *BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Command = command
 	target.AddOutput(target.Label.Name + ".py")
+	// Dependency resolution now happens against the graph at replacement time rather than being
+	// cached on the target, so the targets must live in the state's graph. These tests share a
+	// global state and reuse labels across tests, so we replace rather than AddTarget (which would
+	// panic on a duplicate label).
+	state.Graph.targets.Set(target.Label, target)
 	if dep != nil {
 		target.AddDependency(dep.Label)
-		// This is a bit awkward but I don't want to add a public interface just for a test.
-		graph := NewGraph()
-		graph.AddTarget(target)
-		graph.AddTarget(dep)
-		target.AddDependency(dep.Label)
-		if err := target.ResolveDependencies(graph); err != nil {
-			log.Fatalf("Failed to resolve some dependencies for %s: %s", target, err)
-		}
 	}
 	return target
 }
@@ -359,8 +356,10 @@ func TestTestCommand(t *testing.T) {
 	})
 
 	t.Run("Combined sequence and placeholder replacement", func(t *testing.T) {
+		state := NewDefaultBuildState()
 		target2 := makeTarget2("//path/to:target2", "", nil)
 		target1 := makeTarget2("//path/to:target1", "$(location //path/to:target2) __TEST_ARGS__", target2)
+		state.Graph.AddTarget(target2)
 		target1.Test = &TestFields{
 			Command:         "$(location //path/to:target2) __TEST_ARGS__",
 			ArgsPlaceholder: "__TEST_ARGS__",

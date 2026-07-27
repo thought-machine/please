@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -55,8 +54,6 @@ func makeGraph(t *testing.T) *core.BuildState {
 	pkg2.AddTarget(t3)
 	graph.AddTarget(pkg2.Target("target3"))
 	graph.AddPackage(pkg2)
-	require.NoError(t, t2.ResolveDependencies(graph))
-	require.NoError(t, t3.ResolveDependencies(graph))
 	return state
 }
 

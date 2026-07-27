@@ -37,7 +37,7 @@ func Repo(state *core.BuildState, dir string, noTrim bool, targets []core.BuildL
 func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	for _, label := range targets {
 		target := state.Graph.TargetOrDie(label)
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(state.Graph) {
 			fullPath := filepath.Join(dir, out)
 			outDir := filepath.Dir(fullPath)
 			if err := os.MkdirAll(outDir, core.DirPermissions); err != nil {

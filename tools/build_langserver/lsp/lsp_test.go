@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/thought-machine/please/src/cli"
-	"github.com/thought-machine/please/src/core"
 )
 
 func init() {
@@ -629,10 +628,10 @@ func (h *Handler) CurrentContent(doc string) string {
 
 // WaitForPackage blocks until the given package has been parsed.
 func (h *Handler) WaitForPackage(pkg string) {
-	// this can only be described as 'grotty', but it is test code
-	h.state.Graph.WaitForTarget(core.BuildLabel{PackageName: pkg})
-	if h.state.Graph.Package(pkg, "") == nil {
-		log.Fatalf("package %s doesn't exist", pkg)
+	// As with WaitForPackageTree below, polling is a bit yucky, but it's the only way of syncing
+	// up to this without interfering with the parse we're waiting on.
+	for h.state.Graph.Package(pkg, "") == nil {
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 

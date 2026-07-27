@@ -241,7 +241,7 @@ func (label AnnotatedOutputLabel) Paths(graph *BuildGraph) []string {
 		return label.BuildLabel.Paths(graph)
 	}
 
-	return addPathPrefix(target.NamedOutputs(label.Annotation), target.PackageDir())
+	return addPathPrefix(target.NamedOutputs(graph, label.Annotation), target.PackageDir())
 }
 
 // FullPaths is like Paths but includes the leading plz-out/gen directory.
@@ -250,7 +250,7 @@ func (label AnnotatedOutputLabel) FullPaths(graph *BuildGraph) []string {
 	if _, ok := target.EntryPoints[label.Annotation]; ok {
 		return label.BuildLabel.FullPaths(graph)
 	}
-	return addPathPrefix(target.NamedOutputs(label.Annotation), target.OutDir())
+	return addPathPrefix(target.NamedOutputs(graph, label.Annotation), target.OutDir())
 }
 
 // LocalPaths returns paths within the local package
@@ -259,7 +259,7 @@ func (label AnnotatedOutputLabel) LocalPaths(graph *BuildGraph) []string {
 	if _, ok := target.EntryPoints[label.Annotation]; ok {
 		return label.BuildLabel.LocalPaths(graph)
 	}
-	return target.NamedOutputs(label.Annotation)
+	return target.NamedOutputs(graph, label.Annotation)
 }
 
 // Label returns the build rule associated with this input. For a AnnotatedOutputLabel it's always non-nil.
