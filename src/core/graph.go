@@ -5,6 +5,7 @@
 package core
 
 import (
+	"context"
 	"maps"
 	"slices"
 	"sort"
@@ -100,6 +101,24 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
 	return graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
+}
+
+// PackageOrWait retrieves a package from the graph.
+// If the package doesn't exist and nobody has asked for it before, it returns nil.
+// If the package doesn't exist and somebody has asked for it before, it waits until it is added with AddPackage, then returns it.
+func (graph *BuildGraph) PackageOrWait(ctx context.Context, label BuildLabel) (*Package, error) {
+	key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+	pkg, wait, first := graph.packages.GetOrWait(key)
+	if pkg != nil || first {
+		return pkg, nil
+	}
+	done := ctx.Done()
+	select {
+	case <-wait:
+		return graph.packages.Get(key), nil
+	case <-done:
+		return nil, ctx.Err()
+	}
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.

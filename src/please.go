@@ -1223,14 +1223,17 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	state.Cache = cache.NewCache(state)
 
 	// Run the display
-	state.Results() // important this is called now, don't ask...
+	var progress plz.Progress
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		output.MonitorState(state, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, &progress, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
+	if err := plz.Run(targets, opts.BuildFlags.PreTargets, state, &progress, state.TargetArch); err != nil {
+		// TODO(peter): we might want to do something else with this
+		log.Error("%s", err)
+	}
 	wg.Wait()
 }
 

@@ -69,12 +69,12 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
-	return p.parser.ParseFile(pkg, forLabel, dependent, mode, fs, filename)
+func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
+	return p.parser.ParseFile(pkg, forLabel, dependent, fs, filename)
 }
 
-func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel, mode core.ParseMode) error {
-	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent, mode)
+func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel) error {
+	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent)
 	return err
 }
 
@@ -99,7 +99,9 @@ func (p *aspParser) RegisterPreload(label core.BuildLabel) error {
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	state.SyncParsePackage(target.Label)
+	if _, err := state.Parse(target.Label); err != nil {
+		return err
+	}
 	if err := f(); err != nil {
 		state.LogBuildError(target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
 		return err

@@ -25,9 +25,15 @@ import (
 const durationGranularity = 10 * time.Millisecond
 const testDurationGranularity = time.Millisecond
 
+type Progress interface {
+	NumDone() int
+	NumTotal() int
+	NumParsing() int
+}
+
 // MonitorState monitors the build while it's running and prints output until the results
 // channel of state has completed.
-func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
+func MonitorState(state *core.BuildState, progress Progress, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
 	initPrintf(state.Config)
 
 	if len(state.Config.Please.Motd) != 0 {
@@ -41,11 +47,11 @@ func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTest
 		defer tw.Close()
 	}
 
-	displayer := setupDisplayer(state, plainOutput)
+	displayer := setupDisplayer(state, progress, plainOutput)
 	t := time.NewTicker(displayer.Frequency())
 	defer t.Stop()
 	results := state.Results()
-	bt := newBuildingTargets(state, plainOutput)
+	bt := newBuildingTargets(state, progress, plainOutput)
 	displayer.Update(bt.Targets())
 loop:
 	for {

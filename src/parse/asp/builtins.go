@@ -213,18 +213,6 @@ func buildRule(s *scope, args []pyObject) pyObject {
 	if s.Callback {
 		target.AddedPostBuild = true
 	}
-
-	if s.parsingFor != nil && s.parsingFor.label == target.Label {
-		if err := s.state.ActivateTarget(s.pkg, s.parsingFor.label, s.parsingFor.dependent, s.mode); err != nil {
-			s.Error("%v", err)
-		}
-	}
-	if s.state.IsPendingTarget(target.Label) {
-		if err := s.state.ActivateTarget(s.pkg, target.Label, target.Label, s.mode); err != nil {
-			s.Error("%v", err)
-		}
-	}
-
 	return pyString(":" + target.Label.Name)
 }
 
@@ -314,11 +302,10 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 // WaitForSubincludedTarget drops the interpreter lock and waits for the subincluded target to be built. This is
 // important to keep us from deadlocking all available parser threads (easy to happen if they're all waiting on a
 // single target which now can't start)
-func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) *core.BuildTarget {
+func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) (*core.BuildTarget, error) {
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
-
-	return s.state.WaitForTargetAndEnsureDownload(l, dependent, s.mode.IsPreload())
+	return s.state.Build(l)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -394,7 +381,9 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			Subrepo:     subrepoLabel.Subrepo,
 			Name:        "all",
 		}
-		s.state.WaitForPackage(subrepoPackageLabel, pkgLabel, s.mode|core.ParseModeForSubinclude)
+		if _, err := s.state.Parse(subrepoPackageLabel); err != nil {
+			s.Error("Failed to parse subrepo target: %v", err)
+		}
 	}
 
 	// isLocal is true when this subinclude target in the current package being parsed
@@ -404,17 +393,13 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// but isn't activated, we should activate it otherwise WaitForSubincludedTarget might block. This can happen when
 	// another package also subincludes this target, and queues it first.
 	t := s.state.Graph.Target(l)
-	if t != nil {
-		if t.State() < core.Active {
-			if err := s.state.ActivateTarget(s.pkg, l, pkgLabel, s.mode|core.ParseModeForSubinclude); err != nil {
-				s.Error("Failed to activate subinclude target: %v", err)
-			}
-		}
-	} else if isLocal {
+	if t == nil && isLocal {
 		s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-	t = s.WaitForSubincludedTarget(l, pkgLabel)
-	if s.pkg != nil {
+	t, err := s.WaitForSubincludedTarget(l, pkgLabel)
+	if err != nil {
+		s.Error("Failed to build subincluded target: %v", err)
+	} else if s.pkg != nil {
 		s.pkg.RegisterSubinclude(l)
 	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude
 		s.state.Graph.RegisterTransitiveSubinclude(*s.subincludeLabel, l)
@@ -1234,30 +1219,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	exported := args[2].IsTruthy()
 	runtime := args[3].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false, runtime)
-	// Queue this dependency if it'll be needed.
-	if target.State() > core.Inactive {
-		err := s.state.QueueTarget(dep, target.Label, false, core.ParseModeNormal)
-		s.Assert(err == nil, "%s", err)
-	}
 	return None
-}
-
-func addDatumToTargetAndMaybeQueue(s *scope, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
-	target.AddDatum(datum)
-	// Queue this dependency if it'll be needed.
-	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
-		s.Assert(err == nil, "%s", err)
-	}
-}
-
-func addNamedDatumToTargetAndMaybeQueue(s *scope, name string, target *core.BuildTarget, datum core.BuildInput, systemAllowed, tool bool) {
-	target.AddNamedDatum(name, datum)
-	// Queue this dependency if it'll be needed.
-	if l, ok := datum.Label(); ok && target.State() > core.Inactive {
-		err := s.state.QueueTarget(l, target.Label, false, core.ParseModeNormal)
-		s.Assert(err == nil, "%s", err)
-	}
 }
 
 // Add runtime dependencies to target
@@ -1274,19 +1236,19 @@ func addData(s *scope, args []pyObject) pyObject {
 	// add_data() builtin can take a string, list, or dict
 	if isType(datum, "str") {
 		if bi := parseBuildInput(s, datum, string(label.(pyString)), systemAllowed, tool); bi != nil {
-			addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+			target.AddDatum(bi)
 		}
 	} else if isType(datum, "list") {
 		for _, str := range datum.(pyList) {
 			if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
-				addDatumToTargetAndMaybeQueue(s, target, bi, systemAllowed, tool)
+				target.AddDatum(bi)
 			}
 		}
 	} else if isType(datum, "dict") {
 		for name, v := range datum.(pyDict) {
 			for _, str := range v.(pyList) {
 				if bi := parseBuildInput(s, str, string(label.(pyString)), systemAllowed, tool); bi != nil {
-					addNamedDatumToTargetAndMaybeQueue(s, name, target, bi, systemAllowed, tool)
+					target.AddNamedDatum(name, bi)
 				}
 			}
 		}

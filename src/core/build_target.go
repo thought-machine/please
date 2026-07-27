@@ -700,6 +700,21 @@ func (target *BuildTarget) BuildDependencies() []*BuildTarget {
 	return ret
 }
 
+// BuildDependencyLabels returns the build-time dependency labels of this target (i.e. not run-time dependencies, data, internal nor source).
+func (target *BuildTarget) BuildDependencyLabels() iter.Seq[BuildLabel] {
+	return func(yield func(BuildLabel) bool) {
+		target.mutex.RLock()
+		defer target.mutex.RUnlock()
+		for _, deps := range target.dependencies {
+			if !deps.runtime && !deps.data {
+				if !yield(*deps.declared) {
+					break
+				}
+			}
+		}
+	}
+}
+
 // ExportedDependencies returns any exported dependencies of this target.
 func (target *BuildTarget) ExportedDependencies() []BuildLabel {
 	target.mutex.RLock()

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"runtime/debug"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -34,6 +33,10 @@ type interpreter struct {
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
+
+	// TODO(peter): rethink what we can do here, we don't really need build labels for this,
+	// we should be able to store a preloaded set of symbols or smthn that we can wang into scopes as needed.
+	preloads []core.BuildLabel
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -87,7 +90,7 @@ func (i *interpreter) getConfig(state *core.BuildState) *pyConfig {
 
 // LoadBuiltins loads a set of builtins from a file, optionally with its contents.
 func (i *interpreter) LoadBuiltins(filename string, contents []byte, statements []*Statement) error {
-	s := i.scope.NewScope(filename, 0)
+	s := i.scope.NewScope(filename)
 	// Gentle hack - attach the native code once we have loaded the correct file.
 	// Needs to be after this file is loaded but before any of the others that will
 	// use functions from it.
@@ -129,8 +132,7 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 }
 
 func (i *interpreter) preloadSubincludes(s *scope) error {
-	// We should have ensured these targets are downloaded by this point in `parse_step.go`
-	for _, label := range s.state.GetPreloadedSubincludes() {
+	for _, label := range i.preloads {
 		if err := i.preloadSubinclude(s, label); err != nil {
 			return err
 		}
@@ -162,8 +164,8 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, statements []*Statement) (*scope, error) {
-	s := i.scope.NewPackagedScope(pkg, mode, 1)
+func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, statements []*Statement) (*scope, error) {
+	s := i.scope.NewPackagedScope(pkg, 1)
 	s.config = i.getConfig(s.state).Copy()
 
 	// Config needs a little separate tweaking.
@@ -180,10 +182,8 @@ func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.
 		defer pprof.SetGoroutineLabels(old)
 	}
 
-	if !mode.IsPreload() {
-		if err := i.preloadSubincludes(s); err != nil {
-			return nil, err
-		}
+	if err := i.preloadSubincludes(s); err != nil {
+		return nil, err
 	}
 
 	s.Set("CONFIG", s.config)
@@ -200,7 +200,6 @@ func handleErrors(r interface{}) (err error) {
 	} else {
 		err = fmt.Errorf("%s", r)
 	}
-	log.Debug("%v:\n %s", err, debug.Stack())
 	return
 }
 
@@ -225,11 +224,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 			return nil, err
 		}
 
-		mode := pkgScope.mode
-		if preload {
-			mode |= core.ParseModeForPreload
-		}
-		s := i.scope.NewScope(path, mode)
+		s := i.scope.NewScope(path)
 
 		s.state = pkgScope.state
 		// Scope needs a local version of CONFIG
@@ -237,7 +232,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		s.Set("CONFIG", s.config)
 		s.subincludeLabel = &label
 
-		if !mode.IsPreload() {
+		if !preload {
 			if err := i.preloadSubincludes(s); err != nil {
 				return nil, err
 			}
@@ -309,7 +304,6 @@ type scope struct {
 	globber         *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
-	mode     core.ParseMode
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -403,17 +397,17 @@ func (s *scope) subincludePackage() *core.Package {
 }
 
 // NewScope creates a new child scope of this one.
-func (s *scope) NewScope(filename string, mode core.ParseMode) *scope {
-	return s.newScope(s.pkg, mode, filename, 0)
+func (s *scope) NewScope(filename string) *scope {
+	return s.newScope(s.pkg, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
-func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint int) *scope {
-	return s.newScope(pkg, mode, pkg.Filename, hint)
+func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
+	return s.newScope(pkg, pkg.Filename, hint)
 }
 
-func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string, hint int) *scope {
+func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
 	s2 := &scope{
 		ctx:         s.ctx,
 		filename:    filename,
@@ -425,7 +419,6 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		locals:      make(pyDict, hint),
 		config:      s.config,
 		Callback:    s.Callback,
-		mode:        mode,
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State
@@ -709,7 +702,7 @@ func (s *scope) interpretJoin(base string, list *List) pyObject {
 	}
 	// Has a comprehension. Note that there is only ever one level; by the anecdata, two-level ones
 	// are rare in this context so not worth worrying about here.
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScope(s.filename)
 	it := s.iterable(list.Comprehension.Expr)
 	first := true
 	cs.evaluateComprehension(it, list.Comprehension, func(li pyObject) {
@@ -932,7 +925,7 @@ func (s *scope) interpretList(expr *List) pyList {
 	if expr.Comprehension == nil {
 		return pyList(s.evaluateExpressions(expr.Values))
 	}
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScope(s.filename)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyList, 0, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
@@ -953,7 +946,7 @@ func (s *scope) interpretDict(expr *Dict) pyObject {
 		}
 		return d
 	}
-	cs := s.NewScope(s.filename, s.mode)
+	cs := s.NewScope(s.filename)
 	it, l := s.iterableLen(expr.Comprehension.Expr)
 	ret := make(pyDict, l)
 	cs.evaluateComprehension(it, expr.Comprehension, func(li pyObject) {
