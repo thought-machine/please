@@ -63,7 +63,7 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		}
 		return err
 	}
-	return p.ParseFile(pkg, nil, nil, 0, nil, filename)
+	return p.ParseFile(pkg, nil, nil, nil, filename)
 }
 
 type assignment struct {

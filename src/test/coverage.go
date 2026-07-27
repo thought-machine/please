@@ -59,7 +59,9 @@ func collectCoverageFiles(state *core.BuildState, includeAllFiles bool) map[stri
 	doneTargets := map[*core.BuildTarget]bool{}
 	coverageFiles := map[string]bool{}
 	for _, label := range state.ExpandAllOriginalLabels() {
-		collectAllFiles(state, state.Graph.TargetOrDie(label), coverageFiles, includeAllFiles, true, doneTargets)
+		if target := state.Graph.Target(label); target != nil { // It won't be if it failed to parse
+			collectAllFiles(state, target, coverageFiles, includeAllFiles, true, doneTargets)
+		}
 	}
 	return coverageFiles
 }
@@ -74,7 +76,11 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageF
 			}
 		}
 		if deps {
-			for _, dep := range target.ExternalDependencies() {
+			extDeps, unresolved := target.ExternalDependencies(state.Graph)
+			if len(unresolved) > 0 {
+				log.Warning("Can't collect coverage for dependencies of %s; not in build graph: %s", target.Label, unresolved)
+			}
+			for _, dep := range extDeps {
 				collectAllFiles(state, dep, coverageFiles, includeAllFiles, deps, doneTargets)
 			}
 		}

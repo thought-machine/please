@@ -59,7 +59,7 @@ var successfulLocalTargetBuildDuration = metrics.NewHistogramVec(
 )
 
 // Build implements the core logic for building a single target.
-func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
+func Build(state *core.BuildState, target *core.BuildTarget, remote bool) error {
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	start := time.Now()
@@ -67,23 +67,21 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(target, core.TargetBuildStopped, "Build stopped")
-			return
+			return nil
 		}
 		state.LogBuildError(target.Label, core.TargetBuildFailed, err, "Build failed: %s", err)
-		if err := RemoveOutputs(target); err != nil {
+		if err := RemoveOutputs(state, target); err != nil {
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}
 		target.SetState(core.Failed)
-		target.FinishBuild()
-		return
+		return err
 	}
 	if remote {
 		successfulRemoteTargetBuildDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 	} else {
 		successfulLocalTargetBuildDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 	}
-	// Mark the target as having finished building.
-	target.FinishBuild()
+	return nil
 }
 
 func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTarget) error {
@@ -92,7 +90,7 @@ func validateBuildTargetBeforeBuild(state *core.BuildState, target *core.BuildTa
 	}
 	// We can't do this check until build time, until then we don't know what all the outputs
 	// will be (eg. for filegroups that collect outputs of other rules).
-	if err := target.CheckDuplicateOutputs(); err != nil {
+	if err := target.CheckDuplicateOutputs(state.Graph); err != nil {
 		return err
 	}
 
@@ -136,7 +134,7 @@ func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 		return errStop
 	}
 
-	if err := prepareDirectories(target); err != nil {
+	if err := prepareDirectories(state, target); err != nil {
 		return err
 	}
 	if err := prepareSources(state, state.Graph, target); err != nil {
@@ -278,7 +276,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 			return nil
 		}
 
-		if err := prepareDirectories(target); err != nil {
+		if err := prepareDirectories(state, target); err != nil {
 			return fmt.Errorf("Error preparing directories for %s: %s", target.Label, err)
 		}
 
@@ -286,7 +284,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		//
 		// N.B. Important we do not go through state.TargetHasher here since it memoises and
 		//      this calculation might be incorrect.
-		oldOutputHash := outputHashOrNil(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
+		oldOutputHash := outputHashOrNil(target, target.FullOutputs(state.Graph), state.PathHasher, state.PathHasher.NewHash)
 		cacheKey = mustShortTargetHash(state, target)
 
 		if state.Cache != nil && !runRemotely && !state.ShouldRebuild(target) {
@@ -339,12 +337,12 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 	}
 
 	if target.PostBuildFunction != nil {
-		outs := target.Outputs()
+		outs := target.Outputs(state.Graph)
 		if err := runPostBuildFunction(state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
 		}
 
-		if runRemotely && len(outs) != len(target.Outputs()) {
+		if runRemotely && len(outs) != len(target.Outputs(state.Graph)) {
 			// postBuildFunction has changed the target - must rebuild it
 			log.Info("Rebuilding %s after post-build function", target)
 			metadata, err = state.RemoteClient.Build(target)
@@ -470,7 +468,7 @@ func retrieveArtifacts(state *core.BuildState, target *core.BuildTarget, oldOutp
 
 	cacheKey := mustShortTargetHash(state, target)
 
-	if md := retrieveFromCache(state.Cache, target, cacheKey, target.Outputs()); md != nil {
+	if md := retrieveFromCache(state.Cache, target, cacheKey, target.Outputs(state.Graph)); md != nil {
 		// Retrieve additional optional outputs from metadata
 		if len(md.OptionalOutputs) > 0 {
 			state.Cache.Retrieve(target, cacheKey, md.OptionalOutputs)
@@ -481,7 +479,7 @@ func retrieveArtifacts(state *core.BuildState, target *core.BuildTarget, oldOutp
 		newOutputHash, err := calculateAndCheckRuleHash(state, target)
 		if err != nil { // Most likely hash verification failure
 			log.Warning("Error retrieving cached artifacts for %s: %s", target.Label, err)
-			RemoveOutputs(target)
+			RemoveOutputs(state, target)
 			return false
 		} else if oldOutputHash == nil || !bytes.Equal(oldOutputHash, newOutputHash) {
 			target.SetState(core.Cached)
@@ -528,7 +526,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 
 // buildTextFile runs the build action for text_file() rules
 func buildTextFile(state *core.BuildState, target *core.BuildTarget) error {
-	outs := target.Outputs()
+	outs := target.Outputs(state.Graph)
 	if len(outs) != 1 {
 		return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(outs))
 	}
@@ -543,14 +541,14 @@ func buildTextFile(state *core.BuildState, target *core.BuildTarget) error {
 }
 
 // prepareOutputDirectories creates any directories the target has declared it will output into as a nicety
-func prepareOutputDirectories(target *core.BuildTarget) error {
+func prepareOutputDirectories(state *core.BuildState, target *core.BuildTarget) error {
 	for _, dir := range target.OutputDirectories {
 		if err := prepareParentDirs(target, dir.Dir()); err != nil {
 			return err
 		}
 	}
 
-	for _, out := range target.Outputs() {
+	for _, out := range target.Outputs(state.Graph) {
 		if err := prepareParentDirs(target, out); err != nil {
 			return err
 		}
@@ -573,11 +571,11 @@ func prepareParentDirs(target *core.BuildTarget, out string) error {
 }
 
 // Prepares the temp and out directories for a target
-func prepareDirectories(target *core.BuildTarget) error {
+func prepareDirectories(state *core.BuildState, target *core.BuildTarget) error {
 	if err := prepareDirectory(target.TmpDir(), true); err != nil {
 		return err
 	}
-	if err := prepareOutputDirectories(target); err != nil {
+	if err := prepareOutputDirectories(state, target); err != nil {
 		return err
 	}
 	return prepareDirectory(target.OutDir(), false)
@@ -604,7 +602,7 @@ func prepareSources(state *core.BuildState, graph *core.BuildGraph, target *core
 		}
 	}
 	if target.Stamp {
-		if err := fs.WriteFile(bytes.NewReader(core.StampFile(state.Config, target)), filepath.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
+		if err := fs.WriteFile(bytes.NewReader(core.StampFile(state, target)), filepath.Join(target.TmpDir(), target.StampFileName()), 0644); err != nil {
 			return err
 		}
 	}
@@ -699,7 +697,7 @@ func moveOutputs(state *core.BuildState, target *core.BuildTarget) ([]string, bo
 	changed := false
 	tmpDir := target.TmpDir()
 	outDir := target.OutDir()
-	outs := target.Outputs()
+	outs := target.Outputs(state.Graph)
 	allOuts := make([]string, len(outs), len(outs)+len(target.OutputDirectories))
 	for i, output := range outs {
 		allOuts[i] = output
@@ -779,8 +777,8 @@ func moveOutput(state *core.BuildState, target *core.BuildTarget, tmpOutput, rea
 }
 
 // RemoveOutputs removes all generated outputs for a rule.
-func RemoveOutputs(target *core.BuildTarget) error {
-	for _, output := range target.Outputs() {
+func RemoveOutputs(state *core.BuildState, target *core.BuildTarget) error {
+	for _, output := range target.Outputs(state.Graph) {
 		out := filepath.Join(target.OutDir(), output)
 		if err := fs.RemoveAll(out); err != nil {
 			return err
@@ -832,7 +830,7 @@ func calculateAndCheckRuleHash(state *core.BuildState, target *core.BuildTarget)
 	}
 	// Set appropriate permissions on outputs
 	if target.IsBinary {
-		for _, output := range target.FullOutputs() {
+		for _, output := range target.FullOutputs(state.Graph) {
 			// Walk through the output,
 			// if the output is a directory, apply output mode to the file instead of the directory
 			err := fs.Walk(output, func(path string, isDir bool) error {
@@ -890,7 +888,7 @@ func (h *targetHasher) SetHash(target *core.BuildTarget, hash []byte) {
 
 // outputHash calculates the output hash for a target, choosing an appropriate strategy.
 func (h *targetHasher) outputHash(target *core.BuildTarget) ([]byte, error) {
-	outs := target.FullOutputs()
+	outs := target.FullOutputs(h.State.Graph)
 	if len(outs) == 1 && fs.FileExists(outs[0]) {
 		return outputHash(target, outs, h.State.PathHasher, nil)
 	}
@@ -930,7 +928,7 @@ func checkRuleHashes(state *core.BuildState, target *core.BuildTarget, hash []by
 	if len(target.Hashes) == 0 {
 		return nil // nothing to check
 	}
-	outputs := target.FullOutputs()
+	outputs := target.FullOutputs(state.Graph)
 	hashes := target.UnprefixedHashes()
 	// Check if the hash we've already calculated matches any of these before we go off
 	// trying any other combinations.
@@ -1029,7 +1027,7 @@ func buildLinksOfType(state *core.BuildState, target *core.BuildTarget, prefix s
 		for _, dest := range labels {
 			destDir := filepath.Join(core.RepoRoot, os.Expand(dest, env.ReplaceEnvironment))
 			srcDir := filepath.Join(core.RepoRoot, target.OutDir())
-			for _, out := range target.Outputs() {
+			for _, out := range target.Outputs(state.Graph) {
 				if direct {
 					fs.LinkDestination(filepath.Join(srcDir, out), destDir, f)
 				} else {
@@ -1082,7 +1080,8 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 
 	env := core.BuildEnvironment(state, target, filepath.Join(core.RepoRoot, target.TmpDir()))
 	url = os.Expand(url, env.ReplaceEnvironment)
-	tmpPath := filepath.Join(target.TmpDir(), target.Outputs()[0])
+	outputs := target.Outputs(state.Graph)
+	tmpPath := filepath.Join(target.TmpDir(), outputs[0])
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return err

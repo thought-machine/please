@@ -171,8 +171,8 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 
 			done[dependency.Label] = true
 			if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
-				for _, dep := range dependency.BuildDependencies() {
-					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
+				for dep := range dependency.BuildDependencies() {
+					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
 						if !done[dep2] && !dependency.IsTool(dep2) {
 							if !inner(graph.TargetOrDie(dep2)) {
 								return false
@@ -181,7 +181,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 					}
 				}
 			} else {
-				for _, dep := range dependency.ExportedDependencies() {
+				for dep := range dependency.ExportedDependencies() {
 					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
 						if !done[dep2] {
 							if !inner(graph.TargetOrDie(dep2)) {
@@ -261,7 +261,7 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 		}
 
 		outDir := target.OutDir()
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(graph) {
 			if !pushOut(filepath.Join(outDir, out), out) {
 				return
 			}
@@ -431,8 +431,9 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) iter.Seq[string] {
 				}
 
 				// Finally recurse for all the deps of this rule.
-				for _, dep := range target.Dependencies() {
-					for d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
+				for dep := range target.DeclaredDependencies() {
+					t := graph.TargetOrDie(dep)
+					for d := range recursivelyProvideFor(graph, target, t, t.Label) {
 						if !inner(graph.TargetOrDie(d)) {
 							return false
 						}

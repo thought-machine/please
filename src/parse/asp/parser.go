@@ -73,7 +73,7 @@ func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
-func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
+func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
@@ -81,7 +81,7 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	if err != nil {
 		return err
 	}
-	_, err = p.interpreter.interpretAll(pkg, label, dependent, mode, statements)
+	_, err = p.interpreter.interpretAll(pkg, label, dependent, statements)
 	if err != nil {
 		f, _ := p.open(fs, filename)
 		p.annotate(err, f)
@@ -89,22 +89,27 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	return err
 }
 
-// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
-func (p *Parser) RegisterPreload(label core.BuildLabel) error {
+// PreloadSubinclude pre-registers a preload, forcing us to build any transitive preloads before we move on
+func (p *Parser) PreloadSubinclude(label core.BuildLabel) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
 	// This is a throw away scope. We're just doing this to avoid race conditions setting this on the main scope.
-	s := p.interpreter.scope.newScope(nil, p.interpreter.scope.mode, "", 0)
+	s := p.interpreter.scope.newScope(nil, "", 0)
 	s.config = p.interpreter.scope.config.Copy()
 	s.Set("CONFIG", s.config)
 	return p.interpreter.preloadSubinclude(s, label)
 }
 
+// RegisterPreloads registers the set of preloaded subincludes.
+func (p *Parser) RegisterPreloads(labels []core.BuildLabel) {
+	p.interpreter.preloads = labels
+}
+
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.
-func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker, forLabel, dependent *core.BuildLabel, mode core.ParseMode) (bool, error) {
+func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker, forLabel, dependent *core.BuildLabel) (bool, error) {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
@@ -112,7 +117,7 @@ func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker, forLabel, depen
 	if err != nil {
 		return false, err
 	}
-	_, err = p.interpreter.interpretAll(pkg, forLabel, dependent, mode, stmts)
+	_, err = p.interpreter.interpretAll(pkg, forLabel, dependent, stmts)
 	return true, err
 }
 

@@ -1,5 +1,9 @@
 package cmap
 
+import (
+	"context"
+)
+
 // A Limiter is the interface that we use to release/acquire workers while waiting.
 type Limiter interface {
 	Acquire()
@@ -32,13 +36,6 @@ func (m *ErrMap[K, V]) Add(key K, val V) bool {
 	return m.m.Add(key, errV[V]{Val: val})
 }
 
-// AddOrGet either adds a new item (if the key doesn't exist) or gets the existing one.
-// It returns true if the item was inserted, false if it already existed (in which case it won't be inserted)
-func (m *ErrMap[K, V]) AddOrGet(key K, f func() V) (V, bool, error) {
-	v, present := m.m.AddOrGet(key, func() errV[V] { return errV[V]{Val: f()} })
-	return v.Val, present, v.Err
-}
-
 // Set is the equivalent of `map[key] = val`.
 // It always overwrites any key that existed before.
 func (m *ErrMap[K, V]) Set(key K, val V) {
@@ -60,7 +57,7 @@ func (m *ErrMap[K, V]) Get(key K) (V, error) {
 // GetOrSet returns the value if set, or an error if one has been set.
 // If nothing has been set for the key, it runs the given function to generate the value and then sets it.
 func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
-	v, wait, first := m.m.GetOrWait(key)
+	v, wait, first := m.m.getOrWait(key)
 	if v.Err != nil {
 		return v.Val, v.Err
 	} else if first {
@@ -75,6 +72,32 @@ func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 		}
 		<-wait
 		return m.Get(key)
+	}
+	return v.Val, v.Err
+}
+
+// GetOrSetCtx is like GetOrSet but accepts a context that can be cancelled.
+func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, error)) (V, error) {
+	v, wait, first := m.m.getOrWait(key)
+	if v.Err != nil {
+		return v.Val, v.Err
+	} else if first {
+		val, err := f()
+		m.m.Set(key, errV[V]{Val: val, Err: err})
+		return val, err
+	} else if wait != nil {
+		if m.l != nil {
+			// Release the limiter for the duration we're waiting
+			m.l.Release()
+			defer m.l.Acquire()
+		}
+		select {
+		case <-wait:
+			return m.Get(key)
+		case <-ctx.Done():
+			var v V
+			return v, ctx.Err()
+		}
 	}
 	return v.Val, v.Err
 }

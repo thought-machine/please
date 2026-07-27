@@ -34,7 +34,7 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 	}
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
-	s, err := parser.interpreter.interpretAll(pkg, nil, nil, 0, statements)
+	s, err := parser.interpreter.interpretAll(pkg, nil, nil, statements)
 	return s, statements, err
 }
 
@@ -607,7 +607,7 @@ func TestJSON(t *testing.T) {
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
 
-	s := parser.interpreter.scope.NewScope("BUILD", core.ParseModeNormal)
+	s := parser.interpreter.scope.NewScope("BUILD")
 
 	list := pyList{pyString("foo"), pyInt(5)}
 	dict := pyDict{"foo": pyString("bar")}
@@ -677,7 +677,7 @@ func TestLogConfigVariable(t *testing.T) {
 	confBase := &pyConfigBase{dict: dict}
 	config := &pyConfig{base: confBase, overlay: pyDict{"baz": pyInt(6)}}
 
-	s := parser.interpreter.scope.NewScope("BUILD", core.ParseModeNormal)
+	s := parser.interpreter.scope.NewScope("BUILD")
 	s.config = config
 	s.Set("CONFIG", config)
 

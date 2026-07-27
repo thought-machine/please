@@ -22,81 +22,39 @@ var log = logging.Log
 var ErrMissingBuildFile = errors.New("build file not found")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
-// It is not an error if the package has already been parsed.
-//
-// By default, after the package is parsed, any targets that are now needed for the build and ready
-// to be built are queued, and any new packages are queued for parsing. When a specific label is requested
-// this is straightforward, but when parsing for pseudo-targets like :all and ..., various flags affect it:
-// 'include' and 'exclude' refer to the labels of targets to be added. If 'include' is non-empty then only
-// targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
-// 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
-// even when we're not otherwise building targets.
-func Parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) {
-	if err := parse(state, label, dependent, mode); err != nil {
-		state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
-	}
-}
-
-func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) error {
-	if t := state.Graph.Target(label); t != nil && t.State() < core.Active {
-		return state.ActivateTarget(nil, label, dependent, mode)
-	}
-
-	subrepo, err := checkSubrepo(state, label, dependent, mode)
+func Parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Package, error) {
+	subrepo, err := checkSubrepo(state, label)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if subrepo != nil {
 		state = subrepo.State
 	}
 
-	// Ensure that all the preloaded targets are built before we sync the package parse. If we don't do this, we might
-	// take the package lock for a package involved in a subinclude, and end up in a deadlock
-	if !mode.IsPreload() {
-		if err := state.RegisterPreloads(); err != nil {
-			return err
-		}
-	}
-
-	// See if something else has parsed this package first.
-	pkg := state.SyncParsePackage(label)
-	if pkg != nil {
-		// Does exist, all we need to do is toggle on this target
-		return state.ActivateTarget(pkg, label, dependent, mode)
-	}
-	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(label, core.PackageParsing, "Parsing...")
 
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo, but it depends on something, make sure that has been built.
-		state.WaitForBuiltTarget(subrepo.Target.Label, label, mode|core.ParseModeForSubinclude)
-		if !subrepo.Target.State().IsBuilt() {
-			return fmt.Errorf("%v: failed to build subrepo", label)
+		if _, err := state.Build(subrepo.Target.Label, dependent); err != nil {
+			return nil, err
 		}
 		if err := subrepo.State.Initialise(subrepo); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
-		return nil
+		// TODO(peter): is this relevant still?
+		return nil, nil
 	}
-	pkg, err = parsePackage(state, label, dependent, subrepo, mode)
-
+	pkg, err := parsePackage(state, label, dependent, subrepo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	state.LogParseResult(label, core.PackageParsed, "Parsed package")
-
-	// The target likely got activated already, however we activate here to handle pseudo-targets (:all), and to let
-	// this error when the target doesn't exist.
-	return state.ActivateTarget(pkg, label, dependent, mode)
-}
-
-func inSamePackage(label, dependent core.BuildLabel) bool {
-	return !dependent.IsOriginalTarget() && label.Subrepo == dependent.Subrepo && label.PackageName == dependent.PackageName
+	return pkg, nil
 }
 
 // checkSubrepo checks if the label we're parsing is within a subrepo, returning that subrepo, if present in the label.
@@ -104,83 +62,21 @@ func inSamePackage(label, dependent core.BuildLabel) bool {
 // The subrepo target can be inferred from the subrepo name using convention i.e. ///foo/bar//:baz has a subrepo label
 // //foo:bar. checkSubrepo parses package foo, expecting a call to `subrepo()` that registers a subrepo named foo/bar,
 // so it can return it.
-func checkSubrepo(state *core.BuildState, label, dependent core.BuildLabel, mode core.ParseMode) (*core.Subrepo, error) {
+func checkSubrepo(state *core.BuildState, label core.BuildLabel) (*core.Subrepo, error) {
 	if label.Subrepo == "" {
 		return nil, nil
 	}
 
-	// Check if we already have it
+	// Check if we already have it (we expect the higher-level driver code to have arranged for it to be parsed
+	// before we get here)
 	if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
 		return subrepo, nil
 	}
-
-	// SubrepoLabel returns the expected build label for the subrepo's target. Parsing its package should give us the
-	// subrepo we're looking for.
-	sl := label.SubrepoLabel(state)
-
-	// This can happen when we subinclude() a target in a subrepo from the same package the subrepo is defined in. In,
-	// this case, the subrepo must be registered by now. We shouldn't continue to try and parse the subrepo package, as
-	// it's the current package we're parsing, which would result in a lockup.
-	if inSamePackage(sl, dependent) {
-		return nil, fmt.Errorf("subrepo %v is not defined in this package yet. It must appear before it is used by %v", label.Subrepo, dependent)
-	}
-
-	// Try parsing the package in the host repo first.
-	s, err := maybeParseSubrepoPackage(state, sl.PackageName, sl.Subrepo, label, mode)
-	if err != nil || s != nil {
-		return s, err
-	}
-
-	if sl.Subrepo != dependent.Subrepo {
-		// They may have meant a subrepo that was defined in the dependent label's subrepo rather than the host repo
-		s, err = maybeParseSubrepoPackage(state, sl.PackageName, dependent.Subrepo, label, mode)
-		if err != nil || s != nil {
-			return s, err
-		}
-	}
-
-	return nil, fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
-}
-
-// maybeParseSubrepoPackage parses a package to make sure subrepos are available, returning the subrepo if it exists.
-// Returns nothing if the package doesn't exist, or the package doesn't define the subrepo.
-func maybeParseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo string, dependent core.BuildLabel, mode core.ParseMode) (*core.Subrepo, error) {
-	// First, check whether this is an architecture subrepo. The built-in architecture subrepos - which are implicitly
-	// defined at the top level - should be registered regardless of whether a top-level BUILD file exists, so we need to
-	// perform this check before we check whether the subrepo package exists.
-	s := state.CheckArchSubrepo(dependent.Subrepo)
-	if s != nil {
-		return s, nil
-	}
-
-	// Check if the subrepo package exists
-	if state.Graph.Package(subrepoPkg, subrepoSubrepo) == nil {
-		// Don't have it already, must parse.
-		label := core.BuildLabel{Subrepo: subrepoSubrepo, PackageName: subrepoPkg, Name: "all"}
-		if err := parse(state, label, dependent, mode|core.ParseModeForSubinclude); err != nil {
-			// When we try and parse a subrepo package, but the BUILD file or directory doesn't exist, return nil so
-			// this gets handled later on, in the same way as when the package does exist but doesn't define the subrepo
-			if errors.Is(err, ErrMissingBuildFile) {
-				return nil, nil
-			}
-			return nil, err
-		}
-	}
-
-	// Now that we know its package is parsed, we expect the subrepo to be registered
-	//
-	// NB: even if we didn't parse the package above (i.e. package was non-nil), this might've been parsed by a
-	// different thread, so we need to check if the subrepo exists again.
-	//
-	// We last checked if the subrepo existed at the beginning of the checkSubrepo() function, however we haven't
-	// acquired the package lock. That means another thread may have parsed the package, adding it to the graph by the
-	// time we check above. This means, we need to check if the subrepo exists again here regardless of whether we
-	// actually parsed the package in this thread.
-	return state.Graph.Subrepo(dependent.Subrepo), nil
+	return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
 }
 
 // parsePackage parses a BUILD file and adds the package to the build graph
-func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo, mode core.ParseMode) (*core.Package, error) {
+func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
@@ -195,14 +91,15 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate internal package: %w", err)
 		}
-		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr), &label, &dependent, mode); err != nil {
+		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr), &label, &dependent); err != nil {
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
 		filename, dir := buildFileName(state, subrepo, fileSystem, label.PackageName)
 		if filename != "" {
 			pkg.Filename = filename
-			if err := state.Parser.ParseFile(pkg, &label, &dependent, mode, fileSystem, filename); err != nil {
+			log.Debug("Parsing build file %s %s", label, filename)
+			if err := state.Parser.ParseFile(pkg, &label, &dependent, fileSystem, filename); err != nil {
 				return nil, err
 			}
 		} else {

@@ -16,13 +16,11 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-// InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
-func InitParser(state *core.BuildState) *core.BuildState {
-	if state.Parser == nil {
-		p := &aspParser{parser: newAspParser(state)}
-		state.Parser = p
-	}
-	return state
+// InitParser initialises the parser engine.
+func InitParser(state *core.BuildState) *asp.Parser {
+	p := newAspParser(state)
+	state.Parser = &aspParser{parser: p}
+	return p
 }
 
 // GetAspParser returns the underlying asp.Parser from the state's parser.
@@ -69,12 +67,12 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
-	return p.parser.ParseFile(pkg, forLabel, dependent, mode, fs, filename)
+func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
+	return p.parser.ParseFile(pkg, forLabel, dependent, fs, filename)
 }
 
-func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel, mode core.ParseMode) error {
-	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent, mode)
+func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel) error {
+	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent)
 	return err
 }
 
@@ -91,15 +89,12 @@ func (p *aspParser) RunPostBuildFunction(state *core.BuildState, target *core.Bu
 	})
 }
 
-// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
-func (p *aspParser) RegisterPreload(label core.BuildLabel) error {
-	return p.parser.RegisterPreload(label)
-}
-
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	state.SyncParsePackage(target.Label)
+	if _, err := state.Parse(target.Label, target.Label); err != nil {
+		return err
+	}
 	if err := f(); err != nil {
 		state.LogBuildError(target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
 		return err
