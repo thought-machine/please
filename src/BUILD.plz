@@ -27,6 +27,7 @@ go_binary(
         "//src/generate",
         "//src/hashes",
         "//src/help",
+        "//src/mcp",
         "//src/metrics",
         "//src/output",
         "//src/plz",
