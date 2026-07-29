@@ -71,6 +71,19 @@ func (s *server) parseGraph() error {
 	return nil
 }
 
+// withState runs f against the current build state under the server lock,
+// converting panics into errors so a misbehaving query can't kill the server.
+func (s *server) withState(f func(state *core.BuildState) error) (err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("query failed: %v", p)
+		}
+	}()
+	return f(s.state)
+}
+
 // runQuery runs f against the current build state under the server lock,
 // capturing anything it writes to os.Stdout and returning it.
 func (s *server) runQuery(f func(state *core.BuildState) error) (out string, err error) {

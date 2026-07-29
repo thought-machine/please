@@ -17,17 +17,45 @@ func Deps(out io.Writer, state *core.BuildState, labels []core.BuildLabel, hidde
 		fmt.Fprintf(out, "  edge [fontname=\"Helvetica,Arial,sans-serif\"]\n")
 		fmt.Fprintf(out, "  rankdir=\"LR\"\n")
 	}
+	visit := func(dep, parent *core.BuildTarget, level int) {
+		if formatdot {
+			printTargetDot(out, dep, parent)
+		} else {
+			printTarget(out, dep, level)
+		}
+	}
 	done := map[core.BuildLabel]bool{}
 	for _, label := range labels {
-		deps(out, state, state.Graph.TargetOrDie(label), done, targetLevel, 0, hidden, formatdot)
+		walkDeps(state, state.Graph.TargetOrDie(label), done, targetLevel, 0, hidden, visit)
 	}
 	if formatdot {
 		fmt.Fprintf(out, "}\n")
 	}
 }
 
-// deps looks at all the deps of the given target & recurses into them, printing as appropriate.
-func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done map[core.BuildLabel]bool, targetLevel, currentLevel int, hidden, formatdot bool) {
+// DepsLabels returns all transitive dependencies of a set of targets in traversal order.
+func DepsLabels(state *core.BuildState, labels []core.BuildLabel, hidden bool, targetLevel int) core.BuildLabels {
+	ret := core.BuildLabels{}
+	visit := func(dep, parent *core.BuildTarget, level int) {
+		ret = append(ret, dep.Label)
+	}
+	done := map[core.BuildLabel]bool{}
+	for _, label := range labels {
+		walkDeps(state, state.Graph.TargetOrDie(label), done, targetLevel, 0, hidden, visit)
+	}
+	return ret
+}
+
+// walkDeps looks at all the deps of the given target & recurses into them,
+// calling visit for each dependency as it's discovered.
+func walkDeps(
+	state *core.BuildState,
+	target *core.BuildTarget,
+	done map[core.BuildLabel]bool,
+	targetLevel, currentLevel int,
+	hidden bool,
+	visit func(dep, parent *core.BuildTarget, level int),
+) {
 	if currentLevel == targetLevel {
 		return
 	}
@@ -39,18 +67,14 @@ func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done 
 			}
 			done[l] = true
 			if dep := state.Graph.TargetOrDie(l); hidden || !dep.HasParent() {
-				// dep is to be printed; either we're printing hidden deps or it has no parent (i.e. is not hidden)
-				if formatdot {
-					printTargetDot(out, dep, target)
-				} else {
-					printTarget(out, dep, currentLevel)
-				}
-				deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
+				// dep is to be visited; either we're including hidden deps or it has no parent (i.e. is not hidden)
+				visit(dep, target, currentLevel)
+				walkDeps(state, dep, done, targetLevel, currentLevel+1, hidden, visit)
 			} else if dep.Label.Parent() == target.Label.Parent() {
 				// This is a hidden dependency of the current target, recurse without increasing depth
-				deps(out, state, dep, done, targetLevel, currentLevel, hidden, formatdot)
+				walkDeps(state, dep, done, targetLevel, currentLevel, hidden, visit)
 			} else {
-				deps(out, state, dep, done, targetLevel, currentLevel+1, hidden, formatdot)
+				walkDeps(state, dep, done, targetLevel, currentLevel+1, hidden, visit)
 			}
 		}
 	}
