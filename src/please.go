@@ -481,7 +481,7 @@ var buildFunctions = map[string]func() int{
 		}
 		for _, label := range state.ExpandOriginalLabels() {
 			target := state.Graph.TargetOrDie((label))
-			for _, out := range target.Outputs() {
+			for _, out := range target.Outputs(state.Graph) {
 				from := filepath.Join(target.OutDir(), out)
 				fm, err := os.Lstat(from)
 				if err != nil {

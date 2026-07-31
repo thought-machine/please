@@ -496,7 +496,7 @@ func (c *Client) download(target *core.BuildTarget, f func() error) error {
 func (c *Client) reallyDownload(target *core.BuildTarget, digest *pb.Digest, ar *pb.ActionResult) error {
 	log.Debug("Downloading outputs for %s", target)
 
-	if err := removeOutputs(target); err != nil {
+	if err := c.removeOutputs(target); err != nil {
 		return err
 	}
 	if err := c.downloadActionOutputs(context.Background(), ar, target); err != nil {
@@ -904,7 +904,7 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 	}
 	c.state.LogBuildResult(target, core.TargetBuilding, "Downloaded.")
 	// If we get here, the blob exists in the CAS. Create an ActionResult corresponding to it.
-	outs := target.Outputs()
+	outs := target.Outputs(c.state.Graph)
 	ar := &pb.ActionResult{
 		OutputFiles: []*pb.OutputFile{{
 			Path:         outs[0],

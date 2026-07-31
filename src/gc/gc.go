@@ -167,10 +167,10 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 	}
 	log.Debug("  %s", target.Label)
 	m[target] = true
-	for _, dep := range target.DeclaredDependencies() {
+	for dep := range target.DeclaredDependencies() {
 		addTarget(graph, m, graph.Target(dep))
 	}
-	for _, dep := range target.Dependencies() {
+	for _, dep := range target.Dependencies(graph) {
 		addTarget(graph, m, dep)
 	}
 	if target.Subrepo != nil && target.Subrepo.Target != nil {
@@ -199,7 +199,7 @@ func anyInclude(labels []core.BuildLabel, label core.BuildLabel) bool {
 // it will return //src/test:test for //src/test:container_test.
 func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*core.BuildTarget {
 	ret := []*core.BuildTarget{}
-	for _, dep := range target.DeclaredDependencies() {
+	for dep := range target.DeclaredDependencies() {
 		if depTarget := graph.Target(dep); depTarget != nil {
 			if depTarget.Label.Parent() == target.Label.Parent() {
 				ret = append(ret, publicDependencies(graph, depTarget)...)

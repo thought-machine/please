@@ -373,7 +373,7 @@ func testResultMessage(results *core.TestSuite, showDuration bool) string {
 
 func printUnformattedBuildResults(state *core.BuildState) {
 	for _, label := range state.ExpandVisibleOriginalTargets() {
-		for _, result := range buildResult(state.Graph.TargetOrDie(label)) {
+		for _, result := range buildResult(state, state.Graph.TargetOrDie(label)) {
 			fmt.Printf("%s\n", result)
 		}
 	}
@@ -404,7 +404,7 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		fmt.Printf("%s:\n", label)
-		for _, result := range buildResult(target) {
+		for _, result := range buildResult(state, target) {
 			fmt.Printf("  %s\n", result)
 		}
 	}
@@ -476,10 +476,10 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 	}
 }
 
-func buildResult(target *core.BuildTarget) []string {
+func buildResult(state *core.BuildState, target *core.BuildTarget) []string {
 	results := []string{}
 	if target != nil {
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(state.Graph) {
 			if core.StartedAtRepoRoot() {
 				results = append(results, filepath.Join(target.OutDir(), out))
 			} else {

@@ -83,7 +83,7 @@ func TestExecutePostBuildFunction(t *testing.T) {
 	})
 	_, err := c.Build(target)
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"somefile"}, target.Outputs())
+	assert.Equal(t, []string{"somefile"}, target.Outputs(c.state.Graph))
 }
 
 func TestExecuteFetch(t *testing.T) {
@@ -266,9 +266,9 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 	_, err := c.Build(outDirTarget)
 	require.NoError(t, err)
 
-	assert.Len(t, outDirTarget.Outputs(), 2)
-	assert.ElementsMatch(t, []string{"foo.txt", "bar.txt"}, outDirTarget.Outputs())
-	for _, out := range outDirTarget.Outputs() {
+	assert.Len(t, outDirTarget.Outputs(c.state.Graph), 2)
+	assert.ElementsMatch(t, []string{"foo.txt", "bar.txt"}, outDirTarget.Outputs(c.state.Graph))
+	for _, out := range outDirTarget.Outputs(c.state.Graph) {
 		assert.True(t, fs.FileExists(filepath.Join(outDirTarget.OutDir(), out)), "output %s doesn't exist in target out folder", out)
 	}
 }

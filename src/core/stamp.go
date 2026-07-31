@@ -8,11 +8,11 @@ import (
 // a target that is marked stamp=True.
 // This file contains information about its transitive dependencies that can be used to
 // embed information into the output (for example information from labels or licences).
-func StampFile(config *Configuration, target *BuildTarget) []byte {
+func StampFile(state *BuildState, target *BuildTarget) []byte {
 	info := &stampInfo{
 		Targets: map[BuildLabel]targetInfo{},
 	}
-	populateStampInfo(config, target, info)
+	populateStampInfo(state, target, info)
 	b, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
 		log.Fatalf("Failed to encode stamp file: %s", err)
@@ -20,16 +20,16 @@ func StampFile(config *Configuration, target *BuildTarget) []byte {
 	return b
 }
 
-func populateStampInfo(config *Configuration, target *BuildTarget, info *stampInfo) {
-	accepted, _ := target.CheckLicences(config)
+func populateStampInfo(state *BuildState, target *BuildTarget, info *stampInfo) {
+	accepted, _ := target.CheckLicences(state.Config)
 	info.Targets[target.Label] = targetInfo{
 		Licences:        target.Licences,
 		AcceptedLicence: accepted,
 		Labels:          target.Labels,
 	}
-	for _, dep := range target.Dependencies() {
+	for _, dep := range target.Dependencies(state.Graph) {
 		if _, present := info.Targets[dep.Label]; !present {
-			populateStampInfo(config, dep, info)
+			populateStampInfo(state, dep, info)
 		}
 	}
 }

@@ -103,7 +103,7 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 				addSource(watcher, state, datum, dirs, files)
 			}
 		}
-		for _, dep := range target.Dependencies() {
+		for _, dep := range target.Dependencies(state.Graph) {
 			startWatch(dep)
 		}
 		pkg := state.Graph.PackageOrDie(target.Label)

@@ -156,7 +156,7 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 	}
 
 	s.interpreter.loadPluginConfig(s, includeState)
-	for _, out := range t.FullOutputs() {
+	for _, out := range t.FullOutputs(s.state.Graph) {
 		s.SetAll(s.interpreter.Subinclude(s, out, t.Label, true), false)
 	}
 	return nil

@@ -186,7 +186,7 @@ func (e *export) export(target *core.BuildTarget) {
 	}
 
 	e.exportedTargets[target.Label] = true
-	for _, dep := range target.Dependencies() {
+	for _, dep := range target.Dependencies(e.state.Graph) {
 		e.export(dep)
 	}
 	for _, subinclude := range e.state.Graph.PackageOrDie(target.Label).AllSubincludes(e.state.Graph) {
@@ -201,7 +201,7 @@ func (e *export) export(target *core.BuildTarget) {
 func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	for _, label := range targets {
 		target := state.Graph.TargetOrDie(label)
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(state.Graph) {
 			fullPath := filepath.Join(dir, out)
 			outDir := filepath.Dir(fullPath)
 			if err := os.MkdirAll(outDir, core.DirPermissions); err != nil {
