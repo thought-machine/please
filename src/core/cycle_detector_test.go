@@ -14,7 +14,6 @@ func TestCycleDetector(t *testing.T) {
 			target.AddDependency(ParseBuildLabel(dep, ""))
 		}
 		state.Graph.AddTarget(target)
-		state.QueueTarget(target.Label, OriginalTarget, true, ParseModeForSubinclude)
 		return target
 	}
 

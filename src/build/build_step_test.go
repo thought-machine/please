@@ -614,7 +614,7 @@ func (fake *fakeParser) RegisterPreload(core.BuildLabel) error {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
+func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
 	return nil
 }
 
@@ -632,7 +632,7 @@ func (fake *fakeParser) NewParser(state *core.BuildState) {
 }
 
 // ParseReader stub
-func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel, mode core.ParseMode) error {
+func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel) error {
 	return nil
 }
 

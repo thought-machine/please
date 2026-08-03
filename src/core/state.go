@@ -323,6 +323,11 @@ func (state *BuildState) CloseResults() {
 	}
 }
 
+// AddOriginalTarget adds an original target to this state
+func (state *BuildState) AddOriginalTarget(label BuildLabel) {
+	state.progress.originalTargets.Add(label)
+}
+
 // IsOriginalTarget returns true if a target is an original target, ie. one specified on the command line.
 func (state *BuildState) IsOriginalTarget(target *BuildTarget) bool {
 	return state.isOriginalTarget(target, false)

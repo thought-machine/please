@@ -400,6 +400,7 @@ func (tf *taskFinder) findOriginalTask(target core.BuildLabel, needTest, needBui
 
 func (tf *taskFinder) queueTask(target core.BuildLabel, needTest, needBuild bool) {
 	tf.tasks.Go(func() error {
+		tf.state.AddOriginalTarget(target)
 		if needTest {
 			return tf.state.Test(target)
 		} else if needBuild {

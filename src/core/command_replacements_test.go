@@ -356,8 +356,10 @@ func TestTestCommand(t *testing.T) {
 	})
 
 	t.Run("Combined sequence and placeholder replacement", func(t *testing.T) {
+		state := NewDefaultBuildState()
 		target2 := makeTarget2("//path/to:target2", "", nil)
 		target1 := makeTarget2("//path/to:target1", "$(location //path/to:target2) __TEST_ARGS__", target2)
+		state.Graph.AddTarget(target2)
 		target1.Test = &TestFields{
 			Command:         "$(location //path/to:target2) __TEST_ARGS__",
 			ArgsPlaceholder: "__TEST_ARGS__",
