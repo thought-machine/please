@@ -59,7 +59,9 @@ func collectCoverageFiles(state *core.BuildState, includeAllFiles bool) map[stri
 	doneTargets := map[*core.BuildTarget]bool{}
 	coverageFiles := map[string]bool{}
 	for _, label := range state.ExpandAllOriginalLabels() {
-		collectAllFiles(state, state.Graph.TargetOrDie(label), coverageFiles, includeAllFiles, true, doneTargets)
+		if target := state.Graph.Target(label); target != nil { // It won't be if it failed to parse
+			collectAllFiles(state, target, coverageFiles, includeAllFiles, true, doneTargets)
+		}
 	}
 	return coverageFiles
 }
