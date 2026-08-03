@@ -9,7 +9,6 @@ c_library(
 c_binary(
     name = "please_sandbox",
     srcs = ["main.c"],
-    static = (CONFIG.get("STATIC_SANDBOX") is not None),
     visibility = ["PUBLIC"],
     deps = [":sandbox"],
 )
@@ -17,9 +16,38 @@ c_binary(
 c_binary(
     name = "nonet_sandbox",
     srcs = ["nonet_main.c"],
-    static = (CONFIG.get("STATIC_SANDBOX") is not None),
-    visibility = ["PUBLIC"],
     deps = [":sandbox"],
+)
+
+c_binary(
+    name = "noproc_sandbox",
+    srcs = ["noproc_main.c"],
+    deps = [":sandbox"],
+)
+
+c_binary(
+    name = "nonetproc_sandbox",
+    srcs = ["nonetproc_main.c"],
+    deps = [":sandbox"],
+)
+
+go_test(
+    name = "sandbox_test",
+    srcs = ["sandbox_test.go"],
+    data = {
+        "tm_sandbox": ":tm_sandbox",
+        "nonet_sandbox": ":nonet_sandbox",
+        "noproc_sandbox": ":noproc_sandbox",
+        "nonetproc_sandbox": ":nonetproc_sandbox",
+    },
+    labels = [
+        "localonly",
+        "manual",
+    ],
+    sandbox = False,
+    deps = [
+        "///third_party/go/github.com_stretchr_testify//require",
+    ],
 )
 
 cc_test(

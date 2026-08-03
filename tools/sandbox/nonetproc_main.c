@@ -1,8 +1,7 @@
-// nonet_sandbox is a slightly modified version of please_sandbox that does all the same
-// things except it leaves the network unscathed.
-// This is useful for cases where build rules request sandboxing to be disabled, which
-// is mostly so they can go out to the network, but we still want to control the rest
-// of the namespaces.
+// nonetproc_sandbox is a slightly modified version of nonet_sandbox that does all the same
+// things except it doesn't mount /proc.
+// This is a specific, if hacky, solution for newer versions of systemd which aren't
+// allowing us to mount a full /proc from a new user namespace.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,9 +9,9 @@
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fputs("nonet_sandbox implements limited sandboxing via Linux namespaces.\n", stderr);
+        fputs("nonetproc_sandbox implements limited sandboxing via Linux namespaces.\n", stderr);
         fputs("It takes no flags, it simply executes the command given as arguments.\n", stderr);
-        fputs("Usage: nonet_sandbox command args...\n", stderr);
+        fputs("Usage: nonetproc_sandbox command args...\n", stderr);
         return 1;
     }
 
@@ -24,5 +23,5 @@ int main(int argc, char* argv[]) {
     const char* share_mount_env = getenv("SHARE_MOUNT");
     const bool unshare_mount = share_mount_env == NULL || strcmp(share_mount_env, "1");
 
-    return contain(&argv[1], unshare_network, unshare_mount, unshare_mount, true);
+    return contain(&argv[1], unshare_network, unshare_mount, unshare_mount, false);
 }

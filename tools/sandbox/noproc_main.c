@@ -1,11 +1,7 @@
-// please_sandbox is a very small binary to implement sandboxing
-// of tests (and possibly other build actions) via namespaces.
-// Essentially this is a very lightweight replacement for Docker
-// where we would use it for tests to avoid port clashes etc.
-//
-// Note that this is a no-op on non-Linux OSs because they will not
-// support namespaces / cgroups. We still behave similarly otherwise
-// in order for it to be transparent to the rest of the system.
+// noproc_sandbox is a slightly modified version of tm_sandbox that does all the same
+// things except it doesn't mount /proc.
+// This is a specific, if hacky, solution for newer versions of systemd which aren't
+// allowing us to mount a full /proc from a new user namespace.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,9 +9,9 @@
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fputs("please_sandbox implements sandboxing for Please.\n", stderr);
+        fputs("noproc_sandbox implements limited sandboxing via Linux namespaces.\n", stderr);
         fputs("It takes no flags, it simply executes the command given as arguments.\n", stderr);
-        fputs("Usage: please_sandbox command args...\n", stderr);
+        fputs("Usage: noproc_sandbox command args...\n", stderr);
         return 1;
     }
 
@@ -27,5 +23,5 @@ int main(int argc, char* argv[]) {
     const char* share_mount_env = getenv("SHARE_MOUNT");
     const bool unshare_mount = share_mount_env == NULL || strcmp(share_mount_env, "1");
 
-    return contain(&argv[1], unshare_network, unshare_mount, unshare_mount, true);
+    return contain(&argv[1], unshare_network, unshare_mount, unshare_mount, false);
 }
