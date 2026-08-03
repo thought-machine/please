@@ -168,7 +168,9 @@ func (r *runner) parseTarget(ctx context.Context, label core.BuildLabel) (*core.
 	if target := pkg.Target(label.Name); target != nil {
 		return target, nil
 	}
-	return nil, fmt.Errorf("Parsed build file %s but it doesn't contain target %s%s", pkg.Filename, label.Name, pkg.SuggestTargets(label, label))
+	err = fmt.Errorf("Parsed build file %s but it doesn't contain target %s%s", pkg.Filename, label.Name, pkg.SuggestTargets(label, label))
+	r.state.LogBuildError(label, core.ParseFailed, err, "%s", err)
+	return nil, err
 }
 
 // resolveTarget resolves a target, dealing with require/provide as needed.
