@@ -42,199 +42,27 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 
 	parse.InitParser(state)
 
-	localLimiter := make(limiter, state.Config.Please.NumThreads)
-	remoteLimiter := make(limiter, state.Config.NumRemoteExecutors())
-	anyRemote := state.Config.NumRemoteExecutors() > 0
-
-	limiter := func(remote bool) limiter {
-		if remote {
-			return remoteLimiter
-		}
-		return localLimiter
-	}
-
-	// TODO(peter): we should probably stitch these contexts around more
 	g, ctx := errgroup.WithContext(context.Background())
 
+	r := runner{
+		state:    state,
+		arch:     arch,
+		tasks:    g,
+		progress: progress,
+		buildOnce: cmap.NewErrMap[core.BuildLabel, *core.BuildTarget](cmap.DefaultShardCount, func(l core.BuildLabel) uint64 {
+			return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
+		}, nil),
+		localLimiter:  make(limiter, state.Config.Please.NumThreads),
+		remoteLimiter: make(limiter, state.Config.NumRemoteExecutors()),
+		anyRemote:     state.Config.NumRemoteExecutors() > 0,
+	}
+
+	// We don't have context as an argument to this, because they're not fully plumbed through (but probably should be)
+	state.Build = func(label core.BuildLabel) (*core.BuildTarget, error) {
+		return r.Build(ctx, label)
+	}
 	state.Parse = func(label core.BuildLabel) (*core.Package, error) {
-		if pkg, err := state.Graph.PackageOrWait(ctx, label); err != nil || pkg != nil {
-			return pkg, err
-		}
-		// If we get here then we have to parse it (we only get here if we are the first one)
-		progress.numParsing.Add(1)
-		defer progress.numParsing.Add(-1)
-		// If the target defines a subrepo, we must make sure that is built first.
-		if label.Subrepo != "" {
-			sl := label.SubrepoLabel(state)
-			if sl.Subrepo == label.Subrepo && sl.PackageName == label.PackageName {
-				// TODO(peter): Unsure if this is a legit case or not.
-				return nil, fmt.Errorf("subinclude from within same package of a subrepo")
-			}
-			if _, err := state.Parse(sl); err != nil {
-				return nil, err
-			}
-		}
-		// TODO(peter): can we drop the dependent here?
-		return parse.Parse(state, label, label)
-	}
-
-	// parseTarget returns a particular build target, parsing the build file along the way if necessary.
-	parseTarget := func(label core.BuildLabel) (*core.BuildTarget, error) {
-		if target := state.Graph.Target(label); target != nil {
-			return target, nil
-		}
-		pkg, err := state.Parse(label)
-		if err != nil {
-			return nil, err
-		}
-		if target := pkg.Target(label.Name); target != nil {
-			return target, nil
-		}
-		return nil, fmt.Errorf("Parsed build file %s but it doesn't contain target %s%s", pkg.Filename, label.Name, pkg.SuggestTargets(label, label))
-	}
-
-	// resolveTarget resolves a target, dealing with require/provide as needed.
-	resolveTarget := func(label core.BuildLabel, dependent *core.BuildTarget) iter.Seq2[*core.BuildTarget, error] {
-		return func(yield func(*core.BuildTarget, error) bool) {
-			target, err := parseTarget(label)
-			if err != nil {
-				yield(nil, err)
-				return
-			}
-			// TODO(peter): We might want the minor optimisation here to avoid creating a slice in the common case
-			provided := target.ProvideFor(dependent)
-			if len(provided) == 1 && provided[0] == target.Label {
-				yield(target, nil)
-				return
-			}
-			// TODO(peter): Would parallelism here be useful?
-			for _, p := range provided {
-				if !yield(parseTarget(p)) {
-					break
-				}
-			}
-		}
-	}
-
-	buildDep := func(dep core.BuildLabel, target *core.BuildTarget) error {
-		for t, err := range resolveTarget(dep, target) {
-			if err != nil {
-				return err
-			}
-			if _, err := state.Build(t.Label); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	reallyBuild := func(target *core.BuildTarget) error {
-		// TODO(peterebden): want to restructure how all this stuff sits on build targets as well
-		g, _ := errgroup.WithContext(ctx)
-		for dep := range target.BuildDependencyLabels() {
-			g.Go(func() error {
-				return buildDep(dep, target)
-			})
-		}
-		for _, src := range target.AllSources() {
-			if l, ok := src.Label(); ok {
-				g.Go(func() error {
-					return buildDep(l, target)
-				})
-			}
-		}
-		if err := g.Wait(); err != nil {
-			return err
-		}
-
-		// TODO(peter): Need to handle targets getting extra deps added by post-build functions here.
-
-		// Now we are ready to build this target. Grab a thread and get started.
-		remote := anyRemote && !target.Local
-		limiter := limiter(remote)
-		limiter.Acquire()
-		defer limiter.Release()
-		return build.Build(state, target, remote)
-	}
-
-	buildAll := func(label core.BuildLabel) error {
-		pkg, err := state.Parse(label)
-		if err != nil {
-			return err
-		}
-		g, _ := errgroup.WithContext(ctx)
-		for _, target := range pkg.AllTargets() {
-			g.Go(func() error {
-				return reallyBuild(target)
-			})
-		}
-		return g.Wait()
-	}
-
-	// We use this to ensure that we only build each target exactly once.
-	buildOnce := cmap.NewErrMap[core.BuildLabel, *core.BuildTarget](cmap.DefaultShardCount, func(l core.BuildLabel) uint64 {
-		return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
-	}, nil)
-
-	state.Build = func(label core.BuildLabel) (_ *core.BuildTarget, err error) {
-		return buildOnce.GetOrSet(label, func() (*core.BuildTarget, error) {
-			if label.IsAllTargets() {
-				return nil, buildAll(label)
-			}
-			progress.numTotal.Add(1)
-			defer progress.numDone.Add(1)
-			target, err := parseTarget(label)
-			if err != nil {
-				return nil, err
-			}
-			return target, reallyBuild(target)
-		})
-	}
-
-	state.Test = func(label core.BuildLabel) error {
-		progress.numTotal.Add(int64(state.NumTestRuns))
-		target, err := parseTarget(label)
-		if err != nil {
-			return err
-		}
-		g, _ := errgroup.WithContext(ctx)
-		g.Go(func() error {
-			_, err := state.Build(label)
-			return err
-		})
-		for dep := range target.RuntimeDependencies() {
-			g.Go(func() error {
-				_, err := state.Build(dep)
-				return err
-			})
-		}
-		if err := g.Wait(); err != nil {
-			return err
-		}
-		// Now we're ready to test this target.
-		// TODO(peter): Is it okay for none of these to return errors? I _think_ so and we will capture it later?
-		remote := anyRemote && !target.Local
-		limiter := limiter(remote)
-		if state.TestSequentially || state.NumTestRuns == 1 { // minor optimisation to avoid creating unnecessary goroutines
-			limiter.Acquire()
-			defer limiter.Release()
-			for run := range int(state.NumTestRuns) {
-				test.Test(state, target, remote, run+1)
-				progress.numDone.Add(1)
-			}
-			return nil
-		}
-		var wg sync.WaitGroup
-		for run := range int(state.NumTestRuns) {
-			wg.Go(func() {
-				limiter.Acquire()
-				defer limiter.Release()
-				test.Test(state, target, remote, run+1)
-				progress.numDone.Add(1)
-			})
-		}
-		wg.Wait()
-		return nil
+		return r.Parse(ctx, label)
 	}
 
 	// Register the preloaded targets with the parser
@@ -243,12 +71,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	}
 
 	// Start looking for the initial targets to kick the build off
-	tf := taskFinder{
-		state: state,
-		arch:  arch,
-		tasks: g,
-	}
-	if err := tf.FindOriginalTasks(preTargets, targets); err != nil {
+	if err := r.FindOriginalTasks(ctx, preTargets, targets); err != nil {
 		return err
 	}
 	if err := g.Wait(); err != nil {
@@ -272,70 +95,263 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, &Progress{}, cli.HostArch())
 }
 
-type taskFinder struct {
-	tasks *errgroup.Group
-	state *core.BuildState
-	arch  cli.Arch
+type runner struct {
+	tasks         *errgroup.Group
+	state         *core.BuildState
+	arch          cli.Arch
+	progress      *Progress
+	buildOnce     *cmap.ErrMap[core.BuildLabel, *core.BuildTarget]
+	localLimiter  limiter
+	remoteLimiter limiter
+	anyRemote     bool
+}
+
+// Parse parses for a target. It can be called more than once for the same build label.
+func (r *runner) Parse(ctx context.Context, label core.BuildLabel) (*core.Package, error) {
+	if pkg, err := r.state.Graph.PackageOrWait(ctx, label); err != nil || pkg != nil {
+		return pkg, err
+	}
+	// If we get here then we have to parse it (we only get here if we are the first one)
+	r.progress.numParsing.Add(1)
+	defer r.progress.numParsing.Add(-1)
+	// If the target defines a subrepo, we must make sure that is built first.
+	if label.Subrepo != "" {
+		sl := label.SubrepoLabel(r.state)
+		if sl.Subrepo == label.Subrepo && sl.PackageName == label.PackageName {
+			// TODO(peter): Unsure if this is a legit case or not.
+			return nil, fmt.Errorf("subinclude from within same package of a subrepo")
+		}
+		if _, err := r.state.Parse(sl); err != nil {
+			return nil, err
+		}
+	}
+	// TODO(peter): can we drop the dependent here?
+	return parse.Parse(r.state, label, label)
+}
+
+func (r *runner) parseTarget(ctx context.Context, label core.BuildLabel) (*core.BuildTarget, error) {
+	if target := r.state.Graph.Target(label); target != nil {
+		return target, nil
+	}
+	pkg, err := r.Parse(ctx, label)
+	if err != nil {
+		return nil, err
+	}
+	if target := pkg.Target(label.Name); target != nil {
+		return target, nil
+	}
+	return nil, fmt.Errorf("Parsed build file %s but it doesn't contain target %s%s", pkg.Filename, label.Name, pkg.SuggestTargets(label, label))
+}
+
+// resolveTarget resolves a target, dealing with require/provide as needed.
+func (r *runner) resolveTarget(ctx context.Context, label core.BuildLabel, dependent *core.BuildTarget) iter.Seq2[*core.BuildTarget, error] {
+	return func(yield func(*core.BuildTarget, error) bool) {
+		target, err := r.parseTarget(ctx, label)
+		if err != nil {
+			yield(nil, err)
+			return
+		}
+		// TODO(peter): We might want the minor optimisation here to avoid creating a slice in the common case
+		provided := target.ProvideFor(dependent)
+		if len(provided) == 1 && provided[0] == target.Label {
+			yield(target, nil)
+			return
+		}
+		// TODO(peter): Would parallelism here be useful?
+		for _, p := range provided {
+			if !yield(r.parseTarget(ctx, p)) {
+				break
+			}
+		}
+	}
+}
+
+// buildDep builds a single dependency of a target (which might of course turn into multiple when resolved)
+func (r *runner) buildDep(ctx context.Context, dep core.BuildLabel, target *core.BuildTarget) error {
+	for t, err := range r.resolveTarget(ctx, dep, target) {
+		if err != nil {
+			return err
+		}
+		if _, err := r.Build(ctx, t.Label); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// buildOne builds a single target (which cannot be a pseudo-label like :all)
+func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
+	g, ctx := errgroup.WithContext(ctx)
+	for dep := range target.BuildDependencyLabels() {
+		g.Go(func() error {
+			return r.buildDep(ctx, dep, target)
+		})
+	}
+	for _, src := range target.AllSources() {
+		if l, ok := src.Label(); ok {
+			g.Go(func() error {
+				return r.buildDep(ctx, l, target)
+			})
+		}
+	}
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	// TODO(peter): Need to handle targets getting extra deps added by post-build functions here.
+
+	// Now we are ready to build this target. Grab a thread and get started.
+	remote := r.anyRemote && !target.Local
+	limiter := r.limiter(remote)
+	limiter.Acquire()
+	defer limiter.Release()
+	return build.Build(r.state, target, remote)
+}
+
+// buildAll builds all the targets specified by the given label (which can be :all, but can't be ...).
+func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
+	pkg, err := r.state.Parse(label)
+	if err != nil {
+		return err
+	}
+	g, ctx := errgroup.WithContext(ctx)
+	for _, target := range pkg.AllTargets() {
+		g.Go(func() error {
+			return r.buildOne(ctx, target)
+		})
+	}
+	return g.Wait()
+}
+
+// Build is the main entrypoint to build a label
+func (r *runner) Build(ctx context.Context, label core.BuildLabel) (_ *core.BuildTarget, err error) {
+	return r.buildOnce.GetOrSet(label, func() (*core.BuildTarget, error) {
+		if label.IsAllTargets() {
+			return nil, r.buildAll(ctx, label)
+		}
+		r.progress.numTotal.Add(1)
+		defer r.progress.numDone.Add(1)
+		target, err := r.parseTarget(ctx, label)
+		if err != nil {
+			return nil, err
+		}
+		return target, r.buildOne(ctx, target)
+	})
+}
+
+// Test is the main entrypoint to run tests for a label
+func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
+	r.progress.numTotal.Add(int64(r.state.NumTestRuns))
+	target, err := r.parseTarget(ctx, label)
+	if err != nil {
+		return err
+	}
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		_, err := r.Build(ctx, label)
+		return err
+	})
+	for dep := range target.RuntimeDependencies() {
+		g.Go(func() error {
+			_, err := r.Build(ctx, dep)
+			return err
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	// Now we're ready to test this target.
+	// TODO(peter): Is it okay for none of these to return errors? I _think_ so and we will capture it later?
+	remote := r.anyRemote && !target.Local
+	limiter := r.limiter(remote)
+	if r.state.TestSequentially || r.state.NumTestRuns == 1 { // minor optimisation to avoid creating unnecessary goroutines
+		limiter.Acquire()
+		defer limiter.Release()
+		for run := range int(r.state.NumTestRuns) {
+			test.Test(r.state, target, remote, run+1)
+			r.progress.numDone.Add(1)
+		}
+		return nil
+	}
+	var wg sync.WaitGroup
+	for run := range int(r.state.NumTestRuns) {
+		wg.Go(func() {
+			limiter.Acquire()
+			defer limiter.Release()
+			test.Test(r.state, target, remote, run+1)
+			r.progress.numDone.Add(1)
+		})
+	}
+	wg.Wait()
+	return nil
+}
+
+// limiter returns either a local or remote limiter that ensures we don't build too many things at once.
+func (r *runner) limiter(remote bool) limiter {
+	if remote {
+		return r.remoteLimiter
+	}
+	return r.localLimiter
 }
 
 // findOriginalTasks finds the original parse tasks for the original set of targets.
-func (tf *taskFinder) FindOriginalTasks(preTargets, targets []core.BuildLabel) error {
+func (r *runner) FindOriginalTasks(ctx context.Context, preTargets, targets []core.BuildLabel) error {
 	log.Debug("Original target scan beginning...")
-	if tf.state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
+	if r.state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		if _, err := tf.state.Parse(core.NewBuildLabel("workspace", "all")); err != nil {
+		if _, err := r.state.Parse(core.NewBuildLabel("workspace", "all")); err != nil {
 			return err
 		}
 	}
-	if tf.arch.Arch != "" && tf.arch != cli.HostArch() {
+	if r.arch.Arch != "" && r.arch != cli.HostArch() {
 		// Set up a new subrepo for this architecture.
-		tf.state.Graph.AddSubrepo(core.SubrepoForArch(tf.state, tf.arch))
+		r.state.Graph.AddSubrepo(core.SubrepoForArch(r.state, r.arch))
 	}
 	if len(preTargets) > 0 {
-		tf.findOriginalTaskSet(preTargets, false, true)
-		if err := tf.tasks.Wait(); err != nil {
+		r.findOriginalTaskSet(ctx, preTargets, false, true)
+		if err := r.tasks.Wait(); err != nil {
 			return err
 		}
-		tf.tasks = &errgroup.Group{}
+		r.tasks = &errgroup.Group{}
 	}
-	tf.findOriginalTaskSet(targets, tf.state.NeedTests, tf.state.NeedBuild)
-	if tf.state.NeedDebugDeps {
+	r.findOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
+	if r.state.NeedDebugDeps {
 		if len(targets) != 1 {
 			return fmt.Errorf("expected exactly 1 target in debug mode; got %d", len(targets))
 		}
-		tf.tasks.Go(func() error {
-			return tf.queueTargetsForDebug(targets[0])
+		r.tasks.Go(func() error {
+			return r.queueTargetsForDebug(ctx, targets[0])
 		})
 	}
-	if err := tf.tasks.Wait(); err != nil {
+	if err := r.tasks.Wait(); err != nil {
 		return err
 	}
 	log.Debug("Original target scan complete")
 	return nil
 }
 
-func (tf *taskFinder) findOriginalTaskSet(targets []core.BuildLabel, needTest, needBuild bool) {
+func (r *runner) findOriginalTaskSet(ctx context.Context, targets []core.BuildLabel, needTest, needBuild bool) {
 	for _, target := range ReadStdinLabels(targets) {
-		tf.tasks.Go(func() error {
-			return tf.findOriginalTask(target, needTest, needBuild)
+		r.tasks.Go(func() error {
+			return r.findOriginalTask(ctx, target, needTest, needBuild)
 		})
 	}
 }
 
-func (tf *taskFinder) queueTargetsForDebug(target core.BuildLabel) error {
-	if _, err := tf.state.Parse(target); err != nil {
+func (r *runner) queueTargetsForDebug(ctx context.Context, target core.BuildLabel) error {
+	if _, err := r.Parse(ctx, target); err != nil {
 		return err
 	}
-	t := tf.state.Graph.TargetOrDie(target)
+	t := r.state.Graph.TargetOrDie(target)
 	for _, tool := range t.AllDebugTools() {
 		if l, ok := tool.Label(); ok {
-			tf.findOriginalTask(l, false, true)
+			r.findOriginalTask(ctx, l, false, true)
 		}
 	}
 	for _, data := range t.AllDebugData() {
 		if l, ok := data.Label(); ok {
-			tf.findOriginalTask(l, false, true)
+			r.findOriginalTask(ctx, l, false, true)
 		}
 	}
 	return nil
@@ -361,13 +377,13 @@ func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.B
 	return label
 }
 
-func (tf *taskFinder) findOriginalTask(target core.BuildLabel, needTest, needBuild bool) error {
-	if tf.arch != cli.HostArch() {
-		target = core.LabelToArch(target, tf.arch)
+func (r *runner) findOriginalTask(ctx context.Context, target core.BuildLabel, needTest, needBuild bool) error {
+	if r.arch != cli.HostArch() {
+		target = core.LabelToArch(target, r.arch)
 	}
-	target = stripHostRepoName(tf.state.Config, target)
+	target = stripHostRepoName(r.state.Config, target)
 	if !target.IsAllSubpackages() {
-		tf.queueTask(target, needTest, needBuild)
+		r.queueTask(ctx, target, needTest, needBuild)
 		return nil
 	}
 	// Any command-line labels with subrepos and ... require us to know where they are in order to
@@ -375,40 +391,40 @@ func (tf *taskFinder) findOriginalTask(target core.BuildLabel, needTest, needBui
 	dir := target.PackageName
 	prefix := ""
 	if target.Subrepo != "" {
-		subrepoLabel := target.SubrepoLabel(tf.state)
-		if target, err := tf.state.Build(subrepoLabel); err != nil {
+		subrepoLabel := target.SubrepoLabel(r.state)
+		if target, err := r.Build(ctx, subrepoLabel); err != nil {
 			return err
-		} else if err := tf.state.EnsureDownloaded(target); err != nil {
+		} else if err := r.state.EnsureDownloaded(target); err != nil {
 			return err
 		}
 		// Targets now get activated during parsing, so can be built before we finish parsing their package.
-		pkg, err := tf.state.Parse(subrepoLabel)
+		pkg, err := r.Parse(ctx, subrepoLabel)
 		if err != nil {
 			return err
 		}
 		dir = pkg.Subrepo.Dir(dir)
 		prefix = pkg.Subrepo.Dir(prefix)
 	}
-	for filename := range FindAllBuildFiles(tf.state.Config, dir, "") {
+	for filename := range FindAllBuildFiles(r.state.Config, dir, "") {
 		dirname, _ := filepath.Split(filename)
 		l := core.NewBuildLabel(strings.TrimLeft(strings.TrimPrefix(strings.TrimRight(dirname, "/"), prefix), "/"), "all")
 		l.Subrepo = target.Subrepo
-		tf.queueTask(l, needTest, needBuild)
+		r.queueTask(ctx, l, needTest, needBuild)
 	}
 	return nil
 }
 
-func (tf *taskFinder) queueTask(target core.BuildLabel, needTest, needBuild bool) {
-	tf.tasks.Go(func() error {
-		tf.state.AddOriginalTarget(target)
+func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest, needBuild bool) {
+	r.tasks.Go(func() error {
+		r.state.AddOriginalTarget(target)
 		if needTest {
-			return tf.state.Test(target)
+			return r.Test(ctx, target)
 		} else if needBuild {
-			_, err := tf.state.Build(target)
+			_, err := r.Build(ctx, target)
 			// TODO(peter): Ensure this gets downloaded if needed
 			return err
 		}
-		_, err := tf.state.Parse(target)
+		_, err := r.Parse(ctx, target)
 		return err
 	})
 }

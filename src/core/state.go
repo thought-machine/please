@@ -217,13 +217,11 @@ type BuildState struct {
 	// NeedDebugDeps is true if we're doing a `plz debug` and we need to build the debug tools and data
 	NeedDebugDeps bool
 
-	// Various callbacks which are set from outside.
-	// Parse parses a package synchronously
-	Parse func(BuildLabel) (*Package, error)
-	// Build builds a single target
+	// Build is a callback to build a single target. It's set from outside here.
+	// TODO(peter): can we find a way of moving these off this struct? it feels weird here
 	Build func(BuildLabel) (*BuildTarget, error)
-	// Test runs tests on a single target
-	Test func(BuildLabel) error
+	// Parse is a callback to parse a single package. It's also set from outside.
+	Parse func(BuildLabel) (*Package, error)
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
