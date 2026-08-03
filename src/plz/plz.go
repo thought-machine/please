@@ -42,6 +42,20 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 
 	parse.InitParser(state)
 
+	// This must happen however we exit; anything reading state.Results() (e.g. the display)
+	// waits for that channel to be closed, so it would hang forever if we returned an error first.
+	defer func() {
+		if state.Cache != nil {
+			state.Cache.Shutdown()
+		}
+		if state.RemoteClient != nil {
+			_, _, in, out := state.RemoteClient.DataRate()
+			log.Info("Total remote RPC data in: %d out: %d", in, out)
+		}
+		state.CloseResults()
+		metrics.Push(state.Config.Metrics, state.Config.IsRemoteExecution())
+	}()
+
 	g, ctx := errgroup.WithContext(context.Background())
 
 	r := runner{
@@ -100,19 +114,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		})
 	}
 
-	if err := g.Wait(); err != nil {
-		return err
-	}
-	if state.Cache != nil {
-		state.Cache.Shutdown()
-	}
-	if state.RemoteClient != nil {
-		_, _, in, out := state.RemoteClient.DataRate()
-		log.Info("Total remote RPC data in: %d out: %d", in, out)
-	}
-	state.CloseResults()
-	metrics.Push(state.Config.Metrics, state.Config.IsRemoteExecution())
-	return nil
+	return g.Wait()
 }
 
 // RunHost is a convenience function that uses the host architecture, the given state's
