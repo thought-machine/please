@@ -70,10 +70,36 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		return err
 	}
 
-	// Start looking for the initial targets to kick the build off
-	if err := r.FindOriginalTasks(ctx, preTargets, targets); err != nil {
-		return err
+	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
+		// We have to parse the WORKSPACE file before anything else to understand subrepos.
+		// This is a bit crap really since it inhibits parallelism for the first step.
+		if _, err := r.Parse(ctx, core.NewBuildLabel("workspace", "all")); err != nil {
+			return err
+		}
 	}
+	if arch.Arch != "" && arch != cli.HostArch() {
+		// Set up a new subrepo for this architecture.
+		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
+	}
+	if len(preTargets) > 0 {
+		r.FindOriginalTaskSet(ctx, preTargets, false, true)
+		if err := g.Wait(); err != nil {
+			return err
+		}
+		// Reset the group & context for next time
+		g, ctx = errgroup.WithContext(context.Background())
+		r.tasks = g
+	}
+	r.FindOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
+	if state.NeedDebugDeps {
+		if len(targets) != 1 {
+			return fmt.Errorf("expected exactly 1 target in debug mode; got %d", len(targets))
+		}
+		g.Go(func() error {
+			return r.queueTargetsForDebug(ctx, targets[0])
+		})
+	}
+
 	if err := g.Wait(); err != nil {
 		return err
 	}
@@ -315,41 +341,7 @@ func (r *runner) limiter(remote bool) limiter {
 	return r.localLimiter
 }
 
-// findOriginalTasks finds the original parse tasks for the original set of targets.
-func (r *runner) FindOriginalTasks(ctx context.Context, preTargets, targets []core.BuildLabel) error {
-	log.Debug("Original target scan beginning...")
-	if r.state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
-		// We have to parse the WORKSPACE file before anything else to understand subrepos.
-		// This is a bit crap really since it inhibits parallelism for the first step.
-		if _, err := r.Parse(ctx, core.NewBuildLabel("workspace", "all")); err != nil {
-			return err
-		}
-	}
-	if r.arch.Arch != "" && r.arch != cli.HostArch() {
-		// Set up a new subrepo for this architecture.
-		r.state.Graph.AddSubrepo(core.SubrepoForArch(r.state, r.arch))
-	}
-	if len(preTargets) > 0 {
-		r.findOriginalTaskSet(ctx, preTargets, false, true)
-		if err := r.tasks.Wait(); err != nil {
-			return err
-		}
-		r.tasks = &errgroup.Group{}
-	}
-	r.findOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
-	if r.state.NeedDebugDeps {
-		if len(targets) != 1 {
-			return fmt.Errorf("expected exactly 1 target in debug mode; got %d", len(targets))
-		}
-		r.tasks.Go(func() error {
-			return r.queueTargetsForDebug(ctx, targets[0])
-		})
-	}
-	log.Debug("Original target scan complete")
-	return nil
-}
-
-func (r *runner) findOriginalTaskSet(ctx context.Context, targets []core.BuildLabel, needTest, needBuild bool) {
+func (r *runner) FindOriginalTaskSet(ctx context.Context, targets []core.BuildLabel, needTest, needBuild bool) {
 	for _, target := range ReadStdinLabels(targets) {
 		r.tasks.Go(func() error {
 			return r.findOriginalTask(ctx, target, needTest, needBuild)
