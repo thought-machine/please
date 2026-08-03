@@ -121,7 +121,7 @@ func (r *runner) Parse(ctx context.Context, label core.BuildLabel) (*core.Packag
 			// TODO(peter): Unsure if this is a legit case or not.
 			return nil, fmt.Errorf("subinclude from within same package of a subrepo")
 		}
-		if _, err := r.state.Parse(sl); err != nil {
+		if _, err := r.Parse(ctx, sl); err != nil {
 			return nil, err
 		}
 	}
@@ -210,7 +210,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 
 // buildAll builds all the targets specified by the given label (which can be :all, but can't be ...).
 func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
-	pkg, err := r.state.Parse(label)
+	pkg, err := r.Parse(ctx, label)
 	if err != nil {
 		return err
 	}
@@ -239,16 +239,12 @@ func (r *runner) Build(ctx context.Context, label core.BuildLabel) (_ *core.Buil
 	})
 }
 
-// Test is the main entrypoint to run tests for a label
-func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
+// testOne tests one single target
+func (r *runner) testOne(ctx context.Context, target *core.BuildTarget) error {
 	r.progress.numTotal.Add(int64(r.state.NumTestRuns))
-	target, err := r.parseTarget(ctx, label)
-	if err != nil {
-		return err
-	}
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		_, err := r.Build(ctx, label)
+		_, err := r.Build(ctx, target.Label)
 		return err
 	})
 	for dep := range target.RuntimeDependencies() {
@@ -286,6 +282,31 @@ func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
 	return nil
 }
 
+// Test is the main entrypoint to run tests for a label
+func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
+	if !label.IsAllTargets() {
+		target, err := r.parseTarget(ctx, label)
+		if err != nil || !target.IsTest() {
+			return err
+		}
+		return r.testOne(ctx, target)
+	}
+	pkg, err := r.Parse(ctx, label)
+	if err != nil {
+		return err
+	}
+	g, ctx := errgroup.WithContext(ctx)
+	for _, target := range pkg.AllTargets() {
+		if target.IsTest() {
+			g.Go(func() error {
+				return r.testOne(ctx, target)
+			})
+		}
+	}
+	return g.Wait()
+
+}
+
 // limiter returns either a local or remote limiter that ensures we don't build too many things at once.
 func (r *runner) limiter(remote bool) limiter {
 	if remote {
@@ -300,7 +321,7 @@ func (r *runner) FindOriginalTasks(ctx context.Context, preTargets, targets []co
 	if r.state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		if _, err := r.state.Parse(core.NewBuildLabel("workspace", "all")); err != nil {
+		if _, err := r.Parse(ctx, core.NewBuildLabel("workspace", "all")); err != nil {
 			return err
 		}
 	}
@@ -323,9 +344,6 @@ func (r *runner) FindOriginalTasks(ctx context.Context, preTargets, targets []co
 		r.tasks.Go(func() error {
 			return r.queueTargetsForDebug(ctx, targets[0])
 		})
-	}
-	if err := r.tasks.Wait(); err != nil {
-		return err
 	}
 	log.Debug("Original target scan complete")
 	return nil
