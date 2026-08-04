@@ -1003,14 +1003,15 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 	for _, d := range target.dependencies {
-		dep := state.Graph.TargetOrDie(d.Label)
-		if !target.CanSee(state, dep) {
-			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-		} else if dep.TestOnly && !target.IsTest() && !target.TestOnly {
-			if target.Label.isExperimental(state) {
-				log.Info("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
-			} else {
-				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
+		if dep := state.Graph.Target(d.Label); dep != nil {
+			if !target.CanSee(state, dep) {
+				return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
+			} else if dep.TestOnly && !target.IsTest() && !target.TestOnly {
+				if target.Label.isExperimental(state) {
+					log.Info("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
+				} else {
+					return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
+				}
 			}
 		}
 	}
