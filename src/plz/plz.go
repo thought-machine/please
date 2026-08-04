@@ -144,13 +144,15 @@ func (r *runner) Parse(ctx context.Context, label core.BuildLabel) (*core.Packag
 	defer r.progress.numParsing.Add(-1)
 	// If the target defines a subrepo, we must make sure that is built first.
 	if label.Subrepo != "" {
-		sl := label.SubrepoLabel(r.state)
-		if sl.Subrepo == label.Subrepo && sl.PackageName == label.PackageName {
-			// TODO(peter): Unsure if this is a legit case or not.
-			return nil, fmt.Errorf("subinclude from within same package of a subrepo")
-		}
-		if _, err := r.Parse(ctx, sl); err != nil {
-			return nil, err
+		if r.state.CheckArchSubrepo(label.Subrepo) == nil {
+			sl := label.SubrepoLabel(r.state)
+			if sl.Subrepo == label.Subrepo && sl.PackageName == label.PackageName {
+				// TODO(peter): Unsure if this is a legit case or not.
+				return nil, fmt.Errorf("subinclude from within same package of a subrepo")
+			}
+			if _, err := r.Parse(ctx, sl); err != nil {
+				return nil, err
+			}
 		}
 	}
 	// TODO(peter): can we drop the dependent here?
