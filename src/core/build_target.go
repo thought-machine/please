@@ -684,7 +684,7 @@ func (target *BuildTarget) RuntimeDependencies() iter.Seq[BuildLabel] {
 		target.mutex.RLock()
 		defer target.mutex.RUnlock()
 		for _, deps := range target.dependencies {
-			if deps.Runtime {
+			if deps.Runtime || deps.Data {
 				if !yield(deps.Label) {
 					break
 				}
