@@ -159,6 +159,46 @@ func (r *runner) Parse(ctx context.Context, label core.BuildLabel) (*core.Packag
 	return parse.Parse(r.state, label, label)
 }
 
+// RecursiveParse is like Parse but recurses down into all dependencies of the target as well.
+func (r *runner) RecursiveParse(ctx context.Context, label core.BuildLabel) error {
+	if !label.IsAllTargets() {
+		return r.recursiveParse(ctx, label)
+	}
+	pkg, err := r.Parse(ctx, label)
+	if err != nil {
+		return err
+	}
+	// Deduplicate dependencies as early as we can here.
+	seen := map[core.BuildLabel]struct{}{}
+	g, ctx := errgroup.WithContext(ctx)
+	for _, target := range pkg.AllTargets() {
+		for dep := range target.DeclaredDependencies() {
+			if _, present := seen[dep]; !present {
+				seen[dep] = struct{}{}
+				g.Go(func() error {
+					return r.recursiveParse(ctx, dep)
+				})				
+			}
+		}
+	}
+	return g.Wait()	
+}
+
+func (r *runner) recursiveParse(ctx context.Context, label core.BuildLabel) error {
+	target, err := r.parseTarget(ctx, label)
+	if err != nil {
+		return err
+	}
+	g, ctx := errgroup.WithContext(ctx)
+	for dep := range target.DeclaredDependencies() {
+		g.Go(func() error {
+			_, err := r.Parse(ctx, dep)
+			return err
+		})
+	}
+	return g.Wait()
+}
+
 func (r *runner) parseTarget(ctx context.Context, label core.BuildLabel) (*core.BuildTarget, error) {
 	if target := r.state.Graph.Target(label); target != nil {
 		return target, nil
@@ -445,8 +485,7 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 			// TODO(peter): Ensure this gets downloaded if needed
 			return err
 		}
-		_, err := r.Parse(ctx, target)
-		return err
+		return r.RecursiveParse(ctx, target)
 	})
 }
 
