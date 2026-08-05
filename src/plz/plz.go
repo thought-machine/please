@@ -288,6 +288,9 @@ func (r *runner) testOne(ctx context.Context, target *core.BuildTarget) error {
 	if err := g.Wait(); err != nil {
 		return err
 	}
+	if !target.IsTest() {
+		return nil
+	}
 	// Now we're ready to test this target.
 	// TODO(peter): Is it okay for none of these to return errors? I _think_ so and we will capture it later?
 	remote := r.anyRemote && !target.Local
@@ -318,7 +321,7 @@ func (r *runner) testOne(ctx context.Context, target *core.BuildTarget) error {
 func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
 	if !label.IsAllTargets() {
 		target, err := r.parseTarget(ctx, label)
-		if err != nil || !target.IsTest() {
+		if err != nil {
 			return err
 		}
 		return r.testOne(ctx, target)
@@ -329,11 +332,9 @@ func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
 	}
 	g, ctx := errgroup.WithContext(ctx)
 	for _, target := range pkg.AllTargets() {
-		if target.IsTest() {
-			g.Go(func() error {
-				return r.testOne(ctx, target)
-			})
-		}
+		g.Go(func() error {
+			return r.testOne(ctx, target)
+		})
 	}
 	return g.Wait()
 
