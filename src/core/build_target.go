@@ -1473,7 +1473,7 @@ func (target *BuildTarget) AllTestTools() []BuildInput {
 	if target.Test.namedTools == nil {
 		return target.Test.tools
 	}
-	return target.selectBuildInputs(target.Test.tools, target.Test.namedTools)
+	return combinedBuildInputs(target.Test.tools, target.Test.namedTools)
 }
 
 // NamedTestTools returns all named test tools
@@ -1489,7 +1489,7 @@ func (target *BuildTarget) AllDebugTools() []BuildInput {
 	if target.Debug.namedTools == nil {
 		return target.Debug.tools
 	}
-	return target.selectBuildInputs(target.Debug.tools, target.Debug.namedTools)
+	return combinedBuildInputs(target.Debug.tools, target.Debug.namedTools)
 }
 
 // AddDatum adds a new item of data to the target.
@@ -1663,18 +1663,20 @@ func (target *BuildTarget) AllSources() []BuildInput {
 	if target.NamedSources == nil {
 		return target.Sources
 	}
-	return target.selectBuildInputs(target.Sources, target.NamedSources)
+	return combinedBuildInputs(target.Sources, target.NamedSources)
 }
 
-func (target *BuildTarget) selectBuildInputs(unnamed []BuildInput, named map[string][]BuildInput) []BuildInput {
+// combinedBuildInputs combines the unnamed inputs and the values of named inputs into one slice.
+func combinedBuildInputs(unnamed []BuildInput, named map[string][]BuildInput) []BuildInput {
 	keys := make([]string, 0, len(named))
-	size := len(unnamed)
+	size := 0
 	for k, vals := range named {
 		keys = append(keys, k)
 		size += len(vals)
 	}
 	sort.Strings(keys)
 
+	size += len(unnamed)
 	ret := make([]BuildInput, 0, size)
 	ret = append(ret, unnamed...)
 	for _, k := range keys {
@@ -1728,7 +1730,7 @@ func (target *BuildTarget) AllData() []BuildInput {
 		return target.Data
 	}
 
-	return target.selectBuildInputs(target.Data, target.NamedData)
+	return combinedBuildInputs(target.Data, target.NamedData)
 }
 
 // AllDebugData returns all the data for debugging this rule.
@@ -1739,7 +1741,7 @@ func (target *BuildTarget) AllDebugData() []BuildInput {
 	if target.Debug.namedData == nil {
 		return target.Debug.data
 	}
-	return target.selectBuildInputs(target.Debug.data, target.Debug.namedData)
+	return combinedBuildInputs(target.Debug.data, target.Debug.namedData)
 }
 
 // DebugData returns unnamed data for debugging this rule.
@@ -1763,7 +1765,7 @@ func (target *BuildTarget) AllTools() []BuildInput {
 	if target.namedTools == nil {
 		return target.Tools
 	}
-	return target.selectBuildInputs(target.Tools, target.namedTools)
+	return combinedBuildInputs(target.Tools, target.namedTools)
 }
 
 // ToolNames returns an ordered list of tool names.
