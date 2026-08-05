@@ -1,4 +1,4 @@
-// noproc_sandbox is a slightly modified version of tm_sandbox that does all the same
+// noproc_sandbox is a slightly modified version of please_sandbox that does all the same
 // things except it doesn't mount /proc.
 // This is a specific, if hacky, solution for newer versions of systemd which aren't
 // allowing us to mount a full /proc from a new user namespace.

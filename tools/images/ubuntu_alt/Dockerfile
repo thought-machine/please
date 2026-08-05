@@ -7,8 +7,12 @@ ENV DEBIAN_FRONTEND noninteractive
 # Most dependencies; Python, Clang
 RUN apt-get update && \
     apt-get install -y python3 python3-dev python3-pip \
-    curl unzip git locales pkg-config zlib1g-dev clang && \
+    curl unzip git locales pkg-config zlib1g-dev clang uidmap && \
     apt-get clean
+
+# Subordinate id delegation for sandbox tests
+RUN printf 'root:0:65536\n' >> /etc/subuid && \
+    printf 'root:0:65536\n' >> /etc/subgid
 
 # Go
 RUN curl -fsSL https://dl.google.com/go/go1.26.1.linux-amd64.tar.gz | tar -xzC /usr/local

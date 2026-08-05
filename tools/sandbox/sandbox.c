@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #ifdef __linux__
@@ -12,7 +13,6 @@
 #include <errno.h>
 #include <sched.h>
 #include <signal.h>
-#include <string.h>
 #include <net/if.h>
 #include <net/route.h>
 #include <sys/ioctl.h>
@@ -29,7 +29,7 @@
 
 static int cloned_pid;
 
-inline int perror_sock(char *errmsg, const int sock) {
+int perror_sock(char *errmsg, const int sock) {
     close(sock);
     perror(errmsg);
     return 1;
@@ -98,11 +98,17 @@ int default_gateway() {
     return 0;
 }
 
-// add_local_ip assigns an IP address to the loopback interface.
+// add_local_ip assigns an additional IP address to the loopback interface.
+// This is required for envtest to run in the sandbox which has a default
+// cluster IP range of 10.0.0.0/24 and cannot use addresses in the local
+// 127.0.0.0/8 range
 int add_local_ip()
 {
+    // SANDBOX_LOCAL_IP overrides the default address; defined empty string disables it.
     const char* local_ip = getenv("SANDBOX_LOCAL_IP");
     if (local_ip == NULL) {
+        local_ip = "10.1.1.1";
+    } else if (local_ip[0] == '\0') {
         return 0;
     }
 
@@ -237,8 +243,8 @@ int deny_setgroups(pid_t pid) {
     }
 
     if (fclose(f) != 0) {
-      perror("fclose setgroups");
-      return 1;
+        perror("fclose setgroups");
+        return 1;
     }
     return 0;
 }
@@ -261,8 +267,8 @@ int write_id_map(pid_t pid, const char *file, uid_t inside_id, uid_t outside_id)
     }
 
     if (fclose(f) != 0) {
-      perror("fclose map");
-      return 1;
+        perror("fclose map");
+        return 1;
     }
     return 0;
 }
@@ -295,8 +301,8 @@ int mount_tmp(char** argv0, bool sandbox_dir) {
 
     // Mount over /dev/shm as well so nothing can be inadvertently shared through it and we'll clean it up.
     if (mount("tmpfs", "/dev/shm", "tmpfs", flags, NULL) != 0) {
-      perror("mount");
-      return 1;
+        perror("mount");
+        return 1;
     }
 
     // If SANDBOX_DIRS is set, we expect a comma-separated list of directories to mount a tmpfs over in order to hide them.
@@ -509,7 +515,7 @@ int contain(char* argv[], bool net, bool mount, bool sandbox_dir, bool mount_pro
   if (pid == -1) {
     perror("clone");
     fputs("Your user doesn't seem to have enough permissions to call clone(2).\n", stderr);
-    fputs("tm_sandbox requires support for MS_LAZYTIME (>= Linux 4.0)\n", stderr);
+    fputs("please_sandbox requires support for user namespaces (usually >= Linux 3.10)\n", stderr);
     return 1;
   }
   close(arg.sync_fd[0]);
@@ -570,7 +576,7 @@ int contain(char* argv[], bool net, bool mount, bool sandbox_dir, bool mount_pro
 
 // On non-Linux systems contain simply execs a subprocess.
 // It's not really expected to be used there, this is simply to make it compile.
-int contain(char* argv[], bool net, bool mount) {
+int contain(char* argv[], bool net, bool mount, bool sandbox_dir, bool mount_proc) {
   return execvp(argv[0], argv);
 }
 
@@ -585,7 +591,7 @@ char* exec_name(const char* old_name, const char* old_dir, const char* new_dir) 
 // check_valid_path_suffix makes sure given suffix can be appended to an
 // absolute path without any issues.
 bool check_valid_path_suffix(const char* suffix) {
-	return suffix != NULL && (suffix[0] == '/' || suffix[0] == 0);
+  return suffix != NULL && (suffix[0] == '/' || suffix[0] == 0);
 }
 
 // change_path takes a string or environment variable and changes a prefix from one path to another.
@@ -594,7 +600,7 @@ char* change_path(const char* old_name, const char* old_dir, const char* new_dir
   const int old_dir_len = strlen(old_dir);
   const int old_name_len = strlen(old_name);
   if ((old_name_len > prefix_len + old_dir_len && !check_valid_path_suffix(old_name + prefix_len + old_dir_len)) ||
-	  strncmp(old_dir, old_name + prefix_len, old_dir_len) != 0) {  // is the value of old_name prefixed with old_dir
+      strncmp(old_dir, old_name + prefix_len, old_dir_len) != 0) {  // is the value of old_name prefixed with old_dir
     return (char*)old_name;  // Dodgy cast but we know we don't alter it again later.
   }
   const int new_len = new_dir_len + old_name_len - old_dir_len + 1;

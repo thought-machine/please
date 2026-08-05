@@ -23,7 +23,7 @@ func runSandbox(t *testing.T, sandbox string, args []string, env []string) strin
 	return strings.TrimSpace(string(out))
 }
 
-func tmSandbox(t *testing.T, args []string, env []string) string {
+func pleaseSandbox(t *testing.T, args []string, env []string) string {
 	t.Helper()
 	return runSandbox(t, os.Getenv("DATA_PLEASE_SANDBOX"), args, env)
 }
@@ -74,8 +74,8 @@ func TestSandboxCommon(t *testing.T) {
 		{
 			name: "must isolate network when SHARE_NETWORK=0",
 			env:  []string{"SHARE_NETWORK=0", "TMP_DIR=/tmp"},
-			args: []string{"sh", "-c", fmt.Sprintf(`curl %s 2>&1 | grep -o 'Connection refused'`, ts.URL)},
-			want: "Connection refused",
+			args: []string{"sh", "-c", fmt.Sprintf(`curl -s %s; echo "curl exit: $?"`, ts.URL)},
+			want: "curl exit: 7", // exit code 7 represents "Failed to connect to host."
 		},
 		{
 			name: "must map parent user to its own UID by default",
@@ -102,17 +102,18 @@ func TestSandboxCommon(t *testing.T) {
 			want: "0/0",
 		},
 		{
+			// Outside ids below 65536 so they exist even in a constrained container uid space (e.g. the default rootless mapping).
 			name: "SANDBOX_UID_MAP uid and gid ranges",
-			env:  []string{"TMP_DIR=/tmp", "SANDBOX_UID_MAP=0 100000 10   200 103000 40", "SANDBOX_GID_MAP=50 106000 700"},
+			env:  []string{"TMP_DIR=/tmp", "SANDBOX_UID_MAP=0 20000 10   200 23000 40", "SANDBOX_GID_MAP=50 26000 700"},
 			args: []string{"sh", "-c", "cat /proc/self/uid_map /proc/self/gid_map | awk '{$1=$1}1'"},
-			want: "0 100000 10\n200 103000 40\n50 106000 700",
+			want: "0 20000 10\n200 23000 40\n50 26000 700",
 		},
 		{
 			name: "SANDBOX_UID_MAP uid and gid ranges allow us to use chown",
 			env: []string{
 				"TMP_DIR=/var",
-				fmt.Sprintf("SANDBOX_UID_MAP=0 %d 1  1 100000 65536", os.Getuid()),
-				fmt.Sprintf("SANDBOX_GID_MAP=0 %d 1  1 100000 65536", os.Getgid()),
+				fmt.Sprintf("SANDBOX_UID_MAP=0 %d 1  1 20000 40000", os.Getuid()),
+				fmt.Sprintf("SANDBOX_GID_MAP=0 %d 1  1 20000 40000", os.Getgid()),
 			},
 			args: []string{"sh", "-c", "touch /tmp/f && chown 200:50 /tmp/f && stat -c '%u %g' /tmp/f"},
 			want: "200 50",
@@ -125,7 +126,7 @@ func TestSandboxCommon(t *testing.T) {
 		},
 	}
 	sandboxImpl := map[string]func(*testing.T, []string, []string) string{
-		"please_sandbox":    tmSandbox,
+		"please_sandbox":    pleaseSandbox,
 		"noproc_sandbox":    noprocSandbox,
 		"nonet_sandbox":     nonetSandbox,
 		"nonetproc_sandbox": nonetprocSandbox,
@@ -160,10 +161,10 @@ func TestSandboxNetworkShare(t *testing.T) {
 	}{
 		{
 			name:    "please_sandbox must isolate network by default",
-			sandbox: tmSandbox,
+			sandbox: pleaseSandbox,
 			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", fmt.Sprintf(`curl %s 2>&1 | grep -o 'Connection refused'`, ts.URL)},
-			want:    "Connection refused",
+			args:    []string{"sh", "-c", fmt.Sprintf(`curl -s %s; echo "curl exit: $?"`, ts.URL)},
+			want:    "curl exit: 7", // exit code 7 represents "Failed to connect to host."
 		},
 		{
 			name:    "nonet_sandbox must share network by default",
@@ -176,8 +177,8 @@ func TestSandboxNetworkShare(t *testing.T) {
 			name:    "noproc_sandbox must isolate network by default",
 			sandbox: noprocSandbox,
 			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", fmt.Sprintf(`curl %s 2>&1 | grep -o 'Connection refused'`, ts.URL)},
-			want:    "Connection refused",
+			args:    []string{"sh", "-c", fmt.Sprintf(`curl -s %s; echo "curl exit: $?"`, ts.URL)},
+			want:    "curl exit: 7",
 		},
 		{
 			name:    "nonetproc_sandbox must share network by default",
@@ -199,18 +200,61 @@ func TestSandboxNetworkShare(t *testing.T) {
 	}
 }
 
+func TestSandboxLocalIP(t *testing.T) {
+	tests := []struct {
+		name string
+		env  []string
+		args []string
+		want string
+	}{
+		{
+			name: "adds 10.1.1.1 to the loopback interface by default",
+			env:  []string{"TMP_DIR=/tmp"},
+			args: []string{"sh", "-c", `grep -o '10\.1\.1\.1' /proc/net/fib_trie | head -n1`},
+			want: "10.1.1.1",
+		},
+		{
+			name: "SANDBOX_LOCAL_IP overrides the default address",
+			env:  []string{"TMP_DIR=/tmp", "SANDBOX_LOCAL_IP=10.2.3.4"},
+			args: []string{"sh", "-c", `grep -o '10\.2\.3\.4' /proc/net/fib_trie | head -n1; grep -c '10\.1\.1\.1' /proc/net/fib_trie; true`},
+			want: "10.2.3.4\n0",
+		},
+		{
+			name: "SANDBOX_LOCAL_IP= disables the extra address",
+			env:  []string{"TMP_DIR=/tmp", "SANDBOX_LOCAL_IP="},
+			args: []string{"sh", "-c", `grep -c '10\.' /proc/net/fib_trie; true`},
+			want: "0",
+		},
+	}
+	sandboxImpl := map[string]func(*testing.T, []string, []string) string{
+		"please_sandbox": pleaseSandbox,
+		"noproc_sandbox": noprocSandbox,
+	}
+	for _, tt := range tests {
+		for sandboxName, sandbox := range sandboxImpl {
+			t.Run(sandboxName+"/"+tt.name, func(t *testing.T) {
+				output := sandbox(t, tt.args, tt.env)
+
+				if output != tt.want {
+					t.Errorf("Expected %q, but got %q", tt.want, output)
+				}
+			})
+		}
+	}
+}
+
 func TestSandboxMountShare(t *testing.T) {
 	nsOutside, err := os.Readlink("/proc/self/ns/mnt")
 	require.NoError(t, err, "failed to readlink /proc/self/ns/mnt outside sandbox")
 
 	t.Run("please_sandbox must isolate mounts by default", func(t *testing.T) {
-		nsInside := tmSandbox(t, []string{"readlink", "/proc/self/ns/mnt"}, []string{"TMP_DIR=" + os.TempDir()})
+		nsInside := pleaseSandbox(t, []string{"readlink", "/proc/self/ns/mnt"}, []string{"TMP_DIR=" + os.TempDir()})
 		require.Regexp(t, `^mnt:\[\d+\]`, nsInside)
 		require.NotEqual(t, nsInside, nsOutside)
 	})
 
 	t.Run("please_sandbox must share mount namespace when called with SHARE_MOUNT=1", func(t *testing.T) {
-		nsInside := tmSandbox(t, []string{"readlink", "/proc/self/ns/mnt"}, []string{"SHARE_MOUNT=1"})
+		nsInside := pleaseSandbox(t, []string{"readlink", "/proc/self/ns/mnt"}, []string{"SHARE_MOUNT=1"})
 		require.Equal(t, nsInside, nsOutside)
 	})
 }

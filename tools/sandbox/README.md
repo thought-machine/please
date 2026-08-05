@@ -1,15 +1,16 @@
-# tm_sandbox
+# please_sandbox
 
 > [!CAUTION]
 > The Please Sandbox is not a security boundary. It is not designed to run untrusted or malicious
 > code.
 
-`tm_sandbox` is a wrapper that allows running a given binary in Linux namespaces. By default, it
+`please_sandbox` is a wrapper that allows running a given binary in Linux namespaces. By default, it
 creates PID, IPC, UTS, user, mount and network namespaces. It also does a bunch of things on the
 filesystem:
 
 - if `TMP_DIR` is not set or not under `/tmp`, a tmpfs is mounted over `/tmp` and `TMPDIR` is set to
-  `/tmp`. If it is set, current working directory is bind mounted to its path;
+  `/tmp`. If it is set, `$TMP_DIR` is bind mounted onto `/tmp/plz_sandbox`, which becomes the
+  working directory, and the root filesystem is remounted read-only;
 - if `SANDBOX_DIRS` is set, we expect a comma-separated list of path that will be hidden with a
   tmpfs;
 - if `SANDBOX_FILE_MOUNTS` is set, we expect it to be set to a comma-separated list of key-value
@@ -22,7 +23,10 @@ filesystem:
 Mount and network namespaces can be disabled setting the `SHARE_MOUNT` and `SHARE_NETWORK`
 environment variables to `1`.
 
-The sandbox is distributed with 3 other flavours:
+When the network namespace is used, the loopback interface is brought up with an additional IP
+address. `SANDBOX_LOCAL_IP` defines, defined empty string disables the extra address.
+
+The sandbox is distributed with 3 other variants:
 
 - `nonet_sandbox` disables network namespacing by default, but it can be force-enabled by setting
   `SHARE_NETWORK` to 0.
@@ -31,17 +35,17 @@ The sandbox is distributed with 3 other flavours:
 
 ## UID/GID mapping in user namespace
 
-By default, the sandbox only maps the effective UID/GID from the running sandbox into the namespace.
+By default, the sandbox only maps the real UID/GID of the user running the sandbox into the namespace.
 However, `SANDBOX_UID_MAP` and `SANDBOX_GID_MAP` may be used to define arguments that are passed to
 `new*idmap`.
 
-The example below will map the effective UID/GID from the running sandbox to root and UIDs/GIDs
-from range [100000;165536) to [1;65536) in the child namespace.
+The example below will map the real UID of the user running the sandbox to root and UIDs
+from range [100000;165536) to [1;65536) in the child namespace (assuming your UID is 1000):
 
 ```bash
-$ TMP_DIR=/tmp SANDBOX_UID_MAP="0 $UID 1  1 100000 65536" tm_sandbox cat /proc/self/uid_map
-         0  100000000          1
-         1    100000       65536
+$ TMP_DIR=/tmp SANDBOX_UID_MAP="0 $UID 1  1 100000 65536" please_sandbox cat /proc/self/uid_map
+         0       1000          1
+         1     100000      65536
 ```
 
 ## Capabilities and other requirements
