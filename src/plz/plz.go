@@ -248,9 +248,11 @@ func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
 	}
 	g, ctx := errgroup.WithContext(ctx)
 	for _, target := range pkg.AllTargets() {
-		g.Go(func() error {
-			return r.buildOne(ctx, target)
-		})
+		if r.state.ShouldInclude(target) {
+			g.Go(func() error {
+				return r.buildOne(ctx, target)
+			})
+		}
 	}
 	return g.Wait()
 }
@@ -332,9 +334,11 @@ func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
 	}
 	g, ctx := errgroup.WithContext(ctx)
 	for _, target := range pkg.AllTargets() {
-		g.Go(func() error {
-			return r.testOne(ctx, target)
-		})
+		if r.state.ShouldInclude(target) {
+			g.Go(func() error {
+				return r.testOne(ctx, target)
+			})
+		}
 	}
 	return g.Wait()
 
