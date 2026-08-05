@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"slices"
 	"sync/atomic"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
@@ -274,7 +275,26 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 
 	// TODO(peter): Need to handle targets getting extra deps added by post-build functions here.
 
-	// Now we are ready to build this target. Grab a thread and get started.
+	// Okay, now the runtime dependencies can happen in parallel with the target itself.
+	deps := slices.Collect(target.RuntimeDependencies())
+	if len(deps) == 0 {
+		return r.buildJustOne(target)
+	}
+	g, ctx = errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return r.buildJustOne(target)
+	})
+	for _, dep := range deps {
+		g.Go(func() error {
+			_, err := r.Build(ctx, dep)
+			return err
+		})
+	}
+	return g.Wait()
+}
+
+// buildJustOne calls the build for a single target.
+func (r *runner) buildJustOne(target *core.BuildTarget) error {
 	remote := r.anyRemote && !target.Local
 	limiter := r.limiter(remote)
 	limiter.Acquire()
@@ -318,18 +338,7 @@ func (r *runner) Build(ctx context.Context, label core.BuildLabel) (_ *core.Buil
 // testOne tests one single target
 func (r *runner) testOne(ctx context.Context, target *core.BuildTarget) error {
 	r.progress.numTotal.Add(int64(r.state.NumTestRuns))
-	g, ctx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		_, err := r.Build(ctx, target.Label)
-		return err
-	})
-	for dep := range target.RuntimeDependencies() {
-		g.Go(func() error {
-			_, err := r.Build(ctx, dep)
-			return err
-		})
-	}
-	if err := g.Wait(); err != nil {
+	if _, err := r.Build(ctx, target.Label); err != nil {
 		return err
 	}
 	if !target.IsTest() {
