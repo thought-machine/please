@@ -24,9 +24,15 @@ func (bs *BuildStatement) StartPos() int64 {
 	return int64(bs.Start)
 }
 
-// hashBuildStatement mixes the Start and End byte coordinates to produce a unique 64-bit hash.
+// hashBuildStatement mixes the Start and End byte coordinates to produce a 64-bit pseudo hash.
+// It uses a multiplicative hashing approach with two large, distinct, odd prime numbers
+// to ensure that both Start and End values are thoroughly mixed across all bits,
+// especially the lower bits used to determine concurrent map shard indices (e.g., hash & 3).
+// Since coding standards and style guidelines (such as 4-space indentations, common targets and names)
+// can cause start and end positions to align on predictable byte intervals
+// and make them less random, simple bit manipulation is highly biased.
 func hashBuildStatement(stmt BuildStatement) uint64 {
-	return uint64(stmt.Start)<<32 | uint64(stmt.End)
+	return uint64(stmt.Start)*0x9e3779b97f4a7c15 + uint64(stmt.End)*0xbf58476d1ce4e5b9
 }
 
 // BuildStatements is a slice of BuildStatement that implements sort.Interface.
