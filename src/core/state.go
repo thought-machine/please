@@ -224,6 +224,8 @@ type BuildState struct {
 	Build func(BuildLabel) (*BuildTarget, error)
 	// Parse is a callback to parse a single package. It's also set from outside.
 	Parse func(BuildLabel) (*Package, error)
+	// Cancel is a cancel function called when the state detects a cycle.
+	Cancel func()
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
@@ -534,7 +536,7 @@ func (state *BuildState) forwardResults() {
 func (state *BuildState) checkForCycles() {
 	if err := state.progress.cycleDetector.Check(); err != nil {
 		state.LogBuildError(err.Cycle[0].Label, TargetBuildFailed, err, "")
-		// state.Stop()
+		state.Cancel()
 	}
 }
 

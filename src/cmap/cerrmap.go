@@ -1,5 +1,9 @@
 package cmap
 
+import (
+	"context"
+)
+
 // A Limiter is the interface that we use to release/acquire workers while waiting.
 type Limiter interface {
 	Acquire()
@@ -75,6 +79,32 @@ func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 		}
 		<-wait
 		return m.Get(key)
+	}
+	return v.Val, v.Err
+}
+
+// GetOrSetCtx is like GetOrSet but accepts a context that can be cancelled.
+func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, error)) (V, error) {
+	v, wait, first := m.m.GetOrWait(key)
+	if v.Err != nil {
+		return v.Val, v.Err
+	} else if first {
+		val, err := f()
+		m.m.Set(key, errV[V]{Val: val, Err: err})
+		return val, err
+	} else if wait != nil {
+		if m.l != nil {
+			// Release the limiter for the duration we're waiting
+			m.l.Release()
+			defer m.l.Acquire()
+		}
+		select {
+		case <-wait:
+			return m.Get(key)
+		case <-ctx.Done():
+			var v V
+			return v, ctx.Err()
+		}
 	}
 	return v.Val, v.Err
 }

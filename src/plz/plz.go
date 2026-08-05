@@ -56,7 +56,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		metrics.Push(state.Config.Metrics, state.Config.IsRemoteExecution())
 	}()
 
-	g, ctx := errgroup.WithContext(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
+	state.Cancel = cancel
 
 	r := runner{
 		state:    state,
@@ -299,7 +301,7 @@ func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
 
 // Build is the main entrypoint to build a label
 func (r *runner) Build(ctx context.Context, label core.BuildLabel) (_ *core.BuildTarget, err error) {
-	return r.buildOnce.GetOrSet(label, func() (*core.BuildTarget, error) {
+	return r.buildOnce.GetOrSetCtx(ctx, label, func() (*core.BuildTarget, error) {
 		if label.IsAllTargets() {
 			return nil, r.buildAll(ctx, label)
 		}
