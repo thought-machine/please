@@ -834,12 +834,12 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.input": func() int {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
-			query.TargetInputs(state.Graph, state.ExpandOriginalLabels())
+			query.TargetInputs(os.Stdout, state.Graph, state.ExpandOriginalLabels())
 		})
 	},
 	"query.output": func() int {
 		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
-			query.TargetOutputs(state.Graph, state.ExpandOriginalLabels(), opts.Query.Output.JSON)
+			query.TargetOutputs(os.Stdout, state.Graph, state.ExpandOriginalLabels(), opts.Query.Output.JSON)
 		})
 	},
 	"query.completions": func() int {
@@ -1017,7 +1017,7 @@ var buildFunctions = map[string]func() int{
 		return toExitCode(success, state)
 	},
 	"mcp": func() int {
-		if err := mcp.Serve(context.Background(), config); err != nil {
+		if err := mcp.NewServer(config).Serve(context.Background()); err != nil {
 			log.Error("%s", err)
 			return 1
 		}

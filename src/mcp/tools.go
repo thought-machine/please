@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -132,7 +133,7 @@ type whatoutputsArgs struct {
 }
 
 // registerTools registers all the query tools on the given MCP server.
-func (s *server) registerTools(srv *sdk.Server) {
+func (s *Server) registerTools(srv *sdk.Server) {
 	s.registerGraphTools(srv)
 	s.registerTargetTools(srv)
 	s.registerFileTools(srv)
@@ -140,7 +141,7 @@ func (s *server) registerTools(srv *sdk.Server) {
 }
 
 // registerGraphTools registers the tools that walk the dependency graph.
-func (s *server) registerGraphTools(srv *sdk.Server) {
+func (s *Server) registerGraphTools(srv *sdk.Server) {
 	addStructuredTool(srv, "deps",
 		"Returns the transitive dependencies of a set of build targets, with each target's definition.",
 		func(ctx context.Context, in depsArgs) (targetsResult, error) {
@@ -194,7 +195,7 @@ func (s *server) registerGraphTools(srv *sdk.Server) {
 }
 
 // somePath resolves the labels in the given args and finds a path between them.
-func (s *server) somePath(state *core.BuildState, in somepathArgs) (core.BuildLabels, error) {
+func (s *Server) somePath(state *core.BuildState, in somepathArgs) (core.BuildLabels, error) {
 	from, err := resolveLabels(state, []string{in.From})
 	if err != nil {
 		return nil, err
@@ -213,7 +214,7 @@ func (s *server) somePath(state *core.BuildState, in somepathArgs) (core.BuildLa
 }
 
 // registerTargetTools registers the tools that inspect individual targets and target sets.
-func (s *server) registerTargetTools(srv *sdk.Server) {
+func (s *Server) registerTargetTools(srv *sdk.Server) {
 	addStructuredTool(srv, "print",
 		"Returns the definition of build targets as they exist in the build graph, in plz query print --json format.",
 		func(ctx context.Context, in printArgs) (targetsResult, error) {
@@ -256,7 +257,7 @@ func (s *server) registerTargetTools(srv *sdk.Server) {
 }
 
 // registerFileTools registers the tools that map between files and targets.
-func (s *server) registerFileTools(srv *sdk.Server) {
+func (s *Server) registerFileTools(srv *sdk.Server) {
 	addStructuredTool(srv, "whatinputs",
 		"Finds the build targets that the given files are inputs (sources) to, with each target's definition.",
 		func(ctx context.Context, in whatinputsArgs) (filesResult, error) {
@@ -276,32 +277,36 @@ func (s *server) registerFileTools(srv *sdk.Server) {
 	addTool(srv, "inputs",
 		"Lists all the input files (sources) of a set of build targets.",
 		func(ctx context.Context, in labelsArgs) (string, error) {
-			return s.runQuery(func(state *core.BuildState) error {
+			var buf bytes.Buffer
+			err := s.withState(func(state *core.BuildState) error {
 				labels, err := resolveLabels(state, in.Targets)
 				if err != nil {
 					return err
 				}
-				query.TargetInputs(state.Graph, labels)
+				query.TargetInputs(&buf, state.Graph, labels)
 				return nil
 			})
+			return buf.String(), err
 		})
 
 	addTool(srv, "outputs",
 		"Lists the output files of a set of build targets.",
 		func(ctx context.Context, in outputsArgs) (string, error) {
-			return s.runQuery(func(state *core.BuildState) error {
+			var buf bytes.Buffer
+			err := s.withState(func(state *core.BuildState) error {
 				labels, err := resolveLabels(state, in.Targets)
 				if err != nil {
 					return err
 				}
-				query.TargetOutputs(state.Graph, labels, in.JSON)
+				query.TargetOutputs(&buf, state.Graph, labels, in.JSON)
 				return nil
 			})
+			return buf.String(), err
 		})
 }
 
 // registerAdminTools registers the tools that manage the server itself.
-func (s *server) registerAdminTools(srv *sdk.Server) {
+func (s *Server) registerAdminTools(srv *sdk.Server) {
 	addTool(srv, "reload_graph",
 		"Re-parses the build graph from the BUILD files on disk. Use this after BUILD files have changed; other queries are answered from a cached graph. Configuration (.plzconfig) changes require a server restart.",
 		func(ctx context.Context, in struct{}) (string, error) {
@@ -316,7 +321,7 @@ func (s *server) registerAdminTools(srv *sdk.Server) {
 }
 
 // targetsQuery runs f to obtain a set of labels and returns their structured definitions.
-func (s *server) targetsQuery(
+func (s *Server) targetsQuery(
 	fields []string,
 	f func(state *core.BuildState) (core.BuildLabels, error),
 ) (targetsResult, error) {
@@ -337,7 +342,7 @@ func (s *server) targetsQuery(
 
 // filesQuery runs f to obtain a file-to-labels mapping and returns it along with the
 // structured definitions of all matched targets.
-func (s *server) filesQuery(
+func (s *Server) filesQuery(
 	fields []string,
 	f func(state *core.BuildState) map[string]core.BuildLabels,
 ) (filesResult, error) {
