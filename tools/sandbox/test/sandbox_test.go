@@ -28,19 +28,62 @@ func pleaseSandbox(t *testing.T, args []string, env []string) string {
 	return runSandbox(t, os.Getenv("DATA_PLEASE_SANDBOX"), args, env)
 }
 
-func noprocSandbox(t *testing.T, args []string, env []string) string {
-	t.Helper()
-	return runSandbox(t, os.Getenv("DATA_NOPROC_SANDBOX"), args, env)
-}
+// TestSandboxEnvMatrix enumerates every combination of the environment variables that select
+// which namespaces the sandbox creates, asserting each dimension independently: whether the
+// network and mount namespaces are new, and whether a fresh /proc hides outer processes.
+func TestSandboxEnvMatrix(t *testing.T) {
+	outerNet, err := os.Readlink("/proc/self/ns/net")
+	require.NoError(t, err)
+	outerMnt, err := os.Readlink("/proc/self/ns/mnt")
+	require.NoError(t, err)
 
-func nonetSandbox(t *testing.T, args []string, env []string) string {
-	t.Helper()
-	return runSandbox(t, os.Getenv("DATA_NONET_SANDBOX"), args, env)
-}
+	// The test's own pid exists in the outer /proc but not in a freshly remounted one.
+	probe := []string{"sh", "-c", fmt.Sprintf(
+		"readlink /proc/self/ns/net; readlink /proc/self/ns/mnt; test -d /proc/%d && echo visible || echo hidden",
+		os.Getpid())}
 
-func nonetprocSandbox(t *testing.T, args []string, env []string) string {
-	t.Helper()
-	return runSandbox(t, os.Getenv("DATA_NONETPROC_SANDBOX"), args, env)
+	for _, shareNetwork := range []bool{false, true} {
+		for _, shareMount := range []bool{false, true} {
+			for _, mountProc := range []bool{true, false} {
+				var opts []string
+				if shareNetwork {
+					opts = append(opts, "SHARE_NETWORK=1")
+				}
+				if shareMount {
+					opts = append(opts, "SHARE_MOUNT=1")
+				}
+				if !mountProc {
+					opts = append(opts, "MOUNT_PROC=0")
+				}
+				name := "default"
+				if len(opts) > 0 {
+					name = strings.Join(opts, ",")
+				}
+
+				t.Run(name, func(t *testing.T) {
+					lines := strings.Split(pleaseSandbox(t, probe, append([]string{"TMP_DIR=/tmp"}, opts...)), "\n")
+					require.Len(t, lines, 3)
+					if shareNetwork {
+						require.Equal(t, outerNet, lines[0], "network namespace should be shared")
+					} else {
+						require.NotEqual(t, outerNet, lines[0], "network namespace should be new")
+					}
+					if shareMount {
+						require.Equal(t, outerMnt, lines[1], "mount namespace should be shared")
+					} else {
+						require.NotEqual(t, outerMnt, lines[1], "mount namespace should be new")
+					}
+					// /proc is only remounted when a new mount namespace exists and
+					// MOUNT_PROC is not disabled.
+					if !shareMount && mountProc {
+						require.Equal(t, "hidden", lines[2], "fresh /proc should hide outer processes")
+					} else {
+						require.Equal(t, "visible", lines[2], "outer /proc should remain visible")
+					}
+				})
+			}
+		}
+	}
 }
 
 func TestSandboxCommon(t *testing.T) {
@@ -129,79 +172,30 @@ func TestSandboxCommon(t *testing.T) {
 			want: "deny",
 		},
 	}
-	sandboxImpl := map[string]func(*testing.T, []string, []string) string{
-		"please_sandbox":    pleaseSandbox,
-		"noproc_sandbox":    noprocSandbox,
-		"nonet_sandbox":     nonetSandbox,
-		"nonetproc_sandbox": nonetprocSandbox,
-	}
-	for _, tt := range tests {
-		for sandboxName, sandbox := range sandboxImpl {
-			t.Run(sandboxName+"/"+tt.name, func(t *testing.T) {
-				output := sandbox(t, tt.args, tt.env)
-
-				if output != tt.want {
-					t.Errorf("Expected %q, but got %q", tt.want, output)
-				}
-			})
-		}
-	}
-}
-
-func TestSandboxNetworkShare(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Connection accepted"))
-	})
-	ts := httptest.NewServer(handler)
-	defer ts.Close()
-
-	tests := []struct {
-		name    string
-		sandbox func(*testing.T, []string, []string) string
-		env     []string
-		args    []string
-		want    string
-	}{
-		{
-			name:    "please_sandbox must isolate network by default",
-			sandbox: pleaseSandbox,
-			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", fmt.Sprintf(`curl -s %s; echo "curl exit: $?"`, ts.URL)},
-			want:    "curl exit: 7", // exit code 7 represents "Failed to connect to host."
-		},
-		{
-			name:    "nonet_sandbox must share network by default",
-			sandbox: nonetSandbox,
-			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", "curl -sS " + ts.URL},
-			want:    "Connection accepted",
-		},
-		{
-			name:    "noproc_sandbox must isolate network by default",
-			sandbox: noprocSandbox,
-			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", fmt.Sprintf(`curl -s %s; echo "curl exit: $?"`, ts.URL)},
-			want:    "curl exit: 7",
-		},
-		{
-			name:    "nonetproc_sandbox must share network by default",
-			sandbox: nonetprocSandbox,
-			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", "curl -sS " + ts.URL},
-			want:    "Connection accepted",
-		},
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := tt.sandbox(t, tt.args, tt.env)
+			output := pleaseSandbox(t, tt.args, tt.env)
 
 			if output != tt.want {
-				t.Errorf("Expected output to contain %q, but got: %q", tt.want, output)
+				t.Errorf("Expected %q, but got %q", tt.want, output)
 			}
 		})
 	}
+}
+
+func TestSandboxNoTmpDir(t *testing.T) {
+	marker := fmt.Sprintf("/tmp/sandbox-test-marker-%d", os.Getpid())
+	require.NoError(t, os.WriteFile(marker, []byte("outer"), 0o644))
+	defer os.Remove(marker)
+
+	probe := []string{"sh", "-c", fmt.Sprintf(
+		`echo "TMPDIR=$TMPDIR"; test -e %s && echo marker-visible || echo marker-hidden; test -e /tmp/plz_sandbox && echo bind-mounted || echo no-bind-mount`,
+		marker)}
+	out := pleaseSandbox(t, probe, []string{})
+
+	require.Contains(t, out, "TMPDIR=/tmp\n", "TMPDIR should point at the tmpfs mounted over /tmp")
+	require.Contains(t, out, "marker-hidden", "a file in the outer /tmp should be hidden by the tmpfs mounted over it")
+	require.Contains(t, out, "no-bind-mount", "nothing should be bind mounted at /tmp/plz_sandbox when TMP_DIR is unset")
 }
 
 func TestSandboxLocalIP(t *testing.T) {
@@ -230,37 +224,15 @@ func TestSandboxLocalIP(t *testing.T) {
 			want: "0",
 		},
 	}
-	sandboxImpl := map[string]func(*testing.T, []string, []string) string{
-		"please_sandbox": pleaseSandbox,
-		"noproc_sandbox": noprocSandbox,
-	}
 	for _, tt := range tests {
-		for sandboxName, sandbox := range sandboxImpl {
-			t.Run(sandboxName+"/"+tt.name, func(t *testing.T) {
-				output := sandbox(t, tt.args, tt.env)
+		t.Run(tt.name, func(t *testing.T) {
+			output := pleaseSandbox(t, tt.args, tt.env)
 
-				if output != tt.want {
-					t.Errorf("Expected %q, but got %q", tt.want, output)
-				}
-			})
-		}
+			if output != tt.want {
+				t.Errorf("Expected %q, but got %q", tt.want, output)
+			}
+		})
 	}
-}
-
-func TestSandboxMountShare(t *testing.T) {
-	nsOutside, err := os.Readlink("/proc/self/ns/mnt")
-	require.NoError(t, err, "failed to readlink /proc/self/ns/mnt outside sandbox")
-
-	t.Run("please_sandbox must isolate mounts by default", func(t *testing.T) {
-		nsInside := pleaseSandbox(t, []string{"readlink", "/proc/self/ns/mnt"}, []string{"TMP_DIR=" + os.TempDir()})
-		require.Regexp(t, `^mnt:\[\d+\]`, nsInside)
-		require.NotEqual(t, nsInside, nsOutside)
-	})
-
-	t.Run("please_sandbox must share mount namespace when called with SHARE_MOUNT=1", func(t *testing.T) {
-		nsInside := pleaseSandbox(t, []string{"readlink", "/proc/self/ns/mnt"}, []string{"SHARE_MOUNT=1"})
-		require.Equal(t, nsInside, nsOutside)
-	})
 }
 
 // TestSandboxNoOrphanOnParentCrash checks that the sandboxed command does not outlive the
@@ -316,7 +288,7 @@ func TestSandboxHangOnParentCrash(t *testing.T) {
 	}
 
 	// We run this in a loop with different delays to reliably hit the race condition window where
-	// the parent dies after clone() but before sending SIGUSR1 / writing to the pipe.
+	// the parent dies after clone() but before writing to the sync pipe.
 	for i := range 20 {
 		t.Run(fmt.Sprintf("iteration_%d", i), func(t *testing.T) {
 			r, w, err := os.Pipe()

@@ -21,17 +21,32 @@ filesystem:
   space-delimited triples of [id lowerid count], see `man newuidmap`;
 
 Mount and network namespaces can be disabled setting the `SHARE_MOUNT` and `SHARE_NETWORK`
-environment variables to `1`.
+environment variables to `1`. Remounting of `/proc` can be disabled by setting `MOUNT_PROC=0`,
+e.g. for systems that don't allow mounting a full `/proc` from a new user namespace (see the
+mount namespace notes below).
 
 When the network namespace is used, the loopback interface is brought up with an additional IP
 address. `SANDBOX_LOCAL_IP` defines, defined empty string disables the extra address.
 
-The sandbox is distributed with 3 other variants:
+## Using the knobs with Please
 
-- `nonet_sandbox` disables network namespacing by default, but it can be force-enabled by setting
-  `SHARE_NETWORK` to 0.
-- `noproc_sandbox` disables remounting of `/proc`.
-- `nonetproc_sandbox` disables remounting of `/proc` and disables network namespacing by default.
+Please invokes the tool configured in `[sandbox] tool` with the command to run as its arguments,
+and sets `SHARE_NETWORK` and `SHARE_MOUNT` itself according to the rule being run. Remote
+execution workers invoke the sandbox tool themselves and should set these variables explicitly,
+since the binary's defaults apply when they are absent. To set the other knobs, or to override
+Please's per-rule choices, point `tool` at a thin wrapper script:
+
+```sh
+#!/bin/sh
+# please_sandbox, but without remounting /proc.
+export MOUNT_PROC=0
+exec /path/to/please_sandbox "$@"
+```
+
+```ini
+[sandbox]
+tool = /path/to/noproc_sandbox_wrapper
+```
 
 ## UID/GID mapping in user namespace
 
