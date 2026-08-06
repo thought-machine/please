@@ -257,8 +257,6 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 			mode |= core.ParseModeForPreload
 		}
 		s := i.scope.NewScope(path, mode)
-		// // Skip metadata tracking for subincludes since these are not trimmed
-		// s.metadata = &noopScopeMetadata{}
 
 		s.state = pkgScope.state
 		// Scope needs a local version of CONFIG
@@ -1261,12 +1259,12 @@ type trackedSymbol struct {
 	origin core.BuildLabel
 }
 
-// cursor implements [scopeMetadata].
+// cursor implements [scopeMetadata.cursor].
 func (m *trackingScopeMetadata) cursor() *Statement {
 	return m.stmtCursor
 }
 
-// origin implements [scopeMetadata].
+// origin implements [scopeMetadata.origin].
 func (m *trackingScopeMetadata) origin(scope *scope, name string) *core.BuildLabel {
 	if scope.interpreter != nil && scope.interpreter.preloaded.Contains(name) {
 		// Preloaded symbols are treated as local (returning nil origin) because they are implicitly
@@ -1289,36 +1287,36 @@ func (m *trackingScopeMetadata) origin(scope *scope, name string) *core.BuildLab
 	return nil
 }
 
-// registerBuildStatement implements [scopeMetadata].
+// registerBuildStatement implements [scopeMetadata.registerBuildStatement].
 func (m *trackingScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *Statement) {
 	if pkg == nil || stmt == nil {
 		return
 	}
 
-	var deps core.BuildLabels
+	var requiredSubincludes core.BuildLabels
 	seen := make(map[core.BuildLabel]struct{})
 	for _, l := range m.subincludesStack {
 		if _, ok := seen[l]; !ok {
-			deps = append(deps, l)
+			requiredSubincludes = append(requiredSubincludes, l)
 			seen[l] = struct{}{}
 		}
 	}
 	for _, v := range m.symbolStack {
 		l := v.origin
 		if _, ok := seen[l]; !ok {
-			deps = append(deps, l)
+			requiredSubincludes = append(requiredSubincludes, l)
 			seen[l] = struct{}{}
 		}
 	}
 
-	pkg.Metadata.RegisterStatement(NewBuildStatement(stmt), deps, m.fileStack)
+	pkg.Metadata.RegisterStatement(NewBuildStatement(stmt), requiredSubincludes, m.fileStack)
 }
 
 type metadataStackCheckpoint struct {
 	symbolCheckpoint, fileCheckpoint, subincludesCheckpoint int
 }
 
-// checkpoint implements [scopeMetadata].
+// checkpoint implements [scopeMetadata.checkpoint].
 func (m *trackingScopeMetadata) checkpoint() metadataStackCheckpoint {
 	return metadataStackCheckpoint{
 		symbolCheckpoint:      len(m.symbolStack),
@@ -1327,7 +1325,7 @@ func (m *trackingScopeMetadata) checkpoint() metadataStackCheckpoint {
 	}
 }
 
-// restore implements [scopeMetadata].
+// restore implements [scopeMetadata.restore].
 func (m *trackingScopeMetadata) restore(cp metadataStackCheckpoint) {
 	if cp.symbolCheckpoint >= 0 && cp.symbolCheckpoint <= len(m.symbolStack) {
 		m.symbolStack = m.symbolStack[:cp.symbolCheckpoint]
@@ -1340,12 +1338,12 @@ func (m *trackingScopeMetadata) restore(cp metadataStackCheckpoint) {
 	}
 }
 
-// setCursor implements [scopeMetadata].
+// setCursor implements [scopeMetadata.setCursor].
 func (m *trackingScopeMetadata) setCursor(stmt *Statement) {
 	m.stmtCursor = stmt
 }
 
-// setSymbolOrigin implements [scopeMetadata].
+// setSymbolOrigin implements [scopeMetadata.setSymbolOrigin].
 func (m *trackingScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel) {
 	if m.symbolOrigins == nil {
 		// Lazy initialization to avoid unnecessary allocation of a map in smaller scopes (no subinclude).
@@ -1355,7 +1353,7 @@ func (m *trackingScopeMetadata) setSymbolOrigin(name string, origin core.BuildLa
 	m.symbolOrigins[name] = origin
 }
 
-// pushSymbol implements [scopeMetadata].
+// pushSymbol implements [scopeMetadata.pushSymbol].
 func (m *trackingScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {
 	if origin == nil {
 		return
@@ -1363,14 +1361,14 @@ func (m *trackingScopeMetadata) pushSymbol(name string, origin *core.BuildLabel)
 	m.symbolStack = append(m.symbolStack, trackedSymbol{name: name, origin: *origin})
 }
 
-// pushFiles implements [scopeMetadata].
+// pushFiles implements [scopeMetadata.pushFiles].
 func (m *trackingScopeMetadata) pushFiles(rootPath string, filenames []string) {
 	for _, filename := range filenames {
 		m.fileStack = append(m.fileStack, path.Join(rootPath, filename))
 	}
 }
 
-// pushSubincludes implements [scopeMetadata].
+// pushSubincludes implements [scopeMetadata.pushSubincludes].
 func (m *trackingScopeMetadata) pushSubincludes(labels core.BuildLabels) {
 	m.subincludesStack = append(m.subincludesStack, labels...)
 }
@@ -1379,36 +1377,36 @@ func (m *trackingScopeMetadata) pushSubincludes(labels core.BuildLabels) {
 // avoid the overhead of storing metadata for operations that don't depend on it.
 type noopScopeMetadata struct{}
 
-// cursor implements [scopeMetadata].
+// cursor implements [scopeMetadata.cursor].
 func (nm *noopScopeMetadata) cursor() *Statement { return nil }
 
-// origin implements [scopeMetadata].
+// origin implements [scopeMetadata.origin].
 func (nm *noopScopeMetadata) origin(scope *scope, name string) *core.BuildLabel { return nil }
 
-// registerBuildStatement implements [scopeMetadata].
+// registerBuildStatement implements [scopeMetadata.registerBuildStatement].
 func (nm *noopScopeMetadata) registerBuildStatement(pkg *core.Package, stmt *Statement) {}
 
-// checkpoint implements [scopeMetadata].
+// checkpoint implements [scopeMetadata.checkpoint].
 func (nm *noopScopeMetadata) checkpoint() metadataStackCheckpoint {
 	return metadataStackCheckpoint{}
 }
 
-// restore implements [scopeMetadata].
+// restore implements [scopeMetadata.restore].
 func (nm *noopScopeMetadata) restore(cp metadataStackCheckpoint) {}
 
-// setCursor implements [scopeMetadata].
+// setCursor implements [scopeMetadata.setCursor].
 func (nm *noopScopeMetadata) setCursor(stmt *Statement) {}
 
-// setSymbolOrigin implements [scopeMetadata].
+// setSymbolOrigin implements [scopeMetadata.setSymbolOrigin].
 func (nm *noopScopeMetadata) setSymbolOrigin(name string, origin core.BuildLabel) {}
 
-// pushSymbol implements [scopeMetadata].
+// pushSymbol implements [scopeMetadata.pushSymbol].
 func (nm *noopScopeMetadata) pushSymbol(name string, origin *core.BuildLabel) {}
 
-// pushFiles implements [scopeMetadata].
+// pushFiles implements [scopeMetadata.pushFiles].
 func (nm *noopScopeMetadata) pushFiles(rootPath string, filenames []string) {}
 
-// pushSubincludes implements [scopeMetadata].
+// pushSubincludes implements [scopeMetadata.pushSubincludes].
 func (nm *noopScopeMetadata) pushSubincludes(labels core.BuildLabels) {}
 
 // NewBuildStatement creates a new core.BuildStatement from an asp.statement.

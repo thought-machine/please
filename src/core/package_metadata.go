@@ -65,16 +65,20 @@ type StatementMetadata struct {
 // but should be disabled for most operations by using the no-op implementation to avoid the overhead.
 type PackageMetadata interface {
 	// RegisterStatement records a statement of an interpreted BUILD file and its
-	// dependencies. Dependencies identify the subincluded targets required for a successful
+	// dependencies. Required subincludes identify the required subincluded targets for a successful
 	// interpretation of the statement, i.e. targets that provide the required symbols (variables or
 	// methods). The files argument identify the files required when interpreting that statement, for
-	// example using glob(),
-	RegisterStatement(stmt BuildStatement, deps BuildLabels, files []string)
-	// RegisterStatementTarget records that the given build target was created as a result of the
-	// given statement being executed. This should only be called for statements in BUILD files.
-	RegisterStatementTarget(target BuildLabel, stmtProvider BuildStatementProvider)
+	// example when interpreting a glob() statement, this argument will include files captured by the
+	// file globbing action.
+	RegisterStatement(stmt BuildStatement, requiredSubincludes BuildLabels, files []string)
+	// RegisterTargetStatement records that the given build target was created as a result of the
+	// given statement being executed. For statements that generate targets, we expect this method
+	// to be called in addition to [PackageMetadata.RegisterStatement].
+	// This should only be called for statements in BUILD files.
+	RegisterTargetStatement(target BuildLabel, stmtProvider BuildStatementProvider)
 	// RegisterSubincludeStatement records the given build statement (provided by stmtProvider)
-	// as being a subincluded statement. This should only be called for statements in BUILD files.
+	// as being a subinclude statement. We expect this method to be called in addition to
+	// [PackageMetadata.RegisterStatement]. This should only be called for statements in BUILD files.
 	RegisterSubincludeStatement(stmtProvider BuildStatementProvider)
 	// FindStatement returns the build statement that was responsible for generating the given target.
 	// Returns an error if the target was not found in the recorded metadata.
@@ -104,8 +108,8 @@ type PackageMetadata interface {
 	Statements() []StatementMetadata
 }
 
-// packageMetadataImpl is the canonical implementation of the PackageMetadata interface. It tracks the relationships between BUILD file statements,
-// subincludes, and the build targets they define.
+// packageMetadataImpl is the canonical implementation of the PackageMetadata interface. It tracks
+// the relationships between BUILD file statements, subincludes, and the build targets they define.
 //
 // Note: this implementation uses sharded concurrent maps [cmap.Map], however writes (interpreter
 // phase) are performed on a single-thread per package. Please guarantees that each package's BUILD file
@@ -125,10 +129,13 @@ type packageMetadataImpl struct {
 	// stmtToRequiredSubincludes tracks the subinclude labels that were required for the current
 	// interpretation of the build statement. This, in addition to the statement to target map,
 	// allows mapping a statement back to the subincluded labels required for building the target.
-	// One direct, package level, subincludes are included.
+	// Only direct, package level, subincludes are included, make use of
+	// [BuildGraph.TransitiveSubincludes] if you want all the required subincludes for one target.
 	stmtToRequiredSubincludes *cmap.Map[BuildStatement, BuildLabels]
 	// stmtToRequiredFiles tracks the file paths that were required during interpretation of the
-	// statement (e.g. glob)
+	// statement. These are not referencing target sources but instead files used directly while
+	// interpreting the BUILD file, for example, the matched files resulting of a glob action (glob()
+	// statement).
 	stmtToRequiredFiles *cmap.Map[BuildStatement, []string]
 	// subincludeStmts tracks which build statements (identified by its position in the BUILD file)
 	// are subinclude calls.
@@ -145,14 +152,14 @@ func newPackageMetadata() PackageMetadata {
 	}
 }
 
-// RegisterStatement implements [PackageMetadata].
-func (m *packageMetadataImpl) RegisterStatement(stmt BuildStatement, deps BuildLabels, files []string) {
-	if len(deps) > 0 {
+// RegisterStatement implements [PackageMetadata.RegisterStatement].
+func (m *packageMetadataImpl) RegisterStatement(stmt BuildStatement, requiredSubincludes BuildLabels, files []string) {
+	if len(requiredSubincludes) > 0 {
 		existingDeps := m.stmtToRequiredSubincludes.Get(stmt)
 		if len(existingDeps) == 0 {
-			m.stmtToRequiredSubincludes.Set(stmt, deps)
+			m.stmtToRequiredSubincludes.Set(stmt, requiredSubincludes)
 		} else {
-			mergedDeps := mergeSlices(existingDeps, deps)
+			mergedDeps := mergeSlices(existingDeps, requiredSubincludes)
 			m.stmtToRequiredSubincludes.Set(stmt, mergedDeps)
 		}
 	}
@@ -165,7 +172,7 @@ func (m *packageMetadataImpl) RegisterStatement(stmt BuildStatement, deps BuildL
 			m.stmtToRequiredFiles.Set(stmt, mergedFiles)
 		}
 	}
-	// Even if the statement doesn't create any target, it is important to register so we now it was
+	// Even if the statement doesn't create any target, it is important to register so we know it was
 	// interpreted. We'll register the targets separately and use the Add() method to avoid overriding any existing statement to target mapping.
 	m.stmtToTarget.Add(stmt, BuildLabels{})
 }
@@ -183,21 +190,21 @@ func mergeSlices[T comparable](existing []T, newElements []T) []T {
 	return merged
 }
 
-// RegisterStatementTarget implements [PackageMetadata].
-func (m *packageMetadataImpl) RegisterStatementTarget(target BuildLabel, stmtProvider BuildStatementProvider) {
+// RegisterTargetStatement implements [PackageMetadata.RegisterTargetStatement].
+func (m *packageMetadataImpl) RegisterTargetStatement(target BuildLabel, stmtProvider BuildStatementProvider) {
 	stmt := stmtProvider()
 	targets := m.stmtToTarget.Get(stmt)
 	m.stmtToTarget.Set(stmt, append(targets, target))
 	m.targetToStmt.Set(target, stmt)
 }
 
-// RegisterSubincludeStatement implements [PackageMetadata].
+// RegisterSubincludeStatement implements [PackageMetadata.RegisterSubincludeStatement].
 func (m *packageMetadataImpl) RegisterSubincludeStatement(stmtProvider BuildStatementProvider) {
 	stmt := stmtProvider()
 	m.subincludeStmts.Set(stmt, struct{}{})
 }
 
-// FindStatement implements [PackageMetadata].
+// FindStatement implements [PackageMetadata.FindStatement].
 func (m *packageMetadataImpl) FindStatement(target BuildLabel) (BuildStatement, error) {
 	stmt := m.targetToStmt.Get(target)
 	if stmt == (BuildStatement{}) {
@@ -206,12 +213,12 @@ func (m *packageMetadataImpl) FindStatement(target BuildLabel) (BuildStatement, 
 	return stmt, nil
 }
 
-// FindTargets implements [PackageMetadata].
+// FindTargets implements [PackageMetadata.FindTargets].
 func (m *packageMetadataImpl) FindTargets(stmt BuildStatement) BuildLabels {
 	return m.stmtToTarget.Get(stmt)
 }
 
-// FindRequiredSubincludes implements [PackageMetadata].
+// FindRequiredSubincludes implements [PackageMetadata.FindRequiredSubincludes].
 func (m *packageMetadataImpl) FindRequiredSubincludes(target BuildLabel) (BuildLabels, error) {
 	stmt, err := m.FindStatement(target)
 	if err != nil {
@@ -227,7 +234,7 @@ func (m *packageMetadataImpl) FindRequiredSubincludes(target BuildLabel) (BuildL
 	return directSubincludes, nil
 }
 
-// FindRelatedTargets implements [PackageMetadata].
+// FindRelatedTargets implements [PackageMetadata.FindRelatedTargets].
 func (m *packageMetadataImpl) FindRelatedTargets(target BuildLabel) (BuildLabels, error) {
 	stmt, err := m.FindStatement(target)
 	if err != nil {
@@ -243,7 +250,7 @@ func (m *packageMetadataImpl) FindRelatedTargets(target BuildLabel) (BuildLabels
 	return labels, nil
 }
 
-// FindPackageFileRequirements implements [PackageMetadata].
+// FindPackageFileRequirements implements [PackageMetadata.FindPackageFileRequirements].
 func (m *packageMetadataImpl) FindPackageFileRequirements() (BuildLabels, []string) {
 	requiredSet := LabelSet{}
 	m.stmtToRequiredSubincludes.Range(func(stmt BuildStatement, labels BuildLabels) {
@@ -268,7 +275,7 @@ func (m *packageMetadataImpl) FindPackageFileRequirements() (BuildLabels, []stri
 	return origins, files
 }
 
-// GetSubincludedLabels implements [PackageMetadata].
+// GetSubincludedLabels implements [PackageMetadata.GetSubincludedLabels].
 func (m *packageMetadataImpl) GetSubincludedLabels(stmt BuildStatement) BuildLabels {
 	if !m.subincludeStmts.Contains(stmt) {
 		return nil
@@ -278,12 +285,12 @@ func (m *packageMetadataImpl) GetSubincludedLabels(stmt BuildStatement) BuildLab
 	return m.stmtToRequiredSubincludes.Get(stmt)
 }
 
-// IsInterpretedStatement implements [PackageMetadata].
+// IsInterpretedStatement implements [PackageMetadata.IsInterpretedStatement].
 func (m *packageMetadataImpl) IsInterpretedStatement(stmt BuildStatement) bool {
 	return m.stmtToTarget.Contains(stmt)
 }
 
-// Statements implements [PackageMetadata].
+// Statements implements [PackageMetadata.Statements].
 func (m *packageMetadataImpl) Statements() []StatementMetadata {
 	stmtsMap := map[BuildStatement]*StatementMetadata{}
 	getOrCreate := func(stmt BuildStatement) *StatementMetadata {
@@ -329,61 +336,61 @@ func newNoopPackageMetadata() PackageMetadata {
 	return &noopPackageMetadata{}
 }
 
-// RegisterStatement implements [PackageMetadata].
-func (n *noopPackageMetadata) RegisterStatement(stmt BuildStatement, deps BuildLabels, files []string) {
+// RegisterStatement implements [PackageMetadata.RegisterStatement].
+func (n *noopPackageMetadata) RegisterStatement(stmt BuildStatement, requiredSubincludes BuildLabels, files []string) {
 }
 
-// RegisterStatementTarget implements [PackageMetadata].
-func (n *noopPackageMetadata) RegisterStatementTarget(target BuildLabel, stmtProvider BuildStatementProvider) {
+// RegisterTargetStatement implements [PackageMetadata.RegisterTargetStatement].
+func (n *noopPackageMetadata) RegisterTargetStatement(target BuildLabel, stmtProvider BuildStatementProvider) {
 }
 
-// RegisterSubincludeStatement implements [PackageMetadata].
+// RegisterSubincludeStatement implements [PackageMetadata.RegisterSubincludeStatement].
 func (n *noopPackageMetadata) RegisterSubincludeStatement(stmtProvider BuildStatementProvider) {
 }
 
-// FindStatement implements [PackageMetadata].
+// FindStatement implements [PackageMetadata.FindStatement].
 func (n *noopPackageMetadata) FindStatement(target BuildLabel) (BuildStatement, error) {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return BuildStatement{}, nil
 }
 
-// FindTargets implements [PackageMetadata].
+// FindTargets implements [PackageMetadata.FindTargets].
 func (n *noopPackageMetadata) FindTargets(stmt BuildStatement) BuildLabels {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return nil
 }
 
-// FindRequiredSubincludes implements [PackageMetadata].
+// FindRequiredSubincludes implements [PackageMetadata.FindRequiredSubincludes].
 func (n *noopPackageMetadata) FindRequiredSubincludes(target BuildLabel) (BuildLabels, error) {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return nil, nil
 }
 
-// FindRelatedTargets implements [PackageMetadata].
+// FindRelatedTargets implements [PackageMetadata.FindRelatedTargets].
 func (n *noopPackageMetadata) FindRelatedTargets(target BuildLabel) (BuildLabels, error) {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return nil, nil
 }
 
-// FindPackageFileRequirements implements [PackageMetadata].
+// FindPackageFileRequirements implements [PackageMetadata.FindPackageFileRequirements].
 func (n *noopPackageMetadata) FindPackageFileRequirements() (BuildLabels, []string) {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return nil, nil
 }
 
-// GetSubincludedLabels implements [PackageMetadata].
+// GetSubincludedLabels implements [PackageMetadata.GetSubincludedLabels].
 func (n *noopPackageMetadata) GetSubincludedLabels(stmt BuildStatement) BuildLabels {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return nil
 }
 
-// IsInterpretedStatement implements [PackageMetadata].
+// IsInterpretedStatement implements [PackageMetadata.IsInterpretedStatement].
 func (n *noopPackageMetadata) IsInterpretedStatement(stmt BuildStatement) bool {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return false
 }
 
-// Statements implements [PackageMetadata].
+// Statements implements [PackageMetadata.Statements].
 func (n *noopPackageMetadata) Statements() []StatementMetadata {
 	log.Fatalf("metadata not tracked, using no-op implementation")
 	return nil
