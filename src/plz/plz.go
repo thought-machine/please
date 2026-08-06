@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"iter"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
-	"slices"
 	"sync/atomic"
 
 	"github.com/peterebden/go-cli-init/v5/flags"
@@ -180,11 +180,11 @@ func (r *runner) RecursiveParse(ctx context.Context, label core.BuildLabel) erro
 				seen[dep] = struct{}{}
 				g.Go(func() error {
 					return r.recursiveParse(ctx, dep)
-				})				
+				})
 			}
 		}
 	}
-	return g.Wait()	
+	return g.Wait()
 }
 
 func (r *runner) recursiveParse(ctx context.Context, label core.BuildLabel) error {
