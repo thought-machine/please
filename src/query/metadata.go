@@ -106,22 +106,23 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package]core
 			continue
 		}
 
-		allStatements := pkg.Metadata.Statements()
+		stmts, stmtMetadata := pkg.Metadata.Statements()
 		var filterStmts map[core.BuildStatement]struct{}
 		if !opts.IncludeAllStatements {
 			filterStmts = filterStatements(pkg, labels)
 		}
 
-		for _, sm := range allStatements {
+		for i, sm := range stmtMetadata {
+			stmt := stmts[i]
 			if filterStmts != nil {
-				if _, ok := filterStmts[sm.Statement]; !ok {
+				if _, ok := filterStmts[stmt]; !ok {
 					continue
 				}
 			}
 
-			code := string(content[sm.Statement.Start:sm.Statement.End])
+			code := string(content[stmt.Start:stmt.End])
 
-			cli.Fprintf(os.Stdout, "${BOLD_CYAN}Statement (Offsets: %d-%d):${RESET}\n", sm.Statement.Start, sm.Statement.End)
+			cli.Fprintf(os.Stdout, "${BOLD_CYAN}Statement (Offsets: %d-%d):${RESET}\n", stmt.Start, stmt.End)
 			cli.Fprintf(os.Stdout, "  ${CYAN}Code:${RESET}\n")
 			// Indent the code
 			for line := range strings.SplitSeq(code, "\n") {
