@@ -68,7 +68,7 @@ func TestSandboxCommon(t *testing.T) {
 		{
 			name: "must share network when SHARE_NETWORK=1",
 			env:  []string{"SHARE_NETWORK=1", "TMP_DIR=/tmp"},
-			args: []string{"sh", "-c", fmt.Sprintf(`curl -sS %s`, ts.URL)},
+			args: []string{"sh", "-c", "curl -sS " + ts.URL},
 			want: "Connection accepted",
 		},
 		{
@@ -97,7 +97,11 @@ func TestSandboxCommon(t *testing.T) {
 		},
 		{
 			name: "SANDBOX_UID_MAP maps current uid/gid to 0",
-			env:  []string{"TMP_DIR=/tmp", fmt.Sprintf("SANDBOX_UID_MAP=0 %d 1", os.Getuid())},
+			env: []string{
+				"TMP_DIR=/tmp",
+				fmt.Sprintf("SANDBOX_UID_MAP=0 %d 1", os.Getuid()),
+				fmt.Sprintf("SANDBOX_GID_MAP=0 %d 1", os.Getgid()),
+			},
 			args: []string{"sh", "-c", "echo $(id -u)/$(id -g)"},
 			want: "0/0",
 		},
@@ -170,7 +174,7 @@ func TestSandboxNetworkShare(t *testing.T) {
 			name:    "nonet_sandbox must share network by default",
 			sandbox: nonetSandbox,
 			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", fmt.Sprintf(`curl -sS %s`, ts.URL)},
+			args:    []string{"sh", "-c", "curl -sS " + ts.URL},
 			want:    "Connection accepted",
 		},
 		{
@@ -184,7 +188,7 @@ func TestSandboxNetworkShare(t *testing.T) {
 			name:    "nonetproc_sandbox must share network by default",
 			sandbox: nonetprocSandbox,
 			env:     []string{"TMP_DIR=/tmp"},
-			args:    []string{"sh", "-c", fmt.Sprintf(`curl -sS %s`, ts.URL)},
+			args:    []string{"sh", "-c", "curl -sS " + ts.URL},
 			want:    "Connection accepted",
 		},
 	}
@@ -257,6 +261,52 @@ func TestSandboxMountShare(t *testing.T) {
 		nsInside := pleaseSandbox(t, []string{"readlink", "/proc/self/ns/mnt"}, []string{"SHARE_MOUNT=1"})
 		require.Equal(t, nsInside, nsOutside)
 	})
+}
+
+// TestSandboxNoOrphanOnParentCrash checks that the sandboxed command does not outlive the
+// sandbox process itself. Unlike TestSandboxHangOnParentCrash, which tests the window
+// between clone() and the sync pipe, this kills the sandbox after the command has exec'd,
+// executing the PR_SET_PDEATHSIG path.
+func TestSandboxNoOrphanOnParentCrash(t *testing.T) {
+	sandbox := os.Getenv("DATA_PLEASE_SANDBOX")
+	if sandbox == "" {
+		t.Skip("DATA_PLEASE_SANDBOX not set")
+	}
+
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	defer r.Close()
+
+	// The sleep only needs to outlive the 2s assertion window below.
+	cmd := exec.Command(sandbox, "sh", "-c", "echo ready && exec sleep 10")
+	cmd.Env = []string{"TMP_DIR=/tmp"}
+	cmd.Stdout = w
+	require.NoError(t, cmd.Start())
+	// Close our copy of the write end so the read below blocks only on the sandboxed command.
+	w.Close()
+
+	// Wait for the sandboxed command to be running, i.e. definitely past execvp.
+	buf := make([]byte, 6)
+	_, err = io.ReadFull(r, buf)
+	require.NoError(t, err)
+	require.Equal(t, "ready\n", string(buf))
+
+	// Simulate a crash of the sandbox process.
+	require.NoError(t, cmd.Process.Kill())
+	_ = cmd.Wait()
+
+	// The sandboxed process must die with it, closing its end of the pipe.
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := r.Read(make([]byte, 1))
+		errCh <- err
+	}()
+	select {
+	case err := <-errCh:
+		require.ErrorIs(t, err, io.EOF, "expected EOF once the sandboxed process died")
+	case <-time.After(2 * time.Second):
+		t.Fatal("sandboxed process survived the death of the sandbox process (orphan leak)")
+	}
 }
 
 func TestSandboxHangOnParentCrash(t *testing.T) {

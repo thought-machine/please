@@ -215,6 +215,7 @@ int map_ids(const pid_t child, const char *path, const char *map) {
   int status;
   if (waitpid(pid, &status, 0) == -1) {
     perror("waitpid failed");
+    return 1;
   }
   if (WIFEXITED(status)) {
     return WEXITSTATUS(status);
@@ -288,7 +289,8 @@ int mount_tmp(char** argv0, bool sandbox_dir) {
         return 1;
     }
     const int flags = MS_LAZYTIME | MS_NOATIME | MS_NODEV | MS_NOSUID;
-    if (!dir || strncmp(dir, "/tmp", 4) != 0) {
+    // Skip the tmpfs when TMP_DIR is /tmp itself or lives under it.
+    if (!dir || (strcmp(dir, "/tmp") != 0 && strncmp(dir, "/tmp/", 5) != 0)) {
         if (mount("tmpfs", "/tmp", "tmpfs", flags, NULL) != 0) {
             perror("mount");
             return 1;
@@ -301,8 +303,10 @@ int mount_tmp(char** argv0, bool sandbox_dir) {
 
     // Mount over /dev/shm as well so nothing can be inadvertently shared through it and we'll clean it up.
     if (mount("tmpfs", "/dev/shm", "tmpfs", flags, NULL) != 0) {
-        perror("mount");
-        return 1;
+        if (errno != ENOENT) { // tolerate absent /dev/shm
+            perror("mount /dev/shm");
+            return 1;
+        }
     }
 
     // If SANDBOX_DIRS is set, we expect a comma-separated list of directories to mount a tmpfs over in order to hide them.
@@ -442,7 +446,10 @@ int set_parent_uid(uid_t parent) {
 int contain_child(void* p) {
   clone_arg* arg = p;
 
-  if (prctl(PR_SET_PDEATHSIG, SIGTERM) == -1) {
+  // This process is PID 1 in the new namespace. SIGKILL is required to kill it
+  // with default signal handlers. Graceful termination of a live parent is
+  // handled separately by forward_sigterm.
+  if (prctl(PR_SET_PDEATHSIG, SIGKILL) == -1) {
     perror("failed to set PDEATHSIG");
     return 1;
   }
@@ -529,15 +536,13 @@ int contain(char* argv[], bool net, bool mount, bool sandbox_dir, bool mount_pro
   const char* gid_map = getenv("SANDBOX_GID_MAP");
 
   if (uid_map != NULL || gid_map != NULL) {
-    if (uid_map == NULL) {
-      uid_map = gid_map;
-    }
-    if (gid_map == NULL) {
-      gid_map = uid_map;
+    if (uid_map == NULL || gid_map == NULL) {
+      fputs("SANDBOX_UID_MAP and SANDBOX_GID_MAP must be set together\n", stderr);
+      return 1;
     }
 
-    if (map_ids(pid, "/usr/bin/newuidmap", uid_map) != 0 ||
-        map_ids(pid, "/usr/bin/newgidmap", gid_map) != 0) {
+    if (map_ids(pid, "newuidmap", uid_map) != 0 ||
+        map_ids(pid, "newgidmap", gid_map) != 0) {
         return 1;
     }
   } else {

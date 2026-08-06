@@ -16,9 +16,9 @@ filesystem:
 - if `SANDBOX_FILE_MOUNTS` is set, we expect it to be set to a comma-separated list of key-value
   pairs in the following format: `key:value`. Keys must point to existing paths and will be bind
   mounted to the path given as value;
-- if `SANDBOX_UID_MAP` or `SANDBOX_GID_MAP` is set, we pass these arguments to
-  newuidmap/newgidmap to configure uid/gid mappings. The format is 1..n space-delimited triples
-  of [id lowerid count], see `man newuidmap`;
+- if `SANDBOX_UID_MAP` and `SANDBOX_GID_MAP` are set (both are required if either is), we pass
+  these arguments to newuidmap/newgidmap to configure uid/gid mappings. The format is 1..n
+  space-delimited triples of [id lowerid count], see `man newuidmap`;
 
 Mount and network namespaces can be disabled setting the `SHARE_MOUNT` and `SHARE_NETWORK`
 environment variables to `1`.
@@ -43,7 +43,7 @@ The example below will map the real UID of the user running the sandbox to root 
 from range [100000;165536) to [1;65536) in the child namespace (assuming your UID is 1000):
 
 ```bash
-$ TMP_DIR=/tmp SANDBOX_UID_MAP="0 $UID 1  1 100000 65536" please_sandbox cat /proc/self/uid_map
+$ TMP_DIR=/tmp SANDBOX_UID_MAP="0 $UID 1  1 100000 65536" SANDBOX_GID_MAP="0 $(id -g) 1" please_sandbox cat /proc/self/uid_map
          0       1000          1
          1     100000      65536
 ```
