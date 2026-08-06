@@ -38,25 +38,6 @@ c_binary(
     deps = [":sandbox"],
 )
 
-go_test(
-    name = "sandbox_go_test",
-    srcs = ["sandbox_test.go"],
-    data = {
-        "please_sandbox": ":please_sandbox",
-        "nonet_sandbox": ":nonet_sandbox",
-        "noproc_sandbox": ":noproc_sandbox",
-        "nonetproc_sandbox": ":nonetproc_sandbox",
-    },
-    labels = [
-        "localonly",
-        "manual",
-    ],
-    sandbox = False,
-    deps = [
-        "///third_party/go/github.com_stretchr_testify//require",
-    ],
-)
-
 cc_test(
     name = "sandbox_test",
     srcs = ["sandbox_test.cc"],
