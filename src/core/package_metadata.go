@@ -155,19 +155,25 @@ func newPackageMetadata() PackageMetadata {
 // RegisterStatement implements [PackageMetadata.RegisterStatement].
 func (m *packageMetadataImpl) RegisterStatement(stmt BuildStatement, requiredSubincludes BuildLabels, files []string) {
 	if len(requiredSubincludes) > 0 {
-		existingDeps := m.stmtToRequiredSubincludes.Get(stmt)
-		if len(existingDeps) == 0 {
-			m.stmtToRequiredSubincludes.Set(stmt, requiredSubincludes)
-		} else {
+		existingDeps, inserted := m.stmtToRequiredSubincludes.AddOrGet(stmt, func() BuildLabels {
+			return requiredSubincludes
+		})
+		// It's necessary to support subsequent calls to this method due to dynamic subincludes.
+		// A function definition can include calls to subinclude() with a dynamic argument, so here
+		// we need to support appending to the required subincludes, meaning this method will be
+		// called more than once with different arguments. For an example refer to
+		// [test/export/test_dynamic_subinclude].
+		if !inserted {
 			mergedDeps := mergeSlices(existingDeps, requiredSubincludes)
 			m.stmtToRequiredSubincludes.Set(stmt, mergedDeps)
 		}
 	}
 	if len(files) > 0 {
-		existingFiles := m.stmtToRequiredFiles.Get(stmt)
-		if len(existingFiles) == 0 {
-			m.stmtToRequiredFiles.Set(stmt, files)
-		} else {
+		existingFiles, inserted := m.stmtToRequiredFiles.AddOrGet(stmt, func() []string {
+			return files
+		})
+		// Subsequent calls have to be supported for similar reasons to the above, appending the value.
+		if !inserted {
 			mergedFiles := mergeSlices(existingFiles, files)
 			m.stmtToRequiredFiles.Set(stmt, mergedFiles)
 		}
