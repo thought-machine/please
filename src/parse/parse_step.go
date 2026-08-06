@@ -80,10 +80,6 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Pack
 	return pkg, nil
 }
 
-func inSamePackage(label, dependent core.BuildLabel) bool {
-	return !dependent.IsOriginalTarget() && label.Subrepo == dependent.Subrepo && label.PackageName == dependent.PackageName
-}
-
 // checkSubrepo checks if the label we're parsing is within a subrepo, returning that subrepo, if present in the label.
 //
 // The subrepo target can be inferred from the subrepo name using convention i.e. ///foo/bar//:baz has a subrepo label
