@@ -27,5 +27,6 @@ go_test(
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
         "//src/core",
+        "//src/fs",
     ],
 )

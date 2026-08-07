@@ -3,13 +3,16 @@ package mcp_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"testing"
+	"time"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
+	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/mcp"
 )
 
@@ -243,6 +246,63 @@ func TestErrorsAreReportedNotFatal(t *testing.T) {
 			a.NoError(err)
 		})
 	}
+}
+
+func TestLazyLoading(t *testing.T) {
+	a := assert.New(t)
+	r := require.New(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	// Create a temporary mock package directory and BUILD file to test parsing on-demand
+	// without requiring any external plugins/compilers in the test sandbox.
+	err := os.MkdirAll("mockpkg", 0755)
+	r.NoError(err)
+	t.Cleanup(func() { os.RemoveAll("mockpkg") })
+
+	err = os.WriteFile("mockpkg/BUILD", []byte(`filegroup(name = "foo", srcs = ["bar.txt"])`), 0644)
+	r.NoError(err)
+	err = os.WriteFile("mockpkg/bar.txt", []byte("hello"), 0644)
+	r.NoError(err)
+
+	config, err := core.ReadConfigFiles(fs.HostFS, []string{".plzconfig"}, nil)
+	r.NoError(err)
+
+	serverTransport, clientTransport := sdk.NewInMemoryTransports()
+	srv := mcp.NewServer(
+		config,
+		mcp.WithTransport(serverTransport),
+	)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		srv.Serve(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	client := sdk.NewClient(&sdk.Implementation{Name: "test", Version: "1"}, nil)
+	session, err := client.Connect(ctx, clientTransport, nil)
+	r.NoError(err)
+	t.Cleanup(func() { session.Close() })
+
+	// Since we are lazy-loading, calling "print" with an actual target (like "//mockpkg:foo")
+	// should parse the target on the fly and succeed.
+	res, err := session.CallTool(ctx, &sdk.CallToolParams{
+		Name: "print",
+		Arguments: map[string]any{
+			"targets": []string{"//mockpkg:foo"},
+		},
+	})
+	r.NoError(err)
+	r.False(res.IsError, "tool returned an error: %s", contentText(res))
+
+	var out targetsResult
+	decodeStructured(t, res, &out)
+	a.Contains(keys(out.Targets), "//mockpkg:foo")
 }
 
 // newTestSession starts a server serving the given state over an in-memory

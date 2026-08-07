@@ -149,7 +149,7 @@ func (s *Server) registerGraphTools(srv *sdk.Server) {
 			if level <= 0 {
 				level = -1
 			}
-			return s.targetsQuery(in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
+			return s.targetsQuery(in.Targets, in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
 				labels, err := resolveLabels(state, in.Targets)
 				if err != nil {
 					return nil, err
@@ -165,7 +165,8 @@ func (s *Server) registerGraphTools(srv *sdk.Server) {
 			if level == 0 {
 				level = 1
 			}
-			return s.targetsQuery(in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
+			targets := append(in.Targets, "//...")
+			return s.targetsQuery(targets, in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
 				labels, err := resolveLabels(state, in.Targets)
 				if err != nil {
 					return nil, err
@@ -181,7 +182,8 @@ func (s *Server) registerGraphTools(srv *sdk.Server) {
 			if err := validatePrintFields(in.Fields); err != nil {
 				return ret, err
 			}
-			err := s.withState(func(state *core.BuildState) error {
+			targets := append([]string{in.From, in.To}, in.Except...)
+			err := s.withState(targets, func(state *core.BuildState) error {
 				path, err := s.somePath(state, in)
 				if err != nil {
 					return err
@@ -218,7 +220,7 @@ func (s *Server) registerTargetTools(srv *sdk.Server) {
 	addStructuredTool(srv, "print",
 		"Returns the definition of build targets as they exist in the build graph, in plz query print --json format.",
 		func(ctx context.Context, in printArgs) (targetsResult, error) {
-			return s.targetsQuery(in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
+			return s.targetsQuery(in.Targets, in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
 				return resolveLabels(state, in.Targets)
 			})
 		})
@@ -226,7 +228,11 @@ func (s *Server) registerTargetTools(srv *sdk.Server) {
 	addStructuredTool(srv, "alltargets",
 		"Returns all the build targets in the graph, optionally filtered to a set of packages, with each target's definition.",
 		func(ctx context.Context, in alltargetsArgs) (targetsResult, error) {
-			return s.targetsQuery(in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
+			targets := in.Targets
+			if len(targets) == 0 {
+				targets = []string{"//..."}
+			}
+			return s.targetsQuery(targets, in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
 				labels, err := resolveWholeGraphLabels(state, in.Targets)
 				if err != nil {
 					return nil, err
@@ -238,7 +244,11 @@ func (s *Server) registerTargetTools(srv *sdk.Server) {
 	addStructuredTool(srv, "filter",
 		"Filters a set of targets by include/exclude labels (as passed to plz --include / --exclude), returning each match's definition.",
 		func(ctx context.Context, in filterArgs) (targetsResult, error) {
-			return s.targetsQuery(in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
+			targets := in.Targets
+			if len(targets) == 0 {
+				targets = []string{"//..."}
+			}
+			return s.targetsQuery(targets, in.Fields, func(state *core.BuildState) (core.BuildLabels, error) {
 				labels, err := resolveWholeGraphLabels(state, in.Targets)
 				if err != nil {
 					return nil, err
@@ -261,7 +271,16 @@ func (s *Server) registerFileTools(srv *sdk.Server) {
 	addStructuredTool(srv, "whatinputs",
 		"Finds the build targets that the given files are inputs (sources) to, with each target's definition.",
 		func(ctx context.Context, in whatinputsArgs) (filesResult, error) {
-			return s.filesQuery(in.Fields, func(state *core.BuildState) map[string]core.BuildLabels {
+			targets := make([]string, 0, len(in.Files))
+			if s.state == nil {
+				// If we haven't generated the build graph yet, identify the
+				// targets associated with the files in the request.
+				state := core.NewBuildState(s.config)
+				for _, file := range in.Files {
+					targets = append(targets, core.FindOwningPackage(state, file).String())
+				}
+			}
+			return s.filesQuery(targets, in.Fields, func(state *core.BuildState) map[string]core.BuildLabels {
 				return query.WhatInputsLabels(state.Graph, in.Files, in.Hidden)
 			})
 		})
@@ -269,7 +288,7 @@ func (s *Server) registerFileTools(srv *sdk.Server) {
 	addStructuredTool(srv, "whatoutputs",
 		"Finds the build targets that produce the given output files, with each target's definition.",
 		func(ctx context.Context, in whatoutputsArgs) (filesResult, error) {
-			return s.filesQuery(in.Fields, func(state *core.BuildState) map[string]core.BuildLabels {
+			return s.filesQuery([]string{"//..."}, in.Fields, func(state *core.BuildState) map[string]core.BuildLabels {
 				return query.WhatOutputsLabels(state.Graph, in.Files)
 			})
 		})
@@ -278,7 +297,7 @@ func (s *Server) registerFileTools(srv *sdk.Server) {
 		"Lists all the input files (sources) of a set of build targets.",
 		func(ctx context.Context, in labelsArgs) (string, error) {
 			var buf bytes.Buffer
-			err := s.withState(func(state *core.BuildState) error {
+			err := s.withState(in.Targets, func(state *core.BuildState) error {
 				labels, err := resolveLabels(state, in.Targets)
 				if err != nil {
 					return err
@@ -293,7 +312,7 @@ func (s *Server) registerFileTools(srv *sdk.Server) {
 		"Lists the output files of a set of build targets.",
 		func(ctx context.Context, in outputsArgs) (string, error) {
 			var buf bytes.Buffer
-			err := s.withState(func(state *core.BuildState) error {
+			err := s.withState(in.Targets, func(state *core.BuildState) error {
 				labels, err := resolveLabels(state, in.Targets)
 				if err != nil {
 					return err
@@ -312,16 +331,21 @@ func (s *Server) registerAdminTools(srv *sdk.Server) {
 		func(ctx context.Context, in struct{}) (string, error) {
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			if err := s.parseGraph(); err != nil {
-				return "", err
+			if s.state != nil {
+				if err := s.parseGraph(); err != nil {
+					return "", err
+				}
+				return fmt.Sprintf("Build graph reloaded: %d targets in %d packages.",
+					len(s.state.Graph.AllTargets()), len(s.state.Graph.PackageMap())), nil
 			}
-			return fmt.Sprintf("Build graph reloaded: %d targets in %d packages.",
-				len(s.state.Graph.AllTargets()), len(s.state.Graph.PackageMap())), nil
+			s.graph = core.NewGraph()
+			return "Build graph cache cleared. Targets will be parsed on demand.", nil
 		})
 }
 
 // targetsQuery runs f to obtain a set of labels and returns their structured definitions.
 func (s *Server) targetsQuery(
+	targets []string,
 	fields []string,
 	f func(state *core.BuildState) (core.BuildLabels, error),
 ) (targetsResult, error) {
@@ -329,7 +353,7 @@ func (s *Server) targetsQuery(
 	if err := validatePrintFields(fields); err != nil {
 		return ret, err
 	}
-	err := s.withState(func(state *core.BuildState) error {
+	err := s.withState(targets, func(state *core.BuildState) error {
 		labels, err := f(state)
 		if err != nil {
 			return err
@@ -343,6 +367,7 @@ func (s *Server) targetsQuery(
 // filesQuery runs f to obtain a file-to-labels mapping and returns it along with the
 // structured definitions of all matched targets.
 func (s *Server) filesQuery(
+	targets []string,
 	fields []string,
 	f func(state *core.BuildState) map[string]core.BuildLabels,
 ) (filesResult, error) {
@@ -350,7 +375,7 @@ func (s *Server) filesQuery(
 	if err := validatePrintFields(fields); err != nil {
 		return ret, err
 	}
-	err := s.withState(func(state *core.BuildState) error {
+	err := s.withState(targets, func(state *core.BuildState) error {
 		ret.Files = map[string][]string{}
 		all := core.BuildLabels{}
 		for file, labels := range f(state) {

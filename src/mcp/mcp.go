@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -28,6 +29,7 @@ type Server struct {
 	// queries (filter) temporarily mutate it.
 	mu     sync.Mutex
 	state  *core.BuildState
+	graph  *core.BuildGraph
 	config *core.Configuration
 
 	transport sdk.Transport
@@ -57,6 +59,7 @@ func WithState(state *core.BuildState) Option {
 func NewServer(config *core.Configuration, opts ...Option) *Server {
 	s := &Server{
 		config: config,
+		graph:  core.NewGraph(),
 	}
 
 	for _, opt := range opts {
@@ -66,19 +69,17 @@ func NewServer(config *core.Configuration, opts ...Option) *Server {
 	return s
 }
 
-// Serve parses the build graph, then runs an MCP server until the client
-// disconnects or ctx is cancelled.
+// Serve runs an MCP server until the client disconnects or ctx is cancelled.
+// By default, the server uses lazy loading to parse the build graph on demand.
 func (s *Server) Serve(ctx context.Context) error {
 	if s.transport == nil {
 		s.transport = stdioTransport()
 	}
 	if s.state == nil {
-		log.Notice("Parsing build graph...")
-		if err := s.parseGraph(); err != nil {
-			return err
-		}
+		log.Notice("Serving MCP with lazy-loaded build graph...")
+	} else {
+		log.Notice("Serving MCP for %d targets", len(s.state.Graph.AllTargets()))
 	}
-	log.Notice("Serving MCP for %d targets", len(s.state.Graph.AllTargets()))
 
 	srv := sdk.NewServer(&sdk.Implementation{
 		Name:    "please",
@@ -122,9 +123,10 @@ func (s *Server) parseGraph() error {
 	return nil
 }
 
-// withState runs f against the current build state under the server lock,
-// converting panics into errors so a misbehaving query can't kill the server.
-func (s *Server) withState(f func(state *core.BuildState) error) (err error) {
+// withState runs f against a build state under the server lock, converting panics
+// into errors so a misbehaving query can't kill the server.
+// Under lazy-loading, it parses the given targets on demand into the persistent graph.
+func (s *Server) withState(targets []string, f func(state *core.BuildState) error) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	defer func() {
@@ -132,7 +134,39 @@ func (s *Server) withState(f func(state *core.BuildState) error) (err error) {
 			err = fmt.Errorf("query failed: %v", p)
 		}
 	}()
-	return f(s.state)
+
+	if s.state != nil {
+		return f(s.state)
+	}
+
+	state := core.NewBuildState(s.config)
+	state.NeedBuild = false
+	state.Graph = s.graph
+
+	if len(targets) == 0 {
+		return f(state)
+	}
+
+	labels := make([]core.BuildLabel, 0, len(targets))
+	for _, t := range targets {
+		l, err := core.TryParseBuildLabel(t, "", "")
+		if err != nil {
+			return fmt.Errorf("invalid build label %q: %w", t, err)
+		}
+		labels = append(labels, l)
+	}
+	plz.RunHost(labels, state)
+	if failed, _, _ := state.Failures(); failed {
+		var errs []string
+		for r := range state.Results() {
+			if r.Status.IsFailure() {
+				errs = append(errs, fmt.Sprintf("%s (%s): %s", r.Label, r.Status, r.Err))
+			}
+		}
+		return fmt.Errorf("failed to parse the build graph: %s", strings.Join(errs, "; "))
+	}
+
+	return f(state)
 }
 
 // resolveLabels parses a set of label strings, expands pseudo-targets (:all and /...)
