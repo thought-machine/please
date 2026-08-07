@@ -245,7 +245,8 @@ type BuildState struct {
 	// KeepParserRunning prevents closing task workers (parse and build channels) to support later
 	// calls to the parser. This is needed to support the export operation since the export logic will
 	// attempt to export targets that have not been parsed during the normal build phase. An example
-	// is when exporting dependencies of targets that are not explicitly used but adjacent/related.
+	// is when exporting dependencies of targets that are not explicitly used but are produced by the
+	// same build statement which causes an explicitly used target to exist.
 	KeepParserRunning bool
 	// WaitForDisplay is a function that blocks until the display thread has finished.
 	WaitForDisplay func()

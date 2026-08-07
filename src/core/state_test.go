@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -203,5 +204,51 @@ func TestWaitForPackageConcurrent(t *testing.T) {
 		case <-time.After(10 * time.Second):
 			t.Fatalf("iteration %d: a WaitForPackage caller never woke", i)
 		}
+	}
+}
+
+func TestLogBuildErrorConcurrency(t *testing.T) {
+	state := NewDefaultBuildState()
+	label := ParseBuildLabel("//src/core:all", "")
+
+	// Spawn multiple goroutines waiting for the package to finish parsing.
+	// These will call SyncParsePackage, and block on the channel for this package .
+	const numWaiters = 100
+	var wg sync.WaitGroup
+	wg.Add(numWaiters)
+	for range numWaiters {
+		go func() {
+			defer wg.Done()
+			_ = state.SyncParsePackage(label)
+		}()
+	}
+
+	// Give the waiters time to block on the wait channel
+	time.Sleep(10 * time.Millisecond)
+
+	// Trigger failures for the exact same package. Concurrently to validate the logic for closing channels.
+	const numFailures = 10
+	var wgFail sync.WaitGroup
+	wgFail.Add(numFailures)
+	for range numFailures {
+		go func() {
+			defer wgFail.Done()
+			state.LogBuildError(label, ParseFailed, fmt.Errorf("intended test error"), "failed to parse %s", label)
+		}()
+	}
+	wgFail.Wait()
+
+	// Ensure all blocked waiters are unblocked safely (no deadlocks)
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All waiters unblocked without panicking or deadlocking.
+	case <-time.After(time.Second):
+		t.Fatal("Deadlock detected: waiting goroutines failed to unblock within 1 seconds")
 	}
 }
