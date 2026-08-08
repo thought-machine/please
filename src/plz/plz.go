@@ -256,16 +256,16 @@ func (r *runner) buildDep(ctx context.Context, dep core.BuildLabel, target *core
 
 // buildOne builds a single target (which cannot be a pseudo-label like :all)
 func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
-	g, ctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContext(ctx)
 	for dep := range target.BuildDependencyLabels() {
 		g.Go(func() error {
-			return r.buildDep(ctx, dep, target)
+			return r.buildDep(gctx, dep, target)
 		})
 	}
 	for _, src := range target.AllSources() {
 		if l, ok := src.Label(); ok {
 			g.Go(func() error {
-				return r.buildDep(ctx, l, target)
+				return r.buildDep(gctx, l, target)
 			})
 		}
 	}
@@ -280,13 +280,13 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	if len(deps) == 0 {
 		return r.buildJustOne(target)
 	}
-	g, ctx = errgroup.WithContext(ctx)
+	g, gctx = errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return r.buildJustOne(target)
 	})
 	for _, dep := range deps {
 		g.Go(func() error {
-			_, err := r.Build(ctx, dep)
+			_, err := r.Build(gctx, dep)
 			return err
 		})
 	}
