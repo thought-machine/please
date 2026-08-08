@@ -684,6 +684,23 @@ func (target *BuildTarget) RuntimeDependencies() iter.Seq[BuildLabel] {
 		target.mutex.RLock()
 		defer target.mutex.RUnlock()
 		for _, deps := range target.dependencies {
+			if deps.Runtime {
+				if !yield(deps.Label) {
+					break
+				}
+			}
+		}
+	}
+}
+
+// RuntimeAndDataDependencies returns the direct run-time and data dependencies of this target, i.e. everything
+// that has to be available when it's run or tested but not when it's built.
+// N.B. This is not the same as RuntimeDependencies, which is what the target declared as runtime_deps.
+func (target *BuildTarget) RuntimeAndDataDependencies() iter.Seq[BuildLabel] {
+	return func(yield func(BuildLabel) bool) {
+		target.mutex.RLock()
+		defer target.mutex.RUnlock()
+		for _, deps := range target.dependencies {
 			if deps.Runtime || deps.Data {
 				if !yield(deps.Label) {
 					break

@@ -278,7 +278,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	// TODO(peter): Need to handle targets getting extra deps added by post-build functions here.
 
 	// Okay, now the runtime dependencies can happen in parallel with the target itself.
-	deps := slices.Collect(target.RuntimeDependencies())
+	deps := slices.Collect(target.RuntimeAndDataDependencies())
 	if len(deps) == 0 {
 		return r.buildJustOne(target)
 	}
@@ -310,11 +310,14 @@ func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
 	if err != nil {
 		return err
 	}
-	g, ctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContext(ctx)
 	for _, target := range pkg.AllTargets() {
 		if r.state.ShouldInclude(target) {
 			g.Go(func() error {
-				return r.buildOne(ctx, target)
+				// N.B. This must go through Build, not buildOne, so we don't build a target twice
+				//      if it's reached both via :all and as a dependency of something else.
+				_, err := r.Build(gctx, target.Label)
+				return err
 			})
 		}
 	}
@@ -322,17 +325,22 @@ func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
 }
 
 // Build is the main entrypoint to build a label
-func (r *runner) Build(ctx context.Context, label core.BuildLabel) (_ *core.BuildTarget, err error) {
-	return r.buildOnce.GetOrSetCtx(ctx, label, func() (*core.BuildTarget, error) {
-		if label.IsAllTargets() {
+func (r *runner) Build(ctx context.Context, label core.BuildLabel) (*core.BuildTarget, error) {
+	if label.IsAllTargets() {
+		return r.buildOnce.GetOrSetCtx(ctx, label, func() (*core.BuildTarget, error) {
 			return nil, r.buildAll(ctx, label)
-		}
+		})
+	}
+	// N.B. We must parse the target _before_ claiming its entry in buildOnce; parsing its package can
+	//      re-enter here for the same label (e.g. a BUILD file that subincludes a target it defines
+	//      earlier in the same file) and we'd then deadlock waiting on ourselves.
+	target, err := r.parseTarget(ctx, label)
+	if err != nil {
+		return nil, err
+	}
+	return r.buildOnce.GetOrSetCtx(ctx, label, func() (*core.BuildTarget, error) {
 		r.progress.numTotal.Add(1)
 		defer r.progress.numDone.Add(1)
-		target, err := r.parseTarget(ctx, label)
-		if err != nil {
-			return nil, err
-		}
 		return target, r.buildOne(ctx, target)
 	})
 }
@@ -489,8 +497,8 @@ func (r *runner) findOriginalTask(ctx context.Context, target core.BuildLabel, n
 }
 
 func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest, needBuild bool) {
+	r.state.AddOriginalTarget(target)
 	r.tasks.Go(func() error {
-		r.state.AddOriginalTarget(target)
 		if needTest {
 			return r.Test(ctx, target)
 		} else if needBuild {
