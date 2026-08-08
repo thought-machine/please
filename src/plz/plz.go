@@ -83,7 +83,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	}
 
 	// Register the preloaded targets with the parser
-	if err := registerPreloads(state); err != nil {
+	if err := r.RegisterPreloads(ctx, state); err != nil {
 		return err
 	}
 
@@ -510,19 +510,19 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 	})
 }
 
-// registerPreloads waits for all preloaded subinclude targets to be built, downloads them, and then registers them with
+// RegisterPreloads waits for all preloaded subinclude targets to be built, downloads them, and then registers them with
 // the interpreter. We have to actually register them otherwise this will return before we build any
 // transitive subincludes.
-func registerPreloads(state *core.BuildState) error {
-	var eg errgroup.Group
+func (r *runner) RegisterPreloads(ctx context.Context, state *core.BuildState) error {
+	g, ctx := errgroup.WithContext(ctx)
 	for _, inc := range state.GetPreloadedSubincludes() {
 		if inc.IsPseudoTarget() {
 			return fmt.Errorf("Can't preload pseudotarget %v", inc)
 		}
 
 		// Queue them up asynchronously to feed the queues as quickly as possible
-		eg.Go(func() error {
-			if _, err := state.Build(inc); err != nil {
+		g.Go(func() error {
+			if _, err := r.Build(ctx, inc); err != nil {
 				return err
 			}
 			return state.Parser.RegisterPreload(inc)
@@ -530,7 +530,7 @@ func registerPreloads(state *core.BuildState) error {
 	}
 	// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
 	// a package
-	return eg.Wait()
+	return g.Wait()
 }
 
 // FindAllBuildFiles finds all BUILD files under a particular path.
