@@ -104,7 +104,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 			return err
 		}
 		// Reset the group & context for next time
-		g, ctx = errgroup.WithContext(context.Background())
+		ctx, cancel := context.WithCancel(context.Background())
+		g, ctx = errgroup.WithContext(ctx)
+		state.Cancel = cancel
 		r.tasks = g
 	}
 	r.FindOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
