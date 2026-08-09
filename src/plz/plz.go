@@ -71,6 +71,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		buildOnce: cmap.NewErrMap[core.BuildLabel, *core.BuildTarget](cmap.DefaultShardCount, func(l core.BuildLabel) uint64 {
 			return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
 		}, nil),
+		parseOnce: cmap.New[core.BuildLabel, struct{}](cmap.DefaultShardCount, func(l core.BuildLabel) uint64 {
+			return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
+		}),
 		localLimiter:  make(limiter, state.Config.Please.NumThreads),
 		remoteLimiter: make(limiter, state.Config.NumRemoteExecutors()),
 		anyRemote:     state.Config.NumRemoteExecutors() > 0,
@@ -136,6 +139,7 @@ type runner struct {
 	arch          cli.Arch
 	progress      *Progress
 	buildOnce     *cmap.ErrMap[core.BuildLabel, *core.BuildTarget]
+	parseOnce     *cmap.Map[core.BuildLabel, struct{}]
 	localLimiter  limiter
 	remoteLimiter limiter
 	anyRemote     bool
@@ -224,32 +228,31 @@ func (r *runner) RecursiveParse(ctx context.Context, label, dependent core.Build
 	if err != nil {
 		return err
 	}
-	// Deduplicate dependencies as early as we can here.
-	seen := map[core.BuildLabel]struct{}{}
-	g, ctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContext(ctx)
 	for _, target := range pkg.AllTargets() {
 		for dep := range target.DeclaredDependencies() {
-			if _, present := seen[dep]; !present {
-				seen[dep] = struct{}{}
-				g.Go(func() error {
-					return r.recursiveParse(ctx, dep, target.Label)
-				})
-			}
+			g.Go(func() error {
+				// N.B. No need to deduplicate these; recursiveParse does that for the whole walk.
+				return r.recursiveParse(gctx, dep, target.Label)
+			})
 		}
 	}
 	return g.Wait()
 }
 
+// recursiveParse parses a target and, transitively, everything it depends on.
 func (r *runner) recursiveParse(ctx context.Context, label, dependent core.BuildLabel) error {
+	if !r.parseOnce.Add(label, struct{}{}) {
+		return nil // Someone else has this one; they're in the same errgroup so we needn't wait for them.
+	}
 	target, err := r.parseTarget(ctx, label, dependent)
 	if err != nil {
 		return err
 	}
-	g, ctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContext(ctx)
 	for dep := range target.DeclaredDependencies() {
 		g.Go(func() error {
-			_, err := r.Parse(ctx, dep, target.Label)
-			return err
+			return r.recursiveParse(gctx, dep, target.Label)
 		})
 	}
 	return g.Wait()
