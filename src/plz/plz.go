@@ -76,11 +76,11 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	}
 
 	// We don't have context as an argument to this, because they're not fully plumbed through (but probably should be)
-	state.Build = func(label core.BuildLabel) (*core.BuildTarget, error) {
-		return r.Build(ctx, label)
+	state.Build = func(label, dependent core.BuildLabel) (*core.BuildTarget, error) {
+		return r.Build(ctx, label, dependent)
 	}
-	state.Parse = func(label core.BuildLabel) (*core.Package, error) {
-		return r.Parse(ctx, label)
+	state.Parse = func(label, dependent core.BuildLabel) (*core.Package, error) {
+		return r.Parse(ctx, label, dependent)
 	}
 
 	// Register the preloaded targets with the parser
@@ -91,7 +91,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
 		// This is a bit crap really since it inhibits parallelism for the first step.
-		if _, err := r.Parse(ctx, core.NewBuildLabel("workspace", "all")); err != nil {
+		if _, err := r.Parse(ctx, core.NewBuildLabel("workspace", "all"), core.OriginalTarget); err != nil {
 			return err
 		}
 	}
@@ -141,34 +141,41 @@ type runner struct {
 }
 
 // Parse parses for a target. It can be called more than once for the same build label.
-func (r *runner) Parse(ctx context.Context, label core.BuildLabel) (*core.Package, error) {
+// The dependent is whatever is asking for this to be parsed; it's used to produce better error
+// messages, and to detect a package that is asking to parse itself.
+func (r *runner) Parse(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
 	return r.state.Graph.GetOrSetPackage(ctx, label, func() (*core.Package, error) {
 		r.progress.numParsing.Add(1)
 		defer r.progress.numParsing.Add(-1)
-		// If the target defines a subrepo, we must make sure that is built first.
-		if label.Subrepo != "" {
+		// If the target is in a subrepo that we don't know about yet, we must make sure that is built first.
+		// If we already have it there's nothing to do here; it's been registered by whatever parse defined it.
+		if label.Subrepo != "" && r.state.Graph.Subrepo(label.Subrepo) == nil {
 			if r.state.CheckArchSubrepo(label.Subrepo) == nil {
 				sl := label.SubrepoLabel(r.state)
-				if sl.Subrepo == label.Subrepo && sl.PackageName == label.PackageName {
-					// TODO(peter): Unsure if this is a legit case or not.
-					return nil, fmt.Errorf("subinclude from within same package of a subrepo")
+				if inSamePackage(sl, dependent) {
+					return nil, fmt.Errorf("subrepo %v is not defined in this package yet. It must appear before it is used by %v", label.Subrepo, dependent)
 				}
-				if _, err := r.Parse(ctx, sl); err != nil {
+				if _, err := r.Parse(ctx, sl, label); err != nil {
 					return nil, err
 				}
 			}
 		}
-		// TODO(peter): can we drop the dependent here?
-		return parse.Parse(r.state, label, label)
+		return parse.Parse(r.state, label, dependent)
 	})
 }
 
+// inSamePackage returns true if the two labels are in the same package (and hence, if one of them is
+// currently being parsed, both are).
+func inSamePackage(label, dependent core.BuildLabel) bool {
+	return !dependent.IsOriginalTarget() && label.Subrepo == dependent.Subrepo && label.PackageName == dependent.PackageName
+}
+
 // RecursiveParse is like Parse but recurses down into all dependencies of the target as well.
-func (r *runner) RecursiveParse(ctx context.Context, label core.BuildLabel) error {
+func (r *runner) RecursiveParse(ctx context.Context, label, dependent core.BuildLabel) error {
 	if !label.IsAllTargets() {
-		return r.recursiveParse(ctx, label)
+		return r.recursiveParse(ctx, label, dependent)
 	}
-	pkg, err := r.Parse(ctx, label)
+	pkg, err := r.Parse(ctx, label, dependent)
 	if err != nil {
 		return err
 	}
@@ -180,7 +187,7 @@ func (r *runner) RecursiveParse(ctx context.Context, label core.BuildLabel) erro
 			if _, present := seen[dep]; !present {
 				seen[dep] = struct{}{}
 				g.Go(func() error {
-					return r.recursiveParse(ctx, dep)
+					return r.recursiveParse(ctx, dep, target.Label)
 				})
 			}
 		}
@@ -188,33 +195,33 @@ func (r *runner) RecursiveParse(ctx context.Context, label core.BuildLabel) erro
 	return g.Wait()
 }
 
-func (r *runner) recursiveParse(ctx context.Context, label core.BuildLabel) error {
-	target, err := r.parseTarget(ctx, label)
+func (r *runner) recursiveParse(ctx context.Context, label, dependent core.BuildLabel) error {
+	target, err := r.parseTarget(ctx, label, dependent)
 	if err != nil {
 		return err
 	}
 	g, ctx := errgroup.WithContext(ctx)
 	for dep := range target.DeclaredDependencies() {
 		g.Go(func() error {
-			_, err := r.Parse(ctx, dep)
+			_, err := r.Parse(ctx, dep, target.Label)
 			return err
 		})
 	}
 	return g.Wait()
 }
 
-func (r *runner) parseTarget(ctx context.Context, label core.BuildLabel) (*core.BuildTarget, error) {
+func (r *runner) parseTarget(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildTarget, error) {
 	if target := r.state.Graph.Target(label); target != nil {
 		return target, nil
 	}
-	pkg, err := r.Parse(ctx, label)
+	pkg, err := r.Parse(ctx, label, dependent)
 	if err != nil {
 		return nil, err
 	}
 	if target := pkg.Target(label.Name); target != nil {
 		return target, nil
 	}
-	err = fmt.Errorf("Parsed build file %s but it doesn't contain target %s%s", pkg.Filename, label.Name, pkg.SuggestTargets(label, label))
+	err = fmt.Errorf("Parsed build file %s but it doesn't contain target %s%s", pkg.Filename, label.Name, pkg.SuggestTargets(label, dependent))
 	r.state.LogBuildError(label, core.ParseFailed, err, "%s", err)
 	return nil, err
 }
@@ -222,7 +229,7 @@ func (r *runner) parseTarget(ctx context.Context, label core.BuildLabel) (*core.
 // resolveTarget resolves a target, dealing with require/provide as needed.
 func (r *runner) resolveTarget(ctx context.Context, label core.BuildLabel, dependent *core.BuildTarget) iter.Seq2[*core.BuildTarget, error] {
 	return func(yield func(*core.BuildTarget, error) bool) {
-		target, err := r.parseTarget(ctx, label)
+		target, err := r.parseTarget(ctx, label, dependent.Label)
 		if err != nil {
 			yield(nil, err)
 			return
@@ -235,7 +242,7 @@ func (r *runner) resolveTarget(ctx context.Context, label core.BuildLabel, depen
 		}
 		// TODO(peter): Would parallelism here be useful?
 		for _, p := range provided {
-			if !yield(r.parseTarget(ctx, p)) {
+			if !yield(r.parseTarget(ctx, p, dependent.Label)) {
 				break
 			}
 		}
@@ -248,7 +255,7 @@ func (r *runner) buildDep(ctx context.Context, dep core.BuildLabel, target *core
 		if err != nil {
 			return err
 		}
-		if _, err := r.Build(ctx, t.Label); err != nil {
+		if _, err := r.Build(ctx, t.Label, target.Label); err != nil {
 			return err
 		}
 	}
@@ -287,7 +294,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	})
 	for _, dep := range deps {
 		g.Go(func() error {
-			_, err := r.Build(gctx, dep)
+			_, err := r.Build(gctx, dep, target.Label)
 			return err
 		})
 	}
@@ -304,8 +311,8 @@ func (r *runner) buildJustOne(target *core.BuildTarget) error {
 }
 
 // buildAll builds all the targets specified by the given label (which can be :all, but can't be ...).
-func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
-	pkg, err := r.Parse(ctx, label)
+func (r *runner) buildAll(ctx context.Context, label, dependent core.BuildLabel) error {
+	pkg, err := r.Parse(ctx, label, dependent)
 	if err != nil {
 		return err
 	}
@@ -315,7 +322,7 @@ func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
 			g.Go(func() error {
 				// N.B. This must go through Build, not buildOne, so we don't build a target twice
 				//      if it's reached both via :all and as a dependency of something else.
-				_, err := r.Build(gctx, target.Label)
+				_, err := r.Build(gctx, target.Label, dependent)
 				return err
 			})
 		}
@@ -324,16 +331,16 @@ func (r *runner) buildAll(ctx context.Context, label core.BuildLabel) error {
 }
 
 // Build is the main entrypoint to build a label
-func (r *runner) Build(ctx context.Context, label core.BuildLabel) (*core.BuildTarget, error) {
+func (r *runner) Build(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildTarget, error) {
 	if label.IsAllTargets() {
 		return r.buildOnce.GetOrSetCtx(ctx, label, func() (*core.BuildTarget, error) {
-			return nil, r.buildAll(ctx, label)
+			return nil, r.buildAll(ctx, label, dependent)
 		})
 	}
 	// N.B. We must parse the target _before_ claiming its entry in buildOnce; parsing its package can
 	//      re-enter here for the same label (e.g. a BUILD file that subincludes a target it defines
 	//      earlier in the same file) and we'd then deadlock waiting on ourselves.
-	target, err := r.parseTarget(ctx, label)
+	target, err := r.parseTarget(ctx, label, dependent)
 	if err != nil {
 		return nil, err
 	}
@@ -345,9 +352,9 @@ func (r *runner) Build(ctx context.Context, label core.BuildLabel) (*core.BuildT
 }
 
 // testOne tests one single target
-func (r *runner) testOne(ctx context.Context, target *core.BuildTarget) error {
+func (r *runner) testOne(ctx context.Context, target *core.BuildTarget, dependent core.BuildLabel) error {
 	r.progress.numTotal.Add(int64(r.state.NumTestRuns))
-	if _, err := r.Build(ctx, target.Label); err != nil {
+	if _, err := r.Build(ctx, target.Label, dependent); err != nil {
 		return err
 	}
 	if !target.IsTest() {
@@ -380,15 +387,15 @@ func (r *runner) testOne(ctx context.Context, target *core.BuildTarget) error {
 }
 
 // Test is the main entrypoint to run tests for a label
-func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
+func (r *runner) Test(ctx context.Context, label, dependent core.BuildLabel) error {
 	if !label.IsAllTargets() {
-		target, err := r.parseTarget(ctx, label)
+		target, err := r.parseTarget(ctx, label, dependent)
 		if err != nil {
 			return err
 		}
-		return r.testOne(ctx, target)
+		return r.testOne(ctx, target, dependent)
 	}
-	pkg, err := r.Parse(ctx, label)
+	pkg, err := r.Parse(ctx, label, dependent)
 	if err != nil {
 		return err
 	}
@@ -396,7 +403,7 @@ func (r *runner) Test(ctx context.Context, label core.BuildLabel) error {
 	for _, target := range pkg.AllTargets() {
 		if r.state.ShouldInclude(target) {
 			g.Go(func() error {
-				return r.testOne(ctx, target)
+				return r.testOne(ctx, target, dependent)
 			})
 		}
 	}
@@ -421,7 +428,7 @@ func (r *runner) FindOriginalTaskSet(ctx context.Context, targets []core.BuildLa
 }
 
 func (r *runner) queueTargetsForDebug(ctx context.Context, target core.BuildLabel) error {
-	if _, err := r.Parse(ctx, target); err != nil {
+	if _, err := r.Parse(ctx, target, core.OriginalTarget); err != nil {
 		return err
 	}
 	t := r.state.Graph.TargetOrDie(target)
@@ -473,13 +480,13 @@ func (r *runner) findOriginalTask(ctx context.Context, target core.BuildLabel, n
 	prefix := ""
 	if target.Subrepo != "" {
 		subrepoLabel := target.SubrepoLabel(r.state)
-		if target, err := r.Build(ctx, subrepoLabel); err != nil {
+		if target, err := r.Build(ctx, subrepoLabel, core.OriginalTarget); err != nil {
 			return err
 		} else if err := r.state.EnsureDownloaded(target); err != nil {
 			return err
 		}
 		// Targets now get activated during parsing, so can be built before we finish parsing their package.
-		pkg, err := r.Parse(ctx, subrepoLabel)
+		pkg, err := r.Parse(ctx, subrepoLabel, core.OriginalTarget)
 		if err != nil {
 			return err
 		}
@@ -499,13 +506,13 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 	r.state.AddOriginalTarget(target)
 	r.tasks.Go(func() error {
 		if needTest {
-			return r.Test(ctx, target)
+			return r.Test(ctx, target, core.OriginalTarget)
 		} else if needBuild {
-			_, err := r.Build(ctx, target)
+			_, err := r.Build(ctx, target, core.OriginalTarget)
 			// TODO(peter): Ensure this gets downloaded if needed
 			return err
 		}
-		return r.RecursiveParse(ctx, target)
+		return r.RecursiveParse(ctx, target, core.OriginalTarget)
 	})
 }
 
@@ -522,7 +529,7 @@ func (r *runner) RegisterPreloads(ctx context.Context, state *core.BuildState, p
 
 		// Queue them up asynchronously to feed the queues as quickly as possible
 		g.Go(func() error {
-			if _, err := r.Build(ctx, inc); err != nil {
+			if _, err := r.Build(ctx, inc, core.OriginalTarget); err != nil {
 				return err
 			}
 			return parser.PreloadSubinclude(inc)

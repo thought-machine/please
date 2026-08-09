@@ -220,9 +220,11 @@ type BuildState struct {
 
 	// Build is a callback to build a single target. It's set from outside here.
 	// TODO(peter): can we find a way of moving these off this struct? it feels weird here
-	Build func(BuildLabel) (*BuildTarget, error)
+	// The second label is the dependent, i.e. whatever is asking for this to be built.
+	Build func(label, dependent BuildLabel) (*BuildTarget, error)
 	// Parse is a callback to parse a single package. It's also set from outside.
-	Parse func(BuildLabel) (*Package, error)
+	// The second label is the dependent, i.e. whatever is asking for this to be parsed.
+	Parse func(label, dependent BuildLabel) (*Package, error)
 	// Cancel is a cancel function called when the state detects a cycle.
 	Cancel func()
 

@@ -305,7 +305,7 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) (*core.BuildTarget, error) {
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
-	return s.state.Build(l)
+	return s.state.Build(l, dependent)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -381,7 +381,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			Subrepo:     subrepoLabel.Subrepo,
 			Name:        "all",
 		}
-		if _, err := s.state.Parse(subrepoPackageLabel); err != nil {
+		if _, err := s.state.Parse(subrepoPackageLabel, pkgLabel); err != nil {
 			s.Error("Failed to parse subrepo target: %w", err)
 		}
 	}

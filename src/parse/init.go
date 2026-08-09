@@ -92,7 +92,7 @@ func (p *aspParser) RunPostBuildFunction(state *core.BuildState, target *core.Bu
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	if _, err := state.Parse(target.Label); err != nil {
+	if _, err := state.Parse(target.Label, target.Label); err != nil {
 		return err
 	}
 	if err := f(); err != nil {

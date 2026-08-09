@@ -59,7 +59,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Pack
 
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo, but it depends on something, make sure that has been built.
-		if _, err := state.Build(subrepo.Target.Label); err != nil {
+		if _, err := state.Build(subrepo.Target.Label, dependent); err != nil {
 			return nil, err
 		}
 		if err := subrepo.State.Initialise(subrepo); err != nil {
