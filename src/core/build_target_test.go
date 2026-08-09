@@ -420,11 +420,11 @@ func TestDependencies(t *testing.T) {
 	target3 := makeTarget1("//src/core:target3", "", target1, target2)
 	graph := graphWith(target1, target2, target3)
 	assert.Empty(t, slices.Collect(target1.DeclaredDependencies()))
-	assert.Empty(t, target1.Dependencies(graph))
+	assert.Empty(t, resolved(target1.Dependencies(graph)))
 	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.DeclaredDependencies()))
-	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies(graph))
+	assert.Equal(t, []*BuildTarget{target1}, resolved(target2.Dependencies(graph)))
 	assert.Equal(t, []BuildLabel{target1.Label, target2.Label}, slices.Collect(target3.DeclaredDependencies()))
-	assert.Equal(t, []*BuildTarget{target1, target2}, target3.Dependencies(graph))
+	assert.Equal(t, []*BuildTarget{target1, target2}, resolved(target3.Dependencies(graph)))
 }
 
 func TestBuildDependencies(t *testing.T) {
@@ -502,7 +502,7 @@ func TestAddDependency(t *testing.T) {
 	target2.AddMaybeExportedDependency(target1.Label, true, false, false, false)
 	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.DeclaredDependencies()))
 	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.ExportedDependencies()))
-	assert.Equal(t, []*BuildTarget{target1}, target2.Dependencies(graphWith(target1, target2)))
+	assert.Equal(t, []*BuildTarget{target1}, resolved(target2.Dependencies(graphWith(target1, target2))))
 }
 
 func TestAddRuntimeDependency(t *testing.T) {
@@ -748,7 +748,7 @@ func TestExternalDependencies(t *testing.T) {
 	t2a := makeTarget1("//src/core:_target2#a", "PUBLIC", t1)
 	t2 := makeTarget1("//src/core:target2", "PUBLIC", t2a)
 	graph := graphWith(t1a, t1, t2a, t2)
-	assert.Equal(t, []*BuildTarget{t1}, t2.ExternalDependencies(graph))
+	assert.Equal(t, []*BuildTarget{t1}, resolved(t2.ExternalDependencies(graph)))
 }
 
 func TestBuildTargetOwnBuildInputs(t *testing.T) {
@@ -1042,6 +1042,14 @@ func makeTarget1(label, visibility string, deps ...*BuildTarget) *BuildTarget {
 		target.AddDependency(dep.Label)
 	}
 	return target
+}
+
+// resolved unwraps a call to Dependencies / ExternalDependencies, requiring that everything resolved.
+func resolved(deps []*BuildTarget, unresolved []BuildLabel) []*BuildTarget {
+	if len(unresolved) > 0 {
+		panic(fmt.Sprintf("dependencies not in graph: %s", unresolved))
+	}
+	return deps
 }
 
 // graphWith returns a graph populated with the given targets, for tests that need dependency

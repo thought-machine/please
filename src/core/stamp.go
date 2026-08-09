@@ -27,7 +27,11 @@ func populateStampInfo(state *BuildState, target *BuildTarget, info *stampInfo) 
 		AcceptedLicence: accepted,
 		Labels:          target.Labels,
 	}
-	for _, dep := range target.Dependencies(state.Graph) {
+	deps, unresolved := target.Dependencies(state.Graph)
+	if len(unresolved) > 0 {
+		log.Fatalf("Can't stamp %s; dependencies not in build graph: %s", target.Label, unresolved)
+	}
+	for _, dep := range deps {
 		if _, present := info.Targets[dep.Label]; !present {
 			populateStampInfo(state, dep, info)
 		}

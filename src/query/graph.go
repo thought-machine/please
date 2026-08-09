@@ -133,7 +133,11 @@ func addJSONTarget(state *core.BuildState, graph *JSONGraph, label core.BuildLab
 			},
 		}
 	}
-	for _, dep := range target.Dependencies(state.Graph) {
+	deps, unresolved := target.Dependencies(state.Graph)
+	if len(unresolved) > 0 {
+		log.Fatalf("Can't generate graph for %s; dependencies not in build graph: %s", target.Label, unresolved)
+	}
+	for _, dep := range deps {
 		addJSONTarget(state, graph, dep.Label, done)
 	}
 }
@@ -157,7 +161,11 @@ func makeJSONTarget(state *core.BuildState, target *core.BuildTarget) JSONTarget
 	for _, out := range target.Outputs(state.Graph) {
 		t.Outputs = append(t.Outputs, filepath.Join(target.Label.PackageName, out))
 	}
-	for _, dep := range target.Dependencies(state.Graph) {
+	deps, unresolved := target.Dependencies(state.Graph)
+	if len(unresolved) > 0 {
+		log.Fatalf("Can't generate graph for %s; dependencies not in build graph: %s", target.Label, unresolved)
+	}
+	for _, dep := range deps {
 		t.Deps = append(t.Deps, dep.Label.String())
 	}
 	// just use run 1 as this is only used to print the test dir

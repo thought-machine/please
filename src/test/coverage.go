@@ -76,7 +76,11 @@ func collectAllFiles(state *core.BuildState, target *core.BuildTarget, coverageF
 			}
 		}
 		if deps {
-			for _, dep := range target.ExternalDependencies(state.Graph) {
+			extDeps, unresolved := target.ExternalDependencies(state.Graph)
+			if len(unresolved) > 0 {
+				log.Warning("Can't collect coverage for dependencies of %s; not in build graph: %s", target.Label, unresolved)
+			}
+			for _, dep := range extDeps {
 				collectAllFiles(state, dep, coverageFiles, includeAllFiles, deps, doneTargets)
 			}
 		}

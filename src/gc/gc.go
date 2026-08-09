@@ -170,7 +170,9 @@ func addTarget(graph *core.BuildGraph, m targetMap, target *core.BuildTarget) {
 	for dep := range target.DeclaredDependencies() {
 		addTarget(graph, m, graph.Target(dep))
 	}
-	for _, dep := range target.Dependencies(graph) {
+	// As above, anything we can't resolve is simply skipped.
+	deps, _ := target.Dependencies(graph)
+	for _, dep := range deps {
 		addTarget(graph, m, dep)
 	}
 	if target.Subrepo != nil && target.Subrepo.Target != nil {

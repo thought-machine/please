@@ -1181,7 +1181,12 @@ func getLabelsInternal(graph *core.BuildGraph, target *core.BuildTarget, prefix 
 			return
 		}
 		if !t.OutputIsComplete || t == target || all {
-			for _, dep := range t.Dependencies(graph) {
+			deps, unresolved := t.Dependencies(graph)
+			if len(unresolved) > 0 {
+				// Shouldn't happen; by the time this is callable the target's dependencies are built.
+				log.Fatalf("get_labels called on %s, but its dependencies aren't in the build graph: %s", t.Label, unresolved)
+			}
+			for _, dep := range deps {
 				if !done[dep] {
 					getLabels(dep, max(depth-1, -1))
 				}

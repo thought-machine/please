@@ -585,7 +585,11 @@ func (target *BuildTarget) DeclaredDependenciesStrict() iter.Seq[BuildLabel] {
 // Dependencies returns the resolved dependencies of this target, applying any require/provide
 // relationships to map each declared dependency to the target(s) that actually satisfy it.
 // It requires the graph to look targets up, since a BuildTarget no longer caches these itself.
-func (target *BuildTarget) Dependencies(graph *BuildGraph) []*BuildTarget {
+//
+// The second return is the labels of any dependencies that aren't in the graph. For most callers
+// that indicates something has gone wrong and should be reported, but it's a legitimate state for
+// anything that runs while the graph is still being built up (e.g. the cycle detector).
+func (target *BuildTarget) Dependencies(graph *BuildGraph) ([]*BuildTarget, []BuildLabel) {
 	target.mutex.RLock()
 	labels := make([]BuildLabel, len(target.dependencies))
 	for i, dep := range target.dependencies {
@@ -593,40 +597,59 @@ func (target *BuildTarget) Dependencies(graph *BuildGraph) []*BuildTarget {
 	}
 	target.mutex.RUnlock()
 	ret := make(BuildTargets, 0, len(labels))
+	var unresolved []BuildLabel
 	for _, l := range labels {
-		depTarget := graph.TargetOrDie(l)
-		for _, provided := range depTarget.ProvideFor(target) {
-			ret = append(ret, graph.TargetOrDie(provided))
+		depTarget := graph.Target(l)
+		if depTarget == nil {
+			unresolved = append(unresolved, l)
+			continue
 		}
-	}
-	sort.Sort(ret)
-	return ret
-}
-
-// ExternalDependencies returns the resolved dependencies of this target, with any internal
-// dependencies (i.e. "_target#tag" ones sharing this target's parent) flattened out to the
-// external targets they in turn depend on. Require/provide relationships are applied as in Dependencies.
-func (target *BuildTarget) ExternalDependencies(graph *BuildGraph) []*BuildTarget {
-	target.mutex.RLock()
-	labels := make([]BuildLabel, len(target.dependencies))
-	for i, dep := range target.dependencies {
-		labels[i] = dep.Label
-	}
-	target.mutex.RUnlock()
-	ret := make(BuildTargets, 0, len(labels))
-	for _, l := range labels {
-		depTarget := graph.TargetOrDie(l)
 		for _, provided := range depTarget.ProvideFor(target) {
-			dep := graph.TargetOrDie(provided)
-			if dep.Label.Parent() != target.Label {
-				ret = append(ret, dep)
+			if t := graph.Target(provided); t != nil {
+				ret = append(ret, t)
 			} else {
-				ret = append(ret, dep.ExternalDependencies(graph)...)
+				unresolved = append(unresolved, provided)
 			}
 		}
 	}
 	sort.Sort(ret)
-	return ret
+	return ret, unresolved
+}
+
+// ExternalDependencies returns the resolved dependencies of this target, with any internal
+// dependencies (i.e. "_target#tag" ones sharing this target's parent) flattened out to the
+// external targets they in turn depend on. Require/provide relationships are applied as in Dependencies,
+// as is the second return of any dependencies that aren't in the graph.
+func (target *BuildTarget) ExternalDependencies(graph *BuildGraph) ([]*BuildTarget, []BuildLabel) {
+	target.mutex.RLock()
+	labels := make([]BuildLabel, len(target.dependencies))
+	for i, dep := range target.dependencies {
+		labels[i] = dep.Label
+	}
+	target.mutex.RUnlock()
+	ret := make(BuildTargets, 0, len(labels))
+	var unresolved []BuildLabel
+	for _, l := range labels {
+		depTarget := graph.Target(l)
+		if depTarget == nil {
+			unresolved = append(unresolved, l)
+			continue
+		}
+		for _, provided := range depTarget.ProvideFor(target) {
+			dep := graph.Target(provided)
+			if dep == nil {
+				unresolved = append(unresolved, provided)
+			} else if dep.Label.Parent() != target.Label {
+				ret = append(ret, dep)
+			} else {
+				deps, u := dep.ExternalDependencies(graph)
+				ret = append(ret, deps...)
+				unresolved = append(unresolved, u...)
+			}
+		}
+	}
+	sort.Sort(ret)
+	return ret, unresolved
 }
 
 // BuildDependencies returns the build-time dependency labels of this target (i.e. not run-time dependencies, data, internal nor source).
