@@ -730,16 +730,6 @@ func exportFile(state *BuildState, pkg *Package, label BuildLabel) {
 	state.AddTarget(pkg, t)
 }
 
-// CheckArchSubrepo checks if a target refers to a cross-compiling subrepo.
-// Those don't have to be explicitly defined - maybe we should insist on that, but it's nicer not to have to.
-func (state *BuildState) CheckArchSubrepo(name string) *Subrepo {
-	var arch cli.Arch
-	if err := arch.UnmarshalFlag(name); err == nil {
-		return state.Graph.MaybeAddSubrepo(SubrepoForArch(state, arch))
-	}
-	return nil
-}
-
 // ForTarget returns the state associated with a given target.
 // This differs if the target is in a subrepo for a different architecture.
 func (state *BuildState) ForTarget(target *BuildTarget) *BuildState {

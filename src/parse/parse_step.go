@@ -22,30 +22,7 @@ var log = logging.Log
 var ErrMissingBuildFile = errors.New("build file not found")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
-// It is not an error if the package has already been parsed.
-//
-// By default, after the package is parsed, any targets that are now needed for the build and ready
-// to be built are queued, and any new packages are queued for parsing. When a specific label is requested
-// this is straightforward, but when parsing for pseudo-targets like :all and ..., various flags affect it:
-// 'include' and 'exclude' refer to the labels of targets to be added. If 'include' is non-empty then only
-// targets with at least one matching label are added. Any targets with a label in 'exclude' are not added.
-// 'forSubinclude' is set when the parse is required for a subinclude target so should proceed
-// even when we're not otherwise building targets.
 func Parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Package, error) {
-	pkg, err := parse(state, label, dependent)
-	if err != nil {
-		state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
-		return nil, err
-	}
-	return pkg, nil
-}
-
-func parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Package, error) {
-	// TODO(peter): I don't think we need this any more
-	// if t := state.Graph.Target(label); t != nil && t.State() < core.Active {
-	// 	return state.ActivateTarget(nil, label, dependent, mode)
-	// }
-
 	subrepo, err := checkSubrepo(state, label)
 	if err != nil {
 		return nil, err

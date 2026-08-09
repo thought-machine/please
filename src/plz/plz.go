@@ -2,6 +2,7 @@ package plz
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"iter"
 	"path/filepath"
@@ -144,24 +145,68 @@ type runner struct {
 // The dependent is whatever is asking for this to be parsed; it's used to produce better error
 // messages, and to detect a package that is asking to parse itself.
 func (r *runner) Parse(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
+	return r.parse(ctx, label, dependent, false)
+}
+
+// tryParse is like Parse but doesn't report failures. It's used where a failure isn't necessarily an
+// error, i.e. when we're speculatively looking for the package that might define a subrepo; the caller
+// is responsible for reporting anything it can't handle itself.
+func (r *runner) tryParse(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
+	return r.parse(ctx, label, dependent, true)
+}
+
+func (r *runner) parse(ctx context.Context, label, dependent core.BuildLabel, quiet bool) (*core.Package, error) {
 	return r.state.Graph.GetOrSetPackage(ctx, label, func() (*core.Package, error) {
 		r.progress.numParsing.Add(1)
 		defer r.progress.numParsing.Add(-1)
-		// If the target is in a subrepo that we don't know about yet, we must make sure that is built first.
-		// If we already have it there's nothing to do here; it's been registered by whatever parse defined it.
-		if label.Subrepo != "" && r.state.Graph.Subrepo(label.Subrepo) == nil {
-			if r.state.CheckArchSubrepo(label.Subrepo) == nil {
-				sl := label.SubrepoLabel(r.state)
-				if inSamePackage(sl, dependent) {
-					return nil, fmt.Errorf("subrepo %v is not defined in this package yet. It must appear before it is used by %v", label.Subrepo, dependent)
-				}
-				if _, err := r.Parse(ctx, sl, label); err != nil {
+		pkg, err := func() (*core.Package, error) {
+			// If the target is in a subrepo that we don't know about yet, we must make sure that is defined first.
+			// If we already have it there's nothing to do here; it's been registered by whatever parse defined it.
+			if label.Subrepo != "" && r.state.Graph.Subrepo(label.Subrepo) == nil {
+				if err := r.ensureSubrepo(ctx, label, dependent); err != nil {
 					return nil, err
 				}
 			}
+			return parse.Parse(r.state, label, dependent)
+		}()
+		if err != nil && !quiet {
+			r.state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
 		}
-		return parse.Parse(r.state, label, dependent)
+		return pkg, err
 	})
+}
+
+// ensureSubrepo makes sure that the subrepo the given label is in has been defined.
+//
+// A name like `linux_amd64` is ambiguous: it could be a subrepo defined by a target somewhere, or one
+// of the architecture subrepos, which are implicitly defined and so have no defining target anywhere.
+// We resolve that by always preferring a real definition, and only falling back to the architecture
+// interpretation once we know there isn't one.
+func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildLabel) error {
+	sl := label.SubrepoLabel(r.state)
+	// The subrepo would be defined by a target in the dependent's package, which means that package is
+	// the one currently being parsed - and since we didn't find the subrepo, the call that defines it
+	// hasn't been reached yet. We can't wait for that parse because we are that parse.
+	if inSamePackage(sl, dependent) {
+		return fmt.Errorf("subrepo %v is not defined in this package yet. It must appear before it is used by %v", label.Subrepo, dependent)
+	}
+	// Parsing the package that should define it registers the subrepo as a side effect. A missing BUILD
+	// file isn't fatal yet; that's exactly what we'd expect for an architecture subrepo.
+	_, err := r.tryParse(ctx, sl, label)
+	if err != nil && !errors.Is(err, parse.ErrMissingBuildFile) {
+		return err
+	}
+	if r.state.Graph.Subrepo(label.Subrepo) != nil {
+		return nil // The parse above defined it, we're done.
+	}
+	// Nothing defines it, so the only remaining possibility is an architecture subrepo.
+	if arch, ok := couldBeArch(label.Subrepo); ok {
+		r.state.Graph.MaybeAddSubrepo(core.SubrepoForArch(r.state, arch))
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 }
 
 // inSamePackage returns true if the two labels are in the same package (and hence, if one of them is
@@ -646,4 +691,15 @@ func (p *Progress) NumDone() int {
 // NumParsing returns the number of BUILD files currently being parsed.
 func (p *Progress) NumParsing() int {
 	return int(p.numParsing.Load())
+}
+
+// couldBeArch returns the architecture for a potential subrepo name, if it could be one for
+// cross-compiling. Note that this is only a syntactic check; a real subrepo can be named this way too,
+// so a caller must satisfy itself that nothing else defines it before treating it as an architecture.
+func couldBeArch(name string) (cli.Arch, bool) {
+	var arch cli.Arch
+	if err := arch.UnmarshalFlag(name); err != nil {
+		return arch, false
+	}
+	return arch, true
 }
