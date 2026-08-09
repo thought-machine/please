@@ -205,8 +205,6 @@ type BuildTarget struct {
 	EntryPoints map[string]string `name:"entry_points"`
 	// Used to arbitrate concurrent access to dependencies, and to the test results.
 	mutex sync.RWMutex `print:"false"`
-	// Used to notify once this target has built successfully.
-	finishedBuilding chan struct{} `print:"false"`
 	// Env are any custom environment variables to set for this build target
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
@@ -405,7 +403,6 @@ func NewBuildTarget(label BuildLabel) *BuildTarget {
 		Label:               label,
 		state:               int32(Inactive),
 		BuildingDescription: DefaultBuildingDescription,
-		finishedBuilding:    make(chan struct{}),
 	}
 }
 
@@ -792,16 +789,6 @@ func (target *BuildTarget) IterAllRuntimeDependencies(graph *BuildGraph) iter.Se
 		}
 		push(target)
 	}
-}
-
-// FinishBuild marks this target as having built.
-func (target *BuildTarget) FinishBuild() {
-	close(target.finishedBuilding)
-}
-
-// WaitForBuild blocks until this target has finished building.
-func (target *BuildTarget) WaitForBuild(dependant BuildLabel) {
-	waitOnChan(target.finishedBuilding, "Still waiting on (target %v).WaitForBuild(dependant %v)", target.Label, dependant)
 }
 
 // DeclaredOutputs returns the outputs from this target's original declaration.

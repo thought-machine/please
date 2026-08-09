@@ -74,7 +74,6 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) error 
 			log.Errorf("Failed to remove outputs for %s: %s", target.Label, err)
 		}
 		target.SetState(core.Failed)
-		target.FinishBuild()
 		return err
 	}
 	if remote {
@@ -82,8 +81,6 @@ func Build(state *core.BuildState, target *core.BuildTarget, remote bool) error 
 	} else {
 		successfulLocalTargetBuildDuration.WithLabelValues(metrics.CILabel).Observe(float64(time.Since(start).Milliseconds()))
 	}
-	// Mark the target as having finished building.
-	target.FinishBuild()
 	return nil
 }
 

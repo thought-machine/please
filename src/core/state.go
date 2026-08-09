@@ -663,19 +663,6 @@ func (state *BuildState) ExpandVisibleOriginalTargets() BuildLabels {
 	return ret
 }
 
-func waitOnChan[T any](ch chan T, message string, args ...any) {
-	start := time.Now()
-	t := time.NewTimer(10 * time.Second)
-	defer t.Stop()
-	select {
-	case <-ch:
-		return
-	case <-t.C:
-		log.Debugf("%v (after %v)", fmt.Sprintf(message, args...), time.Since(start))
-	}
-	<-ch
-}
-
 // AddTarget adds a new target to the build graph.
 func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 	pkg.AddTarget(target)
