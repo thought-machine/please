@@ -73,4 +73,5 @@ python_wheel(
 pip_library(
     name = "progress",
     version = "1.5",
+    licences = ["ISC"],
 )
