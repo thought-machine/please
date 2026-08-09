@@ -66,9 +66,10 @@ func (m *Map[K, V]) Set(key K, val V) {
 }
 
 // Get returns the value corresponding to the given key, or its zero value if the key doesn't exist in the map.
+// N.B. Unlike GetOrWait this never inserts anything; a caller that isn't going to set the value must not
+//      leave an entry behind for others to wait on.
 func (m *Map[K, V]) Get(key K) V {
-	v, _, _ := m.shards[m.hasher(key)&m.mask].Get(key)
-	return v
+	return m.shards[m.hasher(key)&m.mask].get(key)
 }
 
 func (m *Map[K, V]) Contains(key K) bool {
@@ -157,6 +158,14 @@ func (s *shard[K, V]) LazySet(key K, f func() V) (V, bool) {
 	v := f()
 	s.m[key] = awaitableValue[V]{Val: v}
 	return v, true
+}
+
+// get returns the value for a key, or its zero value if it isn't present.
+// Unlike Get it never inserts anything, so it's safe for callers that only want to read.
+func (s *shard[K, V]) get(key K) V {
+	s.l.RLock()
+	defer s.l.RUnlock()
+	return s.m[key].Val
 }
 
 // Get returns the value for a key or, if not present, a channel that it can be waited
