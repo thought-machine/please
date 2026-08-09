@@ -84,6 +84,7 @@ The comparison needs the dependent, not the label — which means reversing the
 
 ## C. `CheckArchSubrepo` is consulted first, and it accepts anything
 SORT OF DONE in 0ba3093a522688f55a0025c02ff43a0f622b3809
+DONE in ba3fef2921b215d29ced22bb5336e65fd70fbbbc
 **Failing:** `//test/proto_plugin:proto_rules_test`
 
 ```
