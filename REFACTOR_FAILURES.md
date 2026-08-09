@@ -52,7 +52,7 @@ doesn't fix the underlying stranding — any parse failure anywhere still relies
 context cancellation to release waiters.
 
 ## B. `runner.Parse` lost the `dependent` label
-
+DONE in 0ba3093a522688f55a0025c02ff43a0f622b3809
 **Failing:** `//test/subrepo/same_package_error:same_package_error` (hangs until the test timeout)
 
 The test asserts the error `subrepo X is not defined in this package yet` for a BUILD file
@@ -83,7 +83,7 @@ The comparison needs the dependent, not the label — which means reversing the
 (`parse.Parse(r.state, label, label)`). The answer appears to be no.
 
 ## C. `CheckArchSubrepo` is consulted first, and it accepts anything
-
+SORT OF DONE in 0ba3093a522688f55a0025c02ff43a0f622b3809
 **Failing:** `//test/proto_plugin:proto_rules_test`
 
 ```
@@ -119,8 +119,7 @@ this one needs its own investigation.
 ## E. `BuildTarget.Dependencies` panics on lazily-resolved deps
 
 **Failing:** `//test/export:export_src_please_test`, `//test/export/test_go_bin:export_go_target`,
-`//test/export/test_native_target_with_go_dep:export_native_target_with_go_dep`,
-`//test/local_subinclude_test:test_subrepo`
+`//test/export/test_native_target_with_go_dep:export_native_target_with_go_dep`
 
 `src/core/build_target.go:598` resolves each declared dep with `graph.TargetOrDie`. Since
 dependency resolution moved out of `build_target`, the graph legitimately may not contain a
