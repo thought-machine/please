@@ -22,6 +22,7 @@ Recorded for context; these are done and are not in the 12 below.
 | `AddOriginalTarget` called inside the task goroutine | Nondeterministic original-target order, visible as `.gitignore` write order | Call it synchronously in `queueTask`, in walk order |
 
 ## A. A failed package parse strands every other waiter
+# DONE in 89ff16978efcc727a8d1272eedecd00c2c8288d6 and d2a0d2dd773a8d651d9fac991a04a2a7e67a292b
 
 **Failing:** `//test/preloaded_subinc:preload_subinc_test` (hangs until the test timeout)
 

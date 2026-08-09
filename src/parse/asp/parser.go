@@ -10,7 +10,6 @@ import (
 	iofs "io/fs"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
@@ -32,9 +31,6 @@ type Parser struct {
 
 	// Parallelism limiter to ensure we don't try to run too many parses simultaneously
 	limiter semaphore
-
-	// Used during subinclude preloads
-	preloadMutex sync.Mutex
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
@@ -93,8 +89,8 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	return err
 }
 
-// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
-func (p *Parser) RegisterPreload(label core.BuildLabel) error {
+// PreloadSubinclude pre-registers a preload, forcing us to build any transitive preloads before we move on
+func (p *Parser) PreloadSubinclude(label core.BuildLabel) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
@@ -102,13 +98,12 @@ func (p *Parser) RegisterPreload(label core.BuildLabel) error {
 	s := p.interpreter.scope.newScope(nil, "", 0)
 	s.config = p.interpreter.scope.config.Copy()
 	s.Set("CONFIG", s.config)
-	if err := p.interpreter.preloadSubinclude(s, label); err != nil {
-		return err
-	}
-	p.preloadMutex.Lock()
-	defer p.preloadMutex.Unlock()
-	p.interpreter.preloads = append(p.interpreter.preloads, label)
-	return nil
+	return p.interpreter.preloadSubinclude(s, label)
+}
+
+// RegisterPreloads registers the set of preloaded subincludes.
+func (p *Parser) RegisterPreloads(labels []core.BuildLabel) {
+	p.interpreter.preloads = labels
 }
 
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.

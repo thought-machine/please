@@ -77,7 +77,6 @@ type Parser interface {
 	RunPreBuildFunction(state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
 	RunPostBuildFunction(state *BuildState, target *BuildTarget, output string) error
-	RegisterPreload(label BuildLabel) error
 }
 
 // A RemoteClient is the interface to a remote execution service.

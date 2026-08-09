@@ -609,10 +609,6 @@ func (*mockCache) Shutdown()                      {}
 type fakeParser struct {
 }
 
-func (fake *fakeParser) RegisterPreload(core.BuildLabel) error {
-	return nil
-}
-
 // ParseFile stub
 func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
 	return nil

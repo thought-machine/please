@@ -13,6 +13,7 @@ go_library(
         "//src/core",
         "//src/fs",
         "//src/metrics",
+        "//src/parse/asp",
         "//src/parse",
         "//src/remote",
         "//src/test",

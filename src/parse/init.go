@@ -16,13 +16,11 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-// InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
-func InitParser(state *core.BuildState) *core.BuildState {
-	if state.Parser == nil {
-		p := &aspParser{parser: newAspParser(state)}
-		state.Parser = p
-	}
-	return state
+// InitParser initialises the parser engine.
+func InitParser(state *core.BuildState) *asp.Parser {
+	p := newAspParser(state)
+	state.Parser = &aspParser{parser: p}
+	return p
 }
 
 // GetAspParser returns the underlying asp.Parser from the state's parser.
@@ -89,11 +87,6 @@ func (p *aspParser) RunPostBuildFunction(state *core.BuildState, target *core.Bu
 		log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
 		return target.PostBuildFunction.Call(target, output)
 	})
-}
-
-// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
-func (p *aspParser) RegisterPreload(label core.BuildLabel) error {
-	return p.parser.RegisterPreload(label)
 }
 
 // runBuildFunction runs either the pre- or post-build function.

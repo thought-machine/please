@@ -21,6 +21,7 @@ import (
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/parse"
+	"github.com/thought-machine/please/src/parse/asp"
 	"github.com/thought-machine/please/src/remote"
 	"github.com/thought-machine/please/src/test"
 )
@@ -41,7 +42,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		go state.UpdateResources()
 	}
 
-	parse.InitParser(state)
+	parser := parse.InitParser(state)
 
 	// This must happen however we exit; anything reading state.Results() (e.g. the display)
 	// waits for that channel to be closed, so it would hang forever if we returned an error first.
@@ -83,7 +84,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	}
 
 	// Register the preloaded targets with the parser
-	if err := r.RegisterPreloads(ctx, state); err != nil {
+	if err := r.RegisterPreloads(ctx, state, parser); err != nil {
 		return err
 	}
 
@@ -511,9 +512,10 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 // RegisterPreloads waits for all preloaded subinclude targets to be built, downloads them, and then registers them with
 // the interpreter. We have to actually register them otherwise this will return before we build any
 // transitive subincludes.
-func (r *runner) RegisterPreloads(ctx context.Context, state *core.BuildState) error {
+func (r *runner) RegisterPreloads(ctx context.Context, state *core.BuildState, parser *asp.Parser) error {
 	g, ctx := errgroup.WithContext(ctx)
-	for _, inc := range state.GetPreloadedSubincludes() {
+	preloads := state.GetPreloadedSubincludes()
+	for _, inc := range preloads {
 		if inc.IsPseudoTarget() {
 			return fmt.Errorf("Can't preload pseudotarget %v", inc)
 		}
@@ -523,12 +525,16 @@ func (r *runner) RegisterPreloads(ctx context.Context, state *core.BuildState) e
 			if _, err := r.Build(ctx, inc); err != nil {
 				return err
 			}
-			return state.Parser.RegisterPreload(inc)
+			return parser.PreloadSubinclude(inc)
 		})
 	}
 	// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
 	// a package
-	return g.Wait()
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	parser.RegisterPreloads(preloads)
+	return nil
 }
 
 // FindAllBuildFiles finds all BUILD files under a particular path.
