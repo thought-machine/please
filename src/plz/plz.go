@@ -442,7 +442,9 @@ func (r *runner) Build(ctx context.Context, label, dependent core.BuildLabel) (*
 
 // testOne tests one single target
 func (r *runner) testOne(ctx context.Context, target *core.BuildTarget, dependent core.BuildLabel) error {
-	r.progress.numTotal.Add(int64(r.state.NumTestRuns))
+	if target.IsTest() {
+		r.progress.numTotal.Add(int64(r.state.NumTestRuns))
+	}
 	if _, err := r.Build(ctx, target.Label, dependent); err != nil {
 		return err
 	}
