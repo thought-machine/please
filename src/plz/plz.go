@@ -60,7 +60,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(ctx)
+	g, ctx := group(state, ctx)
 	state.Cancel = cancel
 
 	r := runner{
@@ -110,7 +110,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		}
 		// Reset the group & context for next time
 		ctx, cancel := context.WithCancel(context.Background())
-		g, ctx = errgroup.WithContext(ctx)
+		g, ctx = group(state, ctx)
 		state.Cancel = cancel
 		r.tasks = g
 	}
@@ -213,6 +213,18 @@ func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildL
 	return fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
 }
 
+// group returns an errgroup to run a set of tasks in, and the context to run them with.
+//
+// Normally that context is cancelled as soon as any of them fails, which stops us starting more work.
+// With --keep_going we don't cancel anything, so everything that can still be built gets built; the
+// group waits for all of it either way and Wait still returns the first error.
+func group(state *core.BuildState, ctx context.Context) (*errgroup.Group, context.Context) {
+	if state.KeepGoing {
+		return &errgroup.Group{}, ctx
+	}
+	return errgroup.WithContext(ctx)
+}
+
 // inSamePackage returns true if the two labels are in the same package (and hence, if one of them is
 // currently being parsed, both are).
 func inSamePackage(label, dependent core.BuildLabel) bool {
@@ -228,7 +240,7 @@ func (r *runner) RecursiveParse(ctx context.Context, label, dependent core.Build
 	if err != nil {
 		return err
 	}
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := group(r.state, ctx)
 	for _, target := range pkg.AllTargets() {
 		for dep := range target.DeclaredDependencies() {
 			g.Go(func() error {
@@ -249,7 +261,7 @@ func (r *runner) recursiveParse(ctx context.Context, label, dependent core.Build
 	if err != nil {
 		return err
 	}
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := group(r.state, ctx)
 	for dep := range target.DeclaredDependencies() {
 		g.Go(func() error {
 			return r.recursiveParse(gctx, dep, target.Label)
@@ -312,7 +324,7 @@ func (r *runner) buildDep(ctx context.Context, dep core.BuildLabel, target *core
 
 // buildOne builds a single target (which cannot be a pseudo-label like :all)
 func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := group(r.state, ctx)
 	for dep := range target.BuildDependencyLabels() {
 		g.Go(func() error {
 			return r.buildDep(gctx, dep, target)
@@ -331,7 +343,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 
 	if target.ModifiedByCallback {
 		// A pre- or post-build function modified this target post parse, so we need to check its dependencies again.
-		g, gctx := errgroup.WithContext(ctx)
+		g, gctx := group(r.state, ctx)
 		for dep := range target.BuildDependencyLabels() {
 			g.Go(func() error {
 				return r.buildDep(gctx, dep, target)
@@ -350,7 +362,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 			return err
 		}
 	} else {
-		g, gctx = errgroup.WithContext(ctx)
+		g, gctx = group(r.state, ctx)
 		g.Go(func() error {
 			return r.buildJustOne(target)
 		})
@@ -369,7 +381,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	}
 	// It could have modified itself with its own post-build function, so we have to check runtime dpendencies again.
 	// This is a little unfortunate that we can't immediately distinguish from the case we checked above.
-	g, gctx = errgroup.WithContext(ctx)
+	g, gctx = group(r.state, ctx)
 	for dep := range target.RuntimeAndDataDependencies() {
 		g.Go(func() error {
 			return r.buildDep(gctx, dep, target)
@@ -393,7 +405,7 @@ func (r *runner) buildAll(ctx context.Context, label, dependent core.BuildLabel)
 	if err != nil {
 		return err
 	}
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := group(r.state, ctx)
 	for _, target := range pkg.AllTargets() {
 		if r.state.ShouldInclude(target) {
 			g.Go(func() error {
@@ -476,7 +488,7 @@ func (r *runner) Test(ctx context.Context, label, dependent core.BuildLabel) err
 	if err != nil {
 		return err
 	}
-	g, ctx := errgroup.WithContext(ctx)
+	g, ctx := group(r.state, ctx)
 	for _, target := range pkg.AllTargets() {
 		if r.state.ShouldInclude(target) {
 			g.Go(func() error {
@@ -597,7 +609,7 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 // the interpreter. We have to actually register them otherwise this will return before we build any
 // transitive subincludes.
 func (r *runner) RegisterPreloads(ctx context.Context, state *core.BuildState, parser *asp.Parser) error {
-	g, ctx := errgroup.WithContext(ctx)
+	g, ctx := group(r.state, ctx)
 	preloads := state.GetPreloadedSubincludes()
 	for _, inc := range preloads {
 		if inc.IsPseudoTarget() {
