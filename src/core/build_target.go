@@ -210,8 +210,7 @@ type BuildTarget struct {
 	// The content of text_file() rules
 	FileContent string `name:"content"`
 	// Represents the state of this build target (see below)
-	// TODO(peter): we can just make this a public field now, it doesn't require atomics any more.
-	state BuildTargetState `print:"false"`
+	state atomic.Int32 `print:"false"`
 	// The number of completed runs
 	completedRuns uint16 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
@@ -392,7 +391,6 @@ func (s BuildTargetState) IsBuilt() bool {
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return &BuildTarget{
 		Label:               label,
-		state:               Inactive,
 		BuildingDescription: DefaultBuildingDescription,
 	}
 }
@@ -1180,12 +1178,12 @@ func (target *BuildTarget) IsSourceOnlyDep(label BuildLabel) bool {
 
 // State returns the target's current state.
 func (target *BuildTarget) State() BuildTargetState {
-	return target.state
+	return BuildTargetState(target.state.Load())
 }
 
 // SetState sets a target's current state.
 func (target *BuildTarget) SetState(state BuildTargetState) {
-	target.state = state
+	target.state.Store(int32(state))
 }
 
 // AddLabel adds the given label to this target if it doesn't already have it.
