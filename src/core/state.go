@@ -268,7 +268,6 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 // This is split out from above so we can share it between multiple instances.
 type stateProgress struct {
 	mutex      sync.Mutex
-	closeOnce  sync.Once
 	resultOnce sync.Once
 	// The set of known states
 	allStates []*BuildState
@@ -719,15 +718,6 @@ func (state *BuildState) EnsureDownloaded(target *BuildTarget) error {
 		}
 	}
 	return nil
-}
-
-// exportFile adds a single-file export target. This is primarily used for Bazel compat.
-func exportFile(state *BuildState, pkg *Package, label BuildLabel) {
-	t := NewBuildTarget(label)
-	t.Subrepo = pkg.Subrepo
-	t.IsFilegroup = true
-	t.AddSource(NewFileLabel(label.Name, pkg))
-	state.AddTarget(pkg, t)
 }
 
 // ForTarget returns the state associated with a given target.

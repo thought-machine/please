@@ -107,6 +107,8 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - tree
+      - plz-out
 formatters:
   enable:
     - gci
@@ -124,3 +126,5 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - tree
+      - plz-out

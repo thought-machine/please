@@ -212,9 +212,6 @@ type BuildTarget struct {
 	// Represents the state of this build target (see below)
 	// TODO(peter): we can just make this a public field now, it doesn't require atomics any more.
 	state BuildTargetState `print:"false"`
-	// If true, the target is needed for a subinclude and therefore we will have to make sure its
-	// outputs are available locally when built.
-	neededForSubinclude atomic.Bool `print:"false"`
 	// The number of completed runs
 	completedRuns uint16 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
