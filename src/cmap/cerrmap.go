@@ -61,6 +61,12 @@ func (m *ErrMap[K, V]) Get(key K) (V, error) {
 	return v.Val, v.Err
 }
 
+// GetOrWait returns the value corresponding to the given key, or a channel to wait on if it doesn't exist in the map.
+func (m *ErrMap[K, V]) GetOrWait(key K) (V, <-chan struct{}, error) {
+	v, ch, _ := m.m.GetOrWait(key)
+	return v.Val, ch, v.Err
+}
+
 // GetOrSet returns the value if set, or an error if one has been set.
 // If nothing has been set for the key, it runs the given function to generate the value and then sets it.
 func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {

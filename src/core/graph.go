@@ -6,8 +6,8 @@ package core
 
 import (
 	"context"
-	"maps"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"sync"
@@ -32,7 +32,7 @@ type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets *cmap.Map[BuildLabel, *BuildTarget]
 	// Map of all currently known packages.
-	packages *cmap.Map[packageKey, *Package]
+	packages *cmap.ErrMap[packageKey, *Package]
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.Map[string, *Subrepo]
 	// Subincludes that are subincluded by other subincludes
@@ -101,25 +101,14 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	return graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
+	pkg, _ := graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
+	return pkg
 }
 
-// PackageOrWait retrieves a package from the graph.
-// If the package doesn't exist and nobody has asked for it before, it returns nil.
-// If the package doesn't exist and somebody has asked for it before, it waits until it is added with AddPackage, then returns it.
-func (graph *BuildGraph) PackageOrWait(ctx context.Context, label BuildLabel) (*Package, error) {
-	key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
-	pkg, wait, first := graph.packages.GetOrWait(key)
-	if pkg != nil || first {
-		return pkg, nil
-	}
-	done := ctx.Done()
-	select {
-	case <-wait:
-		return graph.packages.Get(key), nil
-	case <-done:
-		return nil, ctx.Err()
-	}
+// GetOrSetPackage retrieves a package from the graph.
+// If it doesn't exist, it calls the supplied function to create it.
+func (graph *BuildGraph) GetOrSetPackage(ctx context.Context, label BuildLabel, f func() (*Package, error)) (*Package, error) {
+	return graph.packages.GetOrSetCtx(ctx, packageKey{Name: label.PackageName, Subrepo: label.Subrepo}, f)
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.
@@ -173,12 +162,13 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 	return targets
 }
 
-// PackageMap returns a copy of the graph's internal map of name to package.
+// PackageMap returns a map of name to package.
+// TODO(peterebden): Change this to an iterator.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	packages := map[string]*Package{}
-	for _, pkg := range graph.packages.Values() {
-		packages[packageKey{Subrepo: pkg.SubrepoName, Name: pkg.Name}.String()] = pkg
-	}
+	graph.packages.Range(func(k packageKey, v *Package) {
+		packages[k.String()] = v
+	})
 	return packages
 }
 
@@ -186,7 +176,7 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		targets:               cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, hashBuildLabel),
-		packages:              cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
+		packages:              cmap.NewErrMap[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey, nil),
 		subrepos:              cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
 		subincludeSubincludes: map[BuildLabel]labelSet{},
 	}

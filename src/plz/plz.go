@@ -141,27 +141,25 @@ type runner struct {
 
 // Parse parses for a target. It can be called more than once for the same build label.
 func (r *runner) Parse(ctx context.Context, label core.BuildLabel) (*core.Package, error) {
-	if pkg, err := r.state.Graph.PackageOrWait(ctx, label); err != nil || pkg != nil {
-		return pkg, err
-	}
-	// If we get here then we have to parse it (we only get here if we are the first one)
-	r.progress.numParsing.Add(1)
-	defer r.progress.numParsing.Add(-1)
-	// If the target defines a subrepo, we must make sure that is built first.
-	if label.Subrepo != "" {
-		if r.state.CheckArchSubrepo(label.Subrepo) == nil {
-			sl := label.SubrepoLabel(r.state)
-			if sl.Subrepo == label.Subrepo && sl.PackageName == label.PackageName {
-				// TODO(peter): Unsure if this is a legit case or not.
-				return nil, fmt.Errorf("subinclude from within same package of a subrepo")
-			}
-			if _, err := r.Parse(ctx, sl); err != nil {
-				return nil, err
+	return r.state.Graph.GetOrSetPackage(ctx, label, func() (*core.Package, error) {
+		r.progress.numParsing.Add(1)
+		defer r.progress.numParsing.Add(-1)
+		// If the target defines a subrepo, we must make sure that is built first.
+		if label.Subrepo != "" {
+			if r.state.CheckArchSubrepo(label.Subrepo) == nil {
+				sl := label.SubrepoLabel(r.state)
+				if sl.Subrepo == label.Subrepo && sl.PackageName == label.PackageName {
+					// TODO(peter): Unsure if this is a legit case or not.
+					return nil, fmt.Errorf("subinclude from within same package of a subrepo")
+				}
+				if _, err := r.Parse(ctx, sl); err != nil {
+					return nil, err
+				}
 			}
 		}
-	}
-	// TODO(peter): can we drop the dependent here?
-	return parse.Parse(r.state, label, label)
+		// TODO(peter): can we drop the dependent here?
+		return parse.Parse(r.state, label, label)
+	})
 }
 
 // RecursiveParse is like Parse but recurses down into all dependencies of the target as well.
