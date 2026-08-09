@@ -492,7 +492,7 @@ func (r *runner) Test(ctx context.Context, label, dependent core.BuildLabel) err
 	}
 	g, ctx := r.group(ctx)
 	for _, target := range pkg.AllTargets() {
-		if r.state.ShouldInclude(target) {
+		if r.state.ShouldInclude(target) && (target.IsTest() || r.state.NeedCoverage) && !target.AddedPostBuild {
 			g.Go(func() error {
 				return r.testOne(ctx, target, dependent)
 			})
