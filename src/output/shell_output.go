@@ -86,7 +86,7 @@ loop:
 			} else if (state.NeedHashesOnly || state.PrepareOnly || shell) && target.State() == core.Stopped {
 				// Do nothing, we will output about this shortly.
 			} else if target.State() < core.Built && len(bt.FailedTargets) == 0 && !target.AddedPostBuild {
-				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
+				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltDepsMessage(state.Graph, target))
 			}
 		}
 	}
@@ -643,20 +643,33 @@ func colouriseError(err error) error {
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
 var errorMessageRe = deferredregex.DeferredRegex{Re: `^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`}
 
-// unbuiltTargetsMessage returns a message for any targets that are supposed to build but haven't yet.
-func unbuiltTargetsMessage(graph *core.BuildGraph) string {
-	var msgBuilder strings.Builder
-	for _, target := range graph.AllTargets() {
-		if target.State() == core.Active {
-			_, _ = fmt.Fprintf(&msgBuilder, "  %s", target.Label)
-		} else if target.State() == core.Pending {
-			_, _ = fmt.Fprintf(&msgBuilder, "  %s (pending build)\n", target.Label)
+// unbuiltDepsMessage returns a message describing why the given target hasn't built, by listing
+// any of its transitive dependencies that aren't built either.
+func unbuiltDepsMessage(graph *core.BuildGraph, target *core.BuildTarget) string {
+	var b strings.Builder
+	seen := map[*core.BuildTarget]bool{}
+	var walk func(*core.BuildTarget)
+	walk = func(t *core.BuildTarget) {
+		if seen[t] {
+			return
+		}
+		seen[t] = true
+		deps, unresolved := t.Dependencies(graph)
+		for _, l := range unresolved {
+			fmt.Fprintf(&b, "  %s (not in the build graph)\n", l)
+		}
+		for _, dep := range deps {
+			if !dep.State().IsBuilt() {
+				fmt.Fprintf(&b, "  %s (%s)\n", dep.Label, dep.State())
+				walk(dep)
+			}
 		}
 	}
-	if msgBuilder.Len() == 0 {
-		return "\nThe following targets have not yet built:\n" + msgBuilder.String()
+	walk(target)
+	if b.Len() == 0 {
+		return ""
 	}
-	return ""
+	return "\nThe following dependencies have not built:\n" + b.String()
 }
 
 // shortError returns the message for an error, shortening it if the error supports that.

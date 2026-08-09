@@ -210,7 +210,8 @@ type BuildTarget struct {
 	// The content of text_file() rules
 	FileContent string `name:"content"`
 	// Represents the state of this build target (see below)
-	state int32 `print:"false"`
+	// TODO(peter): we can just make this a public field now, it doesn't require atomics any more.
+	state BuildTargetState `print:"false"`
 	// If true, the target is needed for a subinclude and therefore we will have to make sure its
 	// outputs are available locally when built.
 	neededForSubinclude atomic.Bool `print:"false"`
@@ -344,9 +345,6 @@ type BuildTargetState uint8
 // The available states for a target.
 const (
 	Inactive         BuildTargetState = iota // Target isn't used in current build
-	Semiactive                               // Target would be active if we needed a build
-	Active                                   // Target is going to be used in current build
-	Pending                                  // Target is ready to be built but not yet started.
 	Building                                 // Target is currently being built
 	Stopped                                  // We stopped building the target because we'd gone as far as needed.
 	Built                                    // Target has been successfully built
@@ -364,12 +362,6 @@ func (s BuildTargetState) String() string {
 	switch s {
 	case Inactive:
 		return "Inactive"
-	case Semiactive:
-		return "Semiactive"
-	case Active:
-		return "Active"
-	case Pending:
-		return "Pending"
 	case Building:
 		return "Building"
 	case Stopped:
@@ -403,7 +395,7 @@ func (s BuildTargetState) IsBuilt() bool {
 func NewBuildTarget(label BuildLabel) *BuildTarget {
 	return &BuildTarget{
 		Label:               label,
-		state:               int32(Inactive),
+		state:               Inactive,
 		BuildingDescription: DefaultBuildingDescription,
 	}
 }
@@ -1191,21 +1183,12 @@ func (target *BuildTarget) IsSourceOnlyDep(label BuildLabel) bool {
 
 // State returns the target's current state.
 func (target *BuildTarget) State() BuildTargetState {
-	return BuildTargetState(atomic.LoadInt32(&target.state))
+	return target.state
 }
 
 // SetState sets a target's current state.
 func (target *BuildTarget) SetState(state BuildTargetState) {
-	atomic.StoreInt32(&target.state, int32(state))
-}
-
-// SyncUpdateState oves the target's state from before to after via a lock.
-// Returns true if successful, false if not (which implies something else changed the state first).
-// The nature of our build graph ensures that most transitions are only attempted by
-// one thread simultaneously, but this one can be attempted by several at once
-// (eg. if a depends on b and c, which finish building simultaneously, they race to queue a).
-func (target *BuildTarget) SyncUpdateState(before, after BuildTargetState) bool {
-	return atomic.CompareAndSwapInt32(&target.state, int32(before), int32(after))
+	target.state = state
 }
 
 // AddLabel adds the given label to this target if it doesn't already have it.

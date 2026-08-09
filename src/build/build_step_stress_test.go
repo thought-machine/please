@@ -54,7 +54,6 @@ func addTarget(state *core.BuildState, i int) *core.BuildTarget {
 	// Create and add a new target, with a parent and a dependency.
 	target := core.NewBuildTarget(label(i))
 	target.IsFilegroup = true // Will mean it doesn't have to shell out to anything.
-	target.SetState(core.Active)
 	target.Test = new(core.TestFields)
 	state.Graph.AddTarget(target)
 	if i <= size {
