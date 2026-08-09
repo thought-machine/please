@@ -326,21 +326,50 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 		return err
 	}
 
-	// TODO(peter): Need to handle targets getting extra deps added by post-build functions here.
+	if target.ModifiedByCallback {
+		// A pre- or post-build function modified this target post parse, so we need to check its dependencies again.
+		g, gctx := errgroup.WithContext(ctx)
+		for dep := range target.BuildDependencyLabels() {
+			g.Go(func() error {
+				return r.buildDep(gctx, dep, target)
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return err
+		}
+	}
 
 	// Okay, now the runtime dependencies can happen in parallel with the target itself.
-	deps := slices.Collect(target.RuntimeAndDataDependencies())
-	if len(deps) == 0 {
-		return r.buildJustOne(target)
-	}
-	g, gctx = errgroup.WithContext(ctx)
-	g.Go(func() error {
-		return r.buildJustOne(target)
-	})
-	for _, dep := range deps {
-		g.Go(func() error {
-			_, err := r.Build(gctx, dep, target.Label)
+	// N.B. Even when there are none we can't just build the target and return; its own callbacks
+	//      can add some, which we won't know about until it's built.
+	if deps := slices.Collect(target.RuntimeAndDataDependencies()); len(deps) == 0 {
+		if err := r.buildJustOne(target); err != nil {
 			return err
+		}
+	} else {
+		g, gctx = errgroup.WithContext(ctx)
+		g.Go(func() error {
+			return r.buildJustOne(target)
+		})
+		for _, dep := range deps {
+			g.Go(func() error {
+				return r.buildDep(gctx, dep, target)
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return err
+		}
+	}
+
+	if !target.ModifiedByCallback {
+		return nil
+	}
+	// It could have modified itself with its own post-build function, so we have to check runtime dpendencies again.
+	// This is a little unfortunate that we can't immediately distinguish from the case we checked above.
+	g, gctx = errgroup.WithContext(ctx)
+	for dep := range target.RuntimeAndDataDependencies() {
+		g.Go(func() error {
+			return r.buildDep(gctx, dep, target)
 		})
 	}
 	return g.Wait()

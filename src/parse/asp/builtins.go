@@ -1219,6 +1219,7 @@ func addDep(s *scope, args []pyObject) pyObject {
 	exported := args[2].IsTruthy()
 	runtime := args[3].IsTruthy()
 	target.AddMaybeExportedDependency(dep, exported, false, false, runtime)
+	target.ModifiedByCallback = true
 	return None
 }
 
@@ -1253,8 +1254,9 @@ func addData(s *scope, args []pyObject) pyObject {
 			}
 		}
 	} else {
-		log.Fatal("Unrecognised data type passed to add_data")
+		s.Error("Unrecognised data type passed to add_data")
 	}
+	target.ModifiedByCallback = true
 	return None
 }
 

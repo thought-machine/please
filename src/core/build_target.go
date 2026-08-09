@@ -250,6 +250,8 @@ type BuildTarget struct {
 	IsTextFile bool `print:"false"`
 	// Marks that the target was added in a post-build function.
 	AddedPostBuild bool `print:"false"`
+	// Marks that this target was modified by a pre or post build function
+	ModifiedByCallback bool `print:"false"`
 	// If true, skips generating environment variables for sources; instead files will be generated in
 	// the build environment containing the lists of sources as follows:
 	//  - _plz/srcs (equivalent to $SRCS) always
