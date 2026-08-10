@@ -5,6 +5,7 @@
 package asp
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func parseFile2(filename string) (*scope, error) {
 	if err != nil {
 		panic(err)
 	}
-	return parser.interpreter.interpretAll(pkg, nil, nil, statements)
+	return parser.interpreter.interpretAll(context.Background(), pkg, nil, nil, statements)
 }
 
 // assertRecords asserts equality of a series of logging records.

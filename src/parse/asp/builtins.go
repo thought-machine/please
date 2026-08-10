@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime/pprof"
 	"slices"
 	"sort"
 	"strconv"
@@ -302,10 +304,10 @@ func bazelLoad(s *scope, args []pyObject) pyObject {
 // WaitForSubincludedTarget drops the interpreter lock and waits for the subincluded target to be built. This is
 // important to keep us from deadlocking all available parser threads (easy to happen if they're all waiting on a
 // single target which now can't start)
-func (s *scope) WaitForSubincludedTarget(l, dependent core.BuildLabel) (*core.BuildTarget, error) {
+func (s *scope) WaitForSubincludedTarget(ctx context.Context, l, dependent core.BuildLabel) (*core.BuildTarget, error) {
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
-	return s.state.Build(l, dependent)
+	return s.state.Build(ctx, l, dependent)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -381,10 +383,17 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 			Subrepo:     subrepoLabel.Subrepo,
 			Name:        "all",
 		}
-		if _, err := s.state.Parse(subrepoPackageLabel, pkgLabel); err != nil {
+		ctx := pprof.WithLabels(s.ctx, pprof.Labels("subinclude "+subrepoPackageLabel.String(), pkgLabel.String()))
+		pprof.SetGoroutineLabels(ctx)
+		defer pprof.SetGoroutineLabels(s.ctx)
+		if _, err := s.state.Parse(ctx, subrepoPackageLabel, pkgLabel); err != nil {
 			s.Error("Failed to parse subrepo target: %w", err)
 		}
 	}
+
+	ctx := pprof.WithLabels(s.ctx, pprof.Labels("subinclude "+l.String(), pkgLabel.String()))
+	pprof.SetGoroutineLabels(ctx)
+	defer pprof.SetGoroutineLabels(s.ctx)
 
 	// isLocal is true when this subinclude target in the current package being parsed
 	isLocal := s.pkg != nil && l.Subrepo == s.pkg.Label().Subrepo && l.PackageName == s.pkg.Name
@@ -396,7 +405,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	if t == nil && isLocal {
 		s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
-	t, err := s.WaitForSubincludedTarget(l, pkgLabel)
+	t, err := s.WaitForSubincludedTarget(ctx, l, pkgLabel)
 	if err != nil {
 		s.Error("Failed to build subincluded target: %w", err)
 	} else if s.pkg != nil {

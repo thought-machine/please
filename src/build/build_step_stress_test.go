@@ -4,6 +4,7 @@
 package build_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	iofs "io/fs"
@@ -98,7 +99,7 @@ type fakeParser struct {
 }
 
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
+func (fake *fakeParser) ParseFile(_ context.Context, pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
 	return nil
 }
 
@@ -117,7 +118,7 @@ func (fake *fakeParser) Init(state *core.BuildState) {
 }
 
 // ParseReader stub
-func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel) error {
+func (fake *fakeParser) ParseReader(_ context.Context, pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel) error {
 	return nil
 }
 

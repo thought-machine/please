@@ -73,9 +73,9 @@ const (
 // A Parser is the interface to reading and interacting with BUILD files.
 type Parser interface {
 	// ParseFile parses a single BUILD file into the given package.
-	ParseFile(pkg *Package, forLabel, dependent *BuildLabel, fs iofs.FS, filename string) error
+	ParseFile(ctx context.Context, pkg *Package, forLabel, dependent *BuildLabel, fs iofs.FS, filename string) error
 	// ParseReader parses a single BUILD file into the given package.
-	ParseReader(pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel) error
+	ParseReader(ctx context.Context, pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel) error
 	// RunPreBuildFunction runs a pre-build function for a target.
 	RunPreBuildFunction(state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
@@ -224,10 +224,10 @@ type BuildState struct {
 	// Build is a callback to build a single target. It's set from outside here.
 	// TODO(peter): can we find a way of moving these off this struct? it feels weird here
 	// The second label is the dependent, i.e. whatever is asking for this to be built.
-	Build func(label, dependent BuildLabel) (*BuildTarget, error)
+	Build func(ctx context.Context, label, dependent BuildLabel) (*BuildTarget, error)
 	// Parse is a callback to parse a single package. It's also set from outside.
 	// The second label is the dependent, i.e. whatever is asking for this to be parsed.
-	Parse func(label, dependent BuildLabel) (*Package, error)
+	Parse func(ctx context.Context, label, dependent BuildLabel) (*Package, error)
 	// Cancel is a cancel function called when the state detects a cycle.
 	Cancel func()
 

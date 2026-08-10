@@ -164,8 +164,9 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
-func (i *interpreter) interpretAll(pkg *core.Package, forLabel, dependent *core.BuildLabel, statements []*Statement) (*scope, error) {
+func (i *interpreter) interpretAll(ctx context.Context, pkg *core.Package, forLabel, dependent *core.BuildLabel, statements []*Statement) (*scope, error) {
 	s := i.scope.NewPackagedScope(pkg, 1)
+	s.ctx = ctx
 	s.config = i.getConfig(s.state).Copy()
 
 	// Config needs a little separate tweaking.

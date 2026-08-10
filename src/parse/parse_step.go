@@ -6,6 +6,7 @@
 package parse
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	iofs "io/fs"
@@ -22,7 +23,7 @@ var log = logging.Log
 var ErrMissingBuildFile = errors.New("build file not found")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
-func Parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Package, error) {
+func Parse(ctx context.Context, state *core.BuildState, label, dependent core.BuildLabel) (*core.Package, error) {
 	subrepo, err := checkSubrepo(state, label)
 	if err != nil {
 		return nil, err
@@ -36,7 +37,7 @@ func Parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Pack
 
 	if subrepo != nil && subrepo.Target != nil {
 		// We have got the definition of the subrepo, but it depends on something, make sure that has been built.
-		if _, err := state.Build(subrepo.Target.Label, dependent); err != nil {
+		if _, err := state.Build(ctx, subrepo.Target.Label, dependent); err != nil {
 			return nil, err
 		}
 		if err := subrepo.State.Initialise(subrepo); err != nil {
@@ -49,7 +50,7 @@ func Parse(state *core.BuildState, label, dependent core.BuildLabel) (*core.Pack
 		// TODO(peter): is this relevant still?
 		return nil, nil
 	}
-	pkg, err := parsePackage(state, label, dependent, subrepo)
+	pkg, err := parsePackage(ctx, state, label, dependent, subrepo)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func checkSubrepo(state *core.BuildState, label core.BuildLabel) (*core.Subrepo,
 }
 
 // parsePackage parses a BUILD file and adds the package to the build graph
-func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
+func parsePackage(ctx context.Context, state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
 	packageName := label.PackageName
 	pkg := core.NewPackage(packageName)
 	pkg.Subrepo = subrepo
@@ -91,14 +92,14 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate internal package: %w", err)
 		}
-		if err := state.Parser.ParseReader(pkg, strings.NewReader(pkgStr), &label, &dependent); err != nil {
+		if err := state.Parser.ParseReader(ctx, pkg, strings.NewReader(pkgStr), &label, &dependent); err != nil {
 			return nil, fmt.Errorf("failed to parse internal package: %w", err)
 		}
 	} else {
 		filename, dir := buildFileName(state, subrepo, fileSystem, label.PackageName)
 		if filename != "" {
 			pkg.Filename = filename
-			if err := state.Parser.ParseFile(pkg, &label, &dependent, fileSystem, filename); err != nil {
+			if err := state.Parser.ParseFile(ctx, pkg, &label, &dependent, fileSystem, filename); err != nil {
 				return nil, err
 			}
 		} else {

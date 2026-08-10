@@ -79,8 +79,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	g, ctx := r.group(ctx)
 	r.tasks = g
 
-	// We don't have context as an argument to this, because they're not fully plumbed through (but probably should be)
-	state.Build = func(label, dependent core.BuildLabel) (*core.BuildTarget, error) {
+	state.Build = func(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildTarget, error) {
 		target, err := r.Build(ctx, label, dependent)
 		if err != nil {
 			return nil, err
@@ -88,7 +87,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		// Anything calling this will likely want this thing to end up being downloaded (it's mostly for subincludes)
 		return target, state.EnsureDownloaded(target)
 	}
-	state.Parse = func(label, dependent core.BuildLabel) (*core.Package, error) {
+	state.Parse = func(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
 		return r.Parse(ctx, label, dependent)
 	}
 
@@ -176,7 +175,7 @@ func (r *runner) parse(ctx context.Context, label, dependent core.BuildLabel, qu
 					return nil, err
 				}
 			}
-			return parse.Parse(r.state, label, dependent)
+			return parse.Parse(ctx, r.state, label, dependent)
 		}()
 		if err != nil && !quiet {
 			r.state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")

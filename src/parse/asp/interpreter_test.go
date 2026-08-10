@@ -4,6 +4,7 @@
 package asp
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -34,7 +35,7 @@ func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*
 	}
 	statements = parser.optimise(statements)
 	parser.interpreter.optimiseExpressions(statements)
-	s, err := parser.interpreter.interpretAll(pkg, nil, nil, statements)
+	s, err := parser.interpreter.interpretAll(context.Background(), pkg, nil, nil, statements)
 	return s, statements, err
 }
 
