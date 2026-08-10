@@ -5,7 +5,8 @@ go_test(
         "please_sandbox": "//tools/sandbox:please_sandbox",
     },
     labels = [
-        "localonly",
+        # These tests are executed explicitly via machine executors in .circleci/config.yml
+        # For local testing execute in a container with equivalent configuration.
         "manual",
     ],
     sandbox = False,

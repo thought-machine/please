@@ -26,7 +26,8 @@ e.g. for systems that don't allow mounting a full `/proc` from a new user namesp
 mount namespace notes below).
 
 When the network namespace is used, the loopback interface is brought up with an additional IP
-address. `SANDBOX_LOCAL_IP` defines, defined empty string disables the extra address.
+address, which defaults to 10.1.1.1. The `SANDBOX_LOCAL_IP` environment variable can be used
+to change this IP, and setting it to the empty string disables the extra address entirely.
 
 ## Using the knobs with Please
 
@@ -84,3 +85,8 @@ is not fully visible, [see this commit](https://github.com/torvalds/linux/commit
 This is an issue with most container runtimes (and therefore Kubernetes), as by default, they will
 hide some part of /proc in a container to reduce attack surface, eg
 [see this docker PR](https://github.com/docker/cli/pull/1808).
+
+Users of the sandbox have different options:
+- unmask /proc (k8s pod `procMount: Unmasked` securityContext option combined with `hostUsers: false`),
+- disable the /proc isolation (`MOUNT_PROC=0`), in which case the sandboxed process will be able to see (but not send signals to) processes outside the sandbox,
+- disable the mount namespace entirely with `SHARE_MOUNT=1`.
