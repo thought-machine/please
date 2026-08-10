@@ -98,7 +98,6 @@ func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subr
 		filename, dir := buildFileName(state, subrepo, fileSystem, label.PackageName)
 		if filename != "" {
 			pkg.Filename = filename
-			log.Debug("Parsing build file %s %s", label, filename)
 			if err := state.Parser.ParseFile(pkg, &label, &dependent, fileSystem, filename); err != nil {
 				return nil, err
 			}
