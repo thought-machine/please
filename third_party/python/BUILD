@@ -65,13 +65,12 @@ python_wheel(
 python_wheel(
     name = "absl",
     package_name = "absl_py",
-    hashes = ["0f17b89f2a4eaaedc4f28c622998aa690564b3012a396a4ffad0821007fe03ba"],
-    version = "2.5.0",
+    hashes = ["c106f6ef0ae86c1273b0858b40ee15b99fad1c223838387b9d11446a033bbcb1"],
+    version = "0.9.0",
     deps = [":six"],
 )
 
 pip_library(
     name = "progress",
     version = "1.5",
-    licences = ["ISC"],
 )
