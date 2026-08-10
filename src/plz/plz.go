@@ -81,7 +81,12 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 
 	// We don't have context as an argument to this, because they're not fully plumbed through (but probably should be)
 	state.Build = func(label, dependent core.BuildLabel) (*core.BuildTarget, error) {
-		return r.Build(ctx, label, dependent)
+		target, err := r.Build(ctx, label, dependent)
+		if err != nil {
+			return nil, err
+		}
+		// Anything calling this will likely want this thing to end up being downloaded (it's mostly for subincludes)
+		return target, state.EnsureDownloaded(target)
 	}
 	state.Parse = func(label, dependent core.BuildLabel) (*core.Package, error) {
 		return r.Parse(ctx, label, dependent)
