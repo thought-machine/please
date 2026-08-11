@@ -225,6 +225,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		}
 
 		s := i.scope.NewScope(path)
+		s.Preload = preload
 
 		s.state = pkgScope.state
 		// Scope needs a local version of CONFIG
@@ -304,6 +305,8 @@ type scope struct {
 	globber         *fs.Globber
 	// True if this scope is for a pre- or post-build callback.
 	Callback bool
+	// True if this scope is from a preloaded subinclude
+	Preload bool
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided
@@ -419,6 +422,7 @@ func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
 		locals:      make(pyDict, hint),
 		config:      s.config,
 		Callback:    s.Callback,
+		Preload:     s.Preload,
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State

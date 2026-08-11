@@ -353,7 +353,7 @@ func subinclude(s *scope, args []pyObject) pyObject {
 			outs = t.Outputs(s.state.Graph)
 		}
 		for _, out := range outs {
-			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, false), false)
+			s.SetAll(s.interpreter.Subinclude(s, filepath.Join(t.OutDir(), out), t.Label, s.Preload), false)
 		}
 	}
 	return None
