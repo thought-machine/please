@@ -130,46 +130,53 @@ func TestFilterPackageFile(t *testing.T) {
 
 func TestStatementTrim(t *testing.T) {
 	testCases := []struct {
-		name     string
-		content  string
-		required []string
-		expected string
+		name        string
+		content     string
+		required    []string
+		interpreted []string
+		expected    string
 	}{
 		{
-			name:     "Keep target in if",
-			content:  "src/export/test_data/trim_if.build",
-			required: []string{"a"},
-			expected: "src/export/test_data/trim_if_expected_a.build",
+			name:        "Keep target in if",
+			content:     "src/export/test_data/trim_if.build",
+			required:    []string{"a"},
+			interpreted: []string{"a"},
+			expected:    "src/export/test_data/trim_if_expected_a.build",
 		},
 		{
-			name:     "Target not required - all statements trimmed",
-			content:  "src/export/test_data/trim_if.build",
-			required: []string{},
-			expected: "src/export/test_data/trim_if_expected_none.build",
+			name:        "Target not required - all statements trimmed",
+			content:     "src/export/test_data/trim_if.build",
+			required:    []string{},
+			interpreted: []string{"a"},
+			expected:    "src/export/test_data/trim_if_expected_none.build",
 		},
 		{
-			name:     "Required target in elif",
-			content:  "src/export/test_data/trim_elif.build",
-			required: []string{"b"},
-			expected: "src/export/test_data/trim_elif_expected_b.build",
+			name:        "Required target in elif",
+			content:     "src/export/test_data/trim_elif.build",
+			required:    []string{"b"},
+			interpreted: []string{"b"},
+			expected:    "src/export/test_data/trim_elif_expected_b.build",
 		},
 		{
-			name:     "Required target in for",
-			content:  "src/export/test_data/trim_for.build",
-			required: []string{"a"},
-			expected: "src/export/test_data/trim_for_expected_a.build",
+			name:        "Required target in for",
+			content:     "src/export/test_data/trim_for.build",
+			required:    []string{"a"},
+			interpreted: []string{"a"},
+			expected:    "src/export/test_data/trim_for_expected_a.build",
 		},
 		{
-			name:     "Target not required in for - loop body has a pass",
-			content:  "src/export/test_data/trim_for.build",
-			required: []string{},
-			expected: "src/export/test_data/trim_for_expected_none.build",
+			name:        "Target not required in for - loop body has a pass",
+			content:     "src/export/test_data/trim_for.build",
+			required:    []string{},
+			interpreted: []string{"a"},
+			expected:    "src/export/test_data/trim_for_expected_none.build",
 		},
 		{
-			name:     "Required if stmt in for",
-			content:  "src/export/test_data/trim_for_if.build",
-			required: []string{"a"},
-			expected: "src/export/test_data/trim_for_if_expected_a.build",
+			name:        "Required if stmt in for",
+			content:     "src/export/test_data/trim_for_if.build",
+			required:    []string{"a"},
+			interpreted: []string{"a", "b"},
+			expected:    "src/export/test_data/trim_for_if_expected_a.build",
 		},
 	}
 
@@ -181,7 +188,7 @@ func TestStatementTrim(t *testing.T) {
 
 			pkg := core.NewPackage("test", core.WithPackageMetadata())
 			pkg.Filename = tc.content
-			targetLabels := walkASTRegisterTargets(t, statements, pkg, nil)
+			targetLabels := walkASTRegisterTargets(t, statements, pkg, tc.interpreted)
 
 			e := newExporter(nil, "", false).impl.(*trimmedExporter)
 			for _, name := range tc.required {
@@ -216,7 +223,8 @@ func walkASTRegisterTargets(t *testing.T, stmts []*asp.Statement, pkg *core.Pack
 			return true // Continue
 		}
 
-		// Not in targets we want to register, continue
+		// Not in targets we want to register, continue. Empty selection
+		// will cause all targets to be registered.
 		name := strings.Trim(arg.Value.Val.String, "\"")
 		if toRegister != nil && !slices.Contains(toRegister, name) {
 			return true
