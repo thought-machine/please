@@ -182,9 +182,9 @@ func (be *baseExporter) exportTargets(labels core.BuildLabels) {
 		if be.exportedTargets[l] {
 			continue
 		}
-		target := be.getOrParseTarget(l)
-		if target == nil {
-			log.Errorf("Unable to lookup target %s", l)
+		target, err := be.getOrParseTarget(l)
+		if err != nil {
+			log.Errorf("Unable to lookup target %s: %s", l, err)
 			continue
 		}
 		be.impl.exportTarget(target)
@@ -227,30 +227,58 @@ func (be *baseExporter) exportFiles(paths []string) {
 }
 
 // getOrParseTarget attempts to lookup a target in the build graph. If the target has not
-// been parsed yet, it dynamically requests the package be parsed and blocks until the target is resolved.
+// been parsed yet, it dynamically requests the package be parsed and blocks until the target is resolved,
+// with a safety timeout of 10 seconds.
 //
 // This occurs during the exports when walking dependencies of adjacent targets which were not
 // explicitly activated or resolved during the initial build/parse phase.
 //
 // This requires the background parser worker threads to be kept alive as daemons (controlled by the
 // "KeepParserRunning" build state option).
-func (be *baseExporter) getOrParseTarget(label core.BuildLabel) *core.BuildTarget {
+func (be *baseExporter) getOrParseTarget(label core.BuildLabel) (*core.BuildTarget, error) {
 	target := be.state.Graph.Target(label)
 	if target == nil {
 		log.Infof("Target %v not found in graph. Attempting to parse...", label)
+		ch := make(chan *core.BuildTarget, 1)
+		go func() {
 		parse.Parse(be.state, label, core.OriginalTarget, core.ParseModeNormal)
-		target = be.state.Graph.Target(label)
+			ch <- be.state.Graph.Target(label)
+		}()
+
+		select {
+		case t := <-ch:
+			target = t
+			if target == nil {
+				return nil, fmt.Errorf("target %s not found in graph after parsing", label)
+			}
+		case <-time.After(10 * time.Second):
+			return nil, fmt.Errorf("timeout parsing target %s", label)
+		}
 	}
-	return target
+	return target, nil
 }
 
 // getOrParsePackage attempts to lookup a package in the build graph. If the package has not
-// been parsed yet, it dynamically requests the package be parsed and blocks until resolved.
+// been parsed yet, it dynamically requests the package be parsed and blocks until resolved,
+// with a safety timeout of 10 seconds.
 //
 // This requires the background parser worker threads to be kept alive as daemons (controlled by the
 // "KeepParserRunning" build state option).
-func (be *baseExporter) getOrParsePackage(label core.BuildLabel) *core.Package {
-	return be.state.WaitForPackage(label, core.OriginalTarget, core.ParseModeNormal)
+func (be *baseExporter) getOrParsePackage(label core.BuildLabel) (*core.Package, error) {
+	ch := make(chan *core.Package, 1)
+	go func() {
+		ch <- be.state.WaitForPackage(label, core.OriginalTarget, core.ParseModeNormal)
+	}()
+
+	select {
+	case pkg := <-ch:
+		if pkg == nil {
+			return nil, fmt.Errorf("package %s not found", label.PackageName)
+		}
+		return pkg, nil
+	case <-time.After(10 * time.Second):
+		return nil, fmt.Errorf("timeout waiting for package %s to be parsed", label.PackageName)
+	}
 }
 
 // checkAndSetVisited is a helper to ensure we only visit the same target once.

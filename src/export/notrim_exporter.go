@@ -40,9 +40,9 @@ func (nte *noTrimExporter) exportPreloaded() {
 
 // exportTarget implements [exporterImpl].
 func (nte *noTrimExporter) exportTarget(target *core.BuildTarget) {
-	pkg := nte.getOrParsePackage(target.Label)
-	if pkg == nil {
-		log.Errorf("Unable to lookup package %s", target.Label)
+	pkg, err := nte.getOrParsePackage(target.Label)
+	if err != nil {
+		log.Errorf("Unable to lookup package %s: %s", target.Label, err)
 		return
 	}
 
@@ -67,9 +67,9 @@ func (nte *noTrimExporter) exportTarget(target *core.BuildTarget) {
 // writePackageFiles implements [exporterImpl].
 func (nte *noTrimExporter) writePackageFiles() {
 	for pkgLabel := range nte.exportedPackages {
-		pkg := nte.getOrParsePackage(pkgLabel)
-		if pkg == nil {
-			log.Errorf("Unable to lookup package %s", pkgLabel)
+		pkg, err := nte.getOrParsePackage(pkgLabel)
+		if err != nil {
+			log.Errorf("Unable to lookup package %s: %s", pkgLabel, err)
 			continue
 		}
 

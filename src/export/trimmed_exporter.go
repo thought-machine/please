@@ -72,9 +72,9 @@ func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 	e.exportSources(target)
 	e.exportDependencies(target)
 
-	pkg := e.getOrParsePackage(target.Label)
-	if pkg == nil {
-		log.Errorf("Unable to lookup package %s", target.Label)
+	pkg, err := e.getOrParsePackage(target.Label)
+	if err != nil {
+		log.Errorf("Unable to lookup package %s: %s", target.Label, err)
 		return
 	}
 	e.exportSubincludes(pkg, target.Label)
