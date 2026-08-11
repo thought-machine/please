@@ -3,8 +3,6 @@ package(default_visibility = ["PUBLIC"])
 
 VERSION = "1.2.3"
 
-
-
 # This is a middle comment
 target(
     name = "b",

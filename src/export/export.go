@@ -204,7 +204,7 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 			continue // These will be handled as dependencies later
 		}
 		paths := src.Paths(be.state.Graph)
-		if target.Subrepo != nil { // Adjusting fo for local subrepos
+		if target.Subrepo != nil { // Adjusting for local subrepos
 			for i, p := range paths {
 				paths[i] = target.Subrepo.Dir(p)
 			}

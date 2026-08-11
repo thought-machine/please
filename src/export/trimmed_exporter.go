@@ -172,7 +172,7 @@ func (e *trimmedExporter) exportRelatedTargets(pkg *core.Package, target core.Bu
 func (e *trimmedExporter) writeExportedPackageFile(pkg *core.Package, content []byte) {
 	filename := pkg.Filename
 	exportedFilename := filepath.Join(e.targetDir, filename)
-	if pkg.Subrepo != nil { // Adjusting fo for local subrepos
+	if pkg.Subrepo != nil { // Adjusting for local subrepos
 		exportedFilename = filepath.Join(e.targetDir, pkg.Subrepo.Dir(filename))
 	}
 	f, err := fs.OpenDirFile(exportedFilename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0664)
@@ -189,7 +189,7 @@ func (e *trimmedExporter) writeExportedPackageFile(pkg *core.Package, content []
 // trimPackage filters the statements to be written to the exported BUILD file.
 func (e *trimmedExporter) trimPackage(p *asp.Parser, pkg *core.Package) ([]byte, error) {
 	filename := pkg.Filename
-	if pkg.Subrepo != nil { // Adjusting fo for local subrepos
+	if pkg.Subrepo != nil { // Adjusting for local subrepos
 		filename = pkg.Subrepo.Dir(filename)
 	}
 
