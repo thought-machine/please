@@ -93,10 +93,14 @@ func (p *aspParser) RunPostBuildFunction(state *core.BuildState, target *core.Bu
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	// TODO(peterebden): What is this here for? Why do we need to parse again - by definition we should already have done so
-	// if _, err := state.Parse(target.Label, target.Label); err != nil {
-	// 	return err
-	// }
+	// This doesn't re-parse anything; it waits for the parse of this target's package to complete if
+	// one is still in flight. Targets are added to the graph as each rule is created, so a target can
+	// be picked up and built before the file that defines it has been fully interpreted - but the
+	// callback both reads the package out of the graph and mutates it, so it can't run until then.
+	// There's no parse in flight for us to inherit a context from, hence Background.
+	if _, err := state.Parse(context.Background(), target.Label, target.Label); err != nil {
+		return err
+	}
 	if err := f(); err != nil {
 		state.LogBuildError(target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
 		return err
