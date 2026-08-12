@@ -72,8 +72,8 @@ func TestIterSources(t *testing.T) {
 
 	assert.Equal(t, []SourcePair{
 		{"src/output/output2.go", "plz-out/tmp/src/output/output2._build/src/output/output2.go"},
-		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2._build/src/output/output1.a"},
 		{"plz-out/gen/src/core/target2.a", "plz-out/tmp/src/output/output2._build/src/core/target2.a"},
+		{"plz-out/gen/src/output/output1.a", "plz-out/tmp/src/output/output2._build/src/output/output1.a"},
 	}, iterSources("//src/output:output2"))
 
 	assert.Equal(t, []SourcePair{
