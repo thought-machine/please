@@ -6,7 +6,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"slices"
 	"sort"

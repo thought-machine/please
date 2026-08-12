@@ -64,6 +64,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 
 	r := runner{
 		state:    state,
+		parser:   parser,
 		arch:     arch,
 		progress: progress,
 		buildOnce: cmap.NewErrMap[core.BuildLabel, *core.BuildTarget](cmap.DefaultShardCount, func(l core.BuildLabel) uint64 {
@@ -72,6 +73,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		parseOnce: cmap.New[core.BuildLabel, struct{}](cmap.DefaultShardCount, func(l core.BuildLabel) uint64 {
 			return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
 		}),
+		preloadOnce:   cmap.NewErrMap[string, struct{}](cmap.SmallShardCount, cmap.XXHash, nil),
 		localLimiter:  make(limiter, state.Config.Please.NumThreads),
 		remoteLimiter: make(limiter, state.Config.NumRemoteExecutors()),
 		anyRemote:     state.Config.NumRemoteExecutors() > 0,
@@ -89,11 +91,6 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	}
 	state.Parse = func(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
 		return r.Parse(ctx, label, dependent)
-	}
-
-	// Register the preloaded targets with the parser
-	if err := r.RegisterPreloads(ctx, state, parser); err != nil {
-		return err
 	}
 
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
@@ -140,10 +137,12 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 type runner struct {
 	tasks         *errgroup.Group
 	state         *core.BuildState
+	parser        *asp.Parser
 	arch          cli.Arch
 	progress      *Progress
 	buildOnce     *cmap.ErrMap[core.BuildLabel, *core.BuildTarget]
 	parseOnce     *cmap.Map[core.BuildLabel, struct{}]
+	preloadOnce   *cmap.ErrMap[string, struct{}]
 	localLimiter  limiter
 	remoteLimiter limiter
 	anyRemote     bool
@@ -164,24 +163,101 @@ func (r *runner) tryParse(ctx context.Context, label, dependent core.BuildLabel)
 }
 
 func (r *runner) parse(ctx context.Context, label, dependent core.BuildLabel, quiet bool) (*core.Package, error) {
+	// Work out which repo this package belongs to, and make sure that repo's preloaded subincludes are
+	// resolved, before we claim the package below.
+	// Both of these can need to parse other packages - and preload resolution routinely parses packages in
+	// the very repo we're about to claim. Anything we do while holding the claim can't wait on this package,
+	// so it all has to happen out here.
+	state, subrepo, err := r.repoFor(ctx, label, dependent)
+	if err != nil {
+		if !quiet {
+			r.state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
+		}
+		return nil, err
+	}
+	if err := r.ensurePreloads(ctx, state); err != nil {
+		return nil, err
+	}
 	return r.state.Graph.GetOrSetPackage(ctx, label, func() (*core.Package, error) {
 		r.progress.numParsing.Add(1)
 		defer r.progress.numParsing.Add(-1)
-		pkg, err := func() (*core.Package, error) {
-			// If the target is in a subrepo that we don't know about yet, we must make sure that is defined first.
-			// If we already have it there's nothing to do here; it's been registered by whatever parse defined it.
-			if label.Subrepo != "" && r.state.Graph.Subrepo(label.Subrepo) == nil {
-				if err := r.ensureSubrepo(ctx, label, dependent); err != nil {
-					return nil, err
-				}
-			}
-			return parse.Parse(ctx, r.state, label, dependent)
-		}()
+		pkg, err := parse.Parse(ctx, state, label, dependent, subrepo)
 		if err != nil && !quiet {
 			r.state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
 		}
 		return pkg, err
 	})
+}
+
+// repoFor returns the state and subrepo that the given label should be parsed against, defining the
+// subrepo if we don't know about it yet. The returned subrepo is nil for the host repo.
+func (r *runner) repoFor(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildState, *core.Subrepo, error) {
+	if label.Subrepo == "" {
+		return r.state, nil, nil
+	}
+	// If we already have it there's nothing to do here; it's been registered by whatever parse defined it.
+	if r.state.Graph.Subrepo(label.Subrepo) == nil {
+		if err := r.ensureSubrepo(ctx, label, dependent); err != nil {
+			return nil, nil, err
+		}
+	}
+	subrepo := r.state.Graph.Subrepo(label.Subrepo)
+	if subrepo == nil {
+		return nil, nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
+	}
+	if subrepo.Target != nil {
+		// We have the definition of the subrepo, but it depends on something; that has to be built before
+		// we can read its config off disk.
+		if _, err := r.Build(ctx, subrepo.Target.Label, dependent); err != nil {
+			return nil, nil, err
+		}
+	}
+	// This is what reads the subrepo's .plzconfig, and hence what tells us its preloads.
+	if err := subrepo.State.Initialise(subrepo); err != nil {
+		return nil, nil, err
+	}
+	return subrepo.State, subrepo, nil
+}
+
+// ensurePreloads makes sure the preloaded subincludes of the given repo have been built and registered
+// with the parser, which must happen before we parse any package in it.
+func (r *runner) ensurePreloads(ctx context.Context, state *core.BuildState) error {
+	// If we're already resolving preloads then this parse is part of that resolution; it has to go ahead
+	// without them rather than wait for work that is waiting on us.
+	if core.IsPreloading(ctx) {
+		return nil
+	}
+	_, err := r.preloadOnce.GetOrSetCtx(ctx, state.CurrentSubrepo, func() (struct{}, error) {
+		return struct{}{}, r.registerPreloads(ctx, state)
+	})
+	return err
+}
+
+// registerPreloads builds each of a repo's preloaded subinclude targets and registers it with the parser.
+// We have to actually register them, otherwise this would return before we build any transitive subincludes.
+func (r *runner) registerPreloads(ctx context.Context, state *core.BuildState) error {
+	preloads := state.GetPreloadedSubincludes()
+	if len(preloads) == 0 {
+		return nil
+	}
+	run := core.NewPreloadRun()
+	defer run.Done()
+	g, gctx := r.group(core.WithPreloading(ctx, run))
+	for _, inc := range preloads {
+		if inc.IsPseudoTarget() {
+			return fmt.Errorf("Can't preload pseudotarget %v", inc)
+		}
+		// Queue them up asynchronously to feed the queues as quickly as possible
+		g.Go(func() error {
+			if _, err := r.Build(gctx, inc, core.OriginalTarget); err != nil {
+				return err
+			}
+			return r.parser.PreloadSubinclude(gctx, inc)
+		})
+	}
+	// We must wait for all the subinclude targets to be built otherwise updating the locals might race with
+	// parsing a package
+	return g.Wait()
 }
 
 // ensureSubrepo makes sure that the subrepo the given label is in has been defined.
@@ -618,34 +694,6 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 		}
 		return r.RecursiveParse(ctx, target, core.OriginalTarget)
 	})
-}
-
-// RegisterPreloads waits for all preloaded subinclude targets to be built, downloads them, and then registers them with
-// the interpreter. We have to actually register them otherwise this will return before we build any
-// transitive subincludes.
-func (r *runner) RegisterPreloads(ctx context.Context, state *core.BuildState, parser *asp.Parser) error {
-	g, ctx := r.group(ctx)
-	preloads := state.GetPreloadedSubincludes()
-	for _, inc := range preloads {
-		if inc.IsPseudoTarget() {
-			return fmt.Errorf("Can't preload pseudotarget %v", inc)
-		}
-
-		// Queue them up asynchronously to feed the queues as quickly as possible
-		g.Go(func() error {
-			if _, err := r.Build(ctx, inc, core.OriginalTarget); err != nil {
-				return err
-			}
-			return parser.PreloadSubinclude(inc)
-		})
-	}
-	// We must wait for all the subinclude targets to be built otherwise updating the locals might race with parsing
-	// a package
-	if err := g.Wait(); err != nil {
-		return err
-	}
-	parser.RegisterPreloads(preloads)
-	return nil
 }
 
 // FindAllBuildFiles finds all BUILD files under a particular path.

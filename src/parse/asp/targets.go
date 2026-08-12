@@ -1,6 +1,7 @@
 package asp
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -623,7 +624,9 @@ type preBuildFunction struct {
 }
 
 func (f *preBuildFunction) Call(target *core.BuildTarget) error {
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label), 1)
+	// Callbacks run during the build, long after the parse that defined them; there is no parse in
+	// flight to inherit a context from.
+	s := f.f.scope.NewPackagedScope(context.Background(), f.f.scope.state.Graph.PackageOrDie(target.Label), 1)
 	s.config = f.s.config
 	s.Set("CONFIG", f.s.config)
 	s.Callback = true
@@ -643,7 +646,9 @@ type postBuildFunction struct {
 }
 
 func (f *postBuildFunction) Call(target *core.BuildTarget, output string) error {
-	s := f.f.scope.NewPackagedScope(f.f.scope.state.Graph.PackageOrDie(target.Label), 2)
+	// Callbacks run during the build, long after the parse that defined them; there is no parse in
+	// flight to inherit a context from.
+	s := f.f.scope.NewPackagedScope(context.Background(), f.f.scope.state.Graph.PackageOrDie(target.Label), 2)
 	s.config = f.s.config
 	s.Set("CONFIG", f.s.config)
 	s.Callback = true

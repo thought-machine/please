@@ -91,20 +91,17 @@ func (p *Parser) ParseFile(ctx context.Context, pkg *core.Package, label, depend
 }
 
 // PreloadSubinclude pre-registers a preload, forcing us to build any transitive preloads before we move on
-func (p *Parser) PreloadSubinclude(label core.BuildLabel) error {
+func (p *Parser) PreloadSubinclude(ctx context.Context, label core.BuildLabel) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
 	// This is a throw away scope. We're just doing this to avoid race conditions setting this on the main scope.
-	s := p.interpreter.scope.newScope(nil, "", 0)
+	// It takes the caller's context, not the interpreter's; this is the chain that is resolving the preloads,
+	// and anything it goes on to parse must know that.
+	s := p.interpreter.scope.newScope(ctx, nil, "", 0)
 	s.config = p.interpreter.scope.config.Copy()
 	s.Set("CONFIG", s.config)
 	return p.interpreter.preloadSubinclude(s, label)
-}
-
-// RegisterPreloads registers the set of preloaded subincludes.
-func (p *Parser) RegisterPreloads(labels []core.BuildLabel) {
-	p.interpreter.preloads = labels
 }
 
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.

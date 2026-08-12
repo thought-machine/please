@@ -23,27 +23,10 @@ var log = logging.Log
 var ErrMissingBuildFile = errors.New("build file not found")
 
 // Parse parses the package corresponding to a single build label. The label can be :all to add all targets in a package.
-func Parse(ctx context.Context, state *core.BuildState, label, dependent core.BuildLabel) (*core.Package, error) {
-	subrepo, err := checkSubrepo(state, label)
-	if err != nil {
-		return nil, err
-	}
-
-	if subrepo != nil {
-		state = subrepo.State
-	}
-
+// The state and subrepo must be the ones the label belongs to; the caller resolves those (and makes sure
+// the subrepo's preloads are ready) before claiming the package, since neither can be done from in here.
+func Parse(ctx context.Context, state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
 	state.LogParseResult(label, core.PackageParsing, "Parsing...")
-
-	if subrepo != nil && subrepo.Target != nil {
-		// We have got the definition of the subrepo, but it depends on something, make sure that has been built.
-		if _, err := state.Build(ctx, subrepo.Target.Label, dependent); err != nil {
-			return nil, err
-		}
-		if err := subrepo.State.Initialise(subrepo); err != nil {
-			return nil, err
-		}
-	}
 
 	// Subrepo & nothing else means we just want to ensure that subrepo is present.
 	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
@@ -56,24 +39,6 @@ func Parse(ctx context.Context, state *core.BuildState, label, dependent core.Bu
 	}
 	state.LogParseResult(label, core.PackageParsed, "Parsed package")
 	return pkg, nil
-}
-
-// checkSubrepo checks if the label we're parsing is within a subrepo, returning that subrepo, if present in the label.
-//
-// The subrepo target can be inferred from the subrepo name using convention i.e. ///foo/bar//:baz has a subrepo label
-// //foo:bar. checkSubrepo parses package foo, expecting a call to `subrepo()` that registers a subrepo named foo/bar,
-// so it can return it.
-func checkSubrepo(state *core.BuildState, label core.BuildLabel) (*core.Subrepo, error) {
-	if label.Subrepo == "" {
-		return nil, nil
-	}
-
-	// Check if we already have it (we expect the higher-level driver code to have arranged for it to be parsed
-	// before we get here)
-	if subrepo := state.Graph.Subrepo(label.Subrepo); subrepo != nil {
-		return subrepo, nil
-	}
-	return nil, fmt.Errorf("Subrepo %s is not defined", label.Subrepo)
 }
 
 // parsePackage parses a BUILD file and adds the package to the build graph

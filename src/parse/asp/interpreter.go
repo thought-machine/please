@@ -33,10 +33,6 @@ type interpreter struct {
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
-
-	// TODO(peter): rethink what we can do here, we don't really need build labels for this,
-	// we should be able to store a preloaded set of symbols or smthn that we can wang into scopes as needed.
-	preloads []core.BuildLabel
 }
 
 // newInterpreter creates and returns a new interpreter instance.
@@ -132,7 +128,10 @@ func (i *interpreter) loadBuiltinStatements(s *scope, statements []*Statement, e
 }
 
 func (i *interpreter) preloadSubincludes(s *scope) error {
-	for _, label := range i.preloads {
+	// N.B. These come from the scope's state, not ours; a package in a subrepo preloads whatever that
+	//      subrepo's config asks for, which isn't the same set as the host repo's.
+	//      The driver has ensured these are built before letting us start on this package.
+	for _, label := range s.state.GetPreloadedSubincludes() {
 		if err := i.preloadSubinclude(s, label); err != nil {
 			return err
 		}
@@ -165,8 +164,7 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 // interpretAll runs a series of statements in the scope of the given package.
 // The first return value is for testing only.
 func (i *interpreter) interpretAll(ctx context.Context, pkg *core.Package, forLabel, dependent *core.BuildLabel, statements []*Statement) (*scope, error) {
-	s := i.scope.NewPackagedScope(pkg, 1)
-	s.ctx = ctx
+	s := i.scope.NewPackagedScope(ctx, pkg, 1)
 	s.config = i.getConfig(s.state).Copy()
 
 	// Config needs a little separate tweaking.
@@ -183,8 +181,14 @@ func (i *interpreter) interpretAll(ctx context.Context, pkg *core.Package, forLa
 		defer pprof.SetGoroutineLabels(old)
 	}
 
-	if err := i.preloadSubincludes(s); err != nil {
-		return nil, err
+	// If we're being parsed on behalf of resolving preloads then we mustn't apply them; they aren't built
+	// yet, and waiting for them would mean waiting on the thing that's waiting on us.
+	// N.B. We check the argument rather than s.ctx; scopes get captured by things that outlive the chain
+	//      they were created on, so only the context we were handed describes what we're actually doing.
+	if !core.IsPreloading(ctx) {
+		if err := i.preloadSubincludes(s); err != nil {
+			return nil, err
+		}
 	}
 
 	s.Set("CONFIG", s.config)
@@ -225,8 +229,14 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 			return nil, err
 		}
 
-		s := i.scope.NewScope(path)
+		// N.B. This hangs off the interpreter's root scope so it sees the builtins rather than the
+		//      caller's locals, but the work belongs to the caller's chain, so it takes their context.
+		s := i.scope.newScope(pkgScope.ctx, nil, path, 0)
 		s.Preload = preload
+		// Whether this file gets preloads applied to it. Not if it is itself a preload, and not if we're
+		// resolving preloads at all - they aren't available yet, and reaching for one here would wait on
+		// a subinclude that the resolution we're part of is itself waiting to finish.
+		applyPreloads := !preload && !core.IsPreloading(pkgScope.ctx)
 
 		s.state = pkgScope.state
 		// Scope needs a local version of CONFIG
@@ -234,7 +244,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		s.Set("CONFIG", s.config)
 		s.subincludeLabel = &label
 
-		if !preload {
+		if applyPreloads {
 			if err := i.preloadSubincludes(s); err != nil {
 				return nil, err
 			}
@@ -400,20 +410,22 @@ func (s *scope) subincludePackage() *core.Package {
 	return nil
 }
 
-// NewScope creates a new child scope of this one.
+// NewScope creates a new child scope of this one, continuing on the same context.
+// Use newScope directly if the new scope belongs to a different chain of work to this one; the context
+// describes what we are currently doing, which isn't always the same as where a scope sits lexically.
 func (s *scope) NewScope(filename string) *scope {
-	return s.newScope(s.pkg, filename, 0)
+	return s.newScope(s.ctx, s.pkg, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
-func (s *scope) NewPackagedScope(pkg *core.Package, hint int) *scope {
-	return s.newScope(pkg, pkg.Filename, hint)
+func (s *scope) NewPackagedScope(ctx context.Context, pkg *core.Package, hint int) *scope {
+	return s.newScope(ctx, pkg, pkg.Filename, hint)
 }
 
-func (s *scope) newScope(pkg *core.Package, filename string, hint int) *scope {
+func (s *scope) newScope(ctx context.Context, pkg *core.Package, filename string, hint int) *scope {
 	s2 := &scope{
-		ctx:         s.ctx,
+		ctx:         ctx,
 		filename:    filename,
 		interpreter: s.interpreter,
 		state:       s.state,

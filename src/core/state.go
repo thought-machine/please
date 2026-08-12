@@ -233,9 +233,65 @@ type BuildState struct {
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
+}
 
-	// preloadDownloadOnce is used
-	preloadDownloadOnce *sync.Once
+// A PreloadRun tracks a single attempt at resolving a repo's preloaded subincludes.
+// It exists so that a marker left behind on a context outlives its usefulness harmlessly; see
+// IsPreloading for why that matters.
+type PreloadRun struct {
+	done atomic.Bool
+}
+
+// NewPreloadRun returns a new PreloadRun.
+func NewPreloadRun() *PreloadRun {
+	return &PreloadRun{}
+}
+
+// Done marks this resolution as complete, after which it no longer suppresses anything.
+func (run *PreloadRun) Done() {
+	run.done.Store(true)
+}
+
+// A preloadChain records the preload resolutions in progress on this call chain. It's a linked list
+// rather than a single entry because resolving one repo's preloads can require resolving another's
+// (e.g. when a preload lives in a subrepo), so they nest.
+type preloadChain struct {
+	run    *PreloadRun
+	parent *preloadChain
+}
+
+type preloadChainKey struct{}
+
+// WithPreloading returns a context noting that we are resolving the given repo's preloads. Anything
+// parsed on behalf of that resolution must not try to apply those same preloads; they aren't built
+// yet, and waiting for them would mean waiting on the thing that is waiting on us.
+func WithPreloading(ctx context.Context, run *PreloadRun) context.Context {
+	parent, _ := ctx.Value(preloadChainKey{}).(*preloadChain)
+	return context.WithValue(ctx, preloadChainKey{}, &preloadChain{run: run, parent: parent})
+}
+
+// IsPreloading returns true if we are currently resolving preloaded subincludes.
+//
+// N.B. This is deliberately not "resolving the preloads of repo X". Resolving one repo's preloads
+// routinely means parsing packages in another (a preload usually lives in a plugin subrepo), and those
+// repos preload each other in turn; making this per-repo lets two resolutions wait on each other.
+// Whilst we are resolving any preloads, nothing we parse on the way gets preloads applied - which also
+// matches what a preload can actually rely on. Such a package picks them up the next time it is parsed
+// by something that isn't preload resolution.
+//
+// It also only reports runs that haven't finished. Contexts get captured by things that outlive the
+// chain they came from - most notably a pyFunc holds the scope it was defined in, so a function defined
+// in a preloaded build_defs carries the resolver's context to every later call of it. Checking the run
+// means such a leftover marker stops suppressing anything the moment its resolution completes, so it
+// can't make an unrelated parse skip its preloads.
+func IsPreloading(ctx context.Context) bool {
+	c, _ := ctx.Value(preloadChainKey{}).(*preloadChain)
+	for ; c != nil; c = c.parent {
+		if !c.run.done.Load() {
+			return true
+		}
+	}
+	return false
 }
 
 // Copy creates a copy of this state object
@@ -244,7 +300,6 @@ func (state *BuildState) Copy() *BuildState {
 	*ret = *state
 
 	ret.initOnce = new(sync.Once)
-	ret.preloadDownloadOnce = new(sync.Once)
 	return ret
 }
 
@@ -976,8 +1031,7 @@ func NewBuildState(config *Configuration) *BuildState {
 			cycleDetector:   cycleDetector{graph: graph},
 			originalTargets: NewTargetSet(),
 		},
-		initOnce:            new(sync.Once),
-		preloadDownloadOnce: new(sync.Once),
+		initOnce: new(sync.Once),
 	}
 
 	state.PathHasher = state.Hasher(config.Build.HashFunction)
