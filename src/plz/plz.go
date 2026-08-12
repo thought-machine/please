@@ -89,9 +89,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		// Anything calling this will likely want this thing to end up being downloaded (it's mostly for subincludes)
 		return target, state.EnsureDownloaded(target)
 	}
-	state.Parse = func(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
-		return r.Parse(ctx, label, dependent)
-	}
+	state.Parse = r.Parse
 
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
