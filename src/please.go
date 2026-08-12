@@ -1227,14 +1227,12 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	state.Results() // important this is called now, don't ask...
 	var progress plz.Progress
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		output.MonitorState(state, &progress, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
-		wg.Done()
-	}()
+	})
 	if err := plz.Run(targets, opts.BuildFlags.PreTargets, state, &progress, state.TargetArch); err != nil {
-		// TODO(peter): we might want to do something else with this
-		log.Error("%s", err)
+		// Failures to build are logged through the central error reporting mechanism and will be printed by MonitorState above.
+		log.Debug("Build error: %s", err)
 	}
 	wg.Wait()
 }
