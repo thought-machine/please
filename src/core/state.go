@@ -35,6 +35,9 @@ var startTime = time.Now()
 // cycleCheckDuration is the length of time we allow inactivity for before we trigger cycle detection.
 const cycleCheckDuration = 5 * time.Second
 
+// resultsChanSize is the buffer size of the channel we report build results on.
+const resultsChanSize = 1000
+
 // ParseTask is the type for the parse task queue
 type ParseTask struct {
 	Label, Dependent BuildLabel
@@ -318,11 +321,15 @@ func (state *BuildState) CloseResults() {
 	state.progress.cycleDetector.Stop()
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
-	if state.progress.results != nil {
-		state.progress.resultOnce.Do(func() {
-			close(state.progress.results)
-		})
+	// N.B. We create the channel if nobody has asked for it yet, rather than doing nothing; otherwise
+	//      anyone calling Results() after this would get a fresh channel that is never closed and would
+	//      wait on it forever.
+	if state.progress.results == nil {
+		state.progress.results = make(chan *BuildResult, resultsChanSize)
 	}
+	state.progress.resultOnce.Do(func() {
+		close(state.progress.results)
+	})
 }
 
 // AddOriginalTarget adds an original target to this state
@@ -550,7 +557,7 @@ func (state *BuildState) Results() <-chan *BuildResult {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
 	if state.progress.results == nil {
-		state.progress.results = make(chan *BuildResult, 1000)
+		state.progress.results = make(chan *BuildResult, resultsChanSize)
 	}
 	return state.progress.results
 }

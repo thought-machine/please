@@ -359,6 +359,16 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 		}
 	}
 
+	// The target's own build command can refer to its run-time & data dependencies via shell replacements, so we must at
+	// least have them resolved here (they don't have to be built yet though)
+	for dep := range target.RuntimeAndDataDependencies() {
+		for _, err := range r.resolveTarget(ctx, dep, target) {
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	// Okay, now the runtime dependencies can happen in parallel with the target itself.
 	// N.B. Even when there are none we can't just build the target and return; its own callbacks
 	//      can add some, which we won't know about until it's built.

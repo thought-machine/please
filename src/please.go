@@ -1223,6 +1223,8 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	state.Cache = cache.NewCache(state)
 
 	// Run the display
+	// TODO(peterebden): Refactor out the results stuff from state in a future PR to avoid this kind of race condition.
+	state.Results() // important this is called now, don't ask...
 	var progress plz.Progress
 	var wg sync.WaitGroup
 	wg.Add(1)
