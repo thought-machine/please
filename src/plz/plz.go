@@ -342,6 +342,19 @@ func (r *runner) recursiveParse(ctx context.Context, label, dependent core.Build
 			return r.recursiveParse(gctx, dep, target.Label)
 		})
 	}
+	if r.state.ParseMetadata {
+		if pkg := r.state.Graph.PackageByLabel(target.Label); pkg != nil && !pkg.Subrepo.IsExternal() {
+			related, err := pkg.Metadata.FindRelatedTargets(target.Label)
+			if err != nil {
+				return err
+			}
+			for _, rel := range related {
+				g.Go(func() error {
+					return r.recursiveParse(gctx, rel, target.Label)
+				})
+			}
+		}
+	}
 	return g.Wait()
 }
 
