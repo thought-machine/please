@@ -34,14 +34,14 @@ type dirCache struct {
 }
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []string) {
-	lockFile, err := core.AcquireExclusiveFileLock(cache.getFullPath(target, key, "", ".lock"))
+	cacheDir := cache.getPath(target, key, "")
+	lockFile, err := core.AcquireExclusiveFileLock(cacheDir + ".lock")
 	if err != nil {
 		log.Warning("Failed to acquire cache lock for %s, will not store", target)
 		return
 	}
 	defer core.ReleaseFileLock(lockFile)
 
-	cacheDir := cache.getPath(target, key, "")
 	tmpDir := cache.getFullPath(target, key, "", "=")
 	cache.markDir(cacheDir, 0)
 	if err := fs.RemoveAll(cacheDir); err != nil {
@@ -186,7 +186,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
-	lockFile, err := core.AcquireSharedFileLock(cache.getFullPath(target, key, "", ".lock"))
+	lockFile, err := core.AcquireSharedFileLock(cache.getPath(target, key, "") + ".lock")
 	if err != nil {
 		log.Warning("Failed to acquire cache lock for %s, will not retrieve", target)
 		return false
