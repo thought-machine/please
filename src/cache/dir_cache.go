@@ -33,6 +33,9 @@ type dirCache struct {
 }
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []string) {
+	lockFile := core.AcquireExclusiveFileLock(cache.getFullPath(target, key, "", ".lock"))
+	defer core.ReleaseFileLock(lockFile)
+
 	cacheDir := cache.getPath(target, key, "")
 	tmpDir := cache.getFullPath(target, key, "", "=")
 	cache.markDir(cacheDir, 0)
@@ -178,6 +181,9 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
+	lockFile := core.AcquireExclusiveFileLock(cache.getFullPath(target, key, "", ".lock"))
+	defer core.ReleaseFileLock(lockFile)
+
 	return cache.retrieve(target, key, "", outs)
 }
 
@@ -443,7 +449,10 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		}
 
 		log.Debug("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(entry.Size))
-		// Try to rename the directory first so we don't delete bits while someone might access them.
+		lockFile := core.AcquireExclusiveFileLock(entry.Path + ".lock")
+		defer core.ReleaseFileLock(lockFile)
+
+		// Try to rename the directory first so if anything goes wrong we leave it inaccessible to anyone else
 		newPath := entry.Path + "="
 		if err := os.Rename(entry.Path, newPath); err != nil {
 			log.Errorf("Couldn't rename %s: %s", entry.Path, err)
