@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOpenLockFile(t *testing.T) {
@@ -133,7 +134,8 @@ func TestReleaseRepoLock(t *testing.T) {
 }
 
 func TestAcquireExclusiveFileLock(t *testing.T) {
-	file := AcquireExclusiveFileLock("path/to/file")
+	file, err := AcquireExclusiveFileLock("path/to/file")
+	require.NoError(t, err)
 	defer ReleaseFileLock(file)
 
 	assert.IsType(t, &os.File{}, file)
@@ -162,9 +164,10 @@ func TestAcquireExclusiveFileLockTwice(t *testing.T) {
 }
 
 func TestReleaseFileLock(t *testing.T) {
-	file := AcquireExclusiveFileLock("path/to/file")
+	file, err := AcquireExclusiveFileLock("path/to/file")
+	require.NoError(t, err)
 
 	ReleaseFileLock(file)
-	err := file.Close()
+	err = file.Close()
 	assert.Error(t, err, "file already closed")
 }
