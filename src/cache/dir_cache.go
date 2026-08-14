@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -33,7 +34,11 @@ type dirCache struct {
 }
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []string) {
-	lockFile := core.AcquireExclusiveFileLock(cache.getFullPath(target, key, "", ".lock"))
+	lockFile, err := core.AcquireExclusiveFileLock(cache.getFullPath(target, key, "", ".lock"))
+	if err != nil {
+		log.Warning("Failed to acquire cache lock for %s, will not store", target)
+		return
+	}
 	defer core.ReleaseFileLock(lockFile)
 
 	cacheDir := cache.getPath(target, key, "")
@@ -181,7 +186,11 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
-	lockFile := core.AcquireExclusiveFileLock(cache.getFullPath(target, key, "", ".lock"))
+	lockFile, err := core.AcquireSharedFileLock(cache.getFullPath(target, key, "", ".lock"))
+	if err != nil {
+		log.Warning("Failed to acquire cache lock for %s, will not retrieve", target)
+		return false
+	}
 	defer core.ReleaseFileLock(lockFile)
 
 	return cache.retrieve(target, key, "", outs)
@@ -449,17 +458,8 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		}
 
 		log.Debug("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(entry.Size))
-		lockFile := core.AcquireExclusiveFileLock(entry.Path + ".lock")
-		defer core.ReleaseFileLock(lockFile)
-
-		// Try to rename the directory first so if anything goes wrong we leave it inaccessible to anyone else
-		newPath := entry.Path + "="
-		if err := os.Rename(entry.Path, newPath); err != nil {
-			log.Errorf("Couldn't rename %s: %s", entry.Path, err)
-			continue
-		}
-		if err := fs.RemoveAll(newPath); err != nil {
-			log.Errorf("Couldn't remove %s: %s", newPath, err)
+		if err := cache.cleanPath(entry.Path); err != nil {
+			log.Warning("Error while cleaning cache: %s", err)
 			continue
 		}
 		totalSize -= entry.Size
@@ -468,6 +468,24 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		}
 	}
 	return totalSize
+}
+
+func (cache *dirCache) cleanPath(path string) error {
+	lockFile, err := core.AcquireExclusiveFileLock(path + ".lock")
+	if err != nil {
+		return err
+	}
+	defer core.ReleaseFileLock(lockFile)
+
+	// Try to rename the directory first so if anything goes wrong we leave it inaccessible to anyone else
+	newPath := path + "="
+	if err := os.Rename(path, newPath); err != nil {
+		return fmt.Errorf("Couldn't rename %s: %w", path, err)
+	}
+	if err := fs.RemoveAll(newPath); err != nil {
+		return fmt.Errorf("Couldn't remove %s: %w", newPath, err)
+	}
+	return nil
 }
 
 // shouldClean returns true if we should clean this file.

@@ -455,7 +455,10 @@ func (c *Client) Download(target *core.BuildTarget) error {
 	}
 	return c.download(target, func() error {
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
-		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+		file, err := core.AcquireExclusiveFileLock(target.BuildLockFile())
+		if err != nil {
+			return err
+		}
 		defer core.ReleaseFileLock(file)
 
 		// This is a bit of a grungy hack to avoid clobbering outputs.
@@ -465,7 +468,10 @@ func (c *Client) Download(target *core.BuildTarget) error {
 				if l, ok := t.Label(); ok {
 					if l.PackageName == target.Label.PackageName && l.Subrepo == target.Label.Subrepo {
 						t := c.state.Graph.TargetOrDie(l)
-						file := core.AcquireExclusiveFileLock(t.BuildLockFile())
+						file, err := core.AcquireExclusiveFileLock(t.BuildLockFile())
+						if err != nil {
+							return err
+						}
 						defer core.ReleaseFileLock(file)
 					}
 				}
