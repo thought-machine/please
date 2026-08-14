@@ -1,5 +1,5 @@
 // please_sandbox is a very small binary to implement sandboxing
-// of tests (and possibly other build actions) via cgroups.
+// of tests (and possibly other build actions) via namespaces.
 // Essentially this is a very lightweight replacement for Docker
 // where we would use it for tests to avoid port clashes etc.
 //
@@ -27,5 +27,9 @@ int main(int argc, char* argv[]) {
     const char* share_mount_env = getenv("SHARE_MOUNT");
     const bool unshare_mount = share_mount_env == NULL || strcmp(share_mount_env, "1");
 
-    return contain(&argv[1], unshare_network, unshare_mount);
+    // /proc is remounted by default but it can be opted out if `MOUNT_PROC=0` env is set
+    const char* mount_proc_env = getenv("MOUNT_PROC");
+    const bool mount_proc = mount_proc_env == NULL || strcmp(mount_proc_env, "0");
+
+    return contain(&argv[1], unshare_network, unshare_mount, unshare_mount, mount_proc);
 }

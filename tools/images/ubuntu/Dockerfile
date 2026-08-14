@@ -12,8 +12,12 @@ RUN truncate -s0 /tmp/preseed.cfg; \
     apt-get update && \
     apt-get install -y python3 python3-dev python3-pip time \
     curl unzip git locales pkg-config zlib1g-dev psmisc \
-    openssh-client ca-certificates && \
+    openssh-client ca-certificates uidmap && \
     apt-get clean
+
+# Subordinate id delegation for sandbox tests
+RUN printf 'root:0:65536\n' >> /etc/subuid && \
+    printf 'root:0:65536\n' >> /etc/subgid
 
 # Go - we want a specific package version here.
 RUN curl -fsSL https://dl.google.com/go/go1.26.1.linux-amd64.tar.gz | tar -xzC /usr/local
