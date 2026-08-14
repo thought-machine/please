@@ -559,6 +559,7 @@ type Configuration struct {
 		Namespace          string       `help:"Set to 'always', to namespace all actions. Set to 'sandbox' to namespace only when sandboxing the build action. Defaults to 'never', under the assumption the sandbox tool will handle its own namespacing. If set, user namespacing will be enabled for all rules. Mount and network will only be enabled if the rule is to be sandboxed."`
 		Build              bool         `help:"True to sandbox individual build actions, which isolates them from network access and some aspects of the filesystem. Currently only works on Linux." var:"BUILD_SANDBOX"`
 		Test               bool         `help:"True to sandbox individual tests, which isolates them from network access, IPC and some aspects of the filesystem. Currently only works on Linux." var:"TEST_SANDBOX"`
+		Remote             bool         `help:"True to enable sandboxing for remotely executed actions. Requires an external sandbox tool to be configured via the Tool option." var:"REMOTE_SANDBOX"`
 		ExcludeableTargets []BuildLabel `help:"If set, only targets that match these wildcards will be allowed to opt out of the sandbox"`
 	} `help:"A config section describing settings relating to sandboxing of build actions."`
 	Remote struct {
