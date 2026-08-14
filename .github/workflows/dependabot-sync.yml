@@ -1,0 +1,28 @@
+name: Dependabot Build Sync
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  sync-build-files:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Run puku sync
+        run: |
+          ./pleasew puku sync
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@4b4693c596717de5c939cfa92b1b0b5c8676537f
+        with:
+          commit_message: "sync third_party/go/BUILD with go.mod"
