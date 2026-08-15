@@ -235,12 +235,19 @@ jobs:
         PLZ_ARGS: "--profile ci --exclude pip --exclude embed"
       steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
            key: go-mod-darwin-arm64-v8-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-darwin-arm64-go123-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
+       # Keyed separately from the Linux jobs: the cache holds darwin_arm64 artifacts, so sharing a
+       # key with them would just mean a cache full of things this job can't use.
+       - restore_cache:
+           key: e2e-darwin-arm64-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
@@ -279,6 +286,9 @@ jobs:
        - save_cache:
            key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-darwin-arm64-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
 
    test-rex:
      working_directory: ~/please
