@@ -53,7 +53,11 @@ def please_export_e2e_test(
         f'plz --repo_root="{exported_repo}" build //...',
     ] + [f'plz --repo_root="{exported_repo}" {cmd}' for cmd in cmd_on_export]
 
-    test_cmd = [cmd.replace("plz ", "$TOOLS_PLEASE ") for cmd in test_cmd]
+    # Share the dir cache with the rest of the e2e tests; these repos build a Go toolchain and stdlib
+    # between them, which is by far the most expensive thing either of them does. It goes on the
+    # command line rather than in a config file because both repos here get diffed against golden
+    # masters, so we can't write anything into them.
+    test_cmd = [cmd.replace("plz ", f"$TOOLS_PLEASE {SHARED_CACHE_FLAG} ") for cmd in test_cmd]
     test_cmd = " && ".join(test_cmd)
 
     data["SOURCE_REPO"] = [source_repo]

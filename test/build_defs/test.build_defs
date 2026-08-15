@@ -1,3 +1,17 @@
+# Every e2e test runs in its own copy of a repo with its own $HOME, so by default they each get an
+# empty dir cache and repeat a lot of expensive work (fetching plugins, building the Go stdlib etc).
+# The dir cache is content-addressed and safe to use concurrently, so we point them all at a single
+# cache instead. $TMP_DIR is <repo root>/plz-out/tmp/..., so trimming from the last /plz-out/ gets us
+# back to the root of the repo we're being run from.
+#
+# The whole suite needs about 1.5G of this, most of it Go toolchains and stdlibs, so the default
+# water marks leave plenty of room; cleaning only kicks in once entries from older revisions of the
+# test repos have built up. It all lives under plz-out so `plz clean` takes it away with everything
+# else.
+SHARED_CACHE_DIR = '${TMP_DIR%/plz-out/*}/plz-out/e2e_cache'
+# The same setting as a command-line flag, for tests that can't have a config file written into them.
+SHARED_CACHE_FLAG = f'-o "cache.dir:{SHARED_CACHE_DIR}"'
+
 # Runs e2e tests against please in a specified repo
 def please_repo_e2e_test(
         name: str,
@@ -12,12 +26,25 @@ def please_repo_e2e_test(
         expect_output_contains: dict = {},
         expect_output_doesnt_contain: dict = {},
         labels: list = [],
+        shared_cache: bool = True,
 ):
     if expected_failure:
         plz_command += "; [ ! $? -eq 0 ]"
 
     test_cmd = [
         "cp $DATA_BASE_CONFIG $DATA_REPO",
+    ]
+
+    if shared_cache:
+        # See SHARED_CACHE_DIR above. This goes in .plzconfig.local rather than on the command line
+        # so that it applies to nested plz invocations too (some tests run a script rather than plz
+        # directly), and rather than in $PLZ_OVERRIDES because a test passing its own -o flags makes
+        # go-flags ignore that env var in its entirety.
+        # The path goes through printf's arguments rather than its format string so that a repo root
+        # containing a % can't be read as a format specifier.
+        test_cmd.append(f'printf "[cache]\\ndir = %s\\n" "{SHARED_CACHE_DIR}" > $DATA_REPO/.plzconfig.local')
+
+    test_cmd += [
         "cd $DATA_REPO",
         plz_command,
     ]
