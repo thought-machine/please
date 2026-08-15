@@ -43,12 +43,12 @@ func TestAcquireSharedRepoRoot(t *testing.T) {
 	assert.IsType(t, &os.File{}, repoLockFile)
 
 	contents, err := os.ReadFile(repoLockFile.Name())
-	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	assert.Empty(t, contents)
 }
 
 func TestAcquireExclusiveRepoRoot(t *testing.T) {
-	AcquireSharedRepoLock()
+	AcquireExclusiveRepoLock()
 	defer ReleaseRepoLock()
 
 	assert.IsType(t, &os.File{}, repoLockFile)
