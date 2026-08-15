@@ -4,13 +4,12 @@
 # cache instead. $TMP_DIR is <repo root>/plz-out/tmp/..., so trimming from the last /plz-out/ gets us
 # back to the root of the repo we're being run from.
 #
-# The whole suite needs about 1.5G of this, most of it Go toolchains and stdlibs, so the default
-# water marks leave plenty of room; cleaning only kicks in once entries from older revisions of the
-# test repos have built up. It all lives under plz-out so `plz clean` takes it away with everything
-# else.
+# Cleaning is off: the suite needs about 1.5G and 50k files of this, and the cleaner walks the whole
+# cache on startup, so leaving it on has every test in the suite doing that at once. It all lives
+# under plz-out, so `plz clean` takes it away with everything else.
 SHARED_CACHE_DIR = '${TMP_DIR%/plz-out/*}/plz-out/e2e_cache'
-# The same setting as a command-line flag, for tests that can't have a config file written into them.
-SHARED_CACHE_FLAG = f'-o "cache.dir:{SHARED_CACHE_DIR}"'
+# The same settings as command-line flags, for tests that can't have a config file written into them.
+SHARED_CACHE_FLAG = f'-o "cache.dir:{SHARED_CACHE_DIR}" -o cache.dirclean:false'
 
 # Runs e2e tests against please in a specified repo
 def please_repo_e2e_test(
@@ -42,7 +41,7 @@ def please_repo_e2e_test(
         # go-flags ignore that env var in its entirety.
         # The path goes through printf's arguments rather than its format string so that a repo root
         # containing a % can't be read as a format specifier.
-        test_cmd.append(f'printf "[cache]\\ndir = %s\\n" "{SHARED_CACHE_DIR}" > $DATA_REPO/.plzconfig.local')
+        test_cmd.append(f'printf "[cache]\\ndir = %s\\ndirclean = false\\n" "{SHARED_CACHE_DIR}" > $DATA_REPO/.plzconfig.local')
 
     test_cmd += [
         "cd $DATA_REPO",

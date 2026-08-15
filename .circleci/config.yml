@@ -9,12 +9,17 @@ jobs:
        PLZ_ARGS: "--profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
            key: go-mod-alpine-v9-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-alpine-main-v9-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-alpine-main-v3-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: e2e-alpine-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -39,6 +44,9 @@ jobs:
        - save_cache:
            key: python-alpine-main-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-alpine-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
 
    build-linux:
      working_directory: ~/please
@@ -49,12 +57,17 @@ jobs:
        PLZ_ARGS: "--profile ci"
      steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
            key: go-mod-linux-v9-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-linux-main-v9-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-v3-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: e2e-linux-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -87,6 +100,9 @@ jobs:
        - save_cache:
            key: python-linux-main-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-linux-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
 
    build-linux-alt:
      working_directory: ~/please
@@ -98,12 +114,17 @@ jobs:
        PLZ_COVER: "cover --nocoverage_report"
      steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
            key: go-mod-linux-alt-v7-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-linux-alt-v7-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-alt-v3-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: e2e-linux-alt-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -121,6 +142,9 @@ jobs:
        - save_cache:
            key: python-linux-alt-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-linux-alt-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
    build-darwin-amd64:
      working_directory: ~/please
      macos:
