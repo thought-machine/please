@@ -33,11 +33,13 @@ type interpreter struct {
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
+
+	callbacks Callbacks
 }
 
 // newInterpreter creates and returns a new interpreter instance.
 // It loads all the builtin rules at this point.
-func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
+func newInterpreter(state *core.BuildState, p *Parser, callbacks Callbacks) *interpreter {
 	s := &scope{
 		ctx:    context.Background(),
 		state:  state,
@@ -49,6 +51,7 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 		configs:    map[*core.BuildState]*pyConfig{},
 		limiter:    make(semaphore, state.Config.Parse.NumThreads),
 		regexCache: cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
+		callbacks:  callbacks,
 	}
 	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
 	if p.interpreter != nil {

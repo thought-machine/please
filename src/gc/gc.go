@@ -218,7 +218,7 @@ func publicDependencies(graph *core.BuildGraph, target *core.BuildTarget) []*cor
 
 // RewriteFile rewrites a BUILD file to exclude a set of targets.
 func RewriteFile(state *core.BuildState, filename string, targets []string) error {
-	p := asp.NewParser(state)
+	p := asp.NewParser(state, nil)
 	stmts, err := p.ParseFileOnly(filename)
 	if err != nil {
 		return err

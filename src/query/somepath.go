@@ -92,7 +92,8 @@ func somePath(graph *core.BuildGraph, target1, target2 *core.BuildTarget, seen, 
 		return nil
 	}
 	seen[target1.Label] = struct{}{}
-	for dep := range target1.DeclaredDependencies() {
+	// Sorted so we always report the same path back; DeclaredDependencies yields in declaration order.
+	for _, dep := range slices.SortedFunc(target1.DeclaredDependencies(), core.BuildLabel.Compare) {
 		if t := graph.Target(dep); t != nil {
 			if _, present := except[t.Label]; present {
 				continue

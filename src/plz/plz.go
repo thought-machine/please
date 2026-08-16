@@ -43,8 +43,6 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		go state.UpdateResources()
 	}
 
-	parser := parse.InitParser(state)
-
 	// This must happen however we exit; anything reading state.Results() (e.g. the display)
 	// waits for that channel to be closed, so it would hang forever if we returned an error first.
 	defer func() {
@@ -59,12 +57,9 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		metrics.Push(state.Config.Metrics, state.Config.IsRemoteExecution())
 	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	state.Cancel = cancel
-
+	topctx, cancel := context.WithCancelCause(context.Background())
 	r := runner{
 		state:    state,
-		parser:   parser,
 		arch:     arch,
 		progress: progress,
 		buildOnce: cmap.NewErrMap[core.BuildLabel, *core.BuildTarget](cmap.DefaultShardCount, func(l core.BuildLabel) uint64 {
@@ -78,18 +73,11 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		remoteLimiter: make(limiter, state.Config.NumRemoteExecutors()),
 		anyRemote:     state.Config.NumRemoteExecutors() > 0,
 	}
-	g, ctx := r.group(ctx)
+	g, ctx := r.group(topctx)
 	r.tasks = g
-
-	state.Build = func(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildTarget, error) {
-		target, err := r.Build(ctx, label, dependent)
-		if err != nil {
-			return nil, err
-		}
-		// Anything calling this will likely want this thing to end up being downloaded (it's mostly for subincludes)
-		return target, state.EnsureDownloaded(target)
-	}
-	state.Parse = r.Parse
+	r.parser = parse.InitParser(state, &r)
+	results := state.Results()
+	go checkForCycles(state, results, cancel)
 
 	if state.Config.Bazel.Compatibility && fs.FileExists("WORKSPACE") {
 		// We have to parse the WORKSPACE file before anything else to understand subrepos.
@@ -107,10 +95,8 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		if err := g.Wait(); err != nil {
 			return err
 		}
-		// Reset the group & context for next time
-		ctx, cancel = context.WithCancel(context.Background())
-		g, ctx = r.group(ctx)
-		state.Cancel = cancel
+		// Reset the group & context for next time (the context is now expired because the group is done)
+		g, ctx = r.group(topctx)
 		r.tasks = g
 	}
 	r.FindOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
@@ -126,7 +112,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	return g.Wait()
 }
 
-// RunHost is a convenience function that uses the host architecture, the given state's
+// RunHostAsync is a convenience function that uses the host architecture, the given state's
 // configuration and no pre targets. It is otherwise identical to Run.
 func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, &Progress{}, cli.HostArch())
@@ -280,6 +266,18 @@ func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildL
 	}
 	if r.state.Graph.Subrepo(label.Subrepo) != nil {
 		return nil // The parse above defined it, we're done.
+	}
+	if sl.Subrepo != dependent.Subrepo {
+		nested := sl
+		nested.Subrepo = dependent.Subrepo
+		if !inSamePackage(nested, dependent) {
+			if _, err := r.tryParse(ctx, nested, label); err != nil && !errors.Is(err, parse.ErrMissingBuildFile) {
+				return err
+			}
+			if r.state.Graph.Subrepo(label.Subrepo) != nil {
+				return nil
+			}
+		}
 	}
 	// Nothing defines it, so the only remaining possibility is an architecture subrepo.
 	if arch, ok := couldBeArch(label.Subrepo); ok {
@@ -446,13 +444,13 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	// N.B. Even when there are none we can't just build the target and return; its own callbacks
 	//      can add some, which we won't know about until it's built.
 	if deps := slices.Collect(target.RuntimeAndDataDependencies()); len(deps) == 0 {
-		if err := r.buildJustOne(target); err != nil {
+		if err := r.buildJustOne(ctx, target); err != nil {
 			return err
 		}
 	} else {
 		g, gctx = r.group(ctx)
 		g.Go(func() error {
-			return r.buildJustOne(target)
+			return r.buildJustOne(gctx, target)
 		})
 		for _, dep := range deps {
 			g.Go(func() error {
@@ -479,11 +477,14 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 }
 
 // buildJustOne calls the build for a single target.
-func (r *runner) buildJustOne(target *core.BuildTarget) error {
+func (r *runner) buildJustOne(ctx context.Context, target *core.BuildTarget) error {
 	remote := r.anyRemote && !target.Local
 	limiter := r.limiter(remote)
 	limiter.Acquire()
 	defer limiter.Release()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return build.Build(r.state, target, remote)
 }
 
@@ -528,6 +529,15 @@ func (r *runner) Build(ctx context.Context, label, dependent core.BuildLabel) (*
 	})
 }
 
+func (r *runner) BuildAndDownload(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildTarget, error) {
+	target, err := r.Build(ctx, label, dependent)
+	if err != nil {
+		return nil, err
+	}
+	// Anything calling this will likely want this thing to end up being downloaded (it's mostly for subincludes)
+	return target, r.state.EnsureDownloaded(target)
+}
+
 // testOne tests one single target
 func (r *runner) testOne(ctx context.Context, target *core.BuildTarget, dependent core.BuildLabel) error {
 	if target.IsTest() {
@@ -543,13 +553,14 @@ func (r *runner) testOne(ctx context.Context, target *core.BuildTarget, dependen
 	// TODO(peter): Is it okay for none of these to return errors? I _think_ so and we will capture it later?
 	remote := r.anyRemote && !target.Local
 	limiter := r.limiter(remote)
-	if r.state.TestSequentially || r.state.NumTestRuns == 1 { // minor optimisation to avoid creating unnecessary goroutines
+	if r.state.TestSequentially || r.state.NumTestRuns == 1 {
 		limiter.Acquire()
 		defer limiter.Release()
-		for run := range int(r.state.NumTestRuns) {
-			test.Test(r.state, target, remote, run+1)
-			r.progress.numDone.Add(1)
+		if err := ctx.Err(); err != nil {
+			return err
 		}
+		test.Test(r.state, target, remote, 1)
+		r.progress.numDone.Add(int64(r.state.NumTestRuns))
 		return nil
 	}
 	var wg sync.WaitGroup
@@ -557,6 +568,9 @@ func (r *runner) testOne(ctx context.Context, target *core.BuildTarget, dependen
 		wg.Go(func() {
 			limiter.Acquire()
 			defer limiter.Release()
+			if ctx.Err() != nil {
+				return
+			}
 			test.Test(r.state, target, remote, run+1)
 			r.progress.numDone.Add(1)
 		})
@@ -681,6 +695,9 @@ func (r *runner) findOriginalTask(ctx context.Context, target core.BuildLabel, n
 }
 
 func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest, needBuild bool) {
+	if r.state.IsExcluded(target) {
+		return
+	}
 	r.state.AddOriginalTarget(target)
 	r.tasks.Go(func() error {
 		if needTest {
@@ -688,6 +705,16 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 		} else if needBuild {
 			_, err := r.Build(ctx, target, core.OriginalTarget)
 			// TODO(peter): Ensure this gets downloaded if needed
+			return err
+		}
+		if r.state.ParsePackageOnly {
+			// Some kinds of query don't need a recursive parse. A named target still has to exist
+			// though, so those go via parseTarget for the error (and suggestions) that produces.
+			if target.IsAllTargets() {
+				_, err := r.Parse(ctx, target, core.OriginalTarget)
+				return err
+			}
+			_, err := r.parseTarget(ctx, target, core.OriginalTarget)
 			return err
 		}
 		return r.RecursiveParse(ctx, target, core.OriginalTarget)

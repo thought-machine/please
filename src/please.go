@@ -1222,13 +1222,12 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 	pretty := prettyOutput(opts.OutputFlags.InteractiveOutput, opts.OutputFlags.PlainOutput || opts.BehaviorFlags.Debug, opts.OutputFlags.Verbosity) && state.NeedBuild && !streamTests
 	state.Cache = cache.NewCache(state)
 
-	// Run the display
-	// TODO(peterebden): Refactor out the results stuff from state in a future PR to avoid this kind of race condition.
-	state.Results() // important this is called now, don't ask...
+	// Run the display & build simultaneously
+	results := state.Results()
 	var progress plz.Progress
 	var wg sync.WaitGroup
 	wg.Go(func() {
-		output.MonitorState(state, &progress, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
+		output.MonitorState(state, &progress, results, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
 	})
 	if err := plz.Run(targets, opts.BuildFlags.PreTargets, state, &progress, state.TargetArch); err != nil {
 		// Failures to build are logged through the central error reporting mechanism and will be printed by MonitorState above.

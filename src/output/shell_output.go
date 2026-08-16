@@ -33,7 +33,7 @@ type Progress interface {
 
 // MonitorState monitors the build while it's running and prints output until the results
 // channel of state has completed.
-func MonitorState(state *core.BuildState, progress Progress, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
+func MonitorState(state *core.BuildState, progress Progress, results <-chan *core.BuildResult, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
 	initPrintf(state.Config)
 
 	if len(state.Config.Please.Motd) != 0 {
@@ -50,7 +50,6 @@ func MonitorState(state *core.BuildState, progress Progress, plainOutput, detail
 	displayer := setupDisplayer(state, progress, plainOutput)
 	t := time.NewTicker(displayer.Frequency())
 	defer t.Stop()
-	results := state.Results()
 	bt := newBuildingTargets(state, progress, plainOutput)
 	displayer.Update(bt.Targets())
 loop:
@@ -78,19 +77,7 @@ loop:
 		printFailedBuildResults(bt.FailedNonTests, bt.FailedTargets, duration)
 		return
 	}
-	if state.NeedBuild {
-		// Check all the targets we wanted to build actually have been built.
-		for _, label := range state.ExpandOriginalLabels() {
-			if target := state.Graph.Target(label); target == nil {
-				log.Fatalf("Target %s doesn't exist in build graph", label)
-			} else if (state.NeedHashesOnly || state.PrepareOnly || shell) && target.State() == core.Stopped {
-				// Do nothing, we will output about this shortly.
-			} else if target.State() < core.Built && len(bt.FailedTargets) == 0 && !target.AddedPostBuild {
-				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltDepsMessage(state.Graph, target))
-			}
-		}
-	}
-	if state.NeedBuild && len(bt.FailedNonTests) == 0 {
+	if state.NeedBuild { // N.B. We've returned above if anything failed in the build step.
 		if state.PrepareOnly || shell {
 			printTempDirs(state, duration, shell, shellRun)
 		} else if state.NeedTests { // Got to the test phase, report their results.
@@ -642,35 +629,6 @@ func colouriseError(err error) error {
 
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
 var errorMessageRe = deferredregex.DeferredRegex{Re: `^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`}
-
-// unbuiltDepsMessage returns a message describing why the given target hasn't built, by listing
-// any of its transitive dependencies that aren't built either.
-func unbuiltDepsMessage(graph *core.BuildGraph, target *core.BuildTarget) string {
-	var b strings.Builder
-	seen := map[*core.BuildTarget]bool{}
-	var walk func(*core.BuildTarget)
-	walk = func(t *core.BuildTarget) {
-		if seen[t] {
-			return
-		}
-		seen[t] = true
-		deps, unresolved := t.Dependencies(graph)
-		for _, l := range unresolved {
-			fmt.Fprintf(&b, "  %s (not in the build graph)\n", l)
-		}
-		for _, dep := range deps {
-			if !dep.State().IsBuilt() {
-				fmt.Fprintf(&b, "  %s (%s)\n", dep.Label, dep.State())
-				walk(dep)
-			}
-		}
-	}
-	walk(target)
-	if b.Len() == 0 {
-		return ""
-	}
-	return "\nThe following dependencies have not built:\n" + b.String()
-}
 
 // shortError returns the message for an error, shortening it if the error supports that.
 func shortError(err error) string {

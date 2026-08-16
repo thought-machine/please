@@ -27,12 +27,6 @@ var ErrMissingBuildFile = errors.New("build file not found")
 // the subrepo's preloads are ready) before claiming the package, since neither can be done from in here.
 func Parse(ctx context.Context, state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo) (*core.Package, error) {
 	state.LogParseResult(label, core.PackageParsing, "Parsing...")
-
-	// Subrepo & nothing else means we just want to ensure that subrepo is present.
-	if label.Subrepo != "" && label.PackageName == "" && label.Name == "" {
-		// TODO(peter): is this relevant still?
-		return nil, nil
-	}
 	pkg, err := parsePackage(ctx, state, label, dependent, subrepo)
 	if err != nil {
 		return nil, err

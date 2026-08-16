@@ -251,7 +251,7 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 		dirs = append(dirs, "build_defs")
 	}
 
-	p := asp.NewParser(subrepo.State)
+	p := asp.NewParser(subrepo.State, nil)
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
 		fs := subrepo.FS()

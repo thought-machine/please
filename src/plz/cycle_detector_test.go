@@ -1,24 +1,27 @@
-package core
+package plz
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestCycleDetector(t *testing.T) {
-	newTarget := func(state *BuildState, label string, deps ...string) *BuildTarget {
-		target := NewBuildTarget(ParseBuildLabel(label, ""))
+	newTarget := func(state *core.BuildState, label string, deps ...string) *core.BuildTarget {
+		target := core.NewBuildTarget(core.ParseBuildLabel(label, ""))
 		for _, dep := range deps {
-			target.AddDependency(ParseBuildLabel(dep, ""))
+			target.AddDependency(core.ParseBuildLabel(dep, ""))
 		}
 		state.Graph.AddTarget(target)
 		return target
 	}
 
 	t.Run("NoCycle", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := core.NewDefaultBuildState()
 		newTarget(state, "//src:a", "//src:b", "//src:c")
 		newTarget(state, "//src:b", "//src:d", "//src:e")
 		newTarget(state, "//src:c", "//src:b", "//src:f")
@@ -32,7 +35,7 @@ func TestCycleDetector(t *testing.T) {
 	})
 
 	t.Run("Cycle", func(t *testing.T) {
-		state := NewDefaultBuildState()
+		state := core.NewDefaultBuildState()
 		newTarget(state, "//src:a", "//src:b", "//src:c")
 		newTarget(state, "//src:b", "//src:d", "//src:e")
 		newTarget(state, "//src:c", "//src:b", "//src:f")
@@ -43,9 +46,9 @@ func TestCycleDetector(t *testing.T) {
 
 		detector := cycleDetector{graph: state.Graph}
 		err := detector.Check()
-		require.NotNil(t, err)
-		require.Equal(t, 3, len(err.Cycle))
-		log.Warning("%s", err)
-		assert.Equal(t, []*BuildTarget{g, e, f}, err.Cycle)
+		require.Error(t, err)
+		cerr, ok := errors.AsType[*errCycle](err)
+		require.True(t, ok)
+		assert.Equal(t, []*core.BuildTarget{g, e, f}, cerr.Cycle)
 	})
 }

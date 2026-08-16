@@ -22,7 +22,7 @@ func parseFileToStatements(filename string) (*scope, []*Statement, error) {
 func parseFileToStatementsInPkg(filename string, pkg *core.Package) (*scope, []*Statement, error) {
 	state := core.NewDefaultBuildState()
 	state.Config.BuildConfig = map[string]string{"parser-engine": "python27"}
-	parser := NewParser(state)
+	parser := NewParser(state, nil)
 
 	src, err := rules.ReadAsset("builtins.build_defs")
 	if err != nil {
@@ -594,7 +594,7 @@ func TestIsSemver(t *testing.T) {
 
 func TestJSON(t *testing.T) {
 	state := core.NewDefaultBuildState()
-	parser := NewParser(state)
+	parser := NewParser(state, nil)
 
 	src, err := rules.ReadAsset("builtins.build_defs")
 	if err != nil {
@@ -659,7 +659,7 @@ func TestSemverCheck(t *testing.T) {
 
 func TestLogConfigVariable(t *testing.T) {
 	state := core.NewDefaultBuildState()
-	parser := NewParser(state)
+	parser := NewParser(state, nil)
 
 	src, err := rules.ReadAsset("builtins.build_defs")
 	if err != nil {

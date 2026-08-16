@@ -132,14 +132,16 @@ func specialFields() specialFieldsMap {
 			}
 			return ""
 		},
+		// These all yield in declaration order; we sort them so the printed rule is canonical
+		// regardless of how the original was written.
 		"deps": func(target *core.BuildTarget) interface{} {
-			return slices.Collect(target.DeclaredDependenciesStrict())
+			return slices.SortedFunc(target.DeclaredDependenciesStrict(), core.BuildLabel.Compare)
 		},
 		"exported_deps": func(target *core.BuildTarget) interface{} {
-			return slices.Collect(target.ExportedDependencies())
+			return slices.SortedFunc(target.ExportedDependencies(), core.BuildLabel.Compare)
 		},
 		"runtime_deps": func(target *core.BuildTarget) interface{} {
-			return slices.Collect(target.RuntimeDependencies())
+			return slices.SortedFunc(target.RuntimeDependencies(), core.BuildLabel.Compare)
 		},
 		"visibility": func(target *core.BuildTarget) interface{} {
 			if len(target.Visibility) == 1 && target.Visibility[0] == core.WholeGraph[0] {

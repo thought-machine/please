@@ -1,6 +1,6 @@
 go_library(
     name = "plz",
-    srcs = ["plz.go"],
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -22,10 +22,11 @@ go_library(
 
 go_test(
     name = "plz_test",
-    srcs = ["plz_test.go"],
+    srcs = glob(["*_test.go"]),
     deps = [
         ":plz",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/cli",
         "//src/core",
     ],

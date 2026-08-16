@@ -198,11 +198,7 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 	h.state.NeedBuild = false
 	// Initialize the parser on state first, so that plz.RunHost uses the same parser.
 	// This ensures plugin subincludes are stored in the same AST cache we use.
-	parse.InitParser(h.state)
-	h.parser = parse.GetAspParser(h.state)
-	if h.parser == nil {
-		return nil, fmt.Errorf("failed to get asp parser from state")
-	}
+	h.parser = parse.InitParser(h.state, nil)
 	// Parse everything in the repo up front.
 	// This is a lot easier than trying to do clever partial parses later on, although
 	// eventually we may want that if we start dealing with truly large repos.

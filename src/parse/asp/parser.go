@@ -24,6 +24,12 @@ type semaphore chan struct{}
 func (s semaphore) Acquire() { s <- struct{}{} }
 func (s semaphore) Release() { <-s }
 
+// Callbacks is the interface we require from something that we can call back to for builds / parses.
+type Callbacks interface {
+	Parse(context.Context, core.BuildLabel, core.BuildLabel) (*core.Package, error)
+	BuildAndDownload(context.Context, core.BuildLabel, core.BuildLabel) (*core.BuildTarget, error)
+}
+
 // A Parser implements parsing of BUILD files.
 type Parser struct {
 	interpreter *interpreter
@@ -35,9 +41,9 @@ type Parser struct {
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
-func NewParser(state *core.BuildState) *Parser {
+func NewParser(state *core.BuildState, callbacks Callbacks) *Parser {
 	p := newParser()
-	p.interpreter = newInterpreter(state, p)
+	p.interpreter = newInterpreter(state, p, callbacks)
 	p.limiter = p.interpreter.limiter
 	return p
 }
@@ -48,6 +54,11 @@ func newParser() *Parser {
 		builtins: map[string][]byte{},
 		limiter:  make(semaphore, 10),
 	}
+}
+
+// SetCallbacks sets the callback functions on an existing parser instance.
+func (p *Parser) SetCallbacks(callbacks Callbacks) {
+	p.interpreter.callbacks = callbacks
 }
 
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.

@@ -340,17 +340,16 @@ type BuildTargetState uint8
 
 // The available states for a target.
 const (
-	Inactive         BuildTargetState = iota // Target isn't used in current build
-	Building                                 // Target is currently being built
-	Stopped                                  // We stopped building the target because we'd gone as far as needed.
-	Built                                    // Target has been successfully built
-	Cached                                   // Target has been retrieved from the cache
-	Unchanged                                // Target has been built but hasn't changed since last build
-	Reused                                   // Outputs of previous build have been reused.
-	BuiltRemotely                            // Target has been built but outputs are not necessarily local.
-	ReusedRemotely                           // Outputs of previous remote action have been reused.
-	DependencyFailed                         // At least one dependency of this target has failed.
-	Failed                                   // Target failed for some reason
+	Inactive       BuildTargetState = iota // Target isn't used in current build
+	Building                               // Target is currently being built
+	Stopped                                // We stopped building the target because we'd gone as far as needed.
+	Built                                  // Target has been successfully built
+	Cached                                 // Target has been retrieved from the cache
+	Unchanged                              // Target has been built but hasn't changed since last build
+	Reused                                 // Outputs of previous build have been reused.
+	BuiltRemotely                          // Target has been built but outputs are not necessarily local.
+	ReusedRemotely                         // Outputs of previous remote action have been reused.
+	Failed                                 // Target failed for some reason
 )
 
 // String implements the fmt.Stringer interface.
@@ -370,8 +369,6 @@ func (s BuildTargetState) String() string {
 		return "Unchanged"
 	case Reused:
 		return "Reused"
-	case DependencyFailed:
-		return "Dependency Failed"
 	case Failed:
 		return "Failed"
 	case BuiltRemotely:
@@ -384,7 +381,7 @@ func (s BuildTargetState) String() string {
 }
 
 func (s BuildTargetState) IsBuilt() bool {
-	return Built <= s && s < DependencyFailed
+	return Built <= s && s < Failed
 }
 
 // NewBuildTarget constructs & returns a new BuildTarget.
@@ -1019,15 +1016,15 @@ func (target *BuildTarget) CanSee(state *BuildState, dep *BuildTarget) bool {
 // Returns an error if not, or nil if all's well.
 func (target *BuildTarget) CheckDependencyVisibility(state *BuildState) error {
 	for _, d := range target.dependencies {
-		if dep := state.Graph.Target(d.Label); dep != nil {
-			if !target.CanSee(state, dep) {
-				return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
-			} else if dep.TestOnly && !target.IsTest() && !target.TestOnly {
-				if target.Label.isExperimental(state) {
-					log.Info("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
-				} else {
-					return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
-				}
+		if dep := state.Graph.Target(d.Label); dep == nil {
+			return fmt.Errorf("target %s (dependency of %s) not defined in build graph", d.Label, target)
+		} else if !target.CanSee(state, dep) {
+			return fmt.Errorf("Target %s isn't visible to %s", dep.Label, target.Label)
+		} else if dep.TestOnly && !target.IsTest() && !target.TestOnly {
+			if target.Label.isExperimental(state) {
+				log.Info("Test-only restrictions suppressed for %s since %s is in the experimental tree", dep.Label, target.Label)
+			} else {
+				return fmt.Errorf("Target %s can't depend on %s, it's marked test_only", target.Label, dep.Label)
 			}
 		}
 	}

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -14,7 +13,6 @@ import (
 	iofs "io/fs"
 	"iter"
 	"path/filepath"
-	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -31,9 +29,6 @@ import (
 
 // startTime is as close as we can conveniently get to process start time.
 var startTime = time.Now()
-
-// cycleCheckDuration is the length of time we allow inactivity for before we trigger cycle detection.
-const cycleCheckDuration = 5 * time.Second
 
 // resultsChanSize is the buffer size of the channel we report build results on.
 const resultsChanSize = 1000
@@ -221,16 +216,6 @@ type BuildState struct {
 	// NeedDebugDeps is true if we're doing a `plz debug` and we need to build the debug tools and data
 	NeedDebugDeps bool
 
-	// Build is a callback to build a single target. It's set from outside here.
-	// TODO(peter): can we find a way of moving these off this struct? it feels weird here
-	// The second label is the dependent, i.e. whatever is asking for this to be built.
-	Build func(ctx context.Context, label, dependent BuildLabel) (*BuildTarget, error)
-	// Parse is a callback to parse a single package. It's also set from outside.
-	// The second label is the dependent, i.e. whatever is asking for this to be parsed.
-	Parse func(ctx context.Context, label, dependent BuildLabel) (*Package, error)
-	// Cancel is a cancel function called when the state detects a cycle.
-	Cancel func()
-
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
 }
@@ -325,8 +310,7 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 // A stateProgress records various points of progress for a State.
 // This is split out from above so we can share it between multiple instances.
 type stateProgress struct {
-	mutex      sync.Mutex
-	resultOnce sync.Once
+	mutex sync.Mutex
 	// The set of known states
 	allStates []*BuildState
 	// Targets that we were originally requested to build
@@ -337,12 +321,8 @@ type stateProgress struct {
 	buildFailed atomic.Bool
 	// True if >= 1 target has failed test cases
 	testFailed atomic.Bool
-	// Stream of results from the build
-	results chan *BuildResult
-	// Internal result stream, used to intermediate them for the cycle checker.
-	internalResults chan *BuildResult
-	// The cycle checker itself.
-	cycleDetector cycleDetector
+	// Streams of results from the build
+	results []chan *BuildResult
 }
 
 // SystemStats stores information about the system.
@@ -373,18 +353,12 @@ type lockedStats struct {
 
 // CloseResults closes the result channels.
 func (state *BuildState) CloseResults() {
-	state.progress.cycleDetector.Stop()
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
-	// N.B. We create the channel if nobody has asked for it yet, rather than doing nothing; otherwise
-	//      anyone calling Results() after this would get a fresh channel that is never closed and would
-	//      wait on it forever.
-	if state.progress.results == nil {
-		state.progress.results = make(chan *BuildResult, resultsChanSize)
+	for _, ch := range state.progress.results {
+		close(ch)
 	}
-	state.progress.resultOnce.Do(func() {
-		close(state.progress.results)
-	})
+	state.progress.results = nil
 }
 
 // AddOriginalTarget adds an original target to this state
@@ -433,12 +407,22 @@ func (state *BuildState) SetIncludeAndExclude(include, exclude []string) {
 	}
 }
 
+// IsExcluded returns true if the given label has been excluded by a build label passed to --exclude.
+// Note that this is only about labels; --exclude can also take rule labels, which only make sense
+// once we have a target to look at and hence are handled by ShouldInclude.
+func (state *BuildState) IsExcluded(label BuildLabel) bool {
+	for _, e := range state.ExcludeTargets {
+		if e.Includes(label) {
+			return true
+		}
+	}
+	return false
+}
+
 // ShouldInclude returns true if the given target is included by the include/exclude flags.
 func (state *BuildState) ShouldInclude(target *BuildTarget) bool {
-	for _, e := range state.ExcludeTargets {
-		if e.Includes(target.Label) {
-			return false
-		}
+	if state.IsExcluded(target.Label) {
+		return false
 	}
 	return target.ShouldInclude(state.Include, state.Exclude)
 }
@@ -479,7 +463,7 @@ func (state *BuildState) LogParseResult(label BuildLabel, status BuildResultStat
 func (state *BuildState) LogBuildResult(target *BuildTarget, status BuildResultStatus, description string) {
 	state.logResult(&BuildResult{
 		Label:       target.Label,
-		target:      target,
+		Target:      target,
 		Status:      status,
 		Err:         nil,
 		Description: description,
@@ -494,7 +478,7 @@ func (state *BuildState) LogTestRunning(target *BuildTarget, run int, status Bui
 	}
 	state.logResult(&BuildResult{
 		Label:       target.Label,
-		target:      target,
+		Target:      target,
 		Run:         run,
 		Status:      status,
 		Description: message,
@@ -505,7 +489,7 @@ func (state *BuildState) LogTestRunning(target *BuildTarget, run int, status Bui
 func (state *BuildState) LogTestResult(target *BuildTarget, run int, status BuildResultStatus, results *TestSuite, coverage *TestCoverage, err error, format string, args ...interface{}) {
 	state.logResult(&BuildResult{
 		Label:       target.Label,
-		target:      target,
+		Target:      target,
 		Run:         run,
 		Status:      status,
 		Err:         err,
@@ -533,7 +517,9 @@ func (state *BuildState) logResult(result *BuildResult) {
 		return
 	}
 	result.Time = time.Now()
-	state.progress.internalResults <- result
+	for _, ch := range state.progress.results {
+		ch <- result
+	}
 	if result.Status.IsFailure() {
 		state.progress.failed.Store(true)
 		switch result.Status {
@@ -545,76 +531,19 @@ func (state *BuildState) logResult(result *BuildResult) {
 	}
 }
 
-// forwardResults runs indefinitely, forwarding results from the internal
-// channel to the external one. On the way it checks if we need to do
-// cycle detection.
-func (state *BuildState) forwardResults() {
-	defer func() {
-		if r := recover(); r != nil {
-			// Ensure we don't get a "send on closed channel" when the
-			// outward results channel is closed.
-			log.Debug("%s", r)
-		}
-	}()
-	activeTargets := map[*BuildTarget]struct{}{}
-	// Persist this one timer throughout so we don't generate bazillions of them.
-	t := time.NewTimer(cycleCheckDuration)
-	t.Stop()
-	var result *BuildResult
-	for {
-		if len(activeTargets) == 0 {
-			t.Reset(cycleCheckDuration)
-			select {
-			case result = <-state.progress.internalResults:
-				// This has to be properly managed to prevent hangs.
-				if !t.Stop() {
-					<-t.C
-				}
-			case <-t.C:
-				go state.checkForCycles()
-				go dumpGoroutineInfo()
-				// Still need to get a result!
-				result = <-state.progress.internalResults
-			}
-		} else {
-			result = <-state.progress.internalResults
-		}
-		if target := result.target; target != nil {
-			if result.Status.IsActive() {
-				activeTargets[target] = struct{}{}
-			} else {
-				delete(activeTargets, target)
-			}
-		}
-		state.progress.mutex.Lock()
-		if state.progress.results != nil {
-			state.progress.results <- result
-		}
-		state.progress.mutex.Unlock()
-	}
-}
-
-// checkForCycles is run to detect a cycle in the graph. It converts any returned error into an async error.
-func (state *BuildState) checkForCycles() {
-	if err := state.progress.cycleDetector.Check(); err != nil {
-		state.LogBuildError(err.Cycle[0].Label, TargetBuildFailed, err, "")
-		state.Cancel()
-	}
-}
-
 // Failures returns anything that has failed about the current build.
 func (state *BuildState) Failures() (anything, build, test bool) {
 	return state.progress.failed.Load(), state.progress.buildFailed.Load(), state.progress.testFailed.Load()
 }
 
 // Results returns a channel on which the caller can listen for results.
+// After calling this, the caller is honour-bound to consume the channel, or eventually things will block.
 func (state *BuildState) Results() <-chan *BuildResult {
 	state.progress.mutex.Lock()
 	defer state.progress.mutex.Unlock()
-	if state.progress.results == nil {
-		state.progress.results = make(chan *BuildResult, resultsChanSize)
-	}
-	return state.progress.results
+	ch := make(chan *BuildResult, resultsChanSize)
+	state.progress.results = append(state.progress.results, ch)
+	return ch
 }
 
 // ExpandOriginalLabels expands any pseudo-labels (ie. :all, ... has already been resolved to a bunch :all targets)
@@ -1027,8 +956,6 @@ func NewBuildState(config *Configuration) *BuildState {
 		Arch:            cli.HostArch(),
 		stats:           &lockedStats{},
 		progress: &stateProgress{
-			internalResults: make(chan *BuildResult, 1000),
-			cycleDetector:   cycleDetector{graph: graph},
 			originalTargets: NewTargetSet(),
 		},
 		initOnce: new(sync.Once),
@@ -1040,7 +967,6 @@ func NewBuildState(config *Configuration) *BuildState {
 	for _, exp := range config.Parse.ExperimentalDir {
 		state.experimentalLabels = append(state.experimentalLabels, BuildLabel{PackageName: exp, Name: "..."})
 	}
-	go state.forwardResults()
 	return state
 }
 
@@ -1058,7 +984,7 @@ type BuildResult struct {
 	// Target which has just changed
 	Label BuildLabel
 	// Target which has changed. Nil if it's a parse action.
-	target *BuildTarget
+	Target *BuildTarget
 	// Test run index. 0 if not a test.
 	Run int
 	// Its current status
@@ -1117,11 +1043,4 @@ func (s BuildResultStatus) IsFailure() bool {
 // IsActive returns true if this status represents a target that is not yet finished.
 func (s BuildResultStatus) IsActive() bool {
 	return s == PackageParsing || s == TargetBuilding || s == TargetTesting
-}
-
-// dumpGoroutineInfo logs out the goroutine stacks when we believe we might have hung.
-func dumpGoroutineInfo() {
-	var buf bytes.Buffer
-	pprof.Lookup("goroutine").WriteTo(&buf, 1)
-	log.Debug("Current stacks: %s", buf.String())
 }
