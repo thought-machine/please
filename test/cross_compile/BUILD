@@ -1,5 +1,15 @@
 subinclude("//test/build_defs")
 
+# A static link goes via the host C compiler, which can't handle objects for the architecture
+# we're cross-compiling to. Go turns cgo off by itself when cross-compiling, so a dynamic link
+# here is a pure-Go one and needs no C toolchain at all.
+# N.B. Scoped to this package, so it can't affect the real cross-compiled builds of Please.
+package(
+    go = {
+        "default_static": False,
+    },
+)
+
 genrule(
     name = "record_arch",
     outs = ["arch.txt"],
@@ -36,11 +46,15 @@ sh_test(
     data = [":bin"],
 )
 
-sh_test(
+# N.B. arch_checker is a test tool, not data, so that it's built for the host and can actually
+#      run here while :bin is built for the architecture we're testing.
+gentest(
     name = "cross_compiled_bin_test",
-    src = "cross_compiled_bin_test.sh",
     data = [":bin"],
     labels = ["manual"],
+    no_test_output = True,
+    test_cmd = "$TOOL $(location :bin) EM_AARCH64",
+    test_tools = ["//test/cross_compile/arch_checker"],
 )
 
 # N.B. Go can cross-compile to any platform it supports without needing a toolchain installed,
