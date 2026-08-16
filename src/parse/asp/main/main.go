@@ -233,7 +233,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(opts.NumThreads)
 	total := len(opts.Args.BuildFiles)
-	p := asp.NewParser(state, nil, nil)
+	p := asp.NewParser(state, nil)
 
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AllAssets()
