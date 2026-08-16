@@ -884,14 +884,16 @@ func (state *BuildState) WaitForPackage(l, dependent BuildLabel, mode ParseMode)
 	}
 
 	// If something has already queued the package to be parsed, wait for them
-	if ch := state.progress.packageWaits.Get(key); ch != nil {
+	// (atomically: a racing Get-then-Set here can orphan the first caller's channel)
+	if ch, inserted := state.progress.packageWaits.AddOrGet(key, func() chan struct{} {
+		return make(chan struct{})
+	}); !inserted {
 		waitOnChan(ch, "Still waiting for package wait in WaitForPackage(%v, %v, %v)", l, dependent, mode)
 		return state.Graph.PackageByLabel(l)
 	}
 
 	// Otherwise queue the target for parse and recurse
 	state.addPendingParse(l, dependent, mode)
-	state.progress.packageWaits.Set(key, make(chan struct{}))
 
 	return state.WaitForPackage(l, dependent, mode)
 }
