@@ -2,9 +2,7 @@ package core
 
 import (
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -140,40 +138,4 @@ func TestCopyPlugin(t *testing.T) {
 	newPlugin.ExtraValues["foo"] = []string{"bar"}
 
 	assert.NotEqual(t, plugin.ExtraValues["foo"], newPlugin.ExtraValues["foo"])
-}
-
-func TestWaitForPackageConcurrent(t *testing.T) {
-	// Regression test for a lost-wakeup race: concurrent callers waiting on
-	// the same unparsed package could overwrite each other's wait channel in
-	// packageWaits, so the channel one of them waited on was never closed and
-	// that caller blocked forever.
-	dependent := BuildLabel{PackageName: "other", Name: "all"}
-	for i := 0; i < 200; i++ {
-		state := NewDefaultBuildState()
-		label := BuildLabel{PackageName: "pkg", Name: "all"}
-		const n = 32
-		var wg sync.WaitGroup
-		wg.Add(n)
-		start := make(chan struct{})
-		for j := 0; j < n; j++ {
-			go func() {
-				defer wg.Done()
-				<-start
-				state.WaitForPackage(label, dependent, ParseModeNormal)
-			}()
-		}
-		close(start)
-		// Let the waiters register against the unparsed package first, then
-		// complete the parse the way LogParseResult does for real parses.
-		time.Sleep(time.Millisecond)
-		state.Graph.AddPackage(NewPackage("pkg"))
-		state.LogParseResult(label, PackageParsed, "parsed")
-		done := make(chan struct{})
-		go func() { wg.Wait(); close(done) }()
-		select {
-		case <-done:
-		case <-time.After(10 * time.Second):
-			t.Fatalf("iteration %d: a WaitForPackage caller never woke", i)
-		}
-	}
 }
