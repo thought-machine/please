@@ -298,3 +298,26 @@ func TestStat(t *testing.T) {
 		})
 	}
 }
+
+func TestNilTree(t *testing.T) {
+	// SubrepoFS looks trees up by label and gets nothing for a subrepo that
+	// wasn't built remotely in this invocation (a cache hit, say). Reading
+	// that subrepo's config then reached here with a nil tree and panicked.
+	fc := &fakeClient{}
+	for _, tc := range []struct {
+		name string
+		tree *pb.Tree
+	}{
+		{name: "nil tree", tree: nil},
+		{name: "nil root", tree: &pb.Tree{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fs := New(fc, tc.tree, ".")
+			require.NotNil(t, fs)
+			_, err := fs.Open(".plzconfig")
+			assert.True(t, os.IsNotExist(err), "expected not-exist, got %v", err)
+			_, err = iofs.Stat(fs, "anything")
+			assert.True(t, os.IsNotExist(err), "expected not-exist, got %v", err)
+		})
+	}
+}
