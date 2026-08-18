@@ -63,7 +63,16 @@ func (fs *CASFileSystem) Stat(name string) (iofs.FileInfo, error) {
 }
 
 // New creates a new filesystem on top of the given proto, using client to download files from the CAS on demand.
+// A nil tree (or one with no root) yields an empty filesystem: callers such as SubrepoFS look trees up by label and
+// find nothing for a subrepo that wasn't built remotely during this invocation, and an empty filesystem reports that
+// as "does not exist" rather than crashing.
 func New(c Client, tree *pb.Tree, workingDir string) *CASFileSystem {
+	if tree == nil {
+		tree = &pb.Tree{}
+	}
+	if tree.Root == nil {
+		tree.Root = &pb.Directory{}
+	}
 	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
 	for _, child := range append(tree.Children, tree.Root) {
 		dg, err := digest.NewFromMessage(child)
