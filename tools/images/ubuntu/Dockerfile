@@ -20,7 +20,7 @@ RUN printf 'root:0:65536\n' >> /etc/subuid && \
     printf 'root:0:65536\n' >> /etc/subgid
 
 # Go - we want a specific package version here.
-RUN curl -fsSL https://dl.google.com/go/go1.26.1.linux-amd64.tar.gz | tar -xzC /usr/local
+RUN curl -fsSL https://dl.google.com/go/go1.27.0.linux-amd64.tar.gz | tar -xzC /usr/local
 RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # Locale
