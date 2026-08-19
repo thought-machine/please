@@ -43,7 +43,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20260819
      resource_class: large
      environment:
        PLZ_ARGS: "--profile ci"
