@@ -128,7 +128,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
-		Platform:             c.targetPlatformProperties(target),
+		Platform:             c.targetPlatformProperties(target), //nolint:staticcheck
 		Arguments:            process.BashCommand(c.shellPath, commandPrefixBuilder.String()+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
 		OutputPaths:          outs,
@@ -161,7 +161,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 	}
 	cmd, err := core.TestCommand(state, target)
 	return &pb.Command{
-		Platform: &pb.Platform{
+		Platform: &pb.Platform{ //nolint:staticcheck
 			Properties: []*pb.Platform_Property{
 				{
 					Name:  "OSFamily",
@@ -182,7 +182,7 @@ func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarge
 		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
 	}
 	return &pb.Command{
-		Platform:             c.platform,
+		Platform:             c.platform, //nolint:staticcheck
 		Arguments:            outs,
 		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(state), false),
 	}, nil
