@@ -13,14 +13,14 @@ please_repo_e2e_test(
 # print the target's direct run-time dependencies.
 please_repo_e2e_test(
     name = "query_print_test",
-    plz_command = " && ".join([
-        "plz query print -f runtime_deps //test:runtime_deps_test_case > runtime_deps_test_case",
-        "plz query print -f runtime_deps //test:target_with_no_runtime_deps > target_with_no_runtime_deps",
-    ]),
     expected_output = {
         "runtime_deps_test_case": "//test:target_with_runtime_deps",
         "target_with_no_runtime_deps": "",
     },
+    plz_command = " && ".join([
+        "plz query print -f runtime_deps //test:runtime_deps_test_case > runtime_deps_test_case",
+        "plz query print -f runtime_deps //test:target_with_no_runtime_deps > target_with_no_runtime_deps",
+    ]),
     repo = "repo",
 )
 
@@ -50,20 +50,20 @@ _expected_deps = """\
 
 please_repo_e2e_test(
     name = "query_deps_test",
-    plz_command = "plz query deps //test:runtime_deps_test_case > deps",
     expected_output = {
         "deps": _expected_deps,
     },
+    plz_command = "plz query deps //test:runtime_deps_test_case > deps",
     repo = "repo",
 )
 
 # Ensure that run-time dependencies are in fact considered dependencies by `plz query revdeps`.
 please_repo_e2e_test(
     name = "query_revdeps_test",
-    plz_command = "plz query revdeps //test:another_runtime_dep > revdeps",
     expected_output = {
         "revdeps": "//test:target_with_another_runtime_dep",
     },
+    plz_command = "plz query revdeps //test:another_runtime_dep > revdeps",
     repo = "repo",
 )
 

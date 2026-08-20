@@ -41,7 +41,7 @@ func TestQueryPackage(t *testing.T) {
 
 func makeGraph(t *testing.T) *core.BuildState {
 	t.Helper()
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	graph := state.Graph
 	pkg1 := core.NewPackage("package1")
 	pkg1.AddTarget(makeTarget("//package1:target1"))

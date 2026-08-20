@@ -194,7 +194,8 @@ func (h *Handler) initialize(params *lsp.InitializeParams) (*lsp.InitializeResul
 		log.Error("Error reading configuration: %s", err)
 		config = core.DefaultConfiguration()
 	}
-	h.state = core.NewBuildState(config)
+	ctx := context.TODO()
+	h.state = core.NewBuildState(ctx, config)
 	h.state.NeedBuild = false
 	// Initialize the parser on state first, so that plz.RunHost uses the same parser.
 	// This ensures plugin subincludes are stored in the same AST cache we use.

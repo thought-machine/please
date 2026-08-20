@@ -9,7 +9,7 @@ import (
 )
 
 func TestValidateTargetNoSandbox(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 
 	foo := core.NewBuildTarget(core.NewBuildLabel("pkg", "foo"))
 	foo.Sandbox = false
@@ -27,7 +27,7 @@ func TestValidateTargetNoSandbox(t *testing.T) {
 }
 
 func TestValidateTargetSandbox(t *testing.T) {
-	state := core.NewDefaultBuildState()
+	state := core.NewDefaultBuildState(t.Context())
 	state.Config.Sandbox.ExcludeableTargets = []core.BuildLabel{core.NewBuildLabel("third_party", "all")}
 
 	foo := core.NewBuildTarget(core.NewBuildLabel("pkg", "foo"))

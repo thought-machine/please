@@ -86,7 +86,7 @@ func TestRuntimeDeps(t *testing.T) {
 		},
 	} {
 		t.Run(test.Description, func(t *testing.T) {
-			state := core.NewDefaultBuildState()
+			state := core.NewDefaultBuildState(t.Context())
 			testPkg := core.NewPackage("test")
 
 			addTarget = func(name string, fromSrcs, fromDeps bool, srcs, deps, runtimeDeps []*core.BuildTarget) *core.BuildTarget {

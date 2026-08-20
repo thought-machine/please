@@ -18,7 +18,7 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	c := newClient()
+	c := newClient(t)
 	assert.NoError(t, c.CheckInitialised())
 }
 
@@ -28,7 +28,7 @@ func TestBadAPIVersion(t *testing.T) {
 	defer server.Reset()
 	server.HighAPIVersion.Major = 1
 	server.LowAPIVersion.Major = 1
-	c := newClient()
+	c := newClient(t)
 	assert.Error(t, c.CheckInitialised())
 	assert.Contains(t, c.CheckInitialised().Error(), "1.0.0 - 1.1.0")
 }
@@ -40,12 +40,12 @@ func TestUnsupportedDigest(t *testing.T) {
 		pb.DigestFunction_SHA384,
 		pb.DigestFunction_SHA512,
 	}
-	c := newClient()
+	c := newClient(t)
 	assert.Error(t, c.CheckInitialised())
 }
 
 func TestExecuteBuild(t *testing.T) {
-	c := newClient()
+	c := newClient(t)
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target2"})
 	target.AddSource(core.FileLabel{File: "src1.txt", Package: "package"})
 	target.AddSource(core.FileLabel{File: "src2.txt", Package: "package"})
@@ -72,7 +72,7 @@ func (f postBuildFunction) String() string { return "" }
 
 func TestExecutePostBuildFunction(t *testing.T) {
 	t.Skip("Post-build function currently triggered at a higher level")
-	c := newClient()
+	c := newClient(t)
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target5"})
 	target.BuildTimeout = time.Minute
 	target.Command = "echo 'wibble wibble wibble' | tee file7"
@@ -87,7 +87,7 @@ func TestExecutePostBuildFunction(t *testing.T) {
 }
 
 func TestExecuteFetch(t *testing.T) {
-	c := newClient()
+	c := newClient(t)
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "remote1"})
 	target.IsRemoteFile = true
 	target.AddSource(core.URLLabel("https://get.please.build/linux_amd64/14.2.0/please_14.2.0.tar.gz"))
@@ -99,7 +99,7 @@ func TestExecuteFetch(t *testing.T) {
 }
 
 func TestExecuteTest(t *testing.T) {
-	c := newClientInstance("test")
+	c := newClientInstance(t, "test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target3"})
 	target.AddOutput("remote_test")
 	target.Test = new(core.TestFields)
@@ -120,7 +120,7 @@ func TestExecuteTest(t *testing.T) {
 }
 
 func TestExecuteTestWithCoverage(t *testing.T) {
-	c := newClientInstance("test")
+	c := newClientInstance(t, "test")
 	c.state.NeedCoverage = true // bit of a hack but we need to turn this on somehow
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target4"})
 	target.AddOutput("remote_test")
@@ -158,7 +158,7 @@ src/core/build_target.go:177.44,179.2 1 0
 `)
 
 func TestNoAbsolutePaths(t *testing.T) {
-	c := newClientInstance("test")
+	c := newClientInstance(t, "test")
 	tool := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "tool"})
 	tool.AddOutput("bin")
 	c.state.Graph.AddTarget(tool)
@@ -178,7 +178,7 @@ func TestNoAbsolutePaths(t *testing.T) {
 }
 
 func TestNoAbsolutePaths2(t *testing.T) {
-	c := newClientInstance("test")
+	c := newClientInstance(t, "test")
 	tool := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "tool"})
 	tool.AddOutput("bin")
 	c.state.Graph.AddTarget(tool)
@@ -195,7 +195,7 @@ func TestNoAbsolutePaths2(t *testing.T) {
 }
 
 func TestRemoteFilesHashConsistently(t *testing.T) {
-	c := newClientInstance("test")
+	c := newClientInstance(t, "test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "download"})
 	target.IsRemoteFile = true
 	target.AddSource(core.URLLabel("https://localhost/file"))
@@ -211,7 +211,7 @@ func TestRemoteFilesHashConsistently(t *testing.T) {
 }
 
 func TestOutDirsSetOutsOnTarget(t *testing.T) {
-	c := newClientInstance("mock")
+	c := newClientInstance(t, "mock")
 
 	foo := []byte("this is the content of foo")
 	fooDigest := digest.NewFromBlob(foo)
@@ -315,7 +315,7 @@ func TestDirectoryMetadataStore(t *testing.T) {
 }
 
 func TestTargetPlatform(t *testing.T) {
-	c := newClientInstance("platform_test")
+	c := newClientInstance(t, "platform_test")
 	c.platform = convertPlatform(c.state.Config.Remote.Platform) // Bit of a hack but we can't go through the normal path.
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target"})
 	cmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)

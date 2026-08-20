@@ -6,7 +6,7 @@ import (
 )
 
 func BenchmarkIterInputsControl(b *testing.B) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(b.Context())
 	target := NewBuildTarget(NewBuildLabel("src/foo", "foo_lib"))
 	state.Graph.AddTarget(target)
 
@@ -20,7 +20,7 @@ func BenchmarkIterInputsControl(b *testing.B) {
 }
 
 func BenchmarkIterInputsSimple(b *testing.B) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(b.Context())
 
 	target := NewBuildTarget(NewBuildLabel("src/foo", "foo_lib"))
 	target.NeedsTransitiveDependencies = true
@@ -52,7 +52,7 @@ func BenchmarkIterInputsSimple(b *testing.B) {
 }
 
 func BenchmarkIterInputsNamedSources(b *testing.B) {
-	state := NewDefaultBuildState()
+	state := NewDefaultBuildState(b.Context())
 
 	target := NewBuildTarget(NewBuildLabel("src/foo", "foo_lib"))
 	target.NeedsTransitiveDependencies = true

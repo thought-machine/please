@@ -3,6 +3,7 @@ package build
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -59,11 +60,11 @@ var successfulLocalTargetBuildDuration = metrics.NewHistogramVec(
 )
 
 // Build implements the core logic for building a single target.
-func Build(state *core.BuildState, target *core.BuildTarget, remote bool) {
+func Build(ctx context.Context, state *core.BuildState, target *core.BuildTarget, remote bool) {
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	start := time.Now()
-	if err := buildTarget(state, target, remote); err != nil {
+	if err := buildTarget(ctx, state, target, remote); err != nil {
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(target, core.TargetBuildStopped, "Build stopped")
@@ -161,7 +162,7 @@ func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 //     b) attempt to fetch the outputs from the cache based on the output hash
 //  3. Actually build the rule
 //  4. Store result in the cache
-func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+func buildTarget(ctx context.Context, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -285,7 +286,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		// If we fail to hash our outputs, we get a nil hash so we'll attempt to pull the outputs from the cache
 		//
 		// N.B. Important we do not go through state.TargetHasher here since it memoises and
-		//      this calculation might be incorrect.
+		// this calculation might be incorrect.
 		oldOutputHash := outputHashOrNil(target, target.FullOutputs(), state.PathHasher, state.PathHasher.NewHash)
 		cacheKey = mustShortTargetHash(state, target)
 
@@ -320,7 +321,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		}
 
 		state.LogBuildResult(target, core.TargetBuilding, target.BuildingDescription)
-		metadata, err = build(state, target, cacheKey)
+		metadata, err = build(ctx, state, target, cacheKey)
 		if err != nil {
 			return err
 		}
@@ -509,7 +510,7 @@ func retrieveArtifacts(state *core.BuildState, target *core.BuildTarget, oldOutp
 
 // runBuildCommand runs the actual command to build a target.
 // On success it returns the stdout of the target, otherwise an error.
-func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
+func runBuildCommand(ctx context.Context, state *core.BuildState, target *core.BuildTarget, command string, inputHash []byte) ([]byte, error) {
 	if target.IsRemoteFile {
 		return nil, fetchRemoteFile(state, target)
 	}
@@ -519,7 +520,7 @@ func runBuildCommand(state *core.BuildState, target *core.BuildTarget, command s
 	env := core.StampedBuildEnvironment(state, target, inputHash, filepath.Join(core.RepoRoot, target.TmpDir()), target.Stamp).ToSlice()
 	log.Debug("Building target %s\nENVIRONMENT:\n%s\n%s", target.Label, env, command)
 	audit.WriteBuildCommand(target.Label.String(), env, command)
-	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
+	out, combined, err := state.ProcessExecutor.ExecWithTimeoutShell(ctx, target, target.TmpDir(), env, target.BuildTimeout, state.ShowAllOutput, false, process.NewSandboxConfig(target.Sandbox, target.Sandbox), command)
 	if err != nil {
 		return nil, fmt.Errorf("Error building target %s: %s\n%s", target.Label, err, combined)
 	}
@@ -1219,14 +1220,14 @@ func (r *progressReader) Read(b []byte) (int, error) {
 }
 
 // build builds a target locally, it errors if a remote worker is needed since this has beeen removed.
-func build(state *core.BuildState, target *core.BuildTarget, inputHash []byte) (*core.BuildMetadata, error) {
+func build(ctx context.Context, state *core.BuildState, target *core.BuildTarget, inputHash []byte) (*core.BuildMetadata, error) {
 	metadata := new(core.BuildMetadata)
 
 	workerCmd, _, localCmd, err := core.WorkerCommandAndArgs(state, target)
 	if err != nil {
 		return nil, err
 	} else if workerCmd == "" {
-		metadata.Stdout, err = runBuildCommand(state, target, localCmd, inputHash)
+		metadata.Stdout, err = runBuildCommand(ctx, state, target, localCmd, inputHash)
 		return metadata, err
 	}
 	return nil, fmt.Errorf("Persistent workers are no longer supported, found worker command: %s", workerCmd)
