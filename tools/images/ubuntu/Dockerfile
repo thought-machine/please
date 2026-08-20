@@ -2,8 +2,8 @@ FROM ubuntu:noble
 LABEL org.opencontainers.image.authors="please <at> thoughtmachine <dot> net"
 LABEL org.opencontainers.image.source=https://github.com/thought-machine/please
 
-ENV DEBIAN_FRONTEND noninteractive
-ENV DEBCONF_NONINTERACTIVE_SEEN true
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBCONF_NONINTERACTIVE_SEEN=true
 
 # Python and other dependencies.
 RUN truncate -s0 /tmp/preseed.cfg; \
@@ -20,7 +20,7 @@ RUN printf 'root:0:65536\n' >> /etc/subuid && \
     printf 'root:0:65536\n' >> /etc/subgid
 
 # Go - we want a specific package version here.
-RUN curl -fsSL https://dl.google.com/go/go1.26.1.linux-amd64.tar.gz | tar -xzC /usr/local
+RUN curl -fsSL https://dl.google.com/go/go1.27.0.linux-amd64.tar.gz | tar -xzC /usr/local
 RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # Locale
@@ -33,7 +33,7 @@ RUN curl https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz > /tm
 RUN mkdir -p /usr/local/gcloud \
   && tar -C /usr/local/gcloud -xvf /tmp/google-cloud-sdk.tar.gz \
   && /usr/local/gcloud/google-cloud-sdk/install.sh
-ENV PATH /usr/local/gcloud/google-cloud-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=/usr/local/gcloud/google-cloud-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Welcome message
 COPY /motd.txt /etc/motd

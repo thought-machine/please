@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_alpine:20260318
+       - image: ghcr.io/thought-machine/please_alpine:20260820
      resource_class: large
      environment:
        PLZ_ARGS: "--profile ci --profile alpine --exclude no-musl"
@@ -43,7 +43,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20260820
      resource_class: large
      environment:
        PLZ_ARGS: "--profile ci"
@@ -91,7 +91,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu_alt:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu_alt:20260820
      resource_class: large
      environment:
        PLZ_ARGS: "-c cover --profile ci-alt"
