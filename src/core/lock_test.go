@@ -169,5 +169,5 @@ func TestReleaseFileLock(t *testing.T) {
 
 	ReleaseFileLock(file)
 	err = file.Close()
-	assert.Error(t, err, "file already closed")
+	assert.ErrorIs(t, err, os.ErrClosed)
 }
