@@ -169,7 +169,11 @@ func test(state *core.BuildState, label core.BuildLabel, target *core.BuildTarge
 
 	// Wait if another process is currently testing this target
 	state.LogTestRunning(target, run, core.TargetTesting, "Acquiring target lock...")
-	file := core.AcquireExclusiveFileLock(target.TestLockFile(run))
+	file, err := core.AcquireExclusiveFileLock(target.TestLockFile(run))
+	if err != nil {
+		state.LogBuildError(label, core.TargetTestFailed, err, "Failed to acquire target lock")
+		return
+	}
 	defer core.ReleaseFileLock(file)
 	state.LogTestRunning(target, run, core.TargetTesting, "Testing...")
 
