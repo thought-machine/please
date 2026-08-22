@@ -678,12 +678,14 @@ func (r *runner) findOriginalTask(ctx context.Context, target core.BuildLabel, n
 			return err
 		}
 		// Targets now get activated during parsing, so can be built before we finish parsing their package.
-		pkg, err := r.Parse(ctx, subrepoLabel, core.OriginalTarget)
-		if err != nil {
+		if _, err := r.Parse(ctx, subrepoLabel, core.OriginalTarget); err != nil {
 			return err
 		}
-		dir = pkg.Subrepo.Dir(dir)
-		prefix = pkg.Subrepo.Dir(prefix)
+		// N.B. We must look the subrepo up by name; the package we just parsed is the one that *defines*
+		//      the subrepo, which is in the host repo (or a parent subrepo), not the one we're descending into.
+		subrepo := r.state.Graph.SubrepoOrDie(target.Subrepo)
+		dir = subrepo.Dir(dir)
+		prefix = subrepo.Dir(prefix)
 	}
 	for filename := range FindAllBuildFiles(r.state.Config, dir, "") {
 		dirname, _ := filepath.Split(filename)

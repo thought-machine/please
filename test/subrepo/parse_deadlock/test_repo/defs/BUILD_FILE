@@ -1,0 +1,17 @@
+build_file_name = CONFIG.BUILD_FILE_NAMES[0]
+
+build_rule(
+    name = "sub",
+    srcs = {
+        "build": ["files/sub_build"],
+        "defs": ["files/defs_build_defs"],
+    },
+    outs = ["sub"],
+    cmd = f'mkdir -p "$OUT" && cp "$SRCS_BUILD" "$OUT/{build_file_name}" && cp "$SRCS_DEFS" "$OUT/defs.build_defs"',
+    _subrepo = True,
+)
+
+subrepo(
+    name = "sub",
+    dep = ":sub",
+)

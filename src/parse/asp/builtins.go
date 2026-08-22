@@ -310,6 +310,17 @@ func (s *scope) WaitForSubincludedTarget(ctx context.Context, l, dependent core.
 	return s.interpreter.callbacks.BuildAndDownload(ctx, l, dependent)
 }
 
+// WaitForPackage drops the interpreter lock and waits for the given package to be parsed. Like
+// WaitForSubincludedTarget this is essential rather than just polite: parsing that package can happen
+// inline on this very goroutine, and it will try to take a parser slot of its own when it does. Holding
+// ours while we wait would deadlock us against ourselves as soon as every slot is held by a thread here.
+func (s *scope) WaitForPackage(ctx context.Context, l, dependent core.BuildLabel) error {
+	s.interpreter.limiter.Release()
+	defer s.interpreter.limiter.Acquire()
+	_, err := s.interpreter.callbacks.Parse(ctx, l, dependent)
+	return err
+}
+
 // builtinFail raises an immediate error that can't be intercepted.
 func builtinFail(s *scope, args []pyObject) pyObject {
 	s.Error("%s", string(args[0].(pyString)))
@@ -386,7 +397,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		ctx := pprof.WithLabels(s.ctx, pprof.Labels("subinclude "+subrepoPackageLabel.String(), pkgLabel.String()))
 		pprof.SetGoroutineLabels(ctx)
 		defer pprof.SetGoroutineLabels(s.ctx)
-		if _, err := s.interpreter.callbacks.Parse(ctx, subrepoPackageLabel, pkgLabel); err != nil {
+		if err := s.WaitForPackage(ctx, subrepoPackageLabel, pkgLabel); err != nil {
 			s.Error("Failed to parse subrepo target: %w", err)
 		}
 	}

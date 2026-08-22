@@ -1,0 +1,5 @@
+filegroup(
+    name = "defs",
+    srcs = ["defs.build_defs"],
+    visibility = ["PUBLIC"],
+)
