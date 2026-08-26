@@ -7,7 +7,7 @@ plugin_repo(
 plugin_repo(
     name = "cc",
     plugin = "cc-rules",
-    revision = "v0.7.1",
+    revision = "v0.7.2",
 )
 
 plugin_repo(
