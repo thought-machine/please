@@ -9,22 +9,28 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-// WriteMetadataOpts contains configuration options for formatting and writing package metadata.
-type WriteMetadataOpts struct {
-	IncludeSources       bool
-	IncludeDeps          bool
-	IncludeOutputs       bool
+// MetadataOpts contains configuration options for formatting and writing package metadata.
+type MetadataOpts struct {
+	TargetDetailsOpts
 	IncludeAllStatements bool
 	ShowHidden           bool
 }
 
-// any reports true if any of the options are set to true.
-func (wmo WriteMetadataOpts) any() bool {
-	return wmo.IncludeDeps || wmo.IncludeOutputs || wmo.IncludeSources
+// TargetDetailsOpts contains configuration options for specifying which additional details (sources,
+// dependencies, or outputs) should be included when displaying target metadata.
+type TargetDetailsOpts struct {
+	IncludeSources bool
+	IncludeDeps    bool
+	IncludeOutputs bool
+}
+
+// any reports true if any of the additional target options are set to true.
+func (o TargetDetailsOpts) any() bool {
+	return o.IncludeSources || o.IncludeDeps || o.IncludeOutputs
 }
 
 // Metadata prints out a visualization of the parsed build statement metadata for the given targets.
-func Metadata(state *core.BuildState, targets core.BuildLabels, opts WriteMetadataOpts) {
+func Metadata(state *core.BuildState, targets core.BuildLabels, opts MetadataOpts) {
 	if !cli.ShowColouredOutput || !cli.IsATerminal(os.Stdout) {
 		cli.ShowColouredOutput = false
 	}
@@ -36,11 +42,11 @@ func Metadata(state *core.BuildState, targets core.BuildLabels, opts WriteMetada
 		packageTargets[pkg] = append(packageTargets[pkg], label)
 	}
 
-	printTerminal(state, packageTargets, opts)
+	printMetadata(state, packageTargets, opts)
 }
 
-// printTerminal formats and draws the metadata as a beautiful colorized terminal tree-box layout.
-func printTerminal(state *core.BuildState, packageTargets map[*core.Package]core.BuildLabels, opts WriteMetadataOpts) {
+// printMetadata formats and draws the metadata as a colorized terminal tree-box layout.
+func printMetadata(state *core.BuildState, packageTargets map[*core.Package]core.BuildLabels, opts MetadataOpts) {
 	// itemDetail holds the text to print and its optional color formatting string
 	type itemDetail struct {
 		text  string
@@ -179,7 +185,7 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package]core
 					}
 					cli.Fprintf(os.Stdout, "%s%s ${BOLD_GREEN}%s${RESET}\n", childPrefix, targetBranch, t)
 
-					if opts.any() {
+					if opts.TargetDetailsOpts.any() {
 						if target := state.Graph.Target(t); target != nil {
 							type optDetail struct {
 								title string
@@ -209,7 +215,8 @@ func printTerminal(state *core.BuildState, packageTargets map[*core.Package]core
 	}
 }
 
-// filterStatements calculates if all statements should be written.
+// filterStatements retrieves the build statements corresponding to the given labels, restricting
+// metadata printing to only the statements that define these targets.
 func filterStatements(pkg *core.Package, labels core.BuildLabels) map[core.BuildStatement]struct{} {
 	filterStmts := map[core.BuildStatement]struct{}{}
 	for _, target := range labels {

@@ -856,10 +856,12 @@ var buildFunctions = map[string]func() int{
 	"query.metadata": func() int {
 		if success, state := runBuild(opts.Query.Metadata.Args.Targets, buildOpts{ParseMetadata: true, IsQuery: true}); success {
 			m := opts.Query.Metadata
-			query.Metadata(state, state.ExpandOriginalLabels(), query.WriteMetadataOpts{
-				IncludeSources:       m.Sources || m.All,
-				IncludeDeps:          m.Deps || m.All,
-				IncludeOutputs:       m.Outputs || m.All,
+			query.Metadata(state, state.ExpandOriginalLabels(), query.MetadataOpts{
+				TargetDetailsOpts: query.TargetDetailsOpts{
+					IncludeSources: m.Sources || m.All,
+					IncludeDeps:    m.Deps || m.All,
+					IncludeOutputs: m.Outputs || m.All,
+				},
 				IncludeAllStatements: m.AllStatements,
 				ShowHidden:           m.Hidden,
 			})
