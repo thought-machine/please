@@ -227,7 +227,7 @@ func ReadConfigFiles(fs iofs.FS, filenames []string, profiles []string) (*Config
 	setDefault(&config.Build.HashCheckers, "sha1", "sha256", "blake3")
 	setDefault(&config.Build.PassUnsafeEnv)
 	setDefault(&config.Build.PassEnv)
-	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".tsx", ".ts", ".js", ".cc", ".h", ".c")
+	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".tsx", ".ts", ".js", ".cc", ".h", ".c", ".rs")
 	setDefault(&config.Cover.ExcludeExtension, ".pb.go", "_pb2.py", ".spec.tsx", ".spec.ts", ".spec.js", ".pb.cc", ".pb.h", "_test.py", "_test.go", "_pb.go", "_bindata.go", "_test_main.cc")
 	setDefault(&config.Proto.Language, "cc", "py", "java", "go", "js")
 	setDefault(&config.Parse.BuildDefsDir, "build_defs")
@@ -582,7 +582,7 @@ type Configuration struct {
 	} `help:"Settings related to remote execution & caching using the Google remote execution APIs. This section is still experimental and subject to change."`
 	Size  map[string]*Size `help:"Named sizes of targets; these are the definitions of what can be passed to the 'size' argument."`
 	Cover struct {
-		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to .go, .py, .java, .tsx, .ts, .js, .cc, .h, and .c"`
+		FileExtension    []string `help:"Extensions of files to consider for coverage.\nDefaults to .go, .py, .java, .tsx, .ts, .js, .cc, .h, .c and .rs"`
 		ExcludeExtension []string `help:"Extensions of files to exclude from coverage.\nTypically this is for generated code; the default is to exclude protobuf extensions like .pb.go, _pb2.py, etc."`
 		ExcludeGlob      []string `help:"Exclude glob patterns from coverage.\nTypically this is for generated code and it is useful when there is no other discrimination possible."`
 	} `help:"Configuration relating to coverage reports."`
