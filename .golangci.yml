@@ -105,6 +105,8 @@ linters:
     paths:
       - test_data
       - third_party$
+      - ^tree$
+      - ^plz-out$
       - builtin$
       - examples$
 formatters:
@@ -122,5 +124,7 @@ formatters:
     paths:
       - test_data
       - third_party$
+      - ^tree$
+      - ^plz-out$
       - builtin$
       - examples$

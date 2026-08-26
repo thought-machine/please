@@ -1,4 +1,14 @@
-subinclude("//test/build_defs", "///cc//build_defs:c")
+subinclude("//test/build_defs")
+
+# A static link goes via the host C compiler, which can't handle objects for the architecture
+# we're cross-compiling to. Go turns cgo off by itself when cross-compiling, so a dynamic link
+# here is a pure-Go one and needs no C toolchain at all.
+# N.B. Scoped to this package, so it can't affect the real cross-compiled builds of Please.
+package(
+    go = {
+        "default_static": False,
+    },
+)
 
 genrule(
     name = "record_arch",
@@ -24,9 +34,9 @@ plz_e2e_test(
     cmd = "plz test -a test_x86 //test/cross_compile:test_arch",
 )
 
-c_binary(
+go_binary(
     name = "bin",
-    srcs = ["main.c"],
+    srcs = ["main.go"],
     deps = ["//test/cross_compile/lib"],
 )
 
@@ -34,13 +44,24 @@ sh_test(
     name = "bin_test",
     src = "bin_test.sh",
     data = [":bin"],
-    labels = ["manual"],
 )
 
+# N.B. arch_checker is a test tool, not data, so that it's built for the host and can actually
+#      run here while :bin is built for the architecture we're testing.
+gentest(
+    name = "cross_compiled_bin_test",
+    data = [":bin"],
+    labels = ["manual"],
+    no_test_output = True,
+    test_cmd = "$TOOL $(location :bin) EM_AARCH64",
+    test_tools = ["//test/cross_compile/arch_checker"],
+)
+
+# N.B. Go can cross-compile to any platform it supports without needing a toolchain installed,
+#      so unlike the C rules this used to use, this needs nothing set up to run.
 plz_e2e_test(
-    name = "x86_test",
-    cmd = "plz test -a linux_x86 //test/cross_compile:bin_test",
-    labels = ["x86"],
+    name = "cross_compile_binary_test",
+    cmd = "plz test -a linux_arm64 //test/cross_compile:cross_compiled_bin_test",
 )
 
 # Test for #582
@@ -60,8 +81,7 @@ sh_test(
 
 plz_e2e_test(
     name = "location_cross_compile_test",
-    cmd = "plz test -a linux_x86 //test/cross_compile:location_test",
-    labels = ["x86"],
+    cmd = "plz test -a linux_arm64 //test/cross_compile:location_test",
 )
 
 config_setting(
@@ -104,5 +124,4 @@ sh_test(
 plz_e2e_test(
     name = "select_cross_compile_test",
     cmd = "plz test -a linux_x86 //test/cross_compile:select_test",
-    labels = ["x86"],
 )

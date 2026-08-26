@@ -2,16 +2,20 @@ FROM ubuntu:jammy
 LABEL org.opencontainers.image.authors="please <at> thoughtmachine <dot> net"
 LABEL org.opencontainers.image.source=https://github.com/thought-machine/please
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Most dependencies; Python, Clang
 RUN apt-get update && \
     apt-get install -y python3 python3-dev python3-pip \
-    curl unzip git locales pkg-config zlib1g-dev clang && \
+    curl unzip git locales pkg-config zlib1g-dev clang uidmap && \
     apt-get clean
 
+# Subordinate id delegation for sandbox tests
+RUN printf 'root:0:65536\n' >> /etc/subuid && \
+    printf 'root:0:65536\n' >> /etc/subgid
+
 # Go
-RUN curl -fsSL https://dl.google.com/go/go1.26.1.linux-amd64.tar.gz | tar -xzC /usr/local
+RUN curl -fsSL https://dl.google.com/go/go1.27.0.linux-amd64.tar.gz | tar -xzC /usr/local
 RUN ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # Locale

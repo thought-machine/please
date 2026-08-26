@@ -3,8 +3,11 @@
 // contain separates the process into new namespaces to sandbox it.
 // It should be passed the argv for the new process, and booleans indicating
 // whether it should move to new network and mount namespaces.
+// The sandbox_dir argument indicates whether it should attempt to create a sandbox
+// for TMP_DIR in /tmp/plz_sandbox or not.
+// The mount_proc argument indicates whether it should attempt to mount a new /proc.
 // It returns an exit code (so 0 on success, nonzero on failure).
-int contain(char* argv[], bool net, bool mount);
+int contain(char* argv[], bool net, bool mount, bool sandbox_dir, bool mount_proc);
 
 // exec_name returns the name of the new binary to exec() as.
 // old_name is the current name; if it's within old_dir it will be re-prefixed to new_dir.

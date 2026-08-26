@@ -74,13 +74,14 @@ func openRepoLockFile() error {
 }
 
 // AcquireExclusiveFileLock opens a file to acquire an exclusive lock.
-// Dies if the lock cannot be successfully acquired.
-func AcquireExclusiveFileLock(filePath string) *os.File {
-	lockFile, err := acquireOpenFileLock(filePath, syscall.LOCK_EX)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return lockFile
+func AcquireExclusiveFileLock(filePath string) (*os.File, error) {
+	return acquireOpenFileLock(filePath, syscall.LOCK_EX)
+}
+
+// AcquireSharedFileLock opens a file to acquire a shared lock.
+// Multiple of these can be held at once, but not concurrently with an exclusive lock (ala a RWMutex or similar).
+func AcquireSharedFileLock(filePath string) (*os.File, error) {
+	return acquireOpenFileLock(filePath, syscall.LOCK_SH)
 }
 
 // Base function that allows to set up different lock modes and facilitate testing.
@@ -132,9 +133,11 @@ func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	}
 	log.Debug("Acquired lock for %s", file.Name())
 
-	// Record content
-	if err := file.Truncate(0); err == nil {
-		file.WriteAt([]byte(strconv.Itoa(os.Getpid())), 0)
+	// Record content, only if we have an exclusive lock.
+	if how&syscall.LOCK_EX != 0 {
+		if err := file.Truncate(0); err == nil {
+			file.WriteAt([]byte(strconv.Itoa(os.Getpid())), 0)
+		}
 	}
 
 	return nil

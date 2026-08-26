@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOpenLockFile(t *testing.T) {
@@ -41,20 +42,21 @@ func TestAcquireSharedRepoRoot(t *testing.T) {
 
 	assert.IsType(t, &os.File{}, repoLockFile)
 
+	// We don't record the pid under a shared lock; other holders would be racing to write it too.
 	contents, err := os.ReadFile(repoLockFile.Name())
-	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	assert.Empty(t, string(contents))
 }
 
 func TestAcquireExclusiveRepoRoot(t *testing.T) {
-	AcquireSharedRepoLock()
+	AcquireExclusiveRepoLock()
 	defer ReleaseRepoLock()
 
 	assert.IsType(t, &os.File{}, repoLockFile)
 
 	contents, err := os.ReadFile(repoLockFile.Name())
-	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 	assert.NoError(t, err)
+	assert.Equal(t, strconv.Itoa(os.Getpid()), string(contents))
 }
 
 func TestAcquireRepoRootOverride(t *testing.T) {
@@ -133,7 +135,8 @@ func TestReleaseRepoLock(t *testing.T) {
 }
 
 func TestAcquireExclusiveFileLock(t *testing.T) {
-	file := AcquireExclusiveFileLock("path/to/file")
+	file, err := AcquireExclusiveFileLock("path/to/file")
+	require.NoError(t, err)
 	defer ReleaseFileLock(file)
 
 	assert.IsType(t, &os.File{}, file)
@@ -162,9 +165,10 @@ func TestAcquireExclusiveFileLockTwice(t *testing.T) {
 }
 
 func TestReleaseFileLock(t *testing.T) {
-	file := AcquireExclusiveFileLock("path/to/file")
+	file, err := AcquireExclusiveFileLock("path/to/file")
+	require.NoError(t, err)
 
 	ReleaseFileLock(file)
-	err := file.Close()
-	assert.Error(t, err, "file already closed")
+	err = file.Close()
+	assert.ErrorIs(t, err, os.ErrClosed)
 }

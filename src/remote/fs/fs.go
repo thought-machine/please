@@ -71,7 +71,7 @@ func New(c Client, tree *pb.Tree, workingDir string) *CASFileSystem {
 		tree = &pb.Tree{}
 	}
 	if tree.Root == nil {
-		tree = &pb.Tree{Root: &pb.Directory{}, Children: tree.Children}
+		tree.Root = &pb.Directory{}
 	}
 	directories := make(map[digest.Digest]*pb.Directory, len(tree.Children))
 	for _, child := range append(tree.Children, tree.Root) {

@@ -3,18 +3,23 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_alpine:20260318
+       - image: ghcr.io/thought-machine/please_alpine:20260820
      resource_class: large
      environment:
        PLZ_ARGS: "--profile ci --profile alpine --exclude no-musl"
      steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
            key: go-mod-alpine-v9-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-alpine-main-v9-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-alpine-main-v3-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: e2e-alpine-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -39,22 +44,30 @@ jobs:
        - save_cache:
            key: python-alpine-main-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-alpine-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
 
    build-linux:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20260820
      resource_class: large
      environment:
        PLZ_ARGS: "--profile ci"
      steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
            key: go-mod-linux-v9-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-linux-main-v9-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-main-v3-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: e2e-linux-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -87,23 +100,31 @@ jobs:
        - save_cache:
            key: python-linux-main-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-linux-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
 
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu_alt:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu_alt:20260820
      resource_class: large
      environment:
        PLZ_ARGS: "-c cover --profile ci-alt"
        PLZ_COVER: "cover --nocoverage_report"
      steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
            key: go-mod-linux-alt-v7-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-linux-alt-v7-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-linux-alt-v3-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: e2e-linux-alt-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Bootstrap & Build
            command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
@@ -121,6 +142,9 @@ jobs:
        - save_cache:
            key: python-linux-alt-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-linux-alt-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
    build-darwin-amd64:
      working_directory: ~/please
      macos:
@@ -211,18 +235,32 @@ jobs:
         PLZ_ARGS: "--profile ci --exclude pip --exclude embed"
       steps:
        - checkout
+       - run:
+           name: E2E cache key
+           command: ./tools/misc/e2e_cache_key.sh > /tmp/e2e-cache-key
        - restore_cache:
-           key: go-mod-darwin-arm64-v8-{{ checksum "bootstrap.sh" }}
+           key: go-mod-darwin-arm64-v8-{{ checksum "go.mod" }}
        - restore_cache:
            key: go-darwin-arm64-go123-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
            key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
+       - restore_cache:
+           key: e2e-darwin-arm64-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
            name: Install deps
            command: ./.circleci/setup_osx.sh
        - run:
            name: Bootstrap & Build
-           command: ./bootstrap.sh --test_results_file plz-out/results/please/test_results.xml
+           # TODO(#3556): fix the data race/segfaults and maybe remove this timeout
+           command: |
+             python3 -c "
+             import subprocess, sys
+             try:
+                 subprocess.run(['./bootstrap.sh', '--test_results_file', 'plz-out/results/please/test_results.xml'], timeout=900, check=True)
+             except subprocess.TimeoutExpired:
+                 print('Build timed out after 15 minutes', file=sys.stderr)
+                 sys.exit(1)
+             "
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
@@ -246,6 +284,9 @@ jobs:
        - save_cache:
            key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
+       - save_cache:
+           key: e2e-darwin-arm64-v1-{{ checksum "/tmp/e2e-cache-key" }}
+           paths: [ "plz-out/e2e_cache" ]
 
    test-rex:
      working_directory: ~/please
@@ -307,6 +348,143 @@ jobs:
            at: /tmp/workspace
        - run: ./.circleci/release.sh
 
+   # The sandbox tests (//tools/sandbox/test:sandbox_test) create user, mount,
+   # and network namespaces and mount within them. The docker executor denies
+   # mount inside the job container and doesn't expose any configuration to
+   # allow it. Instead, these workflows run the sandbox tests on machine
+   # executors with rootless podman.
+   #
+   # podman's default seccomp profile allows unprivileged namespace and mount
+   # syscalls, and the kernel gates them on CAP_SYS_ADMIN in the caller's user
+   # namespace, which the sandbox creates for itself, so no custom seccomp
+   # profile and no CAP_SYS_ADMIN are needed. The container only needs
+   # SETUID/SETGID (new*idmap writing multi-range maps) and SETFCAP (mapping
+   # parent uid 0 into a user namespace requires it, see user_namespaces(7)).
+   # unmask=ALL is required so a /proc can be mounted in the nested mount
+   # namespace (the kernel refuses while runtime /proc masks are in place).
+   sandbox-test-linux:
+     working_directory: ~/please
+     machine:
+       image: ubuntu-2404:current
+     resource_class: medium
+     steps:
+       - checkout
+       - run:
+           name: Set up rootless podman
+           command: |
+             sudo apt-get update
+             sudo apt-get install -y podman catatonit uidmap passt slirp4netns
+             grep -q "^$(id -un):" /etc/subuid || sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(id -un)"
+             # The job shell has no systemd user session or D-Bus, so podman's
+             # default systemd cgroup manager fails to create transient scopes
+             # ("Interactive authentication required"); use cgroupfs instead.
+             mkdir -p ~/.config/containers
+             printf '[engine]\ncgroup_manager = "cgroupfs"\n' > ~/.config/containers/containers.conf
+             podman system migrate || true
+       - run:
+           name: Run sandbox tests
+           command: |
+             podman run --rm --init \
+               --security-opt unmask=ALL \
+               --cap-add SETUID --cap-add SETGID --cap-add SETFCAP \
+               -v "$PWD:/please" -w /please \
+               -e PLZ_ARGS="--profile ci" \
+               ghcr.io/thought-machine/please_ubuntu:20260318 \
+               sh -ec '
+                 # Mirrors the tools/images Dockerfile changes; drop once new
+                 # image tags containing them are published and referenced.
+                 apt-get update && apt-get install -y uidmap
+                 printf "root:0:65536\n" >> /etc/subuid
+                 printf "root:0:65536\n" >> /etc/subgid
+                 ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
+               '
+       - store_test_results:
+           path: plz-out/results
+       - store_artifacts:
+           path: plz-out/log
+
+   sandbox-test-linux-alt:
+     working_directory: ~/please
+     machine:
+       image: ubuntu-2404:current
+     resource_class: medium
+     steps:
+       - checkout
+       - run:
+           name: Set up rootless podman
+           command: |
+             sudo apt-get update
+             sudo apt-get install -y podman catatonit uidmap passt slirp4netns
+             grep -q "^$(id -un):" /etc/subuid || sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(id -un)"
+             # The job shell has no systemd user session or D-Bus, so podman's
+             # default systemd cgroup manager fails to create transient scopes
+             # ("Interactive authentication required"); use cgroupfs instead.
+             mkdir -p ~/.config/containers
+             printf '[engine]\ncgroup_manager = "cgroupfs"\n' > ~/.config/containers/containers.conf
+             podman system migrate || true
+       - run:
+           name: Run sandbox tests
+           command: |
+             podman run --rm --init \
+               --security-opt unmask=ALL \
+               --cap-add SETUID --cap-add SETGID --cap-add SETFCAP \
+               -v "$PWD:/please" -w /please \
+               -e PLZ_ARGS="--profile ci-alt" \
+               ghcr.io/thought-machine/please_ubuntu_alt:20260318 \
+               sh -ec '
+                 # Mirrors the tools/images Dockerfile changes; drop once new
+                 # image tags containing them are published and referenced.
+                 apt-get update && apt-get install -y uidmap
+                 printf "root:0:65536\n" >> /etc/subuid
+                 printf "root:0:65536\n" >> /etc/subgid
+                 ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
+               '
+       - store_test_results:
+           path: plz-out/results
+       - store_artifacts:
+           path: plz-out/log
+
+   sandbox-test-alpine:
+     working_directory: ~/please
+     machine:
+       image: ubuntu-2404:current
+     resource_class: medium
+     steps:
+       - checkout
+       - run:
+           name: Set up rootless podman
+           command: |
+             sudo apt-get update
+             sudo apt-get install -y podman catatonit uidmap passt slirp4netns
+             grep -q "^$(id -un):" /etc/subuid || sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(id -un)"
+             # The job shell has no systemd user session or D-Bus, so podman's
+             # default systemd cgroup manager fails to create transient scopes
+             # ("Interactive authentication required"); use cgroupfs instead.
+             mkdir -p ~/.config/containers
+             printf '[engine]\ncgroup_manager = "cgroupfs"\n' > ~/.config/containers/containers.conf
+             podman system migrate || true
+       - run:
+           name: Run sandbox tests
+           command: |
+             podman run --rm --init \
+               --security-opt unmask=ALL \
+               --cap-add SETUID --cap-add SETGID --cap-add SETFCAP \
+               -v "$PWD:/please" -w /please \
+               -e PLZ_ARGS="--profile ci --profile alpine --exclude no-musl" \
+               ghcr.io/thought-machine/please_alpine:20260318 \
+               sh -ec '
+                 # Mirrors the tools/images Dockerfile changes; drop once new
+                 # image tags containing them are published and referenced.
+                 apk add --no-cache shadow-uidmap curl
+                 printf "root:0:65536\n" >> /etc/subuid
+                 printf "root:0:65536\n" >> /etc/subgid
+                 ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
+               '
+       - store_test_results:
+           path: plz-out/results
+       - store_artifacts:
+           path: plz-out/log
+
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
@@ -328,6 +506,9 @@ workflows:
       - build-alpine
       - build-linux
       - build-linux-alt
+      - sandbox-test-linux
+      - sandbox-test-linux-alt
+      - sandbox-test-alpine
       - build-darwin:
           requires:
             - build-alpine
@@ -357,6 +538,9 @@ workflows:
             - build-darwin
             - test-rex
             - test-http-cache
+            - sandbox-test-linux
+            - sandbox-test-linux-alt
+            - sandbox-test-alpine
           filters:
             branches:
               only: master

@@ -210,7 +210,10 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 	} else {
 		// Wait if another process is currently building this target
 		state.LogBuildResult(target, core.TargetBuilding, "Acquiring target lock...")
-		file := core.AcquireExclusiveFileLock(target.BuildLockFile())
+		file, err := core.AcquireExclusiveFileLock(target.BuildLockFile())
+		if err != nil {
+			return err
+		}
 		defer core.ReleaseFileLock(file)
 		state.LogBuildResult(target, core.TargetBuilding, "Preparing...")
 
