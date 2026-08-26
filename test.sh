@@ -15,8 +15,8 @@ check_path_for_excludes() {
   EXCLUDES=""
 
   if ! hash python3 2>/dev/null ; then
-      warn "python3 not found, excluding python3 tests"
-      EXCLUDES="${EXCLUDES} --exclude=py3 --exclude python3"
+      warn "python3 not found, excluding python tests"
+      EXCLUDES="${EXCLUDES} --exclude=py"
   fi
   if ! hash xz 2>/dev/null ; then
       warn "xz not found, excluding update tests"
