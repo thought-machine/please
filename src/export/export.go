@@ -241,7 +241,7 @@ func (be *baseExporter) getOrParseTarget(label core.BuildLabel) (*core.BuildTarg
 		log.Infof("Target %v not found in graph. Attempting to parse...", label)
 		ch := make(chan *core.BuildTarget, 1)
 		go func() {
-		parse.Parse(be.state, label, core.OriginalTarget, core.ParseModeNormal)
+			parse.Parse(be.state, label, core.OriginalTarget, core.ParseModeNormal)
 			ch <- be.state.Graph.Target(label)
 		}()
 
@@ -285,7 +285,10 @@ func (be *baseExporter) getOrParsePackage(label core.BuildLabel) (*core.Package,
 // It returns true if this is the first time the target is being exported.
 func (be *baseExporter) checkAndSetVisited(target *core.BuildTarget) bool {
 	visited := be.exportedTargets[target.Label]
+	if visited {
+		return false
+	}
 	be.exportedTargets[target.Label] = true
 	be.targetCounter++
-	return !visited
+	return true
 }
