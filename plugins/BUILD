@@ -7,7 +7,7 @@ plugin_repo(
 plugin_repo(
     name = "cc",
     plugin = "cc-rules",
-    revision = "v0.7.1",
+    revision = "v0.7.3",
 )
 
 plugin_repo(
@@ -19,5 +19,5 @@ plugin_repo(
 plugin_repo(
     name = "python",
     plugin = "python-rules",
-    revision = "v1.14.0",
+    revision = "v2.0.2",
 )
