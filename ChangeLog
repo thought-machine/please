@@ -1,3 +1,16 @@
+Version 17.32.0
+---------------
+    * `plz_sandbox`: Add UID/GID range mapping, file mounts, configurable
+      local IP, optional /proc remount, reliability fixes and tests (#3566)
+    * Consider .rs files for coverage by default (#3578)
+    * Add file locking to dir cache (#3573)
+    * Don't crash reading the config of a subrepo with no remote tree (#3577)
+    * Fix lost-wakeup race on packageWaits in WaitForPackage (#3576)
+    * Fix segfault on --shell on non-test targets (#3559)
+    * Print test output directly (#3560)
+    * Fix logging output in please_shim (#3554)
+    * Update to go 1.27.0 (#3579)
+
 Version 17.31.2
 ---------------
     * Support test argument placeholder in remote commands and --shell (#3552)
