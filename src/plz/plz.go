@@ -116,7 +116,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		// proceeding with the specific op for the graph to be complete.
 		state.WaitForBuildToComplete()
 		reportResults(state, config)
-		// state.CleanUp() needs to be called at the end of the CLI run when KeepParserRunning is enabled.
+		// state.Cleanup() needs to be called at the end of the CLI run when KeepParserRunning is enabled.
 		return
 	}
 	// Wait for all worker to finish. This should happen as soon as we no longer have pending tasks.

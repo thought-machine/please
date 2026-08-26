@@ -1360,7 +1360,7 @@ type buildOpts struct {
 	IsQuery       bool
 	ParseMetadata bool
 	// Keep the workers running in the background for inline parsing during specific operations (e.g.
-	// export). Note: when running background workers we need to explicit call CleanUp at the end of
+	// export). Note: when running background workers we need to explicit call Cleanup at the end of
 	// the CLI operation.
 	KeepParserRunning bool
 }
