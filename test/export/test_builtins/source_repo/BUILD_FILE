@@ -7,8 +7,8 @@ genrule(
 )
 
 genrule(
-    name = "unneded_target_to_be_trimmed",
-    srcs = ["unneded.txt"],
-    outs = ["unneded"],
+    name = "unneeded_target_to_be_trimmed",
+    srcs = ["unneeded.txt"],
+    outs = ["unneeded"],
     cmd = "cat $SRCS > $OUT",
 )

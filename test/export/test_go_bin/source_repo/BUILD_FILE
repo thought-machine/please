@@ -9,8 +9,8 @@ go_binary(
 )
 
 go_binary(
-    name = "unneded",
-    srcs = ["unneded.go"],
+    name = "unneeded",
+    srcs = ["unneeded.go"],
     deps = [
         "//third_party/go:uuid",
     ],

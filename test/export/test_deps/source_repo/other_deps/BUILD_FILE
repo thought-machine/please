@@ -6,8 +6,8 @@ genrule(
 )
 
 genrule(
-    name = "unneded",
-    outs = ["unneded.out"],
-    cmd = "echo 'unneded' > $OUT",
+    name = "unneeded",
+    outs = ["unneeded.out"],
+    cmd = "echo 'unneeded' > $OUT",
     visibility = ["PUBLIC"],
 )

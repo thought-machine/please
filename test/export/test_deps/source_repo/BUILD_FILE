@@ -17,8 +17,8 @@ genrule(
 )
 
 genrule(
-    name = "unneded",
+    name = "unneeded",
     srcs = ["file1.txt"],
-    outs = ["unneded.out"],
+    outs = ["unneeded.out"],
     cmd = "cat $SRCS > $OUT",
 )

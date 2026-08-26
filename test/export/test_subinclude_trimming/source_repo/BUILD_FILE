@@ -10,8 +10,8 @@ simple_custom_target(
 )
 
 unused_target(
-    name = "unneded",
-    outs = ["unneded.out"],
+    name = "unneeded",
+    outs = ["unneeded.out"],
 )
 
 subinclude(
