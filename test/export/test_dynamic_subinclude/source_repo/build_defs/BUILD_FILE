@@ -17,7 +17,7 @@ filegroup(
 )
 
 filegroup(
-    name = "unneeded_build_def",
-    srcs = ["unneeded.build_defs"],
+    name = "unused_build_def",
+    srcs = ["unused.build_defs"],
     visibility = ["PUBLIC"],
 )

@@ -7,9 +7,9 @@ for file in glob(["file*.in"]):
     )
 
 genrule(
-    name = "unneeded",
-    srcs = glob(["unneeded*.in"]),
-    outs = ["unneeded.out"],
+    name = "unused",
+    srcs = glob(["unused*.in"]),
+    outs = ["unused.out"],
     cmd = "cp $SRCS $OUT",
 )
 

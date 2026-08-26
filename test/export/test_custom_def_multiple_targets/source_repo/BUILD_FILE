@@ -8,8 +8,8 @@ custom_target(
 )
 
 custom_target(
-    name = "unneeded",
+    name = "unused",
     srcs = ["file.txt"],
-    outs = ["unneeded.out"],
-    outs_adjacent = ["unneeded_adjacent.out"],
+    outs = ["unused.out"],
+    outs_adjacent = ["unused_adjacent.out"],
 )

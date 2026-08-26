@@ -1,4 +1,4 @@
-package unneeded
+package unused
 
 func main() {
 	return

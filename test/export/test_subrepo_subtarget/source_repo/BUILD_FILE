@@ -12,6 +12,6 @@ filegroup(
 )
 
 filegroup(
-    name = "unneeded",
-    srcs = ["unneeded.txt"],
+    name = "unused",
+    srcs = ["unused.txt"],
 )

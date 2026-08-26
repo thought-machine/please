@@ -13,7 +13,7 @@ simple_custom_target(
 )
 
 simple_custom_target(
-    name = "unneeded",
-    srcs = ["unneeded.in"],
-    outs = ["unneeded.out"],
+    name = "unused",
+    srcs = ["unused.in"],
+    outs = ["unused.out"],
 )

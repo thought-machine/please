@@ -6,8 +6,8 @@ genrule(
 )
 
 genrule(
-    name = "unneeded",
+    name = "unused",
     srcs = ["unused.dat"],
-    outs = ["unneeded.out"],
+    outs = ["unused.out"],
     cmd = "cat $SRCS > $OUT",
 )

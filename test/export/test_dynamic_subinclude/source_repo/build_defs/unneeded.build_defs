@@ -1,2 +1,0 @@
-def unneeded_helper(name: str):
-    pass

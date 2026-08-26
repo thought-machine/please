@@ -8,6 +8,6 @@ helper_rule_primary(
 )
 
 filegroup(
-    name = "unused_target",
+    name = "unused",
     srcs = ["file.txt"],
 )

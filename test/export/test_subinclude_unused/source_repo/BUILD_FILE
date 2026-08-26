@@ -6,6 +6,6 @@ custom_file(
 )
 
 custom_file(
-    name = "unneeded",
-    src = "unneeded.txt",
+    name = "unused",
+    src = "unused.txt",
 )
