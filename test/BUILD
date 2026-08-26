@@ -179,7 +179,7 @@ python_test(
 
 plz_e2e_test(
     name = "individual_python_test",
-    cmd = "plz test //test:individual_test_run_py TestRunningIndividualTests.test_first_thing",
+    cmd = "plz test --rerun //test:individual_test_run_py TestRunningIndividualTests.test_first_thing",
     expect_output_contains = "1 test target and 1 test run",
     labels = ["python3"],
 )
