@@ -9,7 +9,6 @@ Version 17.32.0
     * Fix segfault on --shell on non-test targets (#3559)
     * Print test output directly (#3560)
     * Fix logging output in please_shim (#3554)
-    * Update to go 1.27.0 (#3579)
 
 Version 17.31.2
 ---------------
