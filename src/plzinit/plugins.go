@@ -55,7 +55,6 @@ var pluginVersion16Map = map[string]v16Mapping{
 		"defaultpiprepo":      "DefaultPipRepo",
 		"wheelrepo":           "WheelRepo",
 		"wheelnamescheme":     "WheelNameScheme",
-		"interpreteroptions":  "InterpreterOptions",
 		"disablevendorflags":  "DisableVendorFlags",
 		"usepypi":             "UsePypi",
 		"testrunnerbootstrap": "TestrunnerDeps",
