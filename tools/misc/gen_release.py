@@ -82,15 +82,15 @@ class ReleaseGen:
         data = response.json()
         self.upload_url = data['upload_url'].replace('{?name,label}', '?name=')
         log.info('Release id %s created', data['id'])
-    
+
     def artifact_name(self, artifact):
         arch = self._arch(artifact)
         return os.path.basename(artifact).replace(self.version, self.version + '_' + arch)
-    
+
     def upload(self, artifact:str):
         """Uploads the given artifact to the new release."""
         # Artifact names aren't unique between OSs; make them so.
-        
+
         filename = self.artifact_name(artifact)
         _, ext = os.path.splitext(filename)
         content_type = self.known_content_types.get(ext, 'application/octet-stream')
@@ -195,7 +195,7 @@ def main(argv):
     for file in release_files:
         r.upload(file)
     if FLAGS.circleci_token and not FLAGS.dry_run:
-        r.trigger_build(FLAGS.circleci_token, 'thought-machine/homebrew-please')
+        r.trigger_build(FLAGS.circleci_token, 'please-build/homebrew')
 
 
 if __name__ == '__main__':
