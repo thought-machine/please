@@ -441,6 +441,8 @@ func (s *scope) NewScope(filename string, mode core.ParseMode) *scope {
 // hint is a size hint for the new set of locals.
 func (s *scope) NewPackagedScope(pkg *core.Package, mode core.ParseMode, hint int) *scope {
 	newScope := s.newScope(pkg, mode, pkg.Filename, hint)
+	// Since we only want to track metadata for new top level packaged scopes, we explicitly add it here
+	// after creation.
 	newScope.metadata = newScope.getOrNewMetadata(pkg)
 	return newScope
 }
@@ -458,7 +460,7 @@ func (s *scope) newScope(pkg *core.Package, mode core.ParseMode, filename string
 		config:      s.config,
 		Callback:    s.Callback,
 		mode:        mode,
-		// We only track metadata at the top level scope created with [scope.NewPackagedScope], every
+		// We only track metadata at the top level scope created with [scope.NewPackagedScope]; Every
 		// other child scope or non-packaged (e.g. subincludes) defaults to a noop implementation.
 		metadata: &noopScopeMetadata{},
 	}
@@ -492,8 +494,7 @@ func (s *scope) NAssert(condition bool, msg string, args ...interface{}) {
 // It panics if the variable is not defined.
 func (s *scope) Lookup(name string) pyObject {
 	if obj, present := s.locals[name]; present {
-		orig := s.metadata.origin(s, name)
-		s.metadata.pushSymbol(name, orig)
+		s.metadata.pushSymbol(name, s.metadata.origin(s, name))
 		return obj
 	} else if s.parent != nil {
 		return s.parent.Lookup(name)
@@ -1136,7 +1137,10 @@ func (s *scope) Constant(expr *Expression) pyObject {
 func (s *scope) CurrentBuildStatement() core.BuildStatementProvider {
 	return func() core.BuildStatement {
 		// We lookup the package metadata from the interpreter table no matter how deep we are in the
-		// call stack. We do this to avoid a recursive lookup from leaf scopes to the top level package scope.
+		// call stack. We do this for a few reasons:
+		// - to avoid maintaining a caller reference in the scope and using the package as the identifier;
+		// - to avoid a recursive lookup from leaf scopes to the top level package scope. This would likely involve traversing method call scopes generated from subincluded packages;
+		// - enforce the consistency attribute that only one scope metadata exists per package.
 		meta := s.interpreter.packageMetadata.Get(s.pkg.Label())
 		s.NAssert(meta.cursor() == nil, "Cursor is not pointing to a statement")
 		return NewBuildStatement(meta.cursor())
@@ -1156,22 +1160,20 @@ func (s *scope) pkgFilename() string {
 // a no-op implementation if we simply want to skip tracking for a certain scope.
 func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
 	// Skip metadata tracking if:
-	// 1. ParseMetadata flag is disabled;
+	// 1. state.ParseMetadata flag is disabled;
 	// 2. Not interpreting a package (e.g. in subincluded targets)
 	// 3. Any external/remote subrepos.
-	// For 2 and 3, we never trim these, so avoiding tracking saves CPU and memory.
+	// For 2 and 3, the current uses cases for this metadata (e.g. export) don't process these, so we
+	// avoid tracking to save CPU and memory. That could be easily update if we decide tracking these
+	// is required.
 	var meta scopeMetadata = &noopScopeMetadata{}
-	if s.interpreter.packageMetadata == nil { // This will be initialized if ParseMetadata is set.
-		return meta
-	}
-
-	if pkg == nil || pkg.Subrepo.IsExternal() {
+	if pkg == nil || !s.state.ParseMetadata || pkg.Subrepo.IsExternal() {
 		return meta
 	}
 
 	meta, _ = s.interpreter.packageMetadata.AddOrGet(pkg.Label(), func() scopeMetadata {
 		return &trackingScopeMetadata{
-			// symbolOrigins is lazy initialized in [setSymbolOrigin]
+			// symbolOrigins is lazy initialized in [trackingScopeMetadata.setSymbolOrigin]
 			symbolStack: []trackedSymbol{},
 		}
 	})
@@ -1180,28 +1182,27 @@ func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
 
 // getPackageMetadata returns the metadata for that current scope's package.
 func (s *scope) getPackageMetadata() scopeMetadata {
-	if s.pkg == nil || s.interpreter.packageMetadata == nil { // This will be initialized if ParseMetadata is set.
-		return nil
+	if s.pkg == nil || !s.state.ParseMetadata {
+		return &noopScopeMetadata{}
 	}
-	return s.interpreter.packageMetadata.Get(s.pkg.Label())
+	meta := s.interpreter.packageMetadata.Get(s.pkg.Label())
+	if meta == nil {
+		// This can happen for packages we decided to return a noop implementation in
+		// [scope.getOrNewMetadata] and avoided adding to the map due to the unnecessary overhead, it
+		// should translate into a [noopScopeMetadata].
+		return &noopScopeMetadata{}
+	}
+	return meta
 }
 
 // metadataRegisterFiles adds the files to the scope's package metadata.
 func (s *scope) metadataRegisterFiles(rootPath string, files []string) {
-	meta := s.getPackageMetadata()
-	if meta == nil {
-		return
-	}
-	meta.pushFiles(rootPath, files)
+	s.getPackageMetadata().pushFiles(rootPath, files)
 }
 
 // metadataRegisterSubincludes adds the subincluded labels to the scope's package metadata.
 func (s *scope) metadataRegisterSubincludes(labels core.BuildLabels) {
-	meta := s.getPackageMetadata()
-	if meta == nil {
-		return
-	}
-	meta.pushSubincludes(labels)
+	s.getPackageMetadata().pushSubincludes(labels)
 }
 
 // scopeMetadata defines an interface for tracking evaluation metadata (such as AST cursor position
@@ -1212,8 +1213,9 @@ func (s *scope) metadataRegisterSubincludes(labels core.BuildLabels) {
 type scopeMetadata interface {
 	// cursor returns the statement currently being interpreted.
 	cursor() *Statement
-	// origin returns the subinclude origin label of a tracked symbol by name. Returns nil if the
-	// symbol is local (defined in the package) or has no origin/not tracked.
+	// origin returns the origin of a symbol given its name. This translates into the label of the
+	// subincluded target which caused that symbol to be loaded into scope. Returns nil if the
+	// symbol is local (defined in the package), preloaded or not tracked.
 	origin(scope *scope, name string) *core.BuildLabel
 	// setCursor registers the statement currently being interpreted.
 	setCursor(stmt *Statement)
