@@ -12,7 +12,7 @@ Feedback Link: https://github.com/thought-machine/please
 ## Overview
 Duration: 2
 
-Notes: `go_module()` is deprecated in Core3. This codelab teaches a practical workflow that uses standard Go tooling (`go get` / `go mod`) together with Puku to generate and maintain third-party go targets (`go_repo`).
+Notes: This codelab teaches a practical workflow that uses standard Go tooling (`go get` / `go mod`) together with Puku to generate and maintain third-party go targets (`go_repo`).
 
 ### Goals and what you'll learn
 - Add and upgrade third‑party dependencies using `go get`
