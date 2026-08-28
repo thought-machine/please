@@ -90,6 +90,12 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	}
 	state.LogParseResult(label, core.PackageParsed, "Parsed package")
 
+	if state.ForceParseEntirePackage && !subrepo.IsExternal() && !mode.IsForSubinclude() {
+		if err := state.QueueEntirePackage(pkg, label, dependent, mode); err != nil {
+			return err
+		}
+	}
+
 	// The target likely got activated already, however we activate here to handle pseudo-targets (:all), and to let
 	// this error when the target doesn't exist.
 	return state.ActivateTarget(pkg, label, dependent, mode)

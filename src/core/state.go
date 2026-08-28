@@ -240,16 +240,13 @@ type BuildState struct {
 	// NeedDebugDeps is true if we're doing a `plz debug` and we need to build the debug tools and
 	// data
 	NeedDebugDeps bool
-	// ParseMetadata is true if we want to store build file metadata
+	// ParseMetadata is true if we want to store BUILD file metadata
 	ParseMetadata bool
-	// KeepParserRunning prevents closing task workers (parse and build channels) to support later
-	// calls to the parser. This is needed to support the export operation since the export logic will
-	// attempt to export targets that have not been parsed during the normal build phase. An example
-	// is when exporting dependencies of targets that are not explicitly used but are produced by the
-	// same build statement which causes an explicitly used target to exist.
-	KeepParserRunning bool
-	// WaitForDisplay is a function that blocks until the display thread has finished.
-	WaitForDisplay func()
+	// ForceParseEntirePackage is true if we want to force parse and activate all targets in every visited
+	// package during the parse phase. This is used by the export operation to ensure that the entire
+	// dependency graph of visited packages is parsed upfront, including co-defined related targets
+	// and sibling targets.
+	ForceParseEntirePackage bool
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
@@ -291,14 +288,13 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 // This is split out from above so we can share it between multiple instances.
 type stateProgress struct {
 	// Used to count the number of currently active/pending targets
-	numActive     int64
-	numPending    int64
-	numDone       int64
-	numParses     atomic.Int64
-	mutex         sync.Mutex
-	closeOnce     sync.Once
-	resultOnce    sync.Once
-	buildDoneOnce sync.Once
+	numActive  int64
+	numPending int64
+	numDone    int64
+	numParses  atomic.Int64
+	mutex      sync.Mutex
+	closeOnce  sync.Once
+	resultOnce sync.Once
 	// Used to track subinclude() calls that block until targets are built. Keyed by their label.
 	pendingTargets *cmap.Map[BuildLabel, chan struct{}]
 	// Used to track general package parsing requests. Keyed by a packageKey struct.
@@ -321,8 +317,6 @@ type stateProgress struct {
 	internalResults chan *BuildResult
 	// The cycle checker itself.
 	cycleDetector cycleDetector
-	// buildDone is closed when numPending drops to 0 or less
-	buildDone chan struct{}
 }
 
 // SystemStats stores information about the system.
@@ -422,13 +416,7 @@ func (state *BuildState) taskDone(wasSynthetic bool) {
 		atomic.AddInt64(&state.progress.numDone, 1)
 	}
 	if atomic.AddInt64(&state.progress.numPending, -1) <= 0 {
-		state.progress.buildDoneOnce.Do(func() {
-			close(state.progress.buildDone)
-		})
-
-		if !state.KeepParserRunning {
-			state.Stop()
-		}
+		state.Stop()
 	}
 }
 
@@ -449,22 +437,6 @@ func (state *BuildState) CloseResults() {
 		state.progress.resultOnce.Do(func() {
 			close(state.progress.results)
 		})
-	}
-}
-
-// Cleanup cleans up and shuts down the build state.
-func (state *BuildState) Cleanup() {
-	state.CloseResults()
-
-	if state.WaitForDisplay != nil {
-		state.WaitForDisplay()
-	}
-
-	if state.Cache != nil {
-		state.Cache.Shutdown()
-	}
-	if state.RemoteClient != nil {
-		state.RemoteClient.Disconnect()
 	}
 }
 
@@ -638,7 +610,7 @@ func (state *BuildState) LogTestResult(target *BuildTarget, run int, status Buil
 func (state *BuildState) LogBuildError(label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
 	if status == ParseFailed {
 		// Force close package wait channels to avoid deadlocks when calling waitForPackage() after
-		// the initial parse, for example when KeepParserRunning is set.
+		// the initial parse, for example when [state.ParseMetadata] is set.
 		key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
 		if ch := state.progress.pendingPackages.Get(key); ch != nil {
 			func() {
@@ -980,11 +952,6 @@ func (state *BuildState) WaitForBuiltTarget(l, dependent BuildLabel, mode ParseM
 	return state.WaitForBuiltTarget(l, dependent, mode)
 }
 
-// WaitForBuildToComplete blocks until all pending tasks are finished.
-func (state *BuildState) WaitForBuildToComplete() {
-	<-state.progress.buildDone
-}
-
 // AddTarget adds a new target to the build graph.
 func (state *BuildState) AddTarget(pkg *Package, target *BuildTarget) {
 	pkg.AddTarget(target)
@@ -1121,6 +1088,23 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
 			if err := state.QueueTarget(l, dependent, dependent.IsAllTargets(), mode); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// QueueEntirePackage queues and activates all targets in the specified package, except optionally a
+// target to skip. This is used when we want to ensure the entire package and its transitive
+// dependency graph are parsed upfront. Refer to [state.ForceParseEntirePackage].
+func (state *BuildState) QueueEntirePackage(pkg *Package, skip BuildLabel, dependent BuildLabel, mode ParseMode) error {
+	for _, target := range pkg.AllTargets() {
+		// Skip the designated target (usually the currently parsing one) and post-build targets.
+		// Similarly to [state.ActivateTarget] we skip queueing post-build targets due to potential race
+		// conditions with post-build function execution.
+		if target.Label != skip && !target.AddedPostBuild {
+			if err := state.QueueTarget(target.Label, dependent, false, mode); err != nil {
 				return err
 			}
 		}
@@ -1551,7 +1535,6 @@ func NewBuildState(config *Configuration) *BuildState {
 			internalResults: make(chan *BuildResult, 1000),
 			cycleDetector:   cycleDetector{graph: graph},
 			originalTargets: NewTargetSet(),
-			buildDone:       make(chan struct{}),
 		},
 		initOnce:            new(sync.Once),
 		preloadDownloadOnce: new(sync.Once),

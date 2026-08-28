@@ -72,7 +72,7 @@ func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 	e.exportSources(target)
 	e.exportDependencies(target)
 
-	pkg, err := e.getOrParsePackage(target.Label)
+	pkg, err := e.getPackage(target.Label)
 	if err != nil {
 		log.Errorf("Unable to lookup package %s: %s", target.Label, err)
 		return

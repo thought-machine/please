@@ -784,9 +784,7 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"export": func() int {
-		success, state := runBuild(opts.Export.Args.Targets, buildOpts{ParseMetadata: true, KeepParserRunning: true})
-		// Required cleanup due to running parser in background
-		defer state.Cleanup()
+		success, state := runBuild(opts.Export.Args.Targets, buildOpts{ParseMetadata: true, ForceParseEntirePackage: true})
 
 		if success {
 			export.Repo(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
@@ -1203,7 +1201,7 @@ func Please(targets []core.BuildLabel, config *core.Configuration, buildOpts bui
 	state.NeedBuild = buildOpts.Build
 	state.NeedTests = buildOpts.Test
 	state.ParseMetadata = buildOpts.ParseMetadata
-	state.KeepParserRunning = buildOpts.KeepParserRunning
+	state.ForceParseEntirePackage = buildOpts.ForceParseEntirePackage
 	state.NeedDebugDeps = debug
 
 	// What outputs get downloaded in remote execution.
@@ -1228,6 +1226,9 @@ func Please(targets []core.BuildLabel, config *core.Configuration, buildOpts bui
 	}
 
 	runPlease(state, targets)
+	if state.RemoteClient != nil && !opts.Run.Remote {
+		defer state.RemoteClient.Disconnect()
+	}
 	failures, _, _ := state.Failures()
 	return !failures, state
 }
@@ -1260,8 +1261,8 @@ func runPlease(state *core.BuildState, targets []core.BuildLabel) {
 		output.MonitorState(state, !pretty, detailedTests, streamTests, shell, shellRun, string(opts.OutputFlags.TraceFile))
 		wg.Done()
 	}()
-	state.WaitForDisplay = wg.Wait
 	plz.Run(targets, opts.BuildFlags.PreTargets, state, config, state.TargetArch)
+	wg.Wait()
 }
 
 // testTargets handles test targets which can be given in two formats; a list of targets or a single
@@ -1355,14 +1356,15 @@ func readConfig() *core.Configuration {
 
 // buildOpts specifies parameter for the core.runBuild method.
 type buildOpts struct {
-	Build         bool
-	Test          bool
-	IsQuery       bool
+	Build   bool
+	Test    bool
+	IsQuery bool
+	// ParseMetadata is true if we want to store BUILD file metadata during parsing.
 	ParseMetadata bool
-	// Keep the workers running in the background for inline parsing during specific operations (e.g.
-	// export). Note: when running background workers we need to explicit call Cleanup at the end of
-	// the CLI operation.
-	KeepParserRunning bool
+	// ForceParseEntirePackage is true if we want to force parse and activate all targets in every
+	// visited package. This is required to include adjacent targets in the build graph for operations
+	// like export.
+	ForceParseEntirePackage bool
 }
 
 // Runs the actual build
