@@ -14,6 +14,6 @@ go_binary(
     name = "unused",
     srcs = ["main.go"],
     deps = [
-        "//third_party/go:cmp",
+        "///third_party/go/github.com_google_go-cmp//cmp:cmp",
     ],
 )
