@@ -123,7 +123,7 @@ type PackageMetadata interface {
 	Statements() ([]BuildStatement, []StatementMetadata)
 }
 
-// packageMetadataImpl is the canonical implementation of the PackageMetadata interface. It tracks
+// trackedPackageMetadata is the canonical implementation of the PackageMetadata interface. It tracks
 // the relationships between BUILD file statements, subincludes, and the build targets they define.
 //
 // Note: this implementation uses sharded concurrent maps [cmap.Map], however writes (interpreter
@@ -132,7 +132,7 @@ type PackageMetadata interface {
 // SyncParsePackage). Because of this guarantee, non-atomic write methods (like the Get-then-Set
 // sequence in RegisterStatement) are safe and wont suffer from write-write race conditions.
 // Nevertheless we use concurrent maps to support concurrent reads.
-type packageMetadataImpl struct {
+type trackedPackageMetadata struct {
 	// statements maps each build statement (identified by its byte range in a BUILD file)
 	// to its StatementMetadata. Refer to [StatementMetadata] for more details but this single
 	// mapping tracks the targets produced by the statement, the subincluded labels required for its
@@ -145,14 +145,14 @@ type packageMetadataImpl struct {
 }
 
 func newPackageMetadata() PackageMetadata {
-	return &packageMetadataImpl{
+	return &trackedPackageMetadata{
 		statements:   cmap.New[BuildStatement, *StatementMetadata](cmap.SmallShardCount, hashBuildStatement),
 		targetToStmt: cmap.New[BuildLabel, BuildStatement](cmap.SmallShardCount, HashBuildLabel),
 	}
 }
 
 // RegisterStatement implements [PackageMetadata.RegisterStatement].
-func (m *packageMetadataImpl) RegisterStatement(stmt BuildStatement, requiredSubincludes BuildLabels, files []string) {
+func (m *trackedPackageMetadata) RegisterStatement(stmt BuildStatement, requiredSubincludes BuildLabels, files []string) {
 	sm, _ := m.statements.AddOrGet(stmt, func() *StatementMetadata {
 		return &StatementMetadata{}
 	})
@@ -185,7 +185,7 @@ func mergeSlices[T comparable](existing []T, newElements []T) []T {
 }
 
 // RegisterTargetStatement implements [PackageMetadata.RegisterTargetStatement].
-func (m *packageMetadataImpl) RegisterTargetStatement(target BuildLabel, stmtProvider BuildStatementProvider) {
+func (m *trackedPackageMetadata) RegisterTargetStatement(target BuildLabel, stmtProvider BuildStatementProvider) {
 	stmt := stmtProvider()
 	sm, _ := m.statements.AddOrGet(stmt, func() *StatementMetadata {
 		return &StatementMetadata{}
@@ -195,7 +195,7 @@ func (m *packageMetadataImpl) RegisterTargetStatement(target BuildLabel, stmtPro
 }
 
 // RegisterSubincludeStatement implements [PackageMetadata.RegisterSubincludeStatement].
-func (m *packageMetadataImpl) RegisterSubincludeStatement(stmtProvider BuildStatementProvider) {
+func (m *trackedPackageMetadata) RegisterSubincludeStatement(stmtProvider BuildStatementProvider) {
 	stmt := stmtProvider()
 	sm, _ := m.statements.AddOrGet(stmt, func() *StatementMetadata {
 		return &StatementMetadata{}
@@ -204,7 +204,7 @@ func (m *packageMetadataImpl) RegisterSubincludeStatement(stmtProvider BuildStat
 }
 
 // FindStatement implements [PackageMetadata.FindStatement].
-func (m *packageMetadataImpl) FindStatement(target BuildLabel) (BuildStatement, error) {
+func (m *trackedPackageMetadata) FindStatement(target BuildLabel) (BuildStatement, error) {
 	stmt := m.targetToStmt.Get(target)
 	if stmt == zeroBuildStatement {
 		return nil, fmt.Errorf("failed to find statement for target %s", target)
@@ -213,7 +213,7 @@ func (m *packageMetadataImpl) FindStatement(target BuildLabel) (BuildStatement, 
 }
 
 // FindTargets implements [PackageMetadata.FindTargets].
-func (m *packageMetadataImpl) FindTargets(stmt BuildStatement) BuildLabels {
+func (m *trackedPackageMetadata) FindTargets(stmt BuildStatement) BuildLabels {
 	if sm := m.statements.Get(stmt); sm != nil {
 		return sm.Targets
 	}
@@ -221,7 +221,7 @@ func (m *packageMetadataImpl) FindTargets(stmt BuildStatement) BuildLabels {
 }
 
 // FindRequiredSubincludes implements [PackageMetadata.FindRequiredSubincludes].
-func (m *packageMetadataImpl) FindRequiredSubincludes(target BuildLabel) (BuildLabels, error) {
+func (m *trackedPackageMetadata) FindRequiredSubincludes(target BuildLabel) (BuildLabels, error) {
 	stmt, err := m.FindStatement(target)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func (m *packageMetadataImpl) FindRequiredSubincludes(target BuildLabel) (BuildL
 }
 
 // FindRelatedTargets implements [PackageMetadata.FindRelatedTargets].
-func (m *packageMetadataImpl) FindRelatedTargets(target BuildLabel) (BuildLabels, error) {
+func (m *trackedPackageMetadata) FindRelatedTargets(target BuildLabel) (BuildLabels, error) {
 	stmt, err := m.FindStatement(target)
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func (m *packageMetadataImpl) FindRelatedTargets(target BuildLabel) (BuildLabels
 }
 
 // FindPackageLevelRequirements implements [PackageMetadata.FindPackageLevelRequirements].
-func (m *packageMetadataImpl) FindPackageLevelRequirements() (BuildLabels, []string) {
+func (m *trackedPackageMetadata) FindPackageLevelRequirements() (BuildLabels, []string) {
 	requiredSet := LabelSet{}
 	filesSet := map[string]struct{}{}
 
@@ -284,7 +284,7 @@ func (m *packageMetadataImpl) FindPackageLevelRequirements() (BuildLabels, []str
 }
 
 // GetSubincludedLabels implements [PackageMetadata.GetSubincludedLabels].
-func (m *packageMetadataImpl) GetSubincludedLabels(stmt BuildStatement) BuildLabels {
+func (m *trackedPackageMetadata) GetSubincludedLabels(stmt BuildStatement) BuildLabels {
 	// After determining that this is a subincludes statement we can return the required subincludes
 	// registered in the general statement mapping.
 	if sm := m.statements.Get(stmt); sm != nil && sm.IsSubincludeStatement {
@@ -294,12 +294,12 @@ func (m *packageMetadataImpl) GetSubincludedLabels(stmt BuildStatement) BuildLab
 }
 
 // IsInterpretedStatement implements [PackageMetadata.IsInterpretedStatement].
-func (m *packageMetadataImpl) IsInterpretedStatement(stmt BuildStatement) bool {
+func (m *trackedPackageMetadata) IsInterpretedStatement(stmt BuildStatement) bool {
 	return m.statements.Contains(stmt)
 }
 
 // Statements implements [PackageMetadata.Statements].
-func (m *packageMetadataImpl) Statements() ([]BuildStatement, []StatementMetadata) {
+func (m *trackedPackageMetadata) Statements() ([]BuildStatement, []StatementMetadata) {
 	type pair struct {
 		stmt BuildStatement
 		meta StatementMetadata

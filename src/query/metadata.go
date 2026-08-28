@@ -24,8 +24,8 @@ type TargetDetailsOpts struct {
 	IncludeOutputs bool
 }
 
-// any reports true if any of the additional target options are set to true.
-func (o TargetDetailsOpts) any() bool {
+// anyTargetDetails reports true if any of the additional target options are set to true.
+func (o TargetDetailsOpts) anyTargetDetails() bool {
 	return o.IncludeSources || o.IncludeDeps || o.IncludeOutputs
 }
 
@@ -186,7 +186,7 @@ func printMetadata(state *core.BuildState, packageTargets map[*core.Package]core
 					}
 					cli.Fprintf(os.Stdout, "%s%s ${BOLD_GREEN}%s${RESET}\n", childPrefix, targetBranch, t)
 
-					if opts.TargetDetailsOpts.any() {
+					if opts.anyTargetDetails() {
 						if target := state.Graph.Target(t); target != nil {
 							type optDetail struct {
 								title string

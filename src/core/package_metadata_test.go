@@ -33,7 +33,7 @@ func TestHashBuildStatementDistribution(t *testing.T) {
 	// With 1000 statements, each shard should ideally have ~250.
 	// We'll assert that every shard gets at least 15% of the total statements
 	// and no shard gets more than 35%, allowing room for 10% variance.
-	optimal := int(totalStatements / nShards)
+	optimal := totalStatements / nShards
 	minExpected := int(float64(optimal) * 0.9)
 	maxExpected := int(float64(optimal) * 1.1)
 
