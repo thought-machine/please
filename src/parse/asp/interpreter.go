@@ -25,8 +25,6 @@ type interpreter struct {
 	parser      *Parser
 	subincludes *cmap.ErrMap[string, pyDict]
 	asts        *cmap.ErrMap[string, []*Statement]
-	// preloaded is a set to register all preloaded symbols (variables and function names).
-	preloaded *cmap.Map[string, struct{}]
 
 	configs      map[*core.BuildState]*pyConfig
 	configsMutex sync.RWMutex
@@ -54,7 +52,6 @@ func newInterpreter(state *core.BuildState, p *Parser) *interpreter {
 	i := &interpreter{
 		scope:      s,
 		parser:     p,
-		preloaded:  cmap.New[string, struct{}](cmap.SmallShardCount, cmap.XXHash),
 		configs:    map[*core.BuildState]*pyConfig{},
 		limiter:    make(semaphore, state.Config.Parse.NumThreads),
 		regexCache: cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
@@ -169,22 +166,9 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 	s.interpreter.loadPluginConfig(s, includeState)
 	for _, out := range t.FullOutputs() {
 		globals := s.interpreter.Subinclude(s, out, t.Label, true)
-		s.interpreter.registerPreloaded(globals)
 		s.SetAllWithOrigin(globals, false, &t.Label)
 	}
 	return nil
-}
-
-// registerPreloaded marks objects as preloaded for later reference.
-func (i *interpreter) registerPreloaded(d pyDict) {
-	for k := range d {
-		if k == "CONFIG" {
-			// Config will be set for each scope instance from global config. Skipping since every preload
-			// will override this value and will never use it.
-			continue
-		}
-		i.preloaded.Add(k, struct{}{})
-	}
 }
 
 // interpretAll runs a series of statements in the scope of the given package.
@@ -1268,24 +1252,11 @@ func (m *trackingScopeMetadata) cursor() *Statement {
 
 // origin implements [scopeMetadata.origin].
 func (m *trackingScopeMetadata) origin(scope *scope, name string) *core.BuildLabel {
-	if scope.interpreter != nil && scope.interpreter.preloaded.Contains(name) {
-		// Preloaded symbols are treated as local (returning nil origin) because they are implicitly
-		// available across all package scopes in the repository.
-		//
-		// This also prevents erroneous subinclude propagation: since symbol resolution recursively
-		// traverses the parent scope chain from bottom to top, where the preloaded symbols are
-		// defined at the top, if a target subincludes a preloaded target again it will be preferred
-		// over the preloaded and will potentially include unwanted symbols so we enforce a
-		// preference for the preloaded symbols. This could cause issues if our repo relies on
-		// redefining preloaded symbols.
-		return nil
-	}
-
 	if label, ok := m.symbolOrigins[name]; ok {
 		// Object subincluded into current scope.
 		return &label
 	}
-	// The origin for a local object is set to nil
+	// The origin for a local (or subincluded) object is set to nil
 	return nil
 }
 
