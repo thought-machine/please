@@ -1,0 +1,14 @@
+target_var = filegroup(
+    name = "target_var",
+    srcs = ["file1.txt"],
+)
+
+filegroup(
+    name = "used",
+    srcs = ["file2.txt"],
+)
+
+filegroup(
+    name = "unused",
+    srcs = [target_var],
+)
