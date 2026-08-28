@@ -126,9 +126,10 @@ func printMetadata(state *core.BuildState, packageTargets map[*core.Package]core
 				}
 			}
 
-			code := string(content[stmt.Start:stmt.End])
+			code := string(content[stmt.StartPos():stmt.EndPos()])
 
-			cli.Fprintf(os.Stdout, "${BOLD_CYAN}Statement (Offsets: %d-%d):${RESET}\n", stmt.Start, stmt.End)
+			cli.Fprintf(os.Stdout, "${BOLD_CYAN}Statement (Offsets: %d-%d):${RESET}\n",
+				stmt.StartPos(), stmt.EndPos())
 			cli.Fprintf(os.Stdout, "  ${CYAN}Code:${RESET}\n")
 			// Indent the code
 			for line := range strings.SplitSeq(code, "\n") {
@@ -221,7 +222,7 @@ func filterStatements(pkg *core.Package, labels core.BuildLabels) map[core.Build
 	filterStmts := map[core.BuildStatement]struct{}{}
 	for _, target := range labels {
 		stmt, err := pkg.Metadata.FindStatement(target)
-		if err == nil && stmt != (core.BuildStatement{}) {
+		if err == nil && stmt != nil {
 			filterStmts[stmt] = struct{}{}
 		}
 	}

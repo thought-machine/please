@@ -1381,11 +1381,3 @@ func (nm *noopScopeMetadata) pushFiles(rootPath string, filenames []string) {}
 
 // pushSubincludes implements [scopeMetadata.pushSubincludes].
 func (nm *noopScopeMetadata) pushSubincludes(labels core.BuildLabels) {}
-
-// NewBuildStatement creates a new core.BuildStatement from an asp.statement.
-func NewBuildStatement(stmt *Statement) core.BuildStatement {
-	return core.BuildStatement{
-		Start: int(stmt.Pos),
-		End:   int(stmt.EndPos),
-	}
-}

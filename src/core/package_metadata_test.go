@@ -7,6 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockBuildStatement struct {
+	start, end int
+}
+
+func (m mockBuildStatement) StartPos() int { return m.start }
+func (m mockBuildStatement) EndPos() int   { return m.end }
+
 func TestHashBuildStatementDistribution(t *testing.T) {
 	nShards := 4
 	shards := make(map[uint64]int, nShards)
@@ -15,7 +22,7 @@ func TestHashBuildStatementDistribution(t *testing.T) {
 	for i := 0; i < totalStatements; i++ {
 		start := i * 4                    // Simulate predictable start
 		end := start + 31*(i%4) + (i % 7) // Varied statement lengths
-		stmt := BuildStatement{Start: start, End: end}
+		stmt := mockBuildStatement{start: start, end: end}
 
 		h := hashBuildStatement(stmt)
 		shard := h & (uint64(nShards) - 1)

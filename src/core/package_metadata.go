@@ -11,19 +11,12 @@ import (
 
 var zeroBuildStatement BuildStatement
 
-// BuildStatement represents the start and end byte positions of a parsed statement in a BUILD file.
-type BuildStatement struct {
-	Start, End int
-}
-
-// Len returns the byte length of the build statement.
-func (bs *BuildStatement) Len() int64 {
-	return int64(bs.End - bs.Start)
-}
-
-// StartPos returns the starting byte position of the build statement.
-func (bs *BuildStatement) StartPos() int64 {
-	return int64(bs.Start)
+// BuildStatement represents a parsed statement in a BUILD file.
+type BuildStatement interface {
+	// StartPos returns the starting byte position of the build statement.
+	StartPos() int
+	// EndPos returns the ending byte position of the build statement.
+	EndPos() int
 }
 
 // hashBuildStatement mixes the Start and End byte coordinates to produce a 64-bit pseudo hash.
@@ -34,7 +27,7 @@ func (bs *BuildStatement) StartPos() int64 {
 // can cause start and end positions to align on predictable byte intervals
 // and make them less random, simple bit manipulation is highly biased.
 func hashBuildStatement(stmt BuildStatement) uint64 {
-	return uint64(stmt.Start)*0x9e3779b97f4a7c15 + uint64(stmt.End)*0xbf58476d1ce4e5b9
+	return uint64(stmt.StartPos())*0x9e3779b97f4a7c15 + uint64(stmt.EndPos())*0xbf58476d1ce4e5b9
 }
 
 // BuildStatements is a slice of BuildStatement that implements sort.Interface.
@@ -214,7 +207,7 @@ func (m *packageMetadataImpl) RegisterSubincludeStatement(stmtProvider BuildStat
 func (m *packageMetadataImpl) FindStatement(target BuildLabel) (BuildStatement, error) {
 	stmt := m.targetToStmt.Get(target)
 	if stmt == zeroBuildStatement {
-		return BuildStatement{}, fmt.Errorf("failed to find statement for target %s", target)
+		return nil, fmt.Errorf("failed to find statement for target %s", target)
 	}
 	return stmt, nil
 }
@@ -321,7 +314,7 @@ func (m *packageMetadataImpl) Statements() ([]BuildStatement, []StatementMetadat
 
 	// Sort the pairs to maintain BUILD file order
 	slices.SortFunc(pairs, func(i, j pair) int {
-		return cmp.Compare(i.stmt.Start, j.stmt.Start)
+		return cmp.Compare(i.stmt.StartPos(), j.stmt.StartPos())
 	})
 
 	stmts := make([]BuildStatement, len(pairs))
@@ -360,7 +353,7 @@ func (n *noopPackageMetadata) RegisterSubincludeStatement(stmtProvider BuildStat
 // FindStatement implements [PackageMetadata.FindStatement].
 func (n *noopPackageMetadata) FindStatement(target BuildLabel) (BuildStatement, error) {
 	log.Fatalf("metadata not tracked, using no-op implementation")
-	return BuildStatement{}, nil
+	return nil, nil
 }
 
 // FindTargets implements [PackageMetadata.FindTargets].
