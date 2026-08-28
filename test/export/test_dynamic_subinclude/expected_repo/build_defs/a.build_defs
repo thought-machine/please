@@ -1,4 +1,4 @@
-def helper_a(name: str):
+def helper_a(name:str):
     genrule(
         name = name,
         outs = [f"{name}.out"],

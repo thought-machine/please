@@ -1,2 +1,2 @@
-def unused_helper(name: str):
+def unused_helper(name:str):
     pass

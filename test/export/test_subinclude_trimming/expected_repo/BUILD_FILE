@@ -11,7 +11,10 @@ subinclude(
     "//build_defs:var2_build_def",
 )
 
-comma_separated_vars = ",".join([var1, var2])
+comma_separated_vars = ",".join([
+    var1,
+    var2,
+])
 
 genrule(
     name = "variables_target",

@@ -17,7 +17,6 @@ plz_e2e_test(
     pre_cmd = 'PLZ_EXPORT_DIR="$(mktemp -d)"',
 )
 
-
 # Generic catch-all test on internal repo - notrim.
 plz_e2e_test(
     name = "export_src_please_notrim_test",

@@ -1,4 +1,4 @@
-def dynamic_target(name: str, def_name: str):
+def dynamic_target(name:str, def_name:str):
     subinclude(f"//build_defs:{def_name}")
     if name == "a":
         helper_a(name = name)
