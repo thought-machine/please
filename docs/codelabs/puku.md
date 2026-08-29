@@ -190,14 +190,14 @@ plz run //src/hello
 To update a module to a specific version:
 
 ```bash
-GOTOOLCHAIN=local go get github.com/google/uuid@v1.5.0
+go get github.com/google/uuid@v1.5.0
 plz puku sync -w
 ```
 
 To update to the latest version:
 
 ```bash
-GOTOOLCHAIN=local go get -u github.com/google/uuid
+go get -u github.com/google/uuid
 plz puku sync -w
 ```
 
