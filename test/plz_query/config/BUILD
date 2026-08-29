@@ -30,12 +30,9 @@ please_repo_e2e_test(
 
 genrule(
     name = "foo_plugin",
-    srcs = {
-        "plugin": ["foo_plugin"],
-        "tool": ["//test/plugins/tools:fooc"],
-    },
+    srcs = ["foo_plugin"],
     outs = ["foo_plugin.tar.gz"],
-    cmd = "mv $SRCS_PLUGIN foo_plugin && mv $SRCS_TOOL foo_plugin/tools && tar -czf $OUT foo_plugin",
+    cmd = "mv $SRCS foo_plugin && tar -czf $OUT foo_plugin",
 )
 
 plz_e2e_test(
