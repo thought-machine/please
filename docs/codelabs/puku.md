@@ -61,7 +61,7 @@ Configure a Please alias for Puku:
 
 ```
 [Alias "puku"]
-Cmd = run //third_party/binary:puku --
+Cmd = run --wd=. //third_party/binary:puku --
 PositionalLabels = true
 Desc = A tool to update BUILD files in Go packages
 ```
