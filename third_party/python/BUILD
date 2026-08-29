@@ -74,5 +74,4 @@ pip_library(
     name = "progress",
     version = "1.6.1",
     licences = ["ISC"],
-    hashes = ["34ce5c7402e39aa9b88b988bc8559bd35b22c589d18b480251c7c72e15eba944"],
 )
