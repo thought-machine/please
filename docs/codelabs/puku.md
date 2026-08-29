@@ -78,9 +78,10 @@ remote_file(
 )
 ```
 
-Configure the Go plugin to point at your go.mod (recommended). Create a repo-root `BUILD` with a filegroup for go.mod:
+Because you ran `plz init plugin go` in a directory that already had a `go.mod`, the Go plugin
+has been pointed at it for you. `plz init` will have written a filegroup exporting `go.mod` into
+your repo-root `BUILD` file:
 
-1) Add a filegroup for go.mod at `BUILD` in repo root:
 ```python
 filegroup(
     name = "gomod",
@@ -89,14 +90,16 @@ filegroup(
 )
 ```
 
-2) Update your `.plzconfig`:
+along with the corresponding `ModFile` setting in your `.plzconfig`:
+
 ```
 [Plugin "go"]
-Target = //plugins:go
 ModFile = //:gomod
 ```
 
 This lets Puku use standard `go get` to resolve modules, then sync them into `third_party/go/BUILD`.
+If you're adding Please to a repo that didn't have a `go.mod` at the time you ran `plz init plugin go`,
+you'll need to add those two pieces yourself.
 
 ### Configuring the PATH for Go
 
