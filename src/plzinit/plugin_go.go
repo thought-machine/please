@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -13,7 +14,12 @@ import (
 	"github.com/thought-machine/please/src/fs"
 )
 
-const buildFilePath = "third_party/go/BUILD"
+const (
+	buildFilePath     = "third_party/go/BUILD"
+	rootBuildFileName = "BUILD"
+	goModFileName     = "go.mod"
+	goModFilegroup    = "gomod"
+)
 
 type goVersionResp = []struct {
 	Version string `json:"version"`
@@ -44,18 +50,18 @@ func getLatestGoVersion() (string, error) {
 	return runtime.Version(), nil
 }
 
-func parseBuildFile() (*build.File, error) {
-	bs, _ := os.ReadFile(buildFilePath)
-	return build.Parse(buildFilePath, bs)
+func parseBuildFile(path string) (*build.File, error) {
+	bs, _ := os.ReadFile(path)
+	return build.Parse(path, bs)
 }
 
-func saveFile(buildFile *build.File) error {
+func saveFile(buildFile *build.File, path string) error {
 	bs := build.Format(buildFile)
-	if err := fs.EnsureDir(buildFilePath); err != nil {
+	if err := fs.EnsureDir(path); err != nil {
 		return err
 	}
 
-	return os.WriteFile(buildFilePath, bs, 0666)
+	return os.WriteFile(path, bs, 0666)
 }
 
 func initGo() (map[string]string, error) {
@@ -69,7 +75,7 @@ func initGo() (map[string]string, error) {
 		return nil, err
 	}
 
-	buildFile, err := parseBuildFile()
+	buildFile, err := parseBuildFile(buildFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse %s: %w", buildFilePath, err)
 	}
@@ -88,14 +94,65 @@ func initGo() (map[string]string, error) {
 		buildFile.Stmt = append(buildFile.Stmt, stdLib("std"))
 	}
 
-	if err := saveFile(buildFile); err != nil {
+	if err := saveFile(buildFile, buildFilePath); err != nil {
 		return nil, err
 	}
 
-	return map[string]string{
+	config := map[string]string{
 		"GoTool": toolchainRule,
 		"STDLib": stdRule,
-	}, nil
+	}
+
+	// Point the plugin at the repo's go.mod, if it has one. Without this, tools like puku
+	// can't reconcile the module requirements against the third party build file.
+	modFile, err := initGoMod(".")
+	if err != nil {
+		return nil, err
+	}
+	if modFile != "" {
+		config["ModFile"] = modFile
+	}
+
+	return config, nil
+}
+
+// initGoMod exports the repo's go.mod via a filegroup in the root build file, returning the
+// label of that filegroup. It returns an empty label if the repo doesn't have a go.mod.
+func initGoMod(dir string) (string, error) {
+	if _, ok := findGoModule(dir); !ok {
+		return "", nil
+	}
+
+	path := filepath.Join(dir, rootBuildFileName)
+	buildFile, err := parseBuildFile(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse %s: %w", path, err)
+	}
+
+	// Reuse an existing filegroup if the repo already exports go.mod under another name.
+	for _, rule := range buildFile.Rules("filegroup") {
+		for _, src := range rule.AttrStrings("srcs") {
+			if src == goModFileName {
+				return "//:" + rule.Name(), nil
+			}
+		}
+	}
+
+	buildFile.Stmt = append(buildFile.Stmt, modFilegroup(goModFilegroup))
+	if err := saveFile(buildFile, path); err != nil {
+		return "", err
+	}
+
+	return "//:" + goModFilegroup, nil
+}
+
+func modFilegroup(name string) *build.CallExpr {
+	r := build.NewRule(&build.CallExpr{})
+	r.SetKind("filegroup")
+	r.SetAttr("name", &build.StringExpr{Value: name})
+	r.SetAttr("srcs", &build.ListExpr{List: []build.Expr{&build.StringExpr{Value: goModFileName}}})
+	r.SetAttr("visibility", &build.ListExpr{List: []build.Expr{&build.StringExpr{Value: "PUBLIC"}}})
+	return r.Call
 }
 
 func goToolchain(name, version string) *build.CallExpr {
