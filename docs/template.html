@@ -82,7 +82,7 @@
           </div>
 
           <ul class="sticky top-1 ttu essential-pragmata-pro" role="menu">
-            {{$isItemActive := matches .Filename "quickstart.html" "codelabs.html" "basics.html" "dependencies.html" "quickstart_dropoff.html"}}
+            {{$isItemActive := matches .Filename "quickstart.html" "codelabs.html" "basics.html" "dependencies.html" "tooling.html" "quickstart_dropoff.html"}}
             <li
                     class="mv2 {{boolOption $isItemActive "white before-dw-arrow" "violet before-rw-arrow hover-before-white"}}"
                     role="menuitem">
@@ -119,6 +119,13 @@
                             class="{{isFilenameOption "dependencies.html" "white" "silver"}} no-underline"
                             href="/dependencies.html"
                     >Third-party dependencies</a
+                    >
+                  </li>
+                  <li class="pl4" role="menuitem">
+                    <a
+                            class="{{isFilenameOption "tooling.html" "white" "silver"}} no-underline"
+                            href="/tooling.html"
+                    >Tooling</a
                     >
                   </li>
                   <li class="pl4" role="menuitem">

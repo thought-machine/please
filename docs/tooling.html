@@ -1,0 +1,121 @@
+<h1 id="tooling" class="title-1">Tooling</h1>
+
+<p>This page lists tools and integrations for working with Please.</p>
+
+<section class="mt4">
+  <h2 id="editor-integrations" class="title-2">Editor integrations</h2>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <a
+          class="copy-link"
+          href="https://github.com/marcuscaisey/please.nvim"
+          target="_blank"
+          rel="noopener"
+          >Please plugin for Neovim</a
+        >.
+      </span>
+    </li>
+    <li>
+      <span>
+        <a
+          class="copy-link"
+          href="https://marketplace.visualstudio.com/items?itemName=please-build.plz-vscode"
+          target="_blank"
+          rel="noopener"
+          >Please extension for Visual Studio Code</a
+        >.
+      </span>
+    </li>
+    <li>
+      <span>
+        <a
+          class="copy-link"
+          href="https://plugins.jetbrains.com/plugin/16816-please"
+          target="_blank"
+          rel="noopener"
+          >Please plugin for IntelliJ</a
+        >.
+      </span>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="build-file-maintenance" class="title-2">BUILD file maintenance</h2>
+
+  <ul class="bulleted-list">
+    <li>
+      <span>
+        <a class="copy-link" href="/commands.html#fmt">plz fmt</a>
+        formats BUILD files.
+      </span>
+    </li>
+    <li>
+      <span>
+        <a
+          class="copy-link"
+          href="https://github.com/please-build/puku"
+          target="_blank"
+          rel="noopener"
+          >puku</a
+        >
+        maintains Go targets in BUILD files.
+      </span>
+    </li>
+  </ul>
+</section>
+
+<section class="mt4">
+  <h2 id="lang-server" class="title-2">BUILD file Language Protocol Server</h2>
+
+  <p>
+    Please ships with a language server for BUILD files. It follows the
+    <a
+      class="copy-link"
+      href="https://langserver.org/"
+      target="_blank"
+      rel="noopener"
+      >language server protocol</a
+    >
+    from Visual Studio Code.
+  </p>
+
+  <p>
+    To use LPS, simply download the language server protocol plugin for your
+    favourite editor, and run the binary with the command
+    <code class="code">plz tool lps</code>. The
+    <a
+      class="copy-link"
+      href="https://github.com/marcuscaisey/please.nvim"
+      target="_blank"
+      rel="noopener"
+      >Neovim plugin</a
+    >
+    and
+    <a
+      class="copy-link"
+      href="https://marketplace.visualstudio.com/items?itemName=please-build.plz-vscode"
+      target="_blank"
+      rel="noopener"
+      >Visual Studio Code extension</a
+    >
+    set this up for you.
+  </p>
+
+  <p>
+    Currently LPS supports auto-completion (this works with build labels too!),
+    hover, goto definition, diagnostics, signature help, auto-formatting and
+    references.
+  </p>
+</section>
+
+<div class="pagination">
+  <div class="pagination__previous">
+    <a class="copy-link" href="/dependencies.html">Third-party dependencies</a>
+  </div>
+  <div class="pagination__next">
+    <a class="copy-link" href="/quickstart_dropoff.html">What's next?</a>
+  </div>
+</div>
