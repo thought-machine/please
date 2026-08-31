@@ -2,6 +2,8 @@ go_library(
     name = "build",
     srcs = [
         "build_step.go",
+        "clean_tmpdir_darwin.go",
+        "clean_tmpdir_other.go",
         "filegroup.go",
         "incrementality.go",
     ],
