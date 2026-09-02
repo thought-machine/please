@@ -60,6 +60,12 @@ type StatementMetadata struct {
 	IsSubincludeStatement bool
 }
 
+// TrackedStatement pairs a build statement with its evaluated metadata.
+type TrackedStatement struct {
+	Statement BuildStatement
+	Metadata  StatementMetadata
+}
+
 // PackageMetadata stores metadata about parsed BUILD files, mapping statements and subincludes
 // to their respective targets. This supports additional logic for operations such as `plz export`
 // but should be disabled for most operations by using the no-op implementation to avoid the overhead.
@@ -106,7 +112,7 @@ type PackageMetadata interface {
 	IsInterpretedStatement(stmt BuildStatement) bool
 	// Statements returns all build statement and their metadata tracked in the package, sorted by
 	// BUILD file order.
-	Statements() ([]BuildStatement, []StatementMetadata)
+	Statements() []TrackedStatement
 }
 
 // trackedPackageMetadata is the canonical implementation of the PackageMetadata interface. It tracks
@@ -335,35 +341,24 @@ func (m *trackedPackageMetadata) IsInterpretedStatement(stmt BuildStatement) boo
 }
 
 // Statements implements [PackageMetadata.Statements].
-func (m *trackedPackageMetadata) Statements() ([]BuildStatement, []StatementMetadata) {
+func (m *trackedPackageMetadata) Statements() []TrackedStatement {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	type pair struct {
-		stmt BuildStatement
-		meta StatementMetadata
-	}
-	pairs := make([]pair, len(m.statements))
+	statements := make([]TrackedStatement, 0, len(m.statements))
 	for stmt, sm := range m.statements {
-		pairs = append(pairs, pair{
-			stmt: stmt,
-			meta: *sm,
+		statements = append(statements, TrackedStatement{
+			Statement: stmt,
+			Metadata:  *sm,
 		})
 	}
 
-	// Sort the pairs to maintain BUILD file order
-	slices.SortFunc(pairs, func(i, j pair) int {
-		return cmp.Compare(i.stmt.StartPos(), j.stmt.StartPos())
+	// Sort the statements to maintain BUILD file order
+	slices.SortFunc(statements, func(i, j TrackedStatement) int {
+		return cmp.Compare(i.Statement.StartPos(), j.Statement.StartPos())
 	})
 
-	stmts := make([]BuildStatement, len(pairs))
-	metas := make([]StatementMetadata, len(pairs))
-	for i, p := range pairs {
-		stmts[i] = p.stmt
-		metas[i] = p.meta
-	}
-
-	return stmts, metas
+	return statements
 }
 
 // noopPackageMetadata implements the PackageMetadata interface with no-op methods. This is the
@@ -432,7 +427,7 @@ func (n *noopPackageMetadata) IsInterpretedStatement(stmt BuildStatement) bool {
 }
 
 // Statements implements [PackageMetadata.Statements].
-func (n *noopPackageMetadata) Statements() ([]BuildStatement, []StatementMetadata) {
+func (n *noopPackageMetadata) Statements() []TrackedStatement {
 	log.Fatalf("metadata not tracked, using no-op implementation")
-	return nil, nil
+	return nil
 }

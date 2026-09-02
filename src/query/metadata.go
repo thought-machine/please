@@ -112,14 +112,15 @@ func printMetadata(state *core.BuildState, packageTargets map[*core.Package]core
 			continue
 		}
 
-		stmts, stmtMetadata := pkg.Metadata.Statements()
+		trackedStmts := pkg.Metadata.Statements()
 		var filterStmts map[core.BuildStatement]struct{}
 		if !opts.IncludeAllStatements {
 			filterStmts = filterStatements(pkg, labels)
 		}
 
-		for i, sm := range stmtMetadata {
-			stmt := stmts[i]
+		for _, ts := range trackedStmts {
+			stmt := ts.Statement
+			sm := ts.Metadata
 			if filterStmts != nil {
 				if _, ok := filterStmts[stmt]; !ok {
 					continue
