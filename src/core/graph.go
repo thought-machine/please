@@ -23,7 +23,7 @@ type BuildGraph struct {
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.Map[string, *Subrepo]
 	// Subincludes that are subincluded by other subincludes
-	subincludeSubincludes map[BuildLabel]LabelSet
+	subincludeSubincludes map[BuildLabel]labelSet
 	// Use a mutex as a LabelSet isn't atomic. We need to guard against inserting as well as mutating the value.
 	subincMux sync.Mutex
 }
@@ -157,7 +157,7 @@ func NewGraph() *BuildGraph {
 		targets:               cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, HashBuildLabel),
 		packages:              cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
 		subrepos:              cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
-		subincludeSubincludes: map[BuildLabel]LabelSet{},
+		subincludeSubincludes: map[BuildLabel]labelSet{},
 	}
 	return g
 }
@@ -177,7 +177,7 @@ func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
 	graph.subincMux.Lock()
 	defer graph.subincMux.Unlock()
 
-	incs := LabelSet{}
+	incs := labelSet{}
 	graph.findTransitiveSubincludes(l, incs)
 
 	ls := slices.Collect(maps.Keys(incs))
@@ -185,7 +185,7 @@ func (graph *BuildGraph) TransitiveSubincludes(l BuildLabel) []BuildLabel {
 	return ls
 }
 
-func (graph *BuildGraph) findTransitiveSubincludes(label BuildLabel, includes LabelSet) {
+func (graph *BuildGraph) findTransitiveSubincludes(label BuildLabel, includes labelSet) {
 	if includes.Contains(label) {
 		return
 	}
@@ -201,7 +201,7 @@ func (graph *BuildGraph) RegisterTransitiveSubinclude(from, to BuildLabel) {
 
 	incs, ok := graph.subincludeSubincludes[from]
 	if !ok {
-		incs = LabelSet{}
+		incs = labelSet{}
 		graph.subincludeSubincludes[from] = incs
 	}
 	incs.Add(to)

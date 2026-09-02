@@ -256,7 +256,7 @@ func (m *trackedPackageMetadata) FindRelatedTargets(target BuildLabel) (BuildLab
 
 // FindPackageLevelRequirements implements [PackageMetadata.FindPackageLevelRequirements].
 func (m *trackedPackageMetadata) FindPackageLevelRequirements() (BuildLabels, []string) {
-	requiredSet := LabelSet{}
+	requiredSet := labelSet{}
 	filesSet := map[string]struct{}{}
 
 	// The intention is to finds all the subincluded labels required by the package but not used to
