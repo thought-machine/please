@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -333,13 +334,12 @@ func subinclude(s *scope, args []pyObject) pyObject {
 	if s.contextPackage() == nil {
 		s.Error("cannot subinclude from this scope")
 	}
-	stringArgs, err := subincludeArgs(args)
-	if err != nil {
-		s.Error("%s", err.Error())
-	}
 
-	var labels = make(core.BuildLabels, 0, len(stringArgs))
-	for _, arg := range stringArgs {
+	var labels = make(core.BuildLabels, 0, len(args))
+	for arg, err := range subincludeArgs(args) {
+		if err != nil {
+			s.Error("%s", err.Error())
+		}
 		label, annotation := core.SplitLabelAnnotation(arg)
 		t := subincludeTarget(s, s.parseLabelInContextPkg(label))
 		s.Assert(s.contextPackage().Label().CanSee(s.state, t), "Target %s isn't visible to be subincluded into %s", t.Label, s.contextPackage().Label())
@@ -371,24 +371,32 @@ func subinclude(s *scope, args []pyObject) pyObject {
 
 // subincludeArgs extracts and validates the arguments from a subinclude() call. Acceptable values
 // are strings and lists of strings.
-func subincludeArgs(args []pyObject) ([]string, error) {
-	var si []string
-	for _, arg := range args {
-		if l, ok := arg.(pyList); ok {
-			for _, e := range l {
-				if l, ok := e.(pyString); ok {
-					si = append(si, string(l))
-				} else {
-					return nil, fmt.Errorf("cannot subinclude type %s", e.Type())
+func subincludeArgs(args []pyObject) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		for _, arg := range args {
+			if l, ok := arg.(pyList); ok {
+				for _, e := range l {
+					if s, ok := e.(pyString); ok {
+						if !yield(string(s), nil) {
+							return
+						}
+					} else {
+						if !yield("", fmt.Errorf("cannot subinclude type %s", e.Type())) {
+							return
+						}
+					}
+				}
+			} else if s, ok := arg.(pyString); ok {
+				if !yield(string(s), nil) {
+					return
+				}
+			} else {
+				if !yield("", fmt.Errorf("cannot subinclude type %s", arg.Type())) {
+					return
 				}
 			}
-		} else if l, ok := arg.(pyString); ok {
-			si = append(si, string(l))
-		} else {
-			return nil, fmt.Errorf("cannot subinclude type %s", arg.Type())
 		}
 	}
-	return si, nil
 }
 
 // subincludeTarget returns the target for a subinclude() call to a label.
