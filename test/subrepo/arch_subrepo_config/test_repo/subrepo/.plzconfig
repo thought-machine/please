@@ -1,0 +1,4 @@
+
+[Plugin "plugin"]
+Target = //:plugin
+teststring =  "subrepoString"
