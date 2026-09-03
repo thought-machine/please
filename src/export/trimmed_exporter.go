@@ -129,7 +129,7 @@ func (e *trimmedExporter) exportSubincludes(pkg *core.Package, target core.Build
 }
 
 // exportPackageRequirements exports any extra package requirements, for example the subincluded
-// targets and files that are required by package but are not linked to any [core.BuildTarget].
+// targets and files that are required by the package but are not linked to any [core.BuildTarget].
 func (e *trimmedExporter) exportPackageRequirements(pkg *core.Package) {
 	subincludes, files := pkg.Metadata.FindPackageLevelRequirements()
 	e.setPackageSubincludes(pkg, subincludes)

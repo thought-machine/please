@@ -1,14 +1,22 @@
-target_var = filegroup(
-    name = "target_var",
+kept_var = filegroup(
+    name = "kept_var",
     srcs = ["file1.txt"],
 )
 
-filegroup(
-    name = "used",
+trimmed_var = filegroup(
+    name = "trimmed_var",
     srcs = ["file2.txt"],
 )
 
 filegroup(
+    name = "used",
+    srcs = [
+        "file3.txt",
+        kept_var,
+    ],
+)
+
+filegroup(
     name = "unused",
-    srcs = [target_var],
+    srcs = [trimmed_var],
 )

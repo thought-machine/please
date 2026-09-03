@@ -298,6 +298,7 @@ func (m *trackedPackageMetadata) FindPackageLevelRequirements() (BuildLabels, []
 	// generate targets. An example could be a variable declaration that depends on a subincluded value.
 	// We range over all interpreted statements that require any subincluded target. From those, we
 	// filter out the statements that generate targets and any explicit subinclude() statement calls.
+	// Similar logic for files that are included by a glob() statement.
 	for _, sm := range m.statements {
 		if len(sm.Targets) == 0 && !sm.IsSubincludeStatement {
 			for _, label := range sm.Subincludes {

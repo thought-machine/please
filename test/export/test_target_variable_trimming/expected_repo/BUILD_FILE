@@ -1,4 +1,12 @@
+kept_var = filegroup(
+    name = "kept_var",
+    srcs = ["file1.txt"],
+)
+
 filegroup(
     name = "used",
-    srcs = ["file2.txt"],
+    srcs = [
+        "file3.txt",
+        kept_var,
+    ],
 )
