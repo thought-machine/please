@@ -100,9 +100,14 @@ func (d *interactiveDisplay) Update(targets []buildingTarget) {
 	d.maxRows, d.maxCols = cli.CurrentBackend.MaxDimensions()
 	d.moveToFirstLine()
 	d.printLines(targets)
-	for _, line := range cli.CurrentBackend.Output() {
-		d.printf("${ERASE_AFTER}%s\n", line)
+	logs := cli.CurrentBackend.Output()
+	if len(logs) > 0 {
+		d.printf("${ERASE_AFTER}Messages:\n")
 		d.lines++
+		for _, line := range logs {
+			d.printf("${ERASE_AFTER}%s\n", line)
+			d.lines++
+		}
 	}
 	// Clean out any lines that were visible last time but are not now.
 	if d.lines < d.lastLines {

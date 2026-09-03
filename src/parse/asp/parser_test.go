@@ -10,7 +10,7 @@ import (
 
 // TODO(peterebden): Might get rid of this, we may want to expose a similar thing on Parser.
 func parseFileOnly(filename string) (*File, []*Statement, error) {
-	stmts, err := newParser().ParseFileOnly(filename)
+	stmts, err := NewParserOnly().ParseFileOnly(filename)
 	return newFile(filename), stmts, err
 }
 
@@ -448,7 +448,7 @@ func TestAssert(t *testing.T) {
 }
 
 func TestOptimise(t *testing.T) {
-	p := newParser()
+	p := NewParserOnly()
 	statements, err := p.parse(nil, "src/parse/asp/test_data/optimise.build")
 	f := newFile("src/parse/asp/test_data/optimise.build")
 	assert.NoError(t, err)
@@ -486,7 +486,7 @@ func TestOptimise(t *testing.T) {
 }
 
 func TestOptimiseJoin(t *testing.T) {
-	p := newParser()
+	p := NewParserOnly()
 	statements, err := p.parse(nil, "src/parse/asp/test_data/optimise_join.build")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(statements))
@@ -658,12 +658,12 @@ func TestMissingNewlines(t *testing.T) {
 }
 
 func TestRepeatedArguments(t *testing.T) {
-	_, err := newParser().parse(nil, "src/parse/asp/test_data/repeated_arguments.build")
+	_, err := NewParserOnly().parse(nil, "src/parse/asp/test_data/repeated_arguments.build")
 	assert.Error(t, err)
 }
 
 func TestConstantAssignments(t *testing.T) {
-	_, err := newParser().parse(nil, "src/parse/asp/test_data/constant_assign.build")
+	_, err := NewParserOnly().parse(nil, "src/parse/asp/test_data/constant_assign.build")
 	assert.Error(t, err)
 }
 
@@ -815,7 +815,7 @@ func TestFStringConcat(t *testing.T) {
 
 func TestFStringImplicitStringConcat(t *testing.T) {
 	str := "str('testing that we can carry these ' f'over {multiple} lines' r' \\n')"
-	prog, err := newParser().parseAndHandleErrors(strings.NewReader(strings.ReplaceAll(str, "\t", "")))
+	prog, err := NewParserOnly().parseAndHandleErrors(strings.NewReader(strings.ReplaceAll(str, "\t", "")))
 	require.NoError(t, err)
 
 	fString := prog[0].Ident.Action.Call.Arguments[0].Value.Val.FString
@@ -827,21 +827,21 @@ func TestFStringImplicitStringConcat(t *testing.T) {
 // F strings should report a sensible error when the {} aren't complete
 func TestFStringIncompleteError(t *testing.T) {
 	str := "s = f'some {' '.join([])}'"
-	_, err := newParser().parseAndHandleErrors(strings.NewReader(str))
+	_, err := NewParserOnly().parseAndHandleErrors(strings.NewReader(str))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Unterminated brace in fstring")
 }
 
 // Continue shouldn't be allowed outside a loop
 func TestContinueOutsideLoop(t *testing.T) {
-	_, err := newParser().parseAndHandleErrors(strings.NewReader("continue"))
+	_, err := NewParserOnly().parseAndHandleErrors(strings.NewReader("continue"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "'continue' outside loop")
 }
 
 // Break shouldn't be allowed outside a loop
 func TestBreakOutsideLoop(t *testing.T) {
-	_, err := newParser().parseAndHandleErrors(strings.NewReader("break"))
+	_, err := NewParserOnly().parseAndHandleErrors(strings.NewReader("break"))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "'break' outside loop")
 }
@@ -853,7 +853,7 @@ for i in [1,2,3]:
     def foo():
         break
 `
-	_, err := newParser().parseAndHandleErrors(strings.NewReader(code))
+	_, err := NewParserOnly().parseAndHandleErrors(strings.NewReader(code))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "'break' outside loop")
 }

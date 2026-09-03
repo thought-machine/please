@@ -240,6 +240,13 @@ type BuildState struct {
 	// NeedDebugDeps is true if we're doing a `plz debug` and we need to build the debug tools and
 	// data
 	NeedDebugDeps bool
+	// ParseMetadata is true if we want to store BUILD file metadata
+	ParseMetadata bool
+	// ForceParseEntirePackage is true if we want to force parse and activate all targets in every visited
+	// package during the parse phase. This is used by the export operation to ensure that the entire
+	// dependency graph of visited packages is parsed upfront, including co-defined related targets
+	// and sibling targets.
+	ForceParseEntirePackage bool
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
@@ -601,6 +608,23 @@ func (state *BuildState) LogTestResult(target *BuildTarget, run int, status Buil
 
 // LogBuildError logs a failure for a target to parse, build or test.
 func (state *BuildState) LogBuildError(label BuildLabel, status BuildResultStatus, err error, format string, args ...interface{}) {
+	if status == ParseFailed {
+		// Force close package wait channels to avoid deadlocks when calling waitForPackage() after
+		// the initial parse, for example when [state.ParseMetadata] is set.
+		key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+		if ch := state.progress.pendingPackages.Get(key); ch != nil {
+			func() {
+				defer func() { recover() }() // recover if attempted to close a closed channel.
+				close(ch)                    // This signals to anyone waiting that it's done (failed, but completed).
+			}()
+		}
+		if ch := state.progress.packageWaits.Get(key); ch != nil {
+			func() {
+				defer func() { recover() }() // recover if attempted to close a closed channel.
+				close(ch)                    // This signals to anyone waiting that it's done (failed, but completed).
+			}()
+		}
+	}
 	state.logResult(&BuildResult{
 		Label:       label,
 		Status:      status,
@@ -665,11 +689,17 @@ func (state *BuildState) forwardResults() {
 				delete(activeTargets, target)
 			}
 		}
-		state.progress.mutex.Lock()
-		if state.progress.results != nil {
-			state.progress.results <- result
-		}
-		state.progress.mutex.Unlock()
+		state.sendResult(result)
+	}
+}
+
+// sendResult sends a unique result to the channel. A simple method that is mostly useful for a
+// deferring the mutex close and avoid deadlocks even when we attempt to write to a closed channel.
+func (state *BuildState) sendResult(result *BuildResult) {
+	state.progress.mutex.Lock()
+	defer state.progress.mutex.Unlock()
+	if state.progress.results != nil {
+		state.progress.results <- result
 	}
 }
 
@@ -1058,6 +1088,23 @@ func (state *BuildState) ActivateTarget(pkg *Package, label, dependent BuildLabe
 		for _, l := range state.Graph.DependentTargets(dependent, label) {
 			// We use :all to indicate a dependency needed for parse.
 			if err := state.QueueTarget(l, dependent, dependent.IsAllTargets(), mode); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// QueueEntirePackage queues and activates all targets in the specified package, except optionally a
+// target to skip. This is used when we want to ensure the entire package and its transitive
+// dependency graph are parsed upfront. Refer to [state.ForceParseEntirePackage].
+func (state *BuildState) QueueEntirePackage(pkg *Package, skip BuildLabel, dependent BuildLabel, mode ParseMode) error {
+	for _, target := range pkg.AllTargets() {
+		// Skip the designated target (usually the currently parsing one) and post-build targets.
+		// Similarly to [state.ActivateTarget] we skip queueing post-build targets due to potential race
+		// conditions with post-build function execution.
+		if target.Label != skip && !target.AddedPostBuild {
+			if err := state.QueueTarget(target.Label, dependent, false, mode); err != nil {
 				return err
 			}
 		}
@@ -1482,7 +1529,7 @@ func NewBuildState(config *Configuration) *BuildState {
 		progress: &stateProgress{
 			numActive:       1, // One for the initial target adding on the main thread.
 			numPending:      1,
-			pendingTargets:  cmap.New[BuildLabel, chan struct{}](cmap.DefaultShardCount, hashBuildLabel),
+			pendingTargets:  cmap.New[BuildLabel, chan struct{}](cmap.DefaultShardCount, HashBuildLabel),
 			pendingPackages: cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			packageWaits:    cmap.New[packageKey, chan struct{}](cmap.DefaultShardCount, hashPackageKey),
 			internalResults: make(chan *BuildResult, 1000),

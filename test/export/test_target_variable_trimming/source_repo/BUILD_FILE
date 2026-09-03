@@ -1,0 +1,22 @@
+kept_var = filegroup(
+    name = "kept_var",
+    srcs = ["file1.txt"],
+)
+
+trimmed_var = filegroup(
+    name = "trimmed_var",
+    srcs = ["file2.txt"],
+)
+
+filegroup(
+    name = "used",
+    srcs = [
+        "file3.txt",
+        kept_var,
+    ],
+)
+
+filegroup(
+    name = "unused",
+    srcs = [trimmed_var],
+)

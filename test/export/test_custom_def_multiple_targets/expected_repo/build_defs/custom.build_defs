@@ -1,0 +1,17 @@
+subinclude("//build_defs:secondary_build_def")
+
+def custom_target(
+        name:str,
+        srcs:list=[],
+        outs:list=[],
+        outs_adjacent:list=[]):
+    secondary_custom_target(
+        name = f"{name}_adjacent",
+        outs = outs_adjacent,
+    )
+    return genrule(
+        name = name,
+        srcs = srcs,
+        outs = outs,
+        cmd = "echo 'main' > $OUT && cat $SRCS >> $OUT ",
+    )

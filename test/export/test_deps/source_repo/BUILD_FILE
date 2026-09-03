@@ -17,8 +17,8 @@ genrule(
 )
 
 genrule(
-    name = "dummy",
+    name = "unused",
     srcs = ["file1.txt"],
-    outs = ["dummy.out"],
+    outs = ["unused.out"],
     cmd = "cat $SRCS > $OUT",
 )

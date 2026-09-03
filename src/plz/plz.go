@@ -110,7 +110,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 		}
 		wg.Done()
 	}()
-	// Wait until they've all exited, which they'll do once they have no tasks left.
+	// Wait for all workers to finish. This should happen as soon as we no longer have pending tasks.
 	wg.Wait()
 	if state.Cache != nil {
 		state.Cache.Shutdown()

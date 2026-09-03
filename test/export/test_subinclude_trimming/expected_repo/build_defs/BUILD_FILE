@@ -1,0 +1,29 @@
+filegroup(
+    name = "simple_build_def",
+    srcs = ["simple.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "var1_build_def",
+    srcs = ["var1.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "var2_build_def",
+    srcs = ["var2.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "var3_build_def",
+    srcs = ["var3.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "versions_build_def",
+    srcs = ["versions.build_defs"],
+    visibility = ["PUBLIC"],
+)

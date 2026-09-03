@@ -312,23 +312,25 @@ func (p *parser) parseArgument() Argument {
 }
 
 func (p *parser) parseIf() *IfStatement {
-	p.nextv("if")
 	i := &IfStatement{}
+	i.HeaderPos = p.nextv("if").Pos
 	p.parseExpressionInPlace(&i.Condition)
-	p.next(':')
+	i.HeaderEndPos = p.next(':').EndPos()
 	p.next(EOL)
 	i.Statements = p.parseStatements()
 
-	for p.optionalv("elif") {
+	for p.l.Peek().Value == "elif" {
 		elif := IfStatementElif{}
+		elif.HeaderPos = p.nextv("elif").Pos
 		p.parseExpressionInPlace(&elif.Condition)
-		p.next(':')
+		elif.HeaderEndPos = p.next(':').EndPos()
 		p.next(EOL)
 		elif.Statements = p.parseStatements()
 		i.Elif = append(i.Elif, elif)
 	}
-	if p.optionalv("else") {
-		p.next(':')
+	if p.l.Peek().Value == "else" {
+		i.ElseHeaderPos = p.nextv("else").Pos
+		i.ElseHeaderEndPos = p.next(':').EndPos()
 		p.next(EOL)
 		i.ElseStatements = p.parseStatements()
 	}

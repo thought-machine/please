@@ -1,0 +1,7 @@
+def helper_rule(name:str):
+    build_rule(
+        name = name,
+        outs = [name + ".out"],
+        cmd = "sh $TOOL > $OUT",
+        tools = ["//tools"],
+    )

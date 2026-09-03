@@ -68,6 +68,11 @@ func (s *Subrepo) IsRemoteSubrepo() bool {
 	return s.Root != "" && s.Target != nil && !s.Target.Local && s.State.RemoteClient != nil
 }
 
+// IsExternal returns true if this subrepo is external, meaning its sources are fetched by a build target.
+func (s *Subrepo) IsExternal() bool {
+	return s != nil && s.Target != nil
+}
+
 // Equal returns true if this subrepo is equivalent to another, or false if it is not.
 func (s *Subrepo) Equal(other *Subrepo) bool {
 	return s.Name == other.Name && s.Root == other.Root && s.PackageRoot == other.PackageRoot &&

@@ -1,0 +1,5 @@
+filegroup(
+    name = "_foo#sub",
+    srcs = ["BUILD_FILE"],
+    visibility = ["PUBLIC"],
+)
