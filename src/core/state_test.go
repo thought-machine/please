@@ -213,28 +213,39 @@ func TestLogBuildErrorConcurrency(t *testing.T) {
 
 	// Spawn multiple goroutines waiting for the package to finish parsing.
 	// These will call SyncParsePackage, and block on the channel for this package .
-	const numWaiters = 100
+	const numWaiters = 5
 	var wg sync.WaitGroup
-	wg.Add(numWaiters)
-	for range numWaiters {
-		go func() {
-			defer wg.Done()
-			_ = state.SyncParsePackage(label)
-		}()
+	started := make(chan int, numWaiters)
+	tasks := make(chan int, numWaiters)
+	for i := range numWaiters {
+		wg.Go(func() {
+			started <- i
+			state.SyncParsePackage(label)
+			tasks <- i
+		})
 	}
 
-	// Give the waiters time to block on the wait channel
-	time.Sleep(10 * time.Millisecond)
+	// Wait for all goroutines to start and be about to call SyncParsePackage.
+	for range numWaiters {
+		<-started
+	}
+	// Wait for the first call to finish. Exactly one of the calls shouldn't block.
+	<-tasks
 
-	// Trigger failures for the exact same package. Concurrently to validate the logic for closing channels.
-	const numFailures = 10
+	// Give other waiters time to block on the wait channel.
+	time.Sleep(time.Millisecond)
+	if len(tasks) > 0 {
+		t.Errorf("Expected only the first caller of SyncParsePackage to proceed immediately, but %d others unblocked prematurely", len(tasks))
+	}
+
+	// Trigger failures for the exact same package. Concurrently to validate the logic for closing
+	// channels.
+	const numFailures = 3
 	var wgFail sync.WaitGroup
-	wgFail.Add(numFailures)
 	for range numFailures {
-		go func() {
-			defer wgFail.Done()
+		wgFail.Go(func() {
 			state.LogBuildError(label, ParseFailed, fmt.Errorf("intended test error"), "failed to parse %s", label)
-		}()
+		})
 	}
 	wgFail.Wait()
 
@@ -248,6 +259,9 @@ func TestLogBuildErrorConcurrency(t *testing.T) {
 	select {
 	case <-done:
 		// All waiters unblocked without panicking or deadlocking.
+		if len(tasks) != numWaiters-1 {
+			t.Errorf("Expected all remaining 4 waiters to have unblocked and written to tasks, but only %d did", len(tasks))
+		}
 	case <-time.After(time.Second):
 		t.Fatal("Deadlock detected: waiting goroutines failed to unblock within 1 seconds")
 	}
