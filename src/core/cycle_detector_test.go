@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -70,5 +71,23 @@ func TestCycleDetector(t *testing.T) {
 		require.Equal(t, 3, len(err.Cycle))
 		log.Warning("%s", err)
 		assert.Equal(t, []*BuildTarget{g, e, f}, err.Cycle)
+	})
+
+	// This is a regression test for a race with `go state.checkForCycles()`
+	// in `src/core/state.go`. The main goroutine can call Stop while the
+	// async check is in flight.
+	t.Run("StopDuringCheck", func(t *testing.T) {
+		state := NewDefaultBuildState()
+		for i := 0; i < 100; i++ {
+			state.Graph.AddTarget(NewBuildTarget(ParseBuildLabel(fmt.Sprintf("//src:t%d", i), "")))
+		}
+		detector := cycleDetector{graph: state.Graph}
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			assert.Nil(t, detector.Check())
+		}()
+		detector.Stop()
+		<-done
 	})
 }
