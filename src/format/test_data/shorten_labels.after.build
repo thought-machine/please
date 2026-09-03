@@ -1,0 +1,7 @@
+go_library(
+    name = "name",
+    srcs = [
+        "src.go",
+    ],
+    deps = [":test_data"],
+)
