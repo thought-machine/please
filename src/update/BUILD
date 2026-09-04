@@ -48,6 +48,7 @@ go_test(
         "///third_party/go/github.com_sigstore_sigstore//pkg/cryptoutils",
         "///third_party/go/github.com_sigstore_sigstore//pkg/signature",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
         "//src/cli",
         "//src/core",
