@@ -7,9 +7,27 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-// SomePath finds and returns a path between two targets, or between one and a set of targets.
+// SomePath finds and prints a path between two targets, or between one and a set of targets.
 // Useful for a "why on earth do I depend on this thing" type query.
 func SomePath(graph *core.BuildGraph, from, to, except []core.BuildLabel, showHidden bool) error {
+	path, err := SomePathLabels(graph, from, to, except, showHidden)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Found path:")
+	for _, l := range path {
+		fmt.Printf("  %s\n", l)
+	}
+	return nil
+}
+
+// SomePathLabels finds and returns a path between two targets, or between one and a set of
+// targets, or an error if no path exists between them.
+func SomePathLabels(
+	graph *core.BuildGraph,
+	from, to, except []core.BuildLabel,
+	showHidden bool,
+) (core.BuildLabels, error) {
 	s := somepath{
 		graph:  graph,
 		except: make(map[core.BuildLabel]struct{}, len(except)),
@@ -21,7 +39,6 @@ func SomePath(graph *core.BuildGraph, from, to, except []core.BuildLabel, showHi
 	for _, l1 := range expandAllTargets(graph, from) {
 		for _, l2 := range expandAllTargets(graph, to) {
 			if path := s.SomePath(l1, l2); len(path) != 0 {
-				fmt.Println("Found path:")
 				if !showHidden {
 					// Filter path to just non-hidden targets
 					for i, x := range path {
@@ -29,17 +46,14 @@ func SomePath(graph *core.BuildGraph, from, to, except []core.BuildLabel, showHi
 					}
 					path = slices.Compact(path)
 				}
-				for _, l := range path {
-					fmt.Printf("  %s\n", l)
-				}
-				return nil
+				return path, nil
 			}
 		}
 	}
 	if len(from) == 1 && len(to) == 1 {
-		return fmt.Errorf("Couldn't find any dependency path between %s and %s", from[0], to[0])
+		return nil, fmt.Errorf("Couldn't find any dependency path between %s and %s", from[0], to[0])
 	}
-	return fmt.Errorf("Couldn't find any dependency path between those targets")
+	return nil, fmt.Errorf("Couldn't find any dependency path between those targets")
 }
 
 // expandAllTargets expands any :all labels in the given set.

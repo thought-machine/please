@@ -10,19 +10,28 @@ import (
 
 // ReverseDeps finds all transitive targets that depend on the set of input labels.
 func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hidden bool) {
+	for _, l := range ReverseDepsLabels(state, labels, level, hidden) {
+		fmt.Println(l.String())
+	}
+}
+
+// ReverseDepsLabels returns the sorted labels of all transitive targets that depend on the
+// set of input labels.
+func ReverseDepsLabels(
+	state *core.BuildState,
+	labels []core.BuildLabel,
+	level int,
+	hidden bool,
+) core.BuildLabels {
 	targets := FindRevdeps(state, labels, hidden, true, true, level)
 	ls := make(core.BuildLabels, 0, len(targets))
-
 	for target := range targets {
 		if state.ShouldInclude(target) {
 			ls = append(ls, target.Label)
 		}
 	}
 	sort.Sort(ls)
-
-	for _, l := range ls {
-		fmt.Println(l.String())
-	}
+	return ls
 }
 
 // node represents a node in the build graph and the depth we visited it at.
