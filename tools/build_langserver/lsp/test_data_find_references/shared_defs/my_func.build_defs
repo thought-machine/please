@@ -1,0 +1,6 @@
+def my_shared_func(name:str, srcs:list=[]):
+    """A function exposed via multiple labels for testing find-references."""
+    return filegroup(
+        name = name,
+        srcs = srcs,
+    )
