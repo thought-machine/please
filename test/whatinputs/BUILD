@@ -8,6 +8,13 @@ plz_e2e_test(
 )
 
 plz_e2e_test(
+    name = "hidden_targets",
+    cmd = "plz query whatinputs test/whatinputs/test_package/bar.txt",
+    expected_failure = False,
+    expect_output_contains = "//test/whatinputs/test_package:_target2",
+)
+
+plz_e2e_test(
     name = "source_and_no_source",
     cmd = "plz query whatinputs making/up/a/file/path/should/be/easy test/whatinputs/test_package/foo.txt",
     expect_output_contains = "making/up/a/file/path/should/be/easy is not a source to any current target",
