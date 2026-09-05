@@ -1,0 +1,10 @@
+# b is reached only as a data dependency of //:a, and its own dependency lives in a subrepo that
+# has to be built before it can be parsed.
+build_rule(
+    name = "b",
+    outs = ["b.txt"],
+    cmd = "echo b > $OUT",
+    labels = ["x:from_b"],
+    deps = ["///slowrepo//:c"],
+    visibility = ["PUBLIC"],
+)

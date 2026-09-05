@@ -432,7 +432,8 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 
 	// The target's own build command can refer to its run-time & data dependencies via shell replacements, so we must at
 	// least have them resolved here (they don't have to be built yet though)
-	for dep := range target.RuntimeAndDataDependencies() {
+	deps := slices.Collect(target.RuntimeAndDataDependencies())
+	for _, dep := range deps {
 		for _, err := range r.resolveTarget(ctx, dep, target) {
 			if err != nil {
 				return err
@@ -443,7 +444,22 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	// Okay, now the runtime dependencies can happen in parallel with the target itself.
 	// N.B. Even when there are none we can't just build the target and return; its own callbacks
 	//      can add some, which we won't know about until it's built.
-	if deps := slices.Collect(target.RuntimeAndDataDependencies()); len(deps) == 0 {
+	if len(deps) == 0 {
+		if err := r.buildJustOne(ctx, target); err != nil {
+			return err
+		}
+	} else if target.PreBuildFunction != nil {
+		// Pre-build functions can walk the build graph to arbitrary depth (e.g. get_labels()), so
+		// we have to make sure all targets are available first.
+		g, gctx = r.group(ctx)
+		for _, dep := range deps {
+			g.Go(func() error {
+				return r.buildDep(gctx, dep, target)
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return err
+		}
 		if err := r.buildJustOne(ctx, target); err != nil {
 			return err
 		}
