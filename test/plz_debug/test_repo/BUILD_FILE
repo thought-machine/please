@@ -12,3 +12,33 @@ build_rule(
     },
     binary = True,
 )
+
+# Mimics the Go plugin's delve tool
+build_rule(
+    name = "debugger_lib",
+    outs = ["debugger_lib.txt"],
+    cmd = "echo 'this is not the debugger' > $OUT",
+)
+
+build_rule(
+    name = "debugger",
+    outs = ["debugger.sh"],
+    cmd = "echo '#!/bin/sh' > $OUT && echo 'echo debugger ran' >> $OUT && chmod +x $OUT",
+    binary = True,
+    provides = {"debuggable": ":debugger_lib"},
+)
+
+build_rule(
+    name = "debug_tool_test",
+    outs = ["debug_tool_test.txt"],
+    cmd = "echo 'hello world' > $OUT",
+    debug_cmd = "$DEBUG_TOOLS_DEBUGGER $OUT",
+    debug_tools = {
+        "debugger": ":debugger",
+    },
+    no_test_output = True,
+    requires = ["debuggable"],
+    test = True,
+    # Runs the debug tool to prove the tool itself was built & staged, not the target it provides.
+    test_cmd = "$DEBUG_TOOLS_DEBUGGER | grep -q 'debugger ran'",
+)
