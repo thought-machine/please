@@ -103,7 +103,9 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 				addSource(watcher, state, datum, dirs, files)
 			}
 		}
-		for _, dep := range target.Dependencies() {
+		// Anything unresolved just doesn't get watched; it's not worth failing the whole watch for.
+		deps, _ := target.Dependencies(state.Graph)
+		for _, dep := range deps {
 			startWatch(dep)
 		}
 		pkg := state.Graph.PackageOrDie(target.Label)

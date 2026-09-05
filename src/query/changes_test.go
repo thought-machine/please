@@ -155,9 +155,6 @@ func addTarget(state *core.BuildState, label string, dep *core.BuildTarget, sour
 		t.AddDependency(dep.Label)
 	}
 	state.Graph.AddTarget(t)
-	if err := t.ResolveDependencies(state.Graph); err != nil {
-		log.Fatalf("Failed to resolve dependency %s -> %s: %s", t, dep, err)
-	}
 	pkg := state.Graph.PackageByLabel(t.Label)
 	if pkg == nil {
 		pkg = core.NewPackageSubrepo(t.Label.PackageName, t.Label.Subrepo)

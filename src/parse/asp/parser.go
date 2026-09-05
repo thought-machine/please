@@ -5,6 +5,7 @@ package asp
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	iofs "io/fs"
@@ -23,6 +24,12 @@ type semaphore chan struct{}
 func (s semaphore) Acquire() { s <- struct{}{} }
 func (s semaphore) Release() { <-s }
 
+// Callbacks is the interface we require from something that we can call back to for builds / parses.
+type Callbacks interface {
+	Parse(context.Context, core.BuildLabel, core.BuildLabel) (*core.Package, error)
+	BuildAndDownload(context.Context, core.BuildLabel, core.BuildLabel) (*core.BuildTarget, error)
+}
+
 // A Parser implements parsing of BUILD files.
 type Parser struct {
 	interpreter *interpreter
@@ -34,9 +41,9 @@ type Parser struct {
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
-func NewParser(state *core.BuildState) *Parser {
+func NewParser(state *core.BuildState, callbacks Callbacks) *Parser {
 	p := newParser()
-	p.interpreter = newInterpreter(state, p)
+	p.interpreter = newInterpreter(state, p, callbacks)
 	p.limiter = p.interpreter.limiter
 	return p
 }
@@ -47,6 +54,11 @@ func newParser() *Parser {
 		builtins: map[string][]byte{},
 		limiter:  make(semaphore, 10),
 	}
+}
+
+// SetCallbacks sets the callback functions on an existing parser instance.
+func (p *Parser) SetCallbacks(callbacks Callbacks) {
+	p.interpreter.callbacks = callbacks
 }
 
 // LoadBuiltins instructs the parser to load rules from this file as built-ins.
@@ -73,7 +85,7 @@ func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
-func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
+func (p *Parser) ParseFile(ctx context.Context, pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
@@ -81,7 +93,7 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	if err != nil {
 		return err
 	}
-	_, err = p.interpreter.interpretAll(pkg, label, dependent, mode, statements)
+	_, err = p.interpreter.interpretAll(ctx, pkg, label, dependent, statements)
 	if err != nil {
 		f, _ := p.open(fs, filename)
 		p.annotate(err, f)
@@ -89,13 +101,15 @@ func (p *Parser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel,
 	return err
 }
 
-// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
-func (p *Parser) RegisterPreload(label core.BuildLabel) error {
+// PreloadSubinclude pre-registers a preload, forcing us to build any transitive preloads before we move on
+func (p *Parser) PreloadSubinclude(ctx context.Context, label core.BuildLabel) error {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
 	// This is a throw away scope. We're just doing this to avoid race conditions setting this on the main scope.
-	s := p.interpreter.scope.newScope(nil, p.interpreter.scope.mode, "", 0)
+	// It takes the caller's context, not the interpreter's; this is the chain that is resolving the preloads,
+	// and anything it goes on to parse must know that.
+	s := p.interpreter.scope.newScope(ctx, nil, "", 0)
 	s.config = p.interpreter.scope.config.Copy()
 	s.Set("CONFIG", s.config)
 	return p.interpreter.preloadSubinclude(s, label)
@@ -104,7 +118,7 @@ func (p *Parser) RegisterPreload(label core.BuildLabel) error {
 // ParseReader parses the contents of the given ReadSeeker as a BUILD file.
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.
-func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker, forLabel, dependent *core.BuildLabel, mode core.ParseMode) (bool, error) {
+func (p *Parser) ParseReader(ctx context.Context, pkg *core.Package, r io.ReadSeeker, forLabel, dependent *core.BuildLabel) (bool, error) {
 	p.limiter.Acquire()
 	defer p.limiter.Release()
 
@@ -112,7 +126,7 @@ func (p *Parser) ParseReader(pkg *core.Package, r io.ReadSeeker, forLabel, depen
 	if err != nil {
 		return false, err
 	}
-	_, err = p.interpreter.interpretAll(pkg, forLabel, dependent, mode, stmts)
+	_, err = p.interpreter.interpretAll(ctx, pkg, forLabel, dependent, stmts)
 	return true, err
 }
 

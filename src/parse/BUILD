@@ -6,7 +6,7 @@ go_library(
         "parse_step.go",
     ],
     pgo_file = "//:pgo",
-    resources = glob(["internal.tmpl"]),
+    resources = ["internal.tmpl"],
     visibility = ["PUBLIC"],
     deps = [
         "//rules",
@@ -17,16 +17,5 @@ go_library(
         "//src/fs",
         "//src/parse/asp",
         "//src/version",
-    ],
-)
-
-go_test(
-    name = "parse_step_test",
-    srcs = ["parse_step_test.go"],
-    resources = ["internal.tmpl"],
-    deps = [
-        ":parse",
-        "///third_party/go/github.com_stretchr_testify//assert",
-        "//src/core",
     ],
 )

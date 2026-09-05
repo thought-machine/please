@@ -5,6 +5,7 @@
 package asp
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ func parseFile2(filename string) (*scope, error) {
 	state := core.NewDefaultBuildState()
 	pkg := core.NewPackage("test/package")
 	pkg.Filename = "test/package/BUILD"
-	parser := NewParser(state)
+	parser := NewParser(state, nil)
 	src, err := rules.ReadAsset("builtins.build_defs")
 	if err != nil {
 		panic(err)
@@ -34,7 +35,7 @@ func parseFile2(filename string) (*scope, error) {
 	if err != nil {
 		panic(err)
 	}
-	return parser.interpreter.interpretAll(pkg, nil, nil, 0, statements)
+	return parser.interpreter.interpretAll(context.Background(), pkg, nil, nil, statements)
 }
 
 // assertRecords asserts equality of a series of logging records.

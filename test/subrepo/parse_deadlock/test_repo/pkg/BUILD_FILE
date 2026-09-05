@@ -1,0 +1,6 @@
+# Subincluding from a subrepo whose defining package (//defs) hasn't been parsed yet makes the
+# parser thread parse that package inline. It must not hold its parser slot while doing so, or
+# it deadlocks against itself; numthreads = 1 in .plzconfig makes that deterministic.
+subinclude("///defs/sub//:defs")
+
+my_rule(name = "x")

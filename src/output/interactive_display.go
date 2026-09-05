@@ -26,13 +26,17 @@ type displayer interface {
 	Frequency() time.Duration
 }
 
-func setupDisplayer(state *core.BuildState, plain bool) displayer {
+func setupDisplayer(state *core.BuildState, progress Progress, plain bool) displayer {
 	if plain {
-		return &plainDisplay{state: state}
+		return &plainDisplay{
+			state:    state,
+			progress: progress,
+		}
 	}
 	cli.CurrentBackend.SetPassthrough(false, state.Config.Display.MaxWorkers, state.Watch)
 	return &interactiveDisplay{
 		state:      state,
+		progress:   progress,
 		numWorkers: state.Config.Please.NumThreads,
 		maxWorkers: state.Config.Display.MaxWorkers,
 		numRemote:  state.Config.NumRemoteExecutors(),
@@ -41,7 +45,8 @@ func setupDisplayer(state *core.BuildState, plain bool) displayer {
 }
 
 type plainDisplay struct {
-	state *core.BuildState
+	state    *core.BuildState
+	progress Progress
 }
 
 func (d *plainDisplay) Update(targets []buildingTarget) {
@@ -49,11 +54,11 @@ func (d *plainDisplay) Update(targets []buildingTarget) {
 	log.Notice(
 		"Build running for %s, %d / %d tasks done (%d left), %s busy, parsing %s",
 		time.Since(d.state.StartTime).Round(time.Second),
-		d.state.NumDone(),
-		d.state.NumActive(),
-		d.state.NumActive()-d.state.NumDone(),
+		d.progress.NumDone(),
+		d.progress.NumTotal(),
+		d.progress.NumTotal()-d.progress.NumDone(),
 		pluralise(localbusy+remotebusy, "worker", "workers"),
-		pluralise(int(d.state.Parses().Load()), "BUILD file", "BUILD files"),
+		pluralise(d.progress.NumParsing(), "BUILD file", "BUILD files"),
 	)
 }
 
@@ -78,6 +83,7 @@ func (d *plainDisplay) Close() {}
 
 type interactiveDisplay struct {
 	state                                               *core.BuildState
+	progress                                            Progress
 	numWorkers, maxWorkers, numRemote, maxRows, maxCols int
 	stats                                               bool
 	lines, lastLines                                    int // mutable - records how many rows we've printed this time
@@ -85,7 +91,7 @@ type interactiveDisplay struct {
 }
 
 func (d *interactiveDisplay) Close() {
-	setWindowTitle(d.state, false)
+	setWindowTitle(d.state, d.progress, false)
 	d.moveToFirstLine()
 	d.printf("${CLEAR_END}")
 	d.flush()
@@ -111,7 +117,7 @@ func (d *interactiveDisplay) Update(targets []buildingTarget) {
 		}
 		d.printf("\x1b[%dA", d.lastLines-d.lines) // Move back up again
 	}
-	setWindowTitle(d.state, true)
+	setWindowTitle(d.state, d.progress, true)
 	d.flush()
 }
 
@@ -129,9 +135,9 @@ func (d *interactiveDisplay) printLines(targets []buildingTarget) {
 	localActive, remoteActive := countActive(targets)
 	totalActive := localActive + remoteActive
 	if d.numRemote > 0 {
-		d.printf("Building [%d/%d, %2d/%d local, %3d/%d remote, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), localActive, d.numWorkers, remoteActive, d.numRemote, time.Since(d.state.StartTime).Seconds())
+		d.printf("Building [%d/%d, %2d/%d local, %3d/%d remote, %3.1fs]:\n", d.progress.NumDone(), d.progress.NumTotal(), localActive, d.numWorkers, remoteActive, d.numRemote, time.Since(d.state.StartTime).Seconds())
 	} else {
-		d.printf("Building [%d/%d, %3.1fs]:\n", d.state.NumDone(), d.state.NumActive(), time.Since(d.state.StartTime).Seconds())
+		d.printf("Building [%d/%d, %3.1fs]:\n", d.progress.NumDone(), d.progress.NumTotal(), time.Since(d.state.StartTime).Seconds())
 	}
 	d.lines++
 	if d.stats {
@@ -276,14 +282,14 @@ func (d *interactiveDisplay) lprintfPrepare(cols int, s string) string {
 }
 
 // setWindowTitle sets the title of the current shell window based on the current build state.
-func setWindowTitle(state *core.BuildState, running bool) {
+func setWindowTitle(state *core.BuildState, progress Progress, running bool) {
 	if !state.Config.Display.UpdateTitle {
 		return
 	}
 	if running {
 		SetWindowTitle("plz: finishing up")
 	} else {
-		SetWindowTitle(fmt.Sprintf("plz: %d / %d tasks, %3.1fs", state.NumDone(), state.NumActive(), time.Since(state.StartTime).Seconds()))
+		SetWindowTitle(fmt.Sprintf("plz: %d / %d tasks, %3.1fs", progress.NumDone(), progress.NumTotal(), time.Since(state.StartTime).Seconds()))
 	}
 }
 

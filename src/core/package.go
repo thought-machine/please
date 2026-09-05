@@ -254,9 +254,9 @@ func FindOwningPackage(state *BuildState, file string) BuildLabel {
 	return BuildLabel{PackageName: "", Name: "all"}
 }
 
-// suggestTargets suggests the targets in the given package that might be misspellings of
+// SuggestTargets suggests the targets in the given package that might be misspellings of
 // the requested one.
-func suggestTargets(pkg *Package, label, dependent BuildLabel) string {
+func (pkg *Package) SuggestTargets(label, dependent BuildLabel) string {
 	if pkg == nil {
 		return ""
 	}

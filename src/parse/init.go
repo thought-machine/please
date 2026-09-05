@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"context"
 	"fmt"
 	"io"
 	iofs "io/fs"
@@ -16,36 +17,29 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
-// InitParser initialises the parser engine. This is guaranteed to be called exactly once before any calls to Parse().
-func InitParser(state *core.BuildState) *core.BuildState {
-	if state.Parser == nil {
-		p := &aspParser{parser: newAspParser(state)}
-		state.Parser = p
+// InitParser initialises the parser engine.
+func InitParser(state *core.BuildState, callbacks asp.Callbacks) *asp.Parser {
+	// There is some awkward coupling here for the benefit of the language server, which wants to get its
+	// hands on the parser, but it cannot create a fully functional one any more.
+	if p, ok := state.Parser.(*aspParser); ok {
+		p.callbacks = callbacks
+		p.parser.SetCallbacks(callbacks)
+		return p.parser
 	}
-	return state
-}
-
-// GetAspParser returns the underlying asp.Parser from the state's parser.
-// This is useful for tools like the language server that need direct access to AST information.
-// Returns nil if the state's parser is not set or is not an aspParser.
-func GetAspParser(state *core.BuildState) *asp.Parser {
-	if state.Parser == nil {
-		return nil
-	}
-	if ap, ok := state.Parser.(*aspParser); ok {
-		return ap.parser
-	}
-	return nil
+	p := newAspParser(state, callbacks)
+	state.Parser = &aspParser{parser: p, callbacks: callbacks}
+	return p
 }
 
 // aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
-	parser *asp.Parser
+	parser    *asp.Parser
+	callbacks asp.Callbacks
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
-func newAspParser(state *core.BuildState) *asp.Parser {
-	p := asp.NewParser(state)
+func newAspParser(state *core.BuildState, callbacks asp.Callbacks) *asp.Parser {
+	p := asp.NewParser(state, callbacks)
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
@@ -69,12 +63,12 @@ func newAspParser(state *core.BuildState) *asp.Parser {
 	return p
 }
 
-func (p *aspParser) ParseFile(pkg *core.Package, forLabel, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
-	return p.parser.ParseFile(pkg, forLabel, dependent, mode, fs, filename)
+func (p *aspParser) ParseFile(ctx context.Context, pkg *core.Package, forLabel, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
+	return p.parser.ParseFile(ctx, pkg, forLabel, dependent, fs, filename)
 }
 
-func (p *aspParser) ParseReader(pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel, mode core.ParseMode) error {
-	_, err := p.parser.ParseReader(pkg, reader, forLabel, dependent, mode)
+func (p *aspParser) ParseReader(ctx context.Context, pkg *core.Package, reader io.ReadSeeker, forLabel, dependent *core.BuildLabel) error {
+	_, err := p.parser.ParseReader(ctx, pkg, reader, forLabel, dependent)
 	return err
 }
 
@@ -91,15 +85,17 @@ func (p *aspParser) RunPostBuildFunction(state *core.BuildState, target *core.Bu
 	})
 }
 
-// RegisterPreload pre-registers a preload, forcing us to build any transitive preloads before we move on
-func (p *aspParser) RegisterPreload(label core.BuildLabel) error {
-	return p.parser.RegisterPreload(label)
-}
-
 // runBuildFunction runs either the pre- or post-build function.
 func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
-	state.SyncParsePackage(target.Label)
+	// This doesn't re-parse anything; it waits for the parse of this target's package to complete if
+	// one is still in flight. Targets are added to the graph as each rule is created, so a target can
+	// be picked up and built before the file that defines it has been fully interpreted - but the
+	// callback both reads the package out of the graph and mutates it, so it can't run until then.
+	// There's no parse in flight for us to inherit a context from, hence Background.
+	if _, err := p.callbacks.Parse(context.Background(), target.Label, target.Label); err != nil {
+		return err
+	}
 	if err := f(); err != nil {
 		state.LogBuildError(target.Label, core.ParseFailed, err, "Failed %s-build function for %s", callbackType, target.Label)
 		return err
@@ -129,7 +125,7 @@ func createBazelSubrepo(state *core.BuildState) {
 
 // BuildRuleArgOrder returns a map of the arguments to build rule and the order they appear in the source file
 func BuildRuleArgOrder(state *core.BuildState) map[string]int {
-	p := asp.NewParser(state)
+	p := asp.NewParser(state, nil)
 	b, _ := rules.ReadAsset("builtins.build_defs")
 	stmts, _ := p.ParseData(b, "builtins.build_defs")
 	m := map[string]int{}

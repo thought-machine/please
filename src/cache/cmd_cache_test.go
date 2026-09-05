@@ -71,7 +71,7 @@ func TestCmdStoreInvalidCommand(t *testing.T) {
 
 	// cache interface does not provide any result here...
 	// but we should at least not panic or that alike
-	cache.Store(target, key, target.Outputs())
+	cache.Store(target, key, target.Outputs(nil))
 }
 
 func TestCmdStoreAndRetrieve(t *testing.T) {
@@ -84,7 +84,7 @@ func TestCmdStoreAndRetrieve(t *testing.T) {
 
 	key := []byte("TestCmdStoreAndRetrieve")
 	os.Chdir("src/cache/test_data")
-	cache.Store(target, key, target.Outputs())
+	cache.Store(target, key, target.Outputs(nil))
 
 	b, err := os.ReadFile("plz-out/gen/pkg/name/testfile2")
 	assert.NoError(t, err)
@@ -107,7 +107,7 @@ func TestCmdStoreAndRetrieveExitCode(t *testing.T) {
 
 	key := []byte("TestCmdStoreAndRetrieveExitCode")
 	os.Chdir("src/cache/test_data")
-	cache.Store(target, key, target.Outputs())
+	cache.Store(target, key, target.Outputs(nil))
 
 	hit := cache.Retrieve(target, key, nil)
 	// expected to fail because of "exit 1"
