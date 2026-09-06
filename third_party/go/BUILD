@@ -351,7 +351,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/grpc",
-    version = "v1.82.1",
+    version = "v1.83.1",
 )
 
 go_repo(
