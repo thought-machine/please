@@ -28,7 +28,7 @@ jobs:
 
       - name: Run puku sync
         run: |
-          ./pleasew puku sync
+          ./pleasew puku sync -w
 
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@4b4693c596717de5c939cfa92b1b0b5c8676537f
