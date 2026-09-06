@@ -18,6 +18,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 
+      - name: Install Please
+        run: |
+          ./pleasew --version
+          # puku shells out to `plz`, but pleasew only installs `please` and doesn't
+          # put it on the PATH, so link it up here.
+          ln -sf "$HOME/.please/please" "$HOME/.please/plz"
+          echo "$HOME/.please" >> "$GITHUB_PATH"
+
       - name: Run puku sync
         run: |
           ./pleasew puku sync
