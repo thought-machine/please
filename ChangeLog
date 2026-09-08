@@ -1,3 +1,7 @@
+Version 17.32.1
+---------------
+    * `plz init plugin go` now writes a filegroup for `go.mod` and sets `modfile`.
+
 Version 17.32.0
 ---------------
     * `plz_sandbox`: Add UID/GID range mapping, file mounts, configurable
