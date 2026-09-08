@@ -155,3 +155,18 @@ func walkASTRegisterTargets(t *testing.T, stmts []*asp.Statement, pkg *core.Pack
 	})
 	return targetLabels
 }
+
+func TestExportSourcesWithSystemLabels(t *testing.T) {
+	// Create a dummy target with a SystemPathLabel and a SystemFileLabel.
+	target := &core.BuildTarget{Label: core.NewBuildLabel("test", "t1")}
+	target.AddTool(core.SystemPathLabel{Name: "non-existent-binary-that-causes-panic", Path: []string{"/bin"}})
+	target.AddSource(core.SystemFileLabel{Path: "/absolute/path/to/some/system/file"})
+
+	be := newExporter(nil, "", false)
+
+	// We expect exportSources to run without panicking because SystemPathLabel and SystemFileLabel
+	// should be skipped.
+	assert.NotPanics(t, func() {
+		be.exportSources(target)
+	}, "Attempting to export targets system-level dependencies should not panic.")
+}

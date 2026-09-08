@@ -202,6 +202,21 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 		if _, ok := src.Label(); ok {
 			continue // These will be handled as dependencies later
 		}
+		// Skip unmanaged system-wide dependencies (like tools on PATH or files on absolute paths).
+		// Since these are on the host system, they are not part of the source repository and
+		// shouldn't be exported. Debug logs added since it could be useful to know of any system
+		// dependencies in our repos. This avoids calling Paths() which searches the host for the
+		// tool and can panic if the host doesn't have the binary installed (e.g. CI runners with no
+		// Python).
+		if _, ok := src.(core.SystemPathLabel); ok {
+			log.Debugf("PATH system dependency detected, skipping...: %s", src.String())
+			continue
+		}
+		if _, ok := src.(core.SystemFileLabel); ok {
+			log.Debugf("Absolute system dependency detected, skipping...: %s", src.String())
+			continue
+		}
+
 		paths := src.Paths(be.state.Graph)
 		if target.Subrepo != nil { // Adjusting for local subrepos
 			for i, p := range paths {
@@ -215,7 +230,6 @@ func (be *baseExporter) exportSources(target *core.BuildTarget) {
 func (be *baseExporter) exportFiles(paths []string) {
 	for _, p := range paths {
 		if filepath.IsAbs(p) { // Don't copy system file deps.
-			log.Debugf("System dependency detected, skipping...: %s", p)
 			continue
 		}
 		dest := filepath.Join(be.targetDir, p)
