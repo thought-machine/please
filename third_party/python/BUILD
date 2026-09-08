@@ -70,8 +70,9 @@ python_wheel(
     deps = [":six"],
 )
 
-pip_library(
+python_wheel(
     name = "progress",
     version = "1.6.1",
     licences = ["ISC"],
+    hashes = ["5239f22f305c12fdc8ce6e0e47f70f21622a935e16eafc4535617112e7c7ea0b"],
 )
