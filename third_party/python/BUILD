@@ -52,8 +52,9 @@ python_wheel(
 
 python_wheel(
     name = "urllib3",
-    hashes = ["9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897"],
-    version = "2.7.0",
+    hashes = ["bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4"],
+    version = "2.6.3",
+    licences = ["MIT"],
 )
 
 python_wheel(
