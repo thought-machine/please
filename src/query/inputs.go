@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"io"
 	"sort"
 
 	"golang.org/x/exp/maps"
@@ -10,7 +11,7 @@ import (
 )
 
 // TargetInputs prints all inputs for a single target.
-func TargetInputs(graph *core.BuildGraph, labels []core.BuildLabel) {
+func TargetInputs(out io.Writer, graph *core.BuildGraph, labels []core.BuildLabel) {
 	inputPaths := map[string]bool{}
 	for _, label := range labels {
 		for sourcePath := range core.IterInputPaths(graph, graph.TargetOrDie(label)) {
@@ -21,6 +22,6 @@ func TargetInputs(graph *core.BuildGraph, labels []core.BuildLabel) {
 	keys := maps.Keys(inputPaths)
 	sort.Strings(keys)
 	for _, path := range keys {
-		fmt.Printf("%s\n", path)
+		fmt.Fprintf(out, "%s\n", path)
 	}
 }

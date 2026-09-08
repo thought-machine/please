@@ -29,6 +29,16 @@ func WhatInputs(graph *core.BuildGraph, files []string, hidden, printFiles, igno
 	}
 }
 
+// WhatInputsLabels returns the targets that have each of the given files as sources,
+// keyed by file. Files that are not a source to any target map to an empty list.
+func WhatInputsLabels(
+	graph *core.BuildGraph,
+	files []string,
+	hidden bool,
+) map[string]core.BuildLabels {
+	return whatInputs(graph.AllTargets(), files, hidden)
+}
+
 func whatInputs(targets []*core.BuildTarget, files []string, hidden bool) map[string]core.BuildLabels {
 	filesMap := make(map[string]map[core.BuildLabel]struct{}, len(files))
 	for _, file := range files {

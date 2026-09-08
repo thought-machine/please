@@ -72,6 +72,17 @@ func handleSpecialFields(specials specialFieldsMap, target *core.BuildTarget, na
 	return reflect.ValueOf(fun(target)), true
 }
 
+// TargetToMap converts a build target into a map of its fields keyed by BUILD rule argument
+// name, the same representation as `plz query print --json`. A non-empty fields list
+// restricts the result to those fields. order is as returned by parse.BuildRuleArgOrder.
+func TargetToMap(
+	order map[string]int,
+	fields []string,
+	target *core.BuildTarget,
+) map[string]interface{} {
+	return targetToValueMap(order, fields, target)
+}
+
 // targetToValueMap creates a map of fields on BuildTarget keyed by the name tag on the struct field annotation. It
 // handles converting fields like named fields, or complex fields so that this can be serialised to json.
 func targetToValueMap(order map[string]int, fieldsToInclude []string, target *core.BuildTarget) map[string]interface{} {

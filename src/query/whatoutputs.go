@@ -29,6 +29,17 @@ func WhatOutputs(graph *core.BuildGraph, files []string, printFiles bool) {
 	}
 }
 
+// WhatOutputsLabels returns the targets responsible for producing each of the given files,
+// keyed by file. Files that are not an output of any target map to an empty list.
+func WhatOutputsLabels(graph *core.BuildGraph, files []string) map[string]core.BuildLabels {
+	targets := graph.AllTargets()
+	ret := make(map[string]core.BuildLabels, len(files))
+	for _, f := range files {
+		ret[f] = whatOutputs(targets, f)
+	}
+	return ret
+}
+
 func whatOutputs(targets []*core.BuildTarget, file string) []core.BuildLabel {
 	ret := []core.BuildLabel{}
 	for _, t := range targets {

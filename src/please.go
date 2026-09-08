@@ -35,6 +35,7 @@ import (
 	"github.com/thought-machine/please/src/generate"
 	"github.com/thought-machine/please/src/hashes"
 	"github.com/thought-machine/please/src/help"
+	"github.com/thought-machine/please/src/mcp"
 	"github.com/thought-machine/please/src/metrics"
 	"github.com/thought-machine/please/src/output"
 	"github.com/thought-machine/please/src/plz"
@@ -266,6 +267,9 @@ var opts struct {
 			Args   TargetsOrArgs   `positional-arg-name:"arguments" description:"Additional targets to watch, or test selectors"`
 		} `positional-args:"true" required:"true"`
 	} `command:"watch" description:"Watches sources of targets for changes and rebuilds them"`
+
+	Mcp struct {
+	} `command:"mcp" description:"Runs a Model Context Protocol server over stdio, answering queries about the build graph from an in-memory cache"`
 
 	Update struct {
 		Force            bool        `long:"force" description:"Forces a re-download of the new version."`
@@ -830,12 +834,12 @@ var buildFunctions = map[string]func() int{
 	},
 	"query.input": func() int {
 		return runQuery(true, opts.Query.Input.Args.Targets, func(state *core.BuildState) {
-			query.TargetInputs(state.Graph, state.ExpandOriginalLabels())
+			query.TargetInputs(os.Stdout, state.Graph, state.ExpandOriginalLabels())
 		})
 	},
 	"query.output": func() int {
 		return runQuery(true, opts.Query.Output.Args.Targets, func(state *core.BuildState) {
-			query.TargetOutputs(state.Graph, state.ExpandOriginalLabels(), opts.Query.Output.JSON)
+			query.TargetOutputs(os.Stdout, state.Graph, state.ExpandOriginalLabels(), opts.Query.Output.JSON)
 		})
 	},
 	"query.completions": func() int {
@@ -1011,6 +1015,13 @@ var buildFunctions = map[string]func() int{
 		state.NeedRun = opts.Watch.Run
 		watch.Watch(state, state.ExpandOriginalLabels(), args, opts.Watch.NoTest, runPlease)
 		return toExitCode(success, state)
+	},
+	"mcp": func() int {
+		if err := mcp.NewServer(config).Serve(context.Background()); err != nil {
+			log.Error("%s", err)
+			return 1
+		}
+		return 0
 	},
 	"generate": func() int {
 		opts.BuildFlags.Include = append(opts.BuildFlags.Include, "codegen")
