@@ -18,9 +18,17 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 
+      - name: Install Please
+        run: |
+          ./pleasew --version
+          # puku shells out to `plz`, but pleasew only installs `please` and doesn't
+          # put it on the PATH, so link it up here.
+          ln -sf "$HOME/.please/please" "$HOME/.please/plz"
+          echo "$HOME/.please" >> "$GITHUB_PATH"
+
       - name: Run puku sync
         run: |
-          ./pleasew puku sync
+          ./pleasew puku sync -w
 
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@4b4693c596717de5c939cfa92b1b0b5c8676537f
