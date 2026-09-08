@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/please-build/buildtools/build"
@@ -131,10 +132,8 @@ func initGoMod(dir string) (string, error) {
 
 	// Reuse an existing filegroup if the repo already exports go.mod under another name.
 	for _, rule := range buildFile.Rules("filegroup") {
-		for _, src := range rule.AttrStrings("srcs") {
-			if src == goModFileName {
-				return "//:" + rule.Name(), nil
-			}
+		if slices.Equal(rule.AttrStrings("srcs"), []string{goModFileName}) {
+			return "//:" + rule.Name(), nil
 		}
 	}
 
