@@ -16,13 +16,6 @@ type BuildStatement interface {
 	EndPos() int
 }
 
-// BuildStatements is a slice of BuildStatement that implements sort.Interface.
-type BuildStatements []BuildStatement
-
-func (s BuildStatements) Len() int           { return len(s) }
-func (s BuildStatements) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s BuildStatements) Less(i, j int) bool { return s[i].StartPos() < s[j].StartPos() }
-
 // BuildStatementProvider defines a closure that generates new build statements.
 // It is used as an argument in PackageMetadata methods to defer evaluation, avoiding
 // unnecessary computation when using the no-op implementation.
@@ -294,7 +287,7 @@ func (m *trackedPackageMetadata) FindPackageLevelRequirements() (BuildLabels, []
 	requiredSet := labelSet{}
 	filesSet := map[string]struct{}{}
 
-	// The intention is to finds all the subincluded labels required by the package but not used to
+	// The intention is to find all the subincluded labels required by the package but not used to
 	// generate targets. An example could be a variable declaration that depends on a subincluded value.
 	// We range over all interpreted statements that require any subincluded target. From those, we
 	// filter out the statements that generate targets and any explicit subinclude() statement calls.

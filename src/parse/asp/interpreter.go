@@ -1148,7 +1148,7 @@ func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
 	// 2. Not interpreting a package (e.g. in subincluded targets)
 	// 3. Any external/remote subrepos.
 	// For 2 and 3, the current uses cases for this metadata (e.g. export) don't process these, so we
-	// avoid tracking to save CPU and memory. That could be easily update if we decide tracking these
+	// avoid tracking to save CPU and memory. That could be easily updated if we decide tracking these
 	// is required.
 	var meta scopeMetadata = &noopScopeMetadata{}
 	if pkg == nil || !s.state.ParseMetadata || pkg.Subrepo.IsExternal() {

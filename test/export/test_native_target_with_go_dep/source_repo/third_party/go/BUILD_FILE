@@ -16,7 +16,7 @@ go_stdlib(
 )
 
 go_repo(
-    # unused, unused target
+    # unused target
     name = "uuid",
     module = "github.com/google/uuid",
     version = f"{LIB_VERSION}",
