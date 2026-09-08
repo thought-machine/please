@@ -14,7 +14,7 @@ var log = logging.Log
 
 func Debug(state *core.BuildState, label core.BuildLabel, args, env []string, shareNetwork, shareMount bool) int {
 	target := state.Graph.TargetOrDie(label)
-	if len(target.Debug.Command) == 0 {
+	if target.Debug == nil || len(target.Debug.Command) == 0 {
 		log.Fatalf("The build definition used by %s doesn't appear to support debugging yet", target.Label)
 	}
 
