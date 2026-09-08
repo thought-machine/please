@@ -24,7 +24,7 @@ type trimmedExporter struct {
 	preloadedSubincludes map[core.BuildLabel]bool
 }
 
-func newTrimmedExporter(base *baseExporter) exporterImpl {
+func newTrimmedExporter(base *baseExporter) exportStrategy {
 	return &trimmedExporter{
 		baseExporter:         base,
 		visitedPackages:      map[core.BuildLabel]bool{},
@@ -33,7 +33,7 @@ func newTrimmedExporter(base *baseExporter) exporterImpl {
 	}
 }
 
-// exportPreloaded implements [exporterImpl].
+// exportPreloaded implements [exportStrategy].
 func (e *trimmedExporter) exportPreloaded() {
 	// Write any preloaded build defs
 	for _, preload := range e.state.Config.Parse.PreloadBuildDefs {
@@ -51,7 +51,7 @@ func (e *trimmedExporter) exportPreloaded() {
 	}
 }
 
-// exportTarget implements [exporterImpl].
+// exportTarget implements [exportStrategy].
 func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 	if !e.checkAndSetVisited(target) {
 		return
@@ -88,7 +88,7 @@ func (e *trimmedExporter) exportTarget(target *core.BuildTarget) {
 	}
 }
 
-// writePackageFiles implements [exporterImpl].
+// writePackageFiles implements [exportStrategy].
 func (e *trimmedExporter) writePackageFiles() {
 	p := asp.NewParserOnly()
 	for pkgLabel := range e.visitedPackages {

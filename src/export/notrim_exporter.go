@@ -16,14 +16,14 @@ type noTrimExporter struct {
 	exportedPackages map[core.BuildLabel]bool
 }
 
-func newNoTrimExporter(base *baseExporter) exporterImpl {
+func newNoTrimExporter(base *baseExporter) exportStrategy {
 	return &noTrimExporter{
 		baseExporter:     base,
 		exportedPackages: map[core.BuildLabel]bool{},
 	}
 }
 
-// exportPreloaded implements [exporterImpl].
+// exportPreloaded implements [exportStrategy].
 func (nte *noTrimExporter) exportPreloaded() {
 	// Write any preloaded build defs
 	for _, preload := range nte.state.Config.Parse.PreloadBuildDefs {
@@ -38,7 +38,7 @@ func (nte *noTrimExporter) exportPreloaded() {
 	}
 }
 
-// exportTarget implements [exporterImpl].
+// exportTarget implements [exportStrategy].
 func (nte *noTrimExporter) exportTarget(target *core.BuildTarget) {
 	pkg, err := nte.getPackage(target.Label)
 	if err != nil {
@@ -64,7 +64,7 @@ func (nte *noTrimExporter) exportTarget(target *core.BuildTarget) {
 	nte.exportDependencies(target)
 }
 
-// writePackageFiles implements [exporterImpl].
+// writePackageFiles implements [exportStrategy].
 func (nte *noTrimExporter) writePackageFiles() {
 	for pkgLabel := range nte.exportedPackages {
 		pkg, err := nte.getPackage(pkgLabel)

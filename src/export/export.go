@@ -50,10 +50,10 @@ func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	}
 }
 
-// exporterImpl defines the interface for exporting parts of a Please repository to a new directory.
+// exportStrategy defines the interface for exporting parts of a Please repository to a new directory.
 // It handles the copying of configuration files, preloaded build definitions, and selected
 // targets along with their necessary source files and dependencies.
-type exporterImpl interface {
+type exportStrategy interface {
 	// exportPreloaded exports all globally preloaded build definitions and subincluded targets.
 	// These are usually defined in the repository's configuration file.
 	exportPreloaded()
@@ -75,14 +75,14 @@ func newExporter(state *core.BuildState, dir string, noTrim bool) *baseExporter 
 		exportedTargets: map[core.BuildLabel]bool{},
 	}
 
-	var exporter exporterImpl
+	var strategy exportStrategy
 	if noTrim {
-		exporter = newNoTrimExporter(base)
+		strategy = newNoTrimExporter(base)
 	} else {
-		exporter = newTrimmedExporter(base)
+		strategy = newTrimmedExporter(base)
 	}
 
-	base.impl = exporter
+	base.strategy = strategy
 	return base
 }
 
@@ -94,9 +94,9 @@ type baseExporter struct {
 
 	// exportedTargets maintains a record of the targets that have been exported so far.
 	exportedTargets map[core.BuildLabel]bool
-	// impl is a reference to the concrete exporter implementation. It's included for calling the
-	// specific exporter implementation from the common methods.
-	impl exporterImpl
+	// strategy is a reference to the concrete exporter strategy. It's included for calling the
+	// specific exporter strategy from the common methods.
+	strategy exportStrategy
 }
 
 // run specifies the main steps when running an export.
@@ -106,9 +106,9 @@ func (be *baseExporter) run(targets core.BuildLabels) {
 	defer close(stop)
 
 	be.exportRepoConfig()
-	be.impl.exportPreloaded()
+	be.strategy.exportPreloaded()
 	be.exportTargets(targets)
-	be.impl.writePackageFiles()
+	be.strategy.writePackageFiles()
 }
 
 func (be *baseExporter) startMonitor(stop chan struct{}) {
@@ -186,7 +186,7 @@ func (be *baseExporter) exportTargets(labels core.BuildLabels) {
 			log.Errorf("Unable to lookup target %s: %s", l, err)
 			continue
 		}
-		be.impl.exportTarget(target)
+		be.strategy.exportTarget(target)
 	}
 }
 

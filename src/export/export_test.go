@@ -55,7 +55,7 @@ func TestMinimalSubincludeStatement(t *testing.T) {
 			assert.Len(t, statements, 1)
 			stmt := statements[0]
 
-			e := newExporter(nil, "", false).impl.(*trimmedExporter)
+			e := newExporter(nil, "", false).strategy.(*trimmedExporter)
 
 			pkg := &core.Package{Name: "test"}
 			e.requiredSubincludes[pkg.Label()] = tc.requiredLabels
@@ -110,7 +110,7 @@ func TestFilterPackageFile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			e := newExporter(nil, "", false).impl.(*trimmedExporter)
+			e := newExporter(nil, "", false).strategy.(*trimmedExporter)
 			for _, name := range tc.required {
 				e.exportedTargets[targetLabels[name]] = true
 			}
