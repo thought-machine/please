@@ -65,8 +65,8 @@ python_wheel(
 python_wheel(
     name = "absl",
     package_name = "absl_py",
-    hashes = ["0f17b89f2a4eaaedc4f28c622998aa690564b3012a396a4ffad0821007fe03ba"],
-    version = "2.5.0",
+    hashes = ["526a04eadab8b4ee719ce68f204172ead1027549089702d99b9059f129ff1308"],
+    version = "2.1.0",
     deps = [":six"],
 )
 
