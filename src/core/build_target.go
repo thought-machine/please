@@ -1812,6 +1812,8 @@ func (target *BuildTarget) IsTool(tool BuildLabel) bool {
 		return true
 	} else if target.Test != nil && target.isTool(tool, target.Test.tools, target.Test.namedTools) {
 		return true
+	} else if target.Debug != nil && target.isTool(tool, target.Debug.tools, target.Debug.namedTools) {
+		return true
 	}
 	return false
 }
