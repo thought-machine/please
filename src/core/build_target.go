@@ -568,7 +568,6 @@ func (target *BuildTarget) DeclaredDependenciesStrict() iter.Seq[BuildLabel] {
 
 // Dependencies returns the resolved dependencies of this target, applying any require/provide
 // relationships to map each declared dependency to the target(s) that actually satisfy it.
-// It requires the graph to look targets up, since a BuildTarget no longer caches these itself.
 //
 // The second return is the labels of any dependencies that aren't in the graph. For most callers
 // that indicates something has gone wrong and should be reported, but it's a legitimate state for
@@ -604,6 +603,8 @@ func (target *BuildTarget) Dependencies(graph *BuildGraph) ([]*BuildTarget, []Bu
 // dependencies (i.e. "_target#tag" ones sharing this target's parent) flattened out to the
 // external targets they in turn depend on. Require/provide relationships are applied as in Dependencies,
 // as is the second return of any dependencies that aren't in the graph.
+//
+// TODO(peterebden): This is used in only one place (for coverage); determine if that is necessary and, if so, move it there.
 func (target *BuildTarget) ExternalDependencies(graph *BuildGraph) ([]*BuildTarget, []BuildLabel) {
 	target.mutex.RLock()
 	labels := make([]BuildLabel, len(target.dependencies))

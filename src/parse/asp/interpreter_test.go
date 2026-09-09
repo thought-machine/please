@@ -780,9 +780,9 @@ func TestCurrentBuildStatement(t *testing.T) {
 	state.ParseMetadata = true
 
 	parser := &Parser{}
-	interpreter := newInterpreter(state, parser)
+	interpreter := newInterpreter(state, parser, nil)
 
-	rootScope := interpreter.scope.NewPackagedScope(pkg, 0, 0)
+	rootScope := interpreter.scope.NewPackagedScope(t.Context(), pkg, 0)
 
 	// Root statement in the BUILD file (e.g. a macro call)
 	rootStmt := &Statement{Pos: 10, EndPos: 20}

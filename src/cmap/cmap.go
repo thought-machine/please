@@ -126,7 +126,7 @@ func (s *shard[K, V]) Set(key K, val V, overwrite bool) bool {
 	return true
 }
 
-// get returns the value for a key, or its zero value if it isn't present.
+// Get returns the value for a key, or its zero value if it isn't present.
 // Unlike Get it never inserts anything, so it's safe for callers that only want to read.
 func (s *shard[K, V]) Get(key K) V {
 	s.l.RLock()
@@ -134,7 +134,7 @@ func (s *shard[K, V]) Get(key K) V {
 	return s.m[key].Val
 }
 
-// Get returns the value for a key or, if not present, a channel that it can be waited
+// GetOrWait returns the value for a key or, if not present, a channel that it can be waited
 // on for.
 // Exactly one of the target or channel will be returned.
 // The third value is true if it is the first call that is waiting on this value.

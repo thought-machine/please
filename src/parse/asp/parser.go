@@ -26,8 +26,8 @@ func (s semaphore) Release() { <-s }
 
 // Callbacks is the interface we require from something that we can call back to for builds / parses.
 type Callbacks interface {
-	Parse(context.Context, core.BuildLabel, core.BuildLabel) (*core.Package, error)
-	BuildAndDownload(context.Context, core.BuildLabel, core.BuildLabel) (*core.BuildTarget, error)
+	Parse(ctx context.Context, pkg, dependent core.BuildLabel) (*core.Package, error)
+	BuildAndDownload(ctx context.Context, target, dependent core.BuildLabel) (*core.BuildTarget, error)
 }
 
 // A Parser implements parsing of BUILD files.

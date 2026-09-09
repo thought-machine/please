@@ -54,7 +54,7 @@ func TestGetDoesntInsert(t *testing.T) {
 func TestReAdd(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
 	assert.True(t, m.Add(5, 7))
-	assert.False(t, m.Add(5, 7))
+	assert.False(t, m.Add(5, 8))
 	assert.Equal(t, 7, m.Get(5))
 	m.Set(5, 8)
 	assert.Equal(t, 8, m.Get(5))

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"slices"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
@@ -197,11 +198,15 @@ func printMetadata(state *core.BuildState, packageTargets map[*core.Package]core
 							if opts.IncludeSources && len(target.AllSources()) > 0 {
 								details = append(details, optDetail{"Sources", inputsToItems(target.AllSources())})
 							}
-							if opts.IncludeDeps && len(target.DeclaredDependencies()) > 0 {
-								details = append(details, optDetail{"Dependencies", labelsToItems(target.DeclaredDependencies(), "${GREEN}")})
+							if opts.IncludeDeps {
+								if deps := slices.Collect(target.DeclaredDependencies()); len(deps) > 0 {
+									details = append(details, optDetail{"Dependencies", labelsToItems(deps, "${GREEN}")})
+								}
 							}
-							if opts.IncludeOutputs && len(target.Outputs()) > 0 {
-								details = append(details, optDetail{"Outputs", stringsToItems(target.Outputs(), "")})
+							if opts.IncludeOutputs {
+								if outputs := target.Outputs(state.Graph); len(outputs) > 0 {
+									details = append(details, optDetail{"Outputs", stringsToItems(outputs, "")})
+								}
 							}
 
 							for idx, det := range details {

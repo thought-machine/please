@@ -429,16 +429,16 @@ func (s *scope) subincludePackage() *core.Package {
 }
 
 // NewScope creates a new child scope of this one, continuing on the same context.
-// Use newScope directly if the new scope belongs to a different chain of work to this one; the context
-// describes what we are currently doing, which isn't always the same as where a scope sits lexically.
+// Use newScope for more control, e.g. if you need to supply a different context because your parse is no longer
+// within the same functional scope.
 func (s *scope) NewScope(filename string) *scope {
 	return s.newScope(s.ctx, s.pkg, filename, 0)
 }
 
 // NewPackagedScope creates a new child scope of this one pointing to the given package.
 // hint is a size hint for the new set of locals.
-func (s *scope) NewPackagedScope(ctx context.Context, pkg *core.Package, mode core.ParseMode, hint int) *scope {
-	newScope := s.newScope(ctx, pkg, mode, pkg.Filename, hint)
+func (s *scope) NewPackagedScope(ctx context.Context, pkg *core.Package, hint int) *scope {
+	newScope := s.newScope(ctx, pkg, pkg.Filename, hint)
 	// Since we only want to track metadata for new top level packaged scopes, we explicitly add it here
 	// after creation.
 	newScope.metadata = newScope.getOrNewMetadata(pkg)
@@ -1164,17 +1164,18 @@ func (s *scope) getOrNewMetadata(pkg *core.Package) scopeMetadata {
 	// For 2 and 3, the current uses cases for this metadata (e.g. export) don't process these, so we
 	// avoid tracking to save CPU and memory. That could be easily updated if we decide tracking these
 	// is required.
-	var meta scopeMetadata = &noopScopeMetadata{}
 	if pkg == nil || !s.state.ParseMetadata || pkg.Subrepo.IsExternal() {
-		return meta
+		return &noopScopeMetadata{}
 	}
 
-	meta, _ = s.interpreter.packageMetadata.AddOrGet(pkg.Label(), func() scopeMetadata {
-		return &trackingScopeMetadata{
-			// symbolOrigins is lazy initialized in [trackingScopeMetadata.setSymbolOrigin]
-			symbolStack: []trackedSymbol{},
-		}
-	})
+	var meta scopeMetadata = &trackingScopeMetadata{
+		// symbolOrigins is lazy initialized in [trackingScopeMetadata.setSymbolOrigin]
+		symbolStack: []trackedSymbol{},
+	}
+	label := pkg.Label()
+	if !s.interpreter.packageMetadata.Add(label, meta) {
+		meta = s.interpreter.packageMetadata.Get(label)
+	}
 	return meta
 }
 

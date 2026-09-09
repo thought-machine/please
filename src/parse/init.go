@@ -20,7 +20,7 @@ import (
 // InitParser initialises the parser engine.
 func InitParser(state *core.BuildState, callbacks asp.Callbacks) *asp.Parser {
 	// There is some awkward coupling here for the benefit of the language server, which wants to get its
-	// hands on the parser, but it cannot create a fully functional one any more.
+	// hands on the parser, but it cannot create a fully functional one on its own.
 	if p, ok := state.Parser.(*aspParser); ok {
 		p.callbacks = callbacks
 		p.parser.SetCallbacks(callbacks)

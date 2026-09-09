@@ -8,7 +8,6 @@ build_rule(
     },
     outs = ["sub"],
     cmd = f'mkdir -p "$OUT" && cp "$SRCS_BUILD" "$OUT/{build_file_name}" && cp "$SRCS_DEFS" "$OUT/defs.build_defs"',
-    _subrepo = True,
 )
 
 subrepo(

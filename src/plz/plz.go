@@ -91,7 +91,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		state.Graph.AddSubrepo(core.SubrepoForArch(state, arch))
 	}
 	if len(preTargets) > 0 {
-		r.FindOriginalTaskSet(ctx, preTargets, false, true)
+		r.QueueOriginalTaskSet(ctx, preTargets, false, true)
 		if err := g.Wait(); err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		g, ctx = r.group(topctx)
 		r.tasks = g
 	}
-	r.FindOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
+	r.QueueOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
 	if state.NeedDebugDeps {
 		if len(targets) != 1 {
 			return fmt.Errorf("expected exactly 1 target in debug mode; got %d", len(targets))
@@ -112,7 +112,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	return g.Wait()
 }
 
-// RunHostAsync is a convenience function that uses the host architecture, the given state's
+// RunHost is a convenience function that uses the host architecture, the given state's
 // configuration and no pre targets. It is otherwise identical to Run.
 func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 	Run(targets, nil, state, &Progress{}, cli.HostArch())
@@ -126,7 +126,7 @@ type runner struct {
 	progress      *Progress
 	buildOnce     *cmap.ErrMap[core.BuildLabel, *core.BuildTarget]
 	parseOnce     *cmap.Map[core.BuildLabel, struct{}]
-	preloadOnce   *cmap.ErrMap[string, struct{}]
+	preloadOnce   *cmap.ErrMap[string, struct{}]  // Keyed by the subrepo that we're preloading for
 	localLimiter  limiter
 	remoteLimiter limiter
 	anyRemote     bool
@@ -282,6 +282,7 @@ func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildL
 		r.state.Graph.MaybeAddSubrepo(core.SubrepoForArch(r.state, arch))
 		return nil
 	} else if err != nil {
+		// This returns the missing build file error that we got from tryParse above.
 		return err
 	}
 	return fmt.Errorf("Subrepo %s is not defined (referenced by %s)", label.Subrepo, dependent)
@@ -383,7 +384,7 @@ func (r *runner) resolveTarget(ctx context.Context, label core.BuildLabel, depen
 	}
 }
 
-// buildDep builds a single dependency of a target (which might of course turn into multiple when resolved)
+// buildDep builds a single dependency of a target (which might turn into multiple when resolving require/provide)
 func (r *runner) buildDep(ctx context.Context, dep core.BuildLabel, target *core.BuildTarget) error {
 	for t, err := range r.resolveTarget(ctx, dep, target) {
 		if err != nil {
@@ -443,7 +444,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	// N.B. Even when there are none we can't just build the target and return; its own callbacks
 	//      can add some, which we won't know about until it's built.
 	if len(deps) == 0 {
-		if err := r.buildJustOne(ctx, target); err != nil {
+		if err := r.runBuildAction(ctx, target); err != nil {
 			return err
 		}
 	} else if target.PreBuildFunction != nil {
@@ -458,13 +459,13 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 		if err := g.Wait(); err != nil {
 			return err
 		}
-		if err := r.buildJustOne(ctx, target); err != nil {
+		if err := r.runBuildAction(ctx, target); err != nil {
 			return err
 		}
 	} else {
 		g, gctx = r.group(ctx)
 		g.Go(func() error {
-			return r.buildJustOne(gctx, target)
+			return r.runBuildAction(gctx, target)
 		})
 		for _, dep := range deps {
 			g.Go(func() error {
@@ -479,7 +480,7 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	if !target.ModifiedByCallback {
 		return nil
 	}
-	// It could have modified itself with its own post-build function, so we have to check runtime dpendencies again.
+	// It could have modified itself with its own post-build function, so we have to check runtime dependencies again.
 	// This is a little unfortunate that we can't immediately distinguish from the case we checked above.
 	g, gctx = r.group(ctx)
 	for dep := range target.RuntimeAndDataDependencies() {
@@ -490,8 +491,8 @@ func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
 	return g.Wait()
 }
 
-// buildJustOne calls the build for a single target.
-func (r *runner) buildJustOne(ctx context.Context, target *core.BuildTarget) error {
+// runBuildAction calls the build for a single target.
+func (r *runner) runBuildAction(ctx context.Context, target *core.BuildTarget) error {
 	remote := r.anyRemote && !target.Local
 	limiter := r.limiter(remote)
 	limiter.Acquire()
@@ -564,7 +565,8 @@ func (r *runner) testOne(ctx context.Context, target *core.BuildTarget, dependen
 		return nil
 	}
 	// Now we're ready to test this target.
-	// TODO(peter): Is it okay for none of these to return errors? I _think_ so and we will capture it later?
+	// We don't require to return errors here because failed tests are aggregated as build results
+	// and reported back to the user via a different channel.
 	remote := r.anyRemote && !target.Local
 	limiter := r.limiter(remote)
 	if r.state.TestSequentially || r.state.NumTestRuns == 1 {
@@ -625,10 +627,10 @@ func (r *runner) limiter(remote bool) limiter {
 	return r.localLimiter
 }
 
-func (r *runner) FindOriginalTaskSet(ctx context.Context, targets []core.BuildLabel, needTest, needBuild bool) {
+func (r *runner) QueueOriginalTaskSet(ctx context.Context, targets []core.BuildLabel, needTest, needBuild bool) {
 	for _, target := range ReadStdinLabels(targets) {
 		r.tasks.Go(func() error {
-			return r.findOriginalTask(ctx, target, needTest, needBuild)
+			return r.queueOriginalTask(ctx, target, needTest, needBuild)
 		})
 	}
 }
@@ -640,12 +642,12 @@ func (r *runner) queueTargetsForDebug(ctx context.Context, target core.BuildLabe
 	t := r.state.Graph.TargetOrDie(target)
 	for _, tool := range t.AllDebugTools() {
 		if l, ok := tool.Label(); ok {
-			r.findOriginalTask(ctx, l, false, true)
+			r.queueOriginalTask(ctx, l, false, true)
 		}
 	}
 	for _, data := range t.AllDebugData() {
 		if l, ok := data.Label(); ok {
-			r.findOriginalTask(ctx, l, false, true)
+			r.queueOriginalTask(ctx, l, false, true)
 		}
 	}
 	return nil
@@ -671,7 +673,7 @@ func stripHostRepoName(config *core.Configuration, label core.BuildLabel) core.B
 	return label
 }
 
-func (r *runner) findOriginalTask(ctx context.Context, target core.BuildLabel, needTest, needBuild bool) error {
+func (r *runner) queueOriginalTask(ctx context.Context, target core.BuildLabel, needTest, needBuild bool) error {
 	if r.arch != cli.HostArch() {
 		target = core.LabelToArch(target, r.arch)
 	}
@@ -691,7 +693,7 @@ func (r *runner) findOriginalTask(ctx context.Context, target core.BuildLabel, n
 		} else if err := r.state.EnsureDownloaded(target); err != nil {
 			return err
 		}
-		// Targets now get activated during parsing, so can be built before we finish parsing their package.
+		// Targets get activated during parsing, so can be built before we finish parsing their package.
 		if _, err := r.Parse(ctx, subrepoLabel, core.OriginalTarget); err != nil {
 			return err
 		}
@@ -720,7 +722,6 @@ func (r *runner) queueTask(ctx context.Context, target core.BuildLabel, needTest
 			return r.Test(ctx, target, core.OriginalTarget)
 		} else if needBuild {
 			_, err := r.Build(ctx, target, core.OriginalTarget)
-			// TODO(peter): Ensure this gets downloaded if needed
 			return err
 		}
 		if r.state.ParsePackageOnly {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/thought-machine/please/src/cli"
@@ -193,7 +194,7 @@ func (be *baseExporter) exportTargets(labels core.BuildLabels) {
 // exportDependencies exports dependencies of a target.
 func (be *baseExporter) exportDependencies(target *core.BuildTarget) {
 	deps := target.DeclaredDependencies()
-	be.exportTargets(deps)
+	be.exportTargets(slices.Collect(deps))
 }
 
 // exportSources exports all files required by the target.

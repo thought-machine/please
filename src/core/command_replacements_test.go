@@ -270,10 +270,6 @@ func makeTarget2(name string, command string, dep *BuildTarget) *BuildTarget {
 	target := NewBuildTarget(ParseBuildLabel(name, ""))
 	target.Command = command
 	target.AddOutput(target.Label.Name + ".py")
-	// Dependency resolution now happens against the graph at replacement time rather than being
-	// cached on the target, so the targets must live in the state's graph. These tests share a
-	// global state and reuse labels across tests, so we replace rather than AddTarget (which would
-	// panic on a duplicate label).
 	state.Graph.targets.Set(target.Label, target)
 	if dep != nil {
 		target.AddDependency(dep.Label)
