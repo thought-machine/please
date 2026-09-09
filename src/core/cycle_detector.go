@@ -3,17 +3,18 @@ package core
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 )
 
 type cycleDetector struct {
 	graph   *BuildGraph
-	stopped bool
+	stopped atomic.Bool
 }
 
 // Check runs a single check of the build graph to see if any cycles can be detected.
 // If it finds one an errCycle is returned.
 func (c *cycleDetector) Check() *errCycle {
-	if c.stopped {
+	if c.stopped.Load() {
 		return nil
 	}
 	log.Debug("Running cycle detection...")
@@ -27,7 +28,7 @@ func (c *cycleDetector) Check() *errCycle {
 	// cycle is complete or not (if not the caller will need to add its node to it as well).
 	var visit func(target *BuildTarget) ([]*BuildTarget, bool)
 	visit = func(target *BuildTarget) ([]*BuildTarget, bool) {
-		if c.stopped {
+		if c.stopped.Load() {
 			return nil, false
 		} else if _, present := complete[target]; present {
 			return nil, false
@@ -49,7 +50,7 @@ func (c *cycleDetector) Check() *errCycle {
 	}
 
 	for _, target := range c.graph.AllTargets() {
-		if c.stopped {
+		if c.stopped.Load() {
 			log.Debug("Cycle detection terminated")
 			return nil
 		}
@@ -66,7 +67,7 @@ func (c *cycleDetector) Check() *errCycle {
 
 // Stop stops any existing run of the cycle detector.
 func (c *cycleDetector) Stop() {
-	c.stopped = true
+	c.stopped.Store(true)
 }
 
 // An errCycle is emitted when a graph cycle is detected.
