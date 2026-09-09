@@ -1,0 +1,10 @@
+if False:
+    pass  # Trimmed during export
+elif True:
+    genrule(
+        name = "b",
+        outs = ["b.txt"],
+        cmd = "echo b > $OUT",
+    )
+else:
+    pass  # Trimmed during export

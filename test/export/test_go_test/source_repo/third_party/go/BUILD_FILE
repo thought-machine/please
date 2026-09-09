@@ -1,0 +1,36 @@
+go_toolchain(
+    name = "toolchain",
+    version = "1.26.2",
+)
+
+go_stdlib(name = "std")
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "github.com/google/go-cmp",
+    version = "v0.6.0",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/stretchr/testify",
+    version = "v1.9.0",
+)
+
+go_repo(
+    licences = ["ISC"],
+    module = "github.com/davecgh/go-spew",
+    version = "v1.1.1",
+)
+
+go_repo(
+    licences = ["BSD-3-Clause"],
+    module = "github.com/pmezard/go-difflib",
+    version = "v1.0.0",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "gopkg.in/yaml.v3",
+    version = "v3.0.1",
+)

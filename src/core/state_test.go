@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -203,5 +204,65 @@ func TestWaitForPackageConcurrent(t *testing.T) {
 		case <-time.After(10 * time.Second):
 			t.Fatalf("iteration %d: a WaitForPackage caller never woke", i)
 		}
+	}
+}
+
+func TestLogBuildErrorConcurrency(t *testing.T) {
+	state := NewDefaultBuildState()
+	label := ParseBuildLabel("//src/core:all", "")
+
+	// Spawn multiple goroutines waiting for the package to finish parsing.
+	// These will call SyncParsePackage, and block on the channel for this package .
+	const numWaiters = 5
+	var wg sync.WaitGroup
+	started := make(chan int, numWaiters)
+	tasks := make(chan int, numWaiters)
+	for i := range numWaiters {
+		wg.Go(func() {
+			started <- i
+			state.SyncParsePackage(label)
+			tasks <- i
+		})
+	}
+
+	// Wait for all goroutines to start and be about to call SyncParsePackage.
+	for range numWaiters {
+		<-started
+	}
+	// Wait for the first call to finish. Exactly one of the calls shouldn't block.
+	<-tasks
+
+	// Give other waiters time to block on the wait channel.
+	time.Sleep(time.Millisecond)
+	if len(tasks) > 0 {
+		t.Errorf("Expected only the first caller of SyncParsePackage to proceed immediately, but %d others unblocked prematurely", len(tasks))
+	}
+
+	// Trigger failures for the exact same package. Concurrently to validate the logic for closing
+	// channels.
+	const numFailures = 3
+	var wgFail sync.WaitGroup
+	for range numFailures {
+		wgFail.Go(func() {
+			state.LogBuildError(label, ParseFailed, fmt.Errorf("intended test error"), "failed to parse %s", label)
+		})
+	}
+	wgFail.Wait()
+
+	// Ensure all blocked waiters are unblocked safely (no deadlocks)
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All waiters unblocked without panicking or deadlocking.
+		if len(tasks) != numWaiters-1 {
+			t.Errorf("Expected all remaining 4 waiters to have unblocked and written to tasks, but only %d did", len(tasks))
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Deadlock detected: waiting goroutines failed to unblock within 1 seconds")
 	}
 }

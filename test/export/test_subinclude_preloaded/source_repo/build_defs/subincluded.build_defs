@@ -1,0 +1,7 @@
+subinclude("//build_defs:preloaded_build_def")
+
+def custom_file(name, src):
+    filegroup(
+        name = name,
+        srcs = [src],
+    )

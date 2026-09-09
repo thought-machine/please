@@ -127,3 +127,34 @@ func TestObjLen(t *testing.T) {
 	assert.EqualValues(t, 1, objLen(d))
 	assert.EqualValues(t, 1, objLen(d.Freeze()))
 }
+
+func TestSubincludeArgs(t *testing.T) {
+	// Test basic parsing of mixed strings and lists of strings.
+	args := []pyObject{
+		pyString("//src/core:all"),
+		pyList{
+			pyString("//src/parse:all"), pyString("//src/build:all"),
+			pyInt(123), // An integer inside a list should cause an error
+		},
+	}
+
+	type result struct {
+		val string
+		err error
+	}
+	var results []result
+	for val, err := range subincludeArgs(args) {
+		results = append(results, result{val: val, err: err})
+	}
+
+	assert.Len(t, results, 4)
+	assert.Equal(t, "//src/core:all", results[0].val)
+	assert.Nil(t, results[0].err)
+	assert.Equal(t, "//src/parse:all", results[1].val)
+	assert.Nil(t, results[1].err)
+	assert.Equal(t, "//src/build:all", results[2].val)
+	assert.Nil(t, results[2].err)
+	// Test for an error when yielding the integer.
+	assert.Equal(t, "", results[3].val)
+	assert.Error(t, results[3].err)
+}

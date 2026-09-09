@@ -1,0 +1,5 @@
+filegroup(
+    name = "tools",
+    srcs = ["tools.sh"],
+    visibility = ["PUBLIC"],
+)

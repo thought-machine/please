@@ -1,0 +1,22 @@
+def custom(
+        name:str,
+        srcs:list=[],
+        outs:list=[]):
+    return genrule(
+        name = name,
+        srcs = srcs,
+        outs = outs,
+        cmd = "cat $SRCS > $OUT",
+    )
+
+custom(
+    name = "custom_target",
+    srcs = ["file.txt"],
+    outs = ["file_simple.out"],
+)
+
+custom(
+    name = "unused",
+    srcs = ["unused.in"],
+    outs = ["unused.out"],
+)

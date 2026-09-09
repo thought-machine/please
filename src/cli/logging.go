@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	cli "github.com/peterebden/go-cli-init/v5/logging"
-	"github.com/peterebden/go-deferred-regex"
+	deferredregex "github.com/peterebden/go-deferred-regex"
 	"golang.org/x/term"
 	"gopkg.in/op/go-logging.v1"
 
@@ -184,9 +184,6 @@ func (backend *LogBackend) calcOutput() []string {
 			ret = append(ret, new...)
 		}
 	}
-	if len(ret) > 0 {
-		ret = append(ret, "Messages:")
-	}
 	return reverse(ret)
 }
 
@@ -246,6 +243,16 @@ func (backend *LogBackend) Output() []string {
 	backend.mutex.Lock()
 	defer backend.mutex.Unlock()
 	return backend.output[:]
+}
+
+// FlushOutput returns the current set of preformatted log messages and clears them.
+func (backend *LogBackend) FlushOutput() []string {
+	backend.mutex.Lock()
+	defer backend.mutex.Unlock()
+	ret := backend.output[:]
+	backend.output = nil
+	backend.logMessages.Init()
+	return ret
 }
 
 // Wraps a string across multiple lines. Returned slice is reversed.

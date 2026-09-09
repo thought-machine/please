@@ -1,0 +1,17 @@
+filegroup(
+    name = "custom_build_def",
+    srcs = ["custom.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "secondary_build_def",
+    srcs = ["secondary.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "secondary_file",
+    src = "secondary.file",
+    visibility = ["PUBLIC"],
+)

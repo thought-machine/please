@@ -1,0 +1,17 @@
+for file in glob(["file*.in"]):
+    genrule(
+        name = "target_" + file.removesuffix(".in"),
+        srcs = [file],
+        outs = [file.removesuffix(".in") + ".out"],
+        cmd = "cp $SRCS $OUT",
+    )
+
+filegroup(
+    name = "all_files",
+    srcs = [
+        ":target_file1",
+    ],
+)
+
+for file in glob(["doc*.in"]):
+    pass  # Trimmed during export

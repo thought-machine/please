@@ -12,7 +12,7 @@ import (
 
 func newScope(pkgName, subrepo, plugin string) *scope {
 	s := &scope{
-		pkg:   core.NewPackageSubrepo(pkgName, subrepo),
+		pkg:   core.NewPackage(pkgName, core.WithPackageSubrepo(subrepo)),
 		state: core.NewBuildState(core.DefaultConfiguration()),
 	}
 	if plugin != "" {

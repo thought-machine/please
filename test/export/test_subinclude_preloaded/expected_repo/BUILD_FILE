@@ -1,0 +1,6 @@
+subinclude("//build_defs:subincluded_build_def")
+
+custom_file(
+    name = "file",
+    src = "file.txt",
+)

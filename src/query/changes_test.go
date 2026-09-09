@@ -160,7 +160,7 @@ func addTarget(state *core.BuildState, label string, dep *core.BuildTarget, sour
 	}
 	pkg := state.Graph.PackageByLabel(t.Label)
 	if pkg == nil {
-		pkg = core.NewPackageSubrepo(t.Label.PackageName, t.Label.Subrepo)
+		pkg = core.NewPackage(t.Label.PackageName, core.WithPackageSubrepo(t.Label.Subrepo))
 		state.Graph.AddPackage(pkg)
 	}
 	pkg.AddTarget(t)

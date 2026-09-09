@@ -1,0 +1,13 @@
+filegroup(
+    name = "defs",
+    srcs = ["defs.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+subinclude(":defs")
+
+genrule(
+    name = "test",
+    outs = ["test.txt"],
+    cmd = f"echo {VAR} > $OUT",
+)

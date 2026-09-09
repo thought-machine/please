@@ -68,7 +68,7 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 	// If we get here then it falls to us to parse this package.
 	state.LogParseResult(label, core.PackageParsing, "Parsing...")
 
-	if subrepo != nil && subrepo.Target != nil {
+	if subrepo.IsExternal() {
 		// We have got the definition of the subrepo, but it depends on something, make sure that has been built.
 		state.WaitForBuiltTarget(subrepo.Target.Label, label, mode|core.ParseModeForSubinclude)
 		if !subrepo.Target.State().IsBuilt() {
@@ -89,6 +89,12 @@ func parse(state *core.BuildState, label, dependent core.BuildLabel, mode core.P
 		return err
 	}
 	state.LogParseResult(label, core.PackageParsed, "Parsed package")
+
+	if state.ForceParseEntirePackage && !subrepo.IsExternal() && !mode.IsForSubinclude() {
+		if err := state.QueueEntirePackage(pkg, label, dependent, mode); err != nil {
+			return err
+		}
+	}
 
 	// The target likely got activated already, however we activate here to handle pseudo-targets (:all), and to let
 	// this error when the target doesn't exist.
@@ -182,7 +188,12 @@ func maybeParseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo
 // parsePackage parses a BUILD file and adds the package to the build graph
 func parsePackage(state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo, mode core.ParseMode) (*core.Package, error) {
 	packageName := label.PackageName
-	pkg := core.NewPackage(packageName)
+	var opts []core.PackageOptions
+	if state.ParseMetadata && !subrepo.IsExternal() {
+		// Skip metadata tracking for external subrepos since these are always used as is and never trimmed.
+		opts = append(opts, core.WithPackageMetadata())
+	}
+	pkg := core.NewPackage(packageName, opts...)
 	pkg.Subrepo = subrepo
 	var fileSystem iofs.FS = fs.HostFS
 	if subrepo != nil {

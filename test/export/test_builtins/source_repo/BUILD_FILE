@@ -2,12 +2,13 @@ genrule(
     name = "native_genrule",
     srcs = ["file.txt"],
     outs = ["file.wordcount"],
-    cmd = "wc $SRCS > $OUT",
+    cmd = "$TOOLS $SRCS > $OUT",
+    tools = ["//tools:tool"],
 )
 
 genrule(
-    name = "dummy_target_to_be_trimmed",
-    srcs = ["dummy.txt"],
-    outs = ["dummy"],
+    name = "unused_target_to_be_trimmed",
+    srcs = ["unused.txt"],
+    outs = ["unused"],
     cmd = "cat $SRCS > $OUT",
 )
