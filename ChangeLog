@@ -1,3 +1,10 @@
+Version 17.33.0
+---------------
+    * Fix macOS tmpdir cleanup race caused by system daemons creating `~/Library` (#3515)
+    * Fix `IsTool` for debug tools (#3593)
+    * Check `target.Debug` is not nil before we access it during `plz debug` (#3596)
+    * Improve `plz export` to support trimming reliably in complex repos (#3530)
+
 Version 17.32.0
 ---------------
     * `plz_sandbox`: Add UID/GID range mapping, file mounts, configurable
