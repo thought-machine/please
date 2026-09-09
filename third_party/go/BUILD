@@ -35,7 +35,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/text",
-    version = "v0.40.0",
+    version = "v0.41.0",
 )
 
 go_repo(
@@ -116,7 +116,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/net",
-    version = "v0.57.0",
+    version = "v0.58.0",
 )
 
 go_repo(
@@ -351,7 +351,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/grpc",
-    version = "v1.83.1",
+    version = "v1.83.2",
 )
 
 go_repo(
@@ -401,7 +401,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.54.0",
+    version = "v0.55.0",
 )
 
 go_repo(
