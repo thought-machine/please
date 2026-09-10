@@ -34,6 +34,15 @@ func TestPlzConfigWorking(t *testing.T) {
 	assert.Equal(t, filepath.Join(RepoRoot, "plz-out", "please"), config.Please.Location)
 }
 
+func TestPlzConfigBackslash(t *testing.T) {
+	// The mistake a Windows user makes first. The parser's own message says nothing about
+	// paths, so check we name the file and say what to do instead.
+	_, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/backslash.plzconfig"}, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "backslash.plzconfig")
+	assert.Contains(t, err.Error(), "forward slashes")
+}
+
 func TestPlzConfigFailing(t *testing.T) {
 	_, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/failing.plzconfig"}, nil)
 	assert.Error(t, err)

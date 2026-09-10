@@ -459,10 +459,16 @@ Three tests are honestly unrunnable rather than fixed:
    `/` only.
 3. **`.plzconfig` rejects unquoted backslashes** — `unquoted '\' must be followed by new line
    or double quote`. Windows paths in config files must use forward slashes or be quoted.
-   Worth a note in the user docs.
+   ~~Worth a note in the user docs.~~ **Fixed instead**: the error now names the file it came
+   from — it did not before — and says to use forward slashes or quote the value. The parser's
+   own message gives no hint that a path is even involved.
 4. **`DefaultPath` being empty on Windows is load-bearing**, not cosmetic: `ar.exe not found
    in path` until `[build] path` is configured. That is the intended design, but it means a
-   Windows user must configure tool locations before anything builds.
+   Windows user must configure tool locations before anything builds. **The message now says
+   so** when the only directory searched was Please's own, which is exactly the
+   nothing-configured state. Note the check counts non-empty entries: clearing a repeatable key
+   by assigning it empty yields `[""]`, not an empty list — the same trap as `ShellArgs`, met
+   for the third time.
 
 ## M7 — Sandboxing parity 🟡
 

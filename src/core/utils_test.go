@@ -154,8 +154,18 @@ func TestLookPathColons(t *testing.T) {
 
 func TestLookPathDoesntExist(t *testing.T) {
 	dir, _ := writeFakeTool(t, "plz_look_path_test")
-	_, err := LookPath("wibblewobbleflibble", []string{dir})
+	_, err := LookPath("wibblewobbleflibble", []string{dir, t.TempDir()})
 	assert.Error(t, err)
+	assert.NotContains(t, err.Error(), "No [build] path", "shouldn't advise configuring a path that is configured")
+}
+
+func TestLookPathWithNothingConfigured(t *testing.T) {
+	// Only Please's own directory to search, which is what a Windows user gets before they set
+	// [build] path - there is no default one there. Say so rather than just naming the one
+	// directory we looked in.
+	_, err := LookPath("wibblewobbleflibble", []string{t.TempDir()})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "No [build] path is configured")
 }
 
 // buildGraph builds a test graph which we use to test IterSources etc.

@@ -520,8 +520,12 @@ func CollapseHash(key []byte) []byte {
 // as the external environment variable.
 func LookPath(filename string, paths []string) (string, error) {
 	names := fs.ExecutableNames(filename)
+	dirs := 0
 	for _, p := range paths {
 		for _, p2 := range fs.SplitPathList(p) {
+			if p2 != "" {
+				dirs++
+			}
 			for _, name := range names {
 				p3 := filepath.Join(p2, name)
 				if _, err := os.Stat(p3); err == nil {
@@ -530,7 +534,14 @@ func LookPath(filename string, paths []string) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("%s not found in path %s", filename, strings.Join(paths, string(os.PathListSeparator)))
+	err := fmt.Errorf("%s not found in path %s", filename, strings.Join(paths, string(os.PathListSeparator)))
+	if dirs <= 1 {
+		// Only Please's own directory was searched, which means no build path is configured.
+		// There is no default one on Windows - nothing there corresponds to /usr/bin - so this
+		// is the first thing a new user hits, and the message above doesn't hint at the answer.
+		return "", fmt.Errorf("%w\nNo [build] path is configured; set one to the directories your tools live in", err)
+	}
+	return "", err
 }
 
 // LookBuildPath is like LookPath but takes the config's build path into account.

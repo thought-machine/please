@@ -84,7 +84,7 @@ func readConfigFileOnly(fs iofs.FS, config *Configuration, filename string, quie
 	}
 
 	if gcfg.FatalOnly(err) != nil {
-		return err
+		return configError(filename, err)
 	}
 	if quiet {
 		log.Debug("Error in config file %s: %s", filename, err)
@@ -92,6 +92,17 @@ func readConfigFileOnly(fs iofs.FS, config *Configuration, filename string, quie
 		log.Warning("Error in config file %s: %s", filename, err)
 	}
 	return nil
+}
+
+// configError names the file a config error came from, and for the one mistake people are most
+// likely to make on Windows says what to do about it. A backslash starts an escape sequence in
+// this format, so a path written the way Windows writes it fails to parse, with a message that
+// gives no hint that a path is even involved.
+func configError(filename string, err error) error {
+	if strings.Contains(err.Error(), `unquoted '\'`) {
+		return fmt.Errorf("%s: %w\nA backslash begins an escape sequence here; write paths with forward slashes, which Windows accepts too, or put the value in double quotes", filename, err)
+	}
+	return fmt.Errorf("%s: %w", filename, err)
 }
 
 // readConfigFile reads a single config file into the config struct taking into account
