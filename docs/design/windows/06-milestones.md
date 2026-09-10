@@ -304,8 +304,11 @@ Design: `05-testing-strategy.md`.
 - [x] Wine test macro for cross-compiled Go test binaries — `test/build_defs/wine.build_defs`,
       `wine_go_test` and `wine_plz_test`
 - [x] Wine CI job — `test-windows-wine`, blocking, and a third pass in `test.sh` where Wine is
-      installed. `//src/core/...` and `//src/fs/...`; **not** `//src/process/...`, whose tests
-      run `true`, `false` and `sleep` as bare argv and so assume a Unix toolbox on the PATH
+      installed. Now `//src/core`, `//src/fs`, `//src/build`, `//src/test`, `//src/cli` and
+      `//src/watch`: 428 tests, 424 passing and 4 skipped. **Not** `//src/process`, whose tests
+      run `true`, `false` and `sleep` as bare argv and so assume a Unix toolbox on the PATH.
+      `//src/build` is the valuable one — it runs real build actions, so it covers the process
+      layer and the bundled shell as well as whatever it is nominally about
 - [x] The genrule shell smoke test — plus a `query alltargets //...` test, which is the
       `forceposix` guard the risk register asked for
 - [x] **The headline end-to-end passes.** `wine plz.exe` extracts the cc plugin with
@@ -348,13 +351,39 @@ are not environment values, and the existing tests already assumed forward slash
 `plz-out` paths are now built with `path`, so they are slash-separated on every platform. Win32
 accepts either, and it is a no-op on Unix.
 
-A fifth finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
+Extending the job past `core` and `fs` found **four more of the same kind**:
+
+5. **`output_dirs` produced doubled paths.** `copyOutDir` strips the temp directory off a path
+   to get an output name, comparing a `filepath.Join` result against a slash-separated
+   `TmpDir()`. Neither prefix matched, the whole path survived as the output name, and
+   `moveOutputs` then joined the temp directory onto a path that already contained it.
+6. **JS coverage file names were never sanitised.** `sanitiseFileNameDir` compared paths from a
+   coverage file against `filepath.Dir` of a plz-out directory, so coverage was reported
+   against absolute build paths instead of source files.
+7. **Coverage-by-directory keys came out backslashed**, so they neither read correctly nor
+   matched anything configured.
+8. **`file://` URLs could not name a Windows path.** RFC 8089 puts a slash before the drive
+   letter, so `file:///C:/foo` arrives as `/C:/foo`, which `filepath.IsAbs` rejects. No
+   `remote_file` with a local URL could work.
+
+A fifth kind of finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
 whose name has no extension in `PATHEXT`, even given its full path.** The `wine_go_test` macro
 copies each test binary to a `.exe` before running it. The same trap is why `//src:please`
 needs `out = "please.exe"` (M4), and it will bite `plz run` on any `go_binary` until the go
 plugin names Windows outputs properly (M8).
 
-Two tests are honestly unrunnable rather than fixed:
+Two things about the harness itself, both found by tests failing for reasons that were nothing
+to do with Please:
+
+- **Wine's hosts file has the `localhost` line commented out.** Anything resolving it hangs
+  until it gives up — three `remote_file` tests each burned 15 seconds. The macro appends the
+  line to the prefix.
+- **`~` resolves inside the shared prefix**, so a test writing to its home directory leaks into
+  the next run. One of these left a read-only file behind, which on Windows the next run cannot
+  replace. Tests that write to `~` now set `USERPROFILE` themselves, which is what
+  `os.UserHomeDir` reads there.
+
+Three tests are honestly unrunnable rather than fixed:
 
 - **`TestSymlink` skips on Windows.** Creating a symlink needs Developer Mode, and under Wine
   `os.Symlink` reports success and produces a link that cannot even be `Lstat`ed. The testing
@@ -362,6 +391,9 @@ Two tests are honestly unrunnable rather than fixed:
   copy fallback; the reality is worse, and belongs on the M9 agenda.
 - **`//src/process/...` is not in the Wine job.** Its tests exec `true`, `false` and `sleep`
   directly, which assumes a Unix toolbox on the PATH rather than anything about Please.
+- **`TestSymlinkedOutputs` and `TestCreatePlzOutGo` skip on Windows**, for the same symlink
+  reason, and the permission assertions in `TestOutputDirDoubleStar` skip because Windows has
+  no mode to preserve — Go synthesises one from the read-only attribute.
 
 ### What the end-to-end test surfaced
 
