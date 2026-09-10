@@ -74,7 +74,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		anyRemote:     state.Config.NumRemoteExecutors() > 0,
 	}
 	g, ctx := r.group(topctx)
-	r.tasks = g
+	r.tasks, r.ctx = g, ctx
 	r.parser = parse.InitParser(state, &r)
 	results := state.Results()
 	go checkForCycles(state, results, cancel)
@@ -97,7 +97,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 		}
 		// Reset the group & context for next time (the context is now expired because the group is done)
 		g, ctx = r.group(topctx)
-		r.tasks = g
+		r.tasks, r.ctx = g, ctx
 	}
 	r.QueueOriginalTaskSet(ctx, targets, r.state.NeedTests, r.state.NeedBuild)
 	if state.NeedDebugDeps {
@@ -120,6 +120,7 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 
 type runner struct {
 	tasks         *errgroup.Group
+	ctx           context.Context //nolint:containedctx
 	state         *core.BuildState
 	parser        *asp.Parser
 	arch          cli.Arch
@@ -132,21 +133,33 @@ type runner struct {
 	anyRemote     bool
 }
 
+// EnsureSubrepo makes sure a subrepo is available, blocking until it is, or returns an error if it could not be found.
+func (r *runner) EnsureSubrepo(ctx context.Context, subrepo string, defining, dependent core.BuildLabel) error {
+	s, wait := r.state.Graph.SubrepoOrWait(subrepo)
+	if s != nil {
+		return nil
+	}
+	if _, err := r.parse(ctx, defining, dependent, true, wait); err != nil && !errors.Is(err, parse.ErrMissingBuildFile) {
+		return err
+	}
+	return nil
+}
+
 // Parse parses for a target. It can be called more than once for the same build label.
 // The dependent is whatever is asking for this to be parsed; it's used to produce better error
 // messages, and to detect a package that is asking to parse itself.
 func (r *runner) Parse(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
-	return r.parse(ctx, label, dependent, false)
+	return r.parse(ctx, label, dependent, false, nil)
 }
 
 // tryParse is like Parse but doesn't report failures. It's used where a failure isn't necessarily an
 // error, i.e. when we're speculatively looking for the package that might define a subrepo; the caller
 // is responsible for reporting anything it can't handle itself.
 func (r *runner) tryParse(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error) {
-	return r.parse(ctx, label, dependent, true)
+	return r.parse(ctx, label, dependent, true, nil)
 }
 
-func (r *runner) parse(ctx context.Context, label, dependent core.BuildLabel, quiet bool) (*core.Package, error) {
+func (r *runner) parse(ctx context.Context, label, dependent core.BuildLabel, quiet bool, stop <-chan struct{}) (*core.Package, error) {
 	// Work out which repo this package belongs to, and make sure that repo's preloaded subincludes are
 	// resolved, before we claim the package below.
 	// Both of these can need to parse other packages - and preload resolution routinely parses packages in
@@ -162,15 +175,53 @@ func (r *runner) parse(ctx context.Context, label, dependent core.BuildLabel, qu
 	if err := r.ensurePreloads(ctx, state); err != nil {
 		return nil, err
 	}
-	return r.state.Graph.GetOrSetPackage(ctx, label, func() (*core.Package, error) {
-		r.progress.numParsing.Add(1)
-		defer r.progress.numParsing.Add(-1)
-		pkg, err := parse.Parse(ctx, state, label, dependent, subrepo)
-		if err != nil && !quiet {
-			r.state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
+	pkg, wait, first, err := r.state.Graph.PackageOrWait(label)
+	if wait == nil {
+		return pkg, err // Already parsed, successfully or otherwise.
+	}
+	if first {
+		// We are responsible for parsing this package.
+		if stop == nil {
+			// We want the whole thing so just parse it directly.
+			return r.parsePackage(ctx, state, label, dependent, subrepo, quiet)
 		}
+		// We are responsible for parsing this package, but we put it on another goroutine so we don't
+		// have to wait for the whole thing, we only wait for the part of it that we need - we might
+		// only want a single target from it, in which case we can return as soon as that is available.
+		// This is important to avoid deadlocks in some subtle cases.
+		pctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+		stopCancel := context.AfterFunc(r.ctx, cancel)
+		r.tasks.Go(func() error {
+			defer stopCancel()
+			defer cancel()
+			_, err := r.parsePackage(pctx, state, label, dependent, subrepo, quiet)
+			return err
+		})
+	}
+	select {
+	case <-wait:
+		pkg, _, _, err := r.state.Graph.PackageOrWait(label)
 		return pkg, err
-	})
+	case <-stop:
+		// What we were waiting for turned up; we don't need the rest of the package.
+		return nil, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// parsePackage parses a single package and records the result in the graph, releasing anything waiting
+// on it. All parses ultimately go through here in order to decouple them from callers who don't need to wait for
+// the full parse to complete - this avoids hangs in subtle cases involving subincludes.
+func (r *runner) parsePackage(ctx context.Context, state *core.BuildState, label, dependent core.BuildLabel, subrepo *core.Subrepo, quiet bool) (*core.Package, error) {
+	r.progress.numParsing.Add(1)
+	defer r.progress.numParsing.Add(-1)
+	pkg, err := parse.Parse(ctx, state, label, dependent, subrepo)
+	if err != nil && !quiet {
+		r.state.LogBuildError(label, core.ParseFailed, err, "Failed to parse package")
+	}
+	r.state.Graph.SetPackage(label, pkg, err)
+	return pkg, err
 }
 
 // repoFor returns the state and subrepo that the given label should be parsed against, defining the
@@ -359,12 +410,16 @@ func (r *runner) recursiveParse(ctx context.Context, label, dependent core.Build
 }
 
 func (r *runner) parseTarget(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildTarget, error) {
-	if target := r.state.Graph.Target(label); target != nil {
+	target, wait := r.state.Graph.TargetOrWait(label)
+	if target != nil {
 		return target, nil
 	}
-	pkg, err := r.Parse(ctx, label, dependent)
+	pkg, err := r.parse(ctx, label, dependent, false, wait)
 	if err != nil {
 		return nil, err
+	} else if pkg == nil {
+		// The target got produced during someone else parsing, although the package isn't ready yet we didn't need the whole thing.
+		return r.state.Graph.Target(label), nil
 	}
 	if target := pkg.Target(label.Name); target != nil {
 		return target, nil

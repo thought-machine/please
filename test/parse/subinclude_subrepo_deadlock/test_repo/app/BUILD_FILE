@@ -1,0 +1,7 @@
+subinclude("//rules:defs")
+
+genrule(
+    name = "a",
+    outs = ["a.txt"],
+    cmd = "echo hello > $OUT",
+)

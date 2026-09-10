@@ -30,14 +30,14 @@ func TestMap(t *testing.T) {
 // but it's the bit with the interesting concurrency so it's worth pinning down here.
 func TestWait(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
-	v, ch, first := m.getOrWait(5)
+	v, ch, first := m.GetOrWait(5)
 	assert.Equal(t, 0, v) // Should be the zero value
 	assert.True(t, first) // We're the first to request it
 	go func() {
 		m.Set(5, 7)
 	}()
 	<-ch
-	v, ch, first = m.getOrWait(5)
+	v, ch, first = m.GetOrWait(5)
 	assert.Nil(t, ch)
 	assert.Equal(t, 7, v)
 	assert.False(t, first)

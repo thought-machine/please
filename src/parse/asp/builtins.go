@@ -313,15 +313,14 @@ func (s *scope) WaitForSubincludedTarget(ctx context.Context, l, dependent core.
 	return s.interpreter.callbacks.BuildAndDownload(ctx, l, dependent)
 }
 
-// WaitForPackage drops the interpreter lock and waits for the given package to be parsed. Like
+// WaitForSubrepo drops the interpreter lock and waits for the given package to be parsed. Like
 // WaitForSubincludedTarget this is essential rather than just polite: parsing that package can happen
 // inline on this very goroutine, and it will try to take a parser slot of its own when it does. Holding
 // ours while we wait would deadlock us against ourselves as soon as every slot is held by a thread here.
-func (s *scope) WaitForPackage(ctx context.Context, l, dependent core.BuildLabel) error {
+func (s *scope) WaitForSubrepo(ctx context.Context, subrepo string, defining, dependent core.BuildLabel) error {
 	s.interpreter.limiter.Release()
 	defer s.interpreter.limiter.Acquire()
-	_, err := s.interpreter.callbacks.Parse(ctx, l, dependent)
-	return err
+	return s.interpreter.callbacks.EnsureSubrepo(ctx, subrepo, defining, dependent)
 }
 
 // builtinFail raises an immediate error that can't be intercepted.
@@ -415,7 +414,9 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	// By parsing the package first, the subrepo package's subinclude will queue the subrepo target to be built before
 	// we call WaitForSubincludedTarget below avoiding the lockup.
 	subrepoLabel := l.SubrepoLabel(s.state)
-	if l.Subrepo != "" && subrepoLabel.PackageName != pkg.Name && l.Subrepo != pkg.SubrepoName {
+	// Make sure we don't wait on the defining package if we are already the one parsing it
+	parsingDefiningPkg := s.pkg != nil && subrepoLabel.PackageName == s.pkg.Name && subrepoLabel.Subrepo == s.pkg.SubrepoName
+	if l.Subrepo != "" && !parsingDefiningPkg {
 		subrepoPackageLabel := core.BuildLabel{
 			PackageName: subrepoLabel.PackageName,
 			Subrepo:     subrepoLabel.Subrepo,
@@ -424,7 +425,7 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 		ctx := pprof.WithLabels(s.ctx, pprof.Labels("subinclude "+subrepoPackageLabel.String(), pkgLabel.String()))
 		pprof.SetGoroutineLabels(ctx)
 		defer pprof.SetGoroutineLabels(s.ctx)
-		if err := s.WaitForPackage(ctx, subrepoPackageLabel, pkgLabel); err != nil {
+		if err := s.WaitForSubrepo(ctx, l.Subrepo, subrepoPackageLabel, pkgLabel); err != nil {
 			s.Error("Failed to parse subrepo target: %w", err)
 		}
 	}

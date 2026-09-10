@@ -57,7 +57,7 @@ func (m *ErrMap[K, V]) Get(key K) (V, error) {
 // GetOrSet returns the value if set, or an error if one has been set.
 // If nothing has been set for the key, it runs the given function to generate the value and then sets it.
 func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
-	v, wait, first := m.m.getOrWait(key)
+	v, wait, first := m.m.GetOrWait(key)
 	if v.Err != nil {
 		return v.Val, v.Err
 	} else if first {
@@ -78,7 +78,7 @@ func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 
 // GetOrSetCtx is like GetOrSet but accepts a context that can be cancelled.
 func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, error)) (V, error) {
-	v, wait, first := m.m.getOrWait(key)
+	v, wait, first := m.m.GetOrWait(key)
 	if v.Err != nil {
 		return v.Val, v.Err
 	} else if first {
@@ -100,6 +100,14 @@ func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, erro
 		}
 	}
 	return v.Val, v.Err
+}
+
+// GetOrWait returns the value for a key, or an error if one has been recorded for it.
+// If neither is set yet, it returns a channel that is closed once the key is populated with a value or
+// an error, and an indication of whether the caller is the first to request it.
+func (m *ErrMap[K, V]) GetOrWait(key K) (V, <-chan struct{}, bool, error) {
+	v, wait, first := m.m.GetOrWait(key)
+	return v.Val, wait, first, v.Err
 }
 
 // Range calls f for each key-value pair in the map.

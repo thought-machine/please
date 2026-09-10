@@ -24,9 +24,9 @@ type semaphore chan struct{}
 func (s semaphore) Acquire() { s <- struct{}{} }
 func (s semaphore) Release() { <-s }
 
-// Callbacks is the interface we require from something that we can call back to for builds / parses.
+// Callbacks is the interface we require from something that we can call back to for builds / parsing a subrepo.
 type Callbacks interface {
-	Parse(ctx context.Context, pkg, dependent core.BuildLabel) (*core.Package, error)
+	EnsureSubrepo(ctx context.Context, subrepo string, defining, dependent core.BuildLabel) error
 	BuildAndDownload(ctx context.Context, target, dependent core.BuildLabel) (*core.BuildTarget, error)
 }
 

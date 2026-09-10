@@ -84,7 +84,6 @@ func parsePackage(ctx context.Context, state *core.BuildState, label, dependent 
 	// it guarantees that all necessary information between targets has been retrieved.
 	go pkg.MustVerifyOutputs()
 
-	state.Graph.AddPackage(pkg) // Calling this means nobody else will add entries to pendingTargets for this package.
 	return pkg, nil
 }
 

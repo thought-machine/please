@@ -68,7 +68,10 @@ func (m *Map[K, V]) Contains(key K) bool {
 	return m.shards[m.hasher(key)&m.mask].Contains(key)
 }
 
-func (m *Map[K, V]) getOrWait(key K) (val V, wait <-chan struct{}, first bool) {
+// GetOrWait returns the value corresponding to this key. If it is not present, a channel is returned that can
+// be waited upon for the item to exist.
+// The final return value indicates whether this is the first request for this item.
+func (m *Map[K, V]) GetOrWait(key K) (val V, wait <-chan struct{}, first bool) {
 	return m.shards[m.hasher(key)&m.mask].GetOrWait(key)
 }
 

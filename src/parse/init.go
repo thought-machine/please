@@ -17,8 +17,13 @@ import (
 	"github.com/thought-machine/please/src/parse/asp"
 )
 
+type Callbacks interface {
+	asp.Callbacks
+	Parse(ctx context.Context, label, dependent core.BuildLabel) (*core.Package, error)
+}
+
 // InitParser initialises the parser engine.
-func InitParser(state *core.BuildState, callbacks asp.Callbacks) *asp.Parser {
+func InitParser(state *core.BuildState, callbacks Callbacks) *asp.Parser {
 	// There is some awkward coupling here for the benefit of the language server, which wants to get its
 	// hands on the parser, but it cannot create a fully functional one on its own.
 	if p, ok := state.Parser.(*aspParser); ok {
@@ -34,11 +39,11 @@ func InitParser(state *core.BuildState, callbacks asp.Callbacks) *asp.Parser {
 // aspParser implements the core.Parser interface around our parser package.
 type aspParser struct {
 	parser    *asp.Parser
-	callbacks asp.Callbacks
+	callbacks Callbacks
 }
 
 // newAspParser returns a asp.Parser object with all the builtins loaded
-func newAspParser(state *core.BuildState, callbacks asp.Callbacks) *asp.Parser {
+func newAspParser(state *core.BuildState, callbacks Callbacks) *asp.Parser {
 	p := asp.NewParser(state, callbacks)
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AllAssets()
