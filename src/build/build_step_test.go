@@ -14,6 +14,7 @@ import (
 	iofs "io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -78,6 +79,7 @@ func TestModifiedBuildTargetStillNeedsRebuilding(t *testing.T) {
 }
 
 func TestSymlinkedOutputs(t *testing.T) {
+	skipIfNoSymlinks(t)
 	// Test behaviour when the output is a symlink.
 	state, target := newState("//package1:target5")
 	target.AddOutput("file5")
@@ -117,6 +119,17 @@ func TestPostBuildFunction(t *testing.T) {
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 }
 
+// assertPermissionsPreserved checks that the mode a build action set on a file survived being
+// moved into plz-out. Windows has no mode to preserve - Go synthesises one from the read-only
+// attribute - so there is nothing to assert there.
+func assertPermissionsPreserved(t *testing.T, info os.FileInfo) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return
+	}
+	assert.Equal(t, "-rwxrwxrwx", info.Mode().Perm().String())
+}
+
 func TestOutputDir(t *testing.T) {
 	newTarget := func() (*core.BuildState, *core.BuildTarget) {
 		// Test modifying a command in the post-build function.
@@ -145,6 +158,16 @@ func TestOutputDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"file7"}, target.Outputs())
 	assert.Equal(t, core.Reused, target.State())
+}
+
+// skipIfNoSymlinks skips a test that needs working symlinks. Creating one on Windows needs
+// Developer Mode, and under Wine os.Symlink reports success while producing a link that cannot
+// even be stat'ed - so a failure here says nothing about Please. See docs/design/windows.
+func skipIfNoSymlinks(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink behaviour on Windows is environment-dependent")
+	}
 }
 
 func TestOutputDirDoubleStar(t *testing.T) {
@@ -176,7 +199,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 
 	info, err := os.Lstat(filepath.Join(target.OutDir(), "foo/file7"))
 	require.NoError(t, err)
-	assert.Equal(t, info.Mode().Perm().String(), "-rwxrwxrwx")
+	assertPermissionsPreserved(t, info)
 
 	state, target = newTarget(true)
 
@@ -186,7 +209,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 
 	info, err = os.Lstat(filepath.Join(target.OutDir(), "foo/file7"))
 	require.NoError(t, err)
-	assert.Equal(t, info.Mode().Perm().String(), "-rwxrwxrwx")
+	assertPermissionsPreserved(t, info)
 }
 
 func TestCacheRetrieval(t *testing.T) {
@@ -272,6 +295,7 @@ func TestGoModCreation(t *testing.T) {
 }
 
 func TestCreatePlzOutGo(t *testing.T) {
+	skipIfNoSymlinks(t)
 	state, target := newState("//package1:target")
 	target.AddLabel("link:plz-out/go/${PKG}/src")
 	target.AddOutput("file1.go")
@@ -399,7 +423,12 @@ func TestHashCheckers(t *testing.T) {
 
 func TestFetchLocalRemoteFile(t *testing.T) {
 	state, target := newState("//package4:target1")
-	target.AddSource(core.URLLabel("file://" + os.Getenv("TMP_DIR") + "/src/build/test_data/local_remote_file.txt"))
+	// From the working directory, which is the test data directory, rather than $TMP_DIR:
+	// that names the same place but as the host we started from writes it, which under Wine
+	// is not an absolute path at all.
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	target.AddSource(core.URLLabel("file://" + filepath.ToSlash(wd) + "/local_remote_file.txt"))
 	target.AddOutput("local_remote_file.txt")
 
 	// Temporarily reset the repo root so we can test this locally
@@ -409,9 +438,19 @@ func TestFetchLocalRemoteFile(t *testing.T) {
 		core.RepoRoot = oldRoot
 	}()
 
-	err := fetchRemoteFile(state, target)
-	assert.NoError(t, err)
+	assert.NoError(t, fetchRemoteFile(state, target))
 	assert.True(t, fs.FileExists(filepath.Join(target.TmpDir(), "local_remote_file.txt")))
+}
+
+func TestFileURLPath(t *testing.T) {
+	// A Unix path round-trips unchanged; a Windows one loses the slash the URL form requires
+	// before its drive letter, but only where that is what a drive letter means.
+	assert.Equal(t, "/home/user/file.txt", fileURLPath("file:///home/user/file.txt"))
+	if filepath.Separator == '\\' {
+		assert.Equal(t, `C:/foo/bar`, fileURLPath("file:///C:/foo/bar"))
+	} else {
+		assert.Equal(t, `/C:/foo/bar`, fileURLPath("file:///C:/foo/bar"))
+	}
 }
 
 func TestFetchLocalRemoteFileCannotBeRelative(t *testing.T) {

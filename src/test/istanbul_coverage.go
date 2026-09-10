@@ -5,6 +5,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -95,13 +96,18 @@ func sanitiseFileName(target *core.BuildTarget, filename string, run int) string
 // It returns a non-empty string if successful.
 // If matchAnyLastDir is true it will match any directory for the last component.
 func sanitiseFileNameDir(filename string, dir string, matchAnyLastDir bool) string {
+	// Compared as slash paths throughout. The directories are plz-out paths, which are
+	// slash-separated on every platform, but the filename comes out of a coverage file that
+	// some other tool wrote and may use either separator.
+	filename = filepath.ToSlash(filename)
+	dir = filepath.ToSlash(dir)
 	if matchAnyLastDir {
-		dir = filepath.Dir(dir)
+		dir = path.Dir(dir)
 	}
 	if index := strings.Index(filename, dir); index != -1 {
 		ret := filename[index+len(dir)+1:]
 		if matchAnyLastDir {
-			if index := strings.IndexRune(ret, filepath.Separator); index != -1 {
+			if index := strings.IndexRune(ret, '/'); index != -1 {
 				return ret[index+1:]
 			}
 		}

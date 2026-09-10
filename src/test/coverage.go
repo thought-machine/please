@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -202,7 +203,10 @@ func getDirectoryCoverage(coverage core.TestCoverage) map[string]float32 {
 
 	for file, coverage := range coverage.Files {
 		covered, total := CountCoverage(coverage)
-		dirpath := filepath.Dir(file)
+		// path, not filepath: these are repo-relative names from a coverage file, and the
+		// result is reported to the user and matched against configured paths, both of which
+		// are slash-separated.
+		dirpath := path.Dir(file)
 
 		if _, exists := linesByDir[dirpath]; exists {
 			linesByDir[dirpath].covered += covered

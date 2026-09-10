@@ -25,6 +25,17 @@ func listen(s *http.Server) net.Listener {
 	return lis
 }
 
+// writeHomeSecret puts the secret the tests read at ~/secret, with the home directory pointed
+// somewhere this test owns. Writing to the real one would leave a file behind, and it is left
+// read-only, which on Windows means the next run cannot replace it.
+func writeHomeSecret(t *testing.T) {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home) // What os.UserHomeDir reads on Windows.
+	require.NoError(t, fs.CopyFile("secret", fs.ExpandHomePath("~/secret"), 0444))
+}
+
 func TestHeader(t *testing.T) {
 	state, target := newState("//pkg:header_test")
 	target.IsRemoteFile = true
@@ -53,8 +64,7 @@ func TestSecretHeader(t *testing.T) {
 	target.AddLabel("remote_file:secret_header:foo:~/secret")
 	target.AddLabel("remote_file:secret_header:bar:secret")
 
-	err := fs.CopyFile("secret", fs.ExpandHomePath("~/secret"), 0444)
-	require.NoError(t, err)
+	writeHomeSecret(t)
 
 	s, m := Server()
 	m.HandleFunc("/header", func(writer http.ResponseWriter, request *http.Request) {
@@ -68,8 +78,7 @@ func TestSecretHeader(t *testing.T) {
 	lis := listen(s)
 	go s.Serve(lis)
 
-	err = fetchRemoteFile(state, target)
-	require.NoError(t, err)
+	require.NoError(t, fetchRemoteFile(state, target))
 }
 
 func TestBasicAuth(t *testing.T) {
@@ -80,8 +89,7 @@ func TestBasicAuth(t *testing.T) {
 	target.AddLabel("remote_file:username:foo")
 	target.AddLabel("remote_file:password_file:~/secret")
 
-	err := fs.CopyFile("secret", fs.ExpandHomePath("~/secret"), 0444)
-	require.NoError(t, err)
+	writeHomeSecret(t)
 
 	s, m := Server()
 	m.HandleFunc("/header", func(writer http.ResponseWriter, request *http.Request) {
@@ -94,6 +102,5 @@ func TestBasicAuth(t *testing.T) {
 	lis := listen(s)
 	go s.Serve(lis)
 
-	err = fetchRemoteFile(state, target)
-	require.NoError(t, err)
+	require.NoError(t, fetchRemoteFile(state, target))
 }
