@@ -517,7 +517,18 @@ the right shape.
 - [ ] go plugin — `windows_amd64` arch, `.exe` naming. **Now blocking more than it looks:**
       Go's `exec` on Windows will not run a file with no `PATHEXT` extension even given its
       full path, so `plz run` on any `go_binary` fails until this lands. `//src:please` and
-      `//tools/build_langserver` work around it per-target (M4)
+      `//tools/build_langserver` work around it per-target (M4).
+
+      **Measured, and the constraint is narrower than it appears.** Windows itself runs such a
+      file happily — `os.StartProcess` on the bare path works, and prints its output. It is
+      only Go's `os/exec` that refuses, in `lookExtensions`, and it refuses even when `Cmd.Path`
+      is set directly, so there is no way to keep `os/exec` and bypass it. Reimplementing
+      process handling to avoid that is far worse than naming the output correctly, so the fix
+      stays with the plugin.
+
+      What is fixed here is the message. `executable file not found in %PATH%` for a file that
+      is plainly there is baffling; `fs.ExplainUnrunnable` adds that the name has no extension
+      Windows will run, and what it would need to be called
 - [ ] shell plugin — `sh_binary` needs a `.cmd`/busybox shim instead of `#!`
 - [ ] python plugin — pex on Windows (prior art: ChangeLog #947)
 - [x] `src/watch` — **this was a bug, not a documentation task.** `plz watch` compares the

@@ -160,7 +160,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 		// Probably it's a java -jar, we need an absolute path to it.
 		cmd, err := exec.LookPath(args[0])
 		if err != nil {
-			log.Fatalf("Can't find binary %s", args[0])
+			log.Fatalf("Can't find binary %s%s", args[0], fs.ExplainUnrunnable(args[0]))
 		}
 		args[0] = cmd
 	} else if dir != "" { // Find an absolute path before changing directory
@@ -261,7 +261,7 @@ func addOneEnv(env []string, k, v string) []string {
 // must dies if the given error is non-nil.
 func must(err error, cmd []string) {
 	if err != nil {
-		log.Fatalf("Error running command %s: %s", strings.Join(cmd, " "), err)
+		log.Fatalf("Error running command %s: %s%s", strings.Join(cmd, " "), err, fs.ExplainUnrunnable(cmd[0]))
 	}
 }
 
