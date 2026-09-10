@@ -14,9 +14,11 @@ BuildTags = forceposix
 cctool = x86_64-w64-mingw32-gcc
 cpptool = x86_64-w64-mingw32-g++
 artool = x86_64-w64-mingw32-ar
-; -lpthread and -ldl are both wrong on MinGW: dl doesn't exist and pthreads is
-; implicit via winpthreads.
-defaultldflags =
+; The plugin's default is -lpthread and -ldl. Windows has no libdl, and setting this key to
+; nothing does not clear it - a repeatable key assigned empty is a list of one empty string,
+; which becomes a bare -Wl, that the linker rejects. The pinned plugin needs this; the local
+; checkout works this out for itself, so drop it when plugins/BUILD is bumped.
+defaultldflags = -lpthread
 
 [build]
 ; Windows has no extended attributes; fall back to the sidecar-file mechanism.

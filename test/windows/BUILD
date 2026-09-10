@@ -170,3 +170,18 @@ if CONFIG.get("PYTHON_RULES_PATH"):
         pex = "///windows_amd64//test/windows/python:exit_code",
         test_output = False,
     )
+
+# Windows resolves a DLL's symbols through an import library rather than through the DLL, so
+# linking against a cc_shared_object needs one to exist. This builds the pair, links one against
+# the other, and runs it - which also covers the DLL being found at run time, where Windows has
+# no rpath and looks beside the binary instead.
+#
+# Needs a local cc-rules checkout for the same reason the pex tests need one: no released plugin
+# emits the import library. See plugins/BUILD and 07-state-of-play.md.
+if CONFIG.get("CC_RULES_PATH"):
+    wine_binary_test(
+        name = "dll_test",
+        binary = "///windows_amd64//test/windows/cc:hello",
+        data = ["///windows_amd64//test/windows/cc:greeting"],
+        expected_output = "hello from a dll",
+    )

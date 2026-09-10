@@ -103,6 +103,68 @@ def wine_go_test(
         test_cmd = test_cmd,
     )
 
+def _wine_run_cmd(binary:str, args:str, exit_code:int):
+    """Returns a command that runs a Windows binary under Wine and checks how it finished.
+
+    The status is captured rather than left to the shell: build actions run with -e, so an exit
+    code we are expecting would otherwise end the command before we could check it.
+
+    The pipe is not only for the log. Wine's console emulation gives a child process handles
+    that some programs - Python among them - reject at startup unless the output is a pipe,
+    which has nothing to do with whatever is being tested.
+    """
+    return " && ".join([
+        "code=0",
+        f'wine "{binary}" {args} 2>&1 | tee "$TMP_DIR/output" || code=$?',
+        f'[ "$code" = "{exit_code}" ]',
+    ])
+
+def wine_binary_test(
+        name:str,
+        binary:str,
+        args:str="",
+        data:list=[],
+        expected_output:str="",
+        exit_code:int=0,
+        labels:list=[],
+        timeout:int=600,
+        size:str=None):
+    """Runs a Windows binary under Wine and checks what it printed and how it exited.
+
+    For things that are not tests themselves - a cc_binary, say - where the point is that the
+    program runs at all and produces the right answer.
+
+    Args:
+      name (str): Name of the rule.
+      binary (str): The target to run, which must be in the windows_amd64 architecture - i.e. a
+                    label of the form ///windows_amd64//pkg:it.
+      args (str): Arguments to pass to it.
+      data (list): Runtime data it needs. It lands beside the binary, which on Windows is also
+                   how a DLL is found: there is no rpath, so it has to be in the same directory.
+      expected_output (str): Text its output should contain. Empty to check nothing.
+      exit_code (int): The exit code it should finish with.
+      labels (list): Extra labels for the rule.
+      timeout (int): Test timeout in seconds.
+      size (str): Test size.
+    """
+
+    cmds = [_wine_setup_cmd(), _wine_run_cmd("$DATA_BINARY", args, exit_code)]
+    if expected_output:
+        cmds.append(f'grep -q "{expected_output}" "$TMP_DIR/output"')
+
+    return gentest(
+        name = name,
+        size = size,
+        timeout = timeout,
+        data = {"BINARY": [binary], "FILES": data},
+        env = WINE_ENV,
+        labels = labels + ["wine", "windows"],
+        local = True,
+        no_test_output = True,
+        sandbox = False,
+        test_cmd = " && ".join(cmds),
+    )
+
 def wine_pex_test(
         name:str,
         pex:str,
@@ -140,18 +202,6 @@ def wine_pex_test(
 
     # Run it where it lands, under its own name. Unlike a go_test there is nothing to rename:
     # the .pex is already called .pex.exe, which is the whole point.
-    #
-    # The pipe is not only for the log. Wine's console emulation gives a child process handles
-    # that Python rejects at startup unless the output is a pipe, which has nothing to do with
-    # what is being tested; a pipe keeps that out of the way.
-    # The status is captured rather than left to the shell: build actions run with -e, so an
-    # exit code we are expecting would otherwise end the command before we could check it.
-    run = " && ".join([
-        "code=0",
-        f'wine "$DATA_PEX" {args} 2>&1 | tee "$TMP_DIR/output" || code=$?',
-        f'[ "$code" = "{exit_code}" ]',
-    ])
-
     return gentest(
         name = name,
         size = size,
@@ -172,7 +222,7 @@ def wine_pex_test(
         test_cmd = " && ".join([
             _wine_setup_cmd(),
             'export WINEPATH="$(winepath -w "$DATA_PYTHON")"',
-            run,
+            _wine_run_cmd("$DATA_PEX", args, exit_code),
         ]),
     )
 
