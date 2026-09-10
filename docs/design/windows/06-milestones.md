@@ -17,7 +17,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | # | Milestone | Est. | Status | Owner | Issue |
 |---|---|---|---|---|---|
 | M0 | Baseline and guardrail | 2d | ✅ | — | — |
-| M1 | OS abstraction layer | 1–2w | 🟡 | — | — |
+| M1 | OS abstraction layer | 1–2w | ✅ | — | — |
 | M2 | Paths, environment and the `.exe` model | 1w | ⬜ | — | — |
 | M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
@@ -97,16 +97,20 @@ gives no signal for.** Do the cheap fixes first to unblock Wine testing, then th
 - [x] `src/output/shell_output.go` — leak removed; `process.ShareParentProcessGroup`
 - [x] `src/core/lock.go` → `lock_other.go` / `lock_windows.go` (`LockFileEx`), real
       implementation; all 12 lock tests pass under Wine
-- [ ] `process.ExecReplace` helper + 6 call sites — **no compiler signal; write tests first**
+- [x] `process.ExecReplace` + 5 call sites (the 6th, `sandbox_linux.go`, is Linux-only).
+      Verified under Wine: stdout passthrough, exit codes 0 and 3. Also releases the repo
+      lock before handing over — on Unix the exec did that implicitly via `O_CLOEXEC`
 - [x] `src/process/exec_windows.go` — `CREATE_NEW_PROCESS_GROUP`; job objects in
       `kill_windows.go`
 - [x] `src/process/kill_windows.go` / `kill_other.go` — Ctrl-Break then `TerminateJobObject`
 - [x] Narrow `exec_other.go` from `!linux` to `!linux && !windows`
 - [x] `src/clean/clean.go` — `ForkExec` → detached `exec.Command` (`DETACHED_PROCESS`)
-- [ ] `src/cli/process.go` — narrow the signal set
-- [ ] `src/fs/attr.go` — default `Build.Xattrs = false` on Windows (no build tag needed)
-- [ ] `src/fs/executable.go` — `.exe` / `PATHEXT`
-- [ ] `src/run/run_step.go` — `ExitError.ExitCode()` instead of `syscall.WaitStatus`
+- [x] `src/cli/process.go` — signal set and exit-code convention now per-platform
+- [x] `Build.Xattrs` defaults false on Windows; `pkg/xattr` needed no build tag
+- [x] `.exe`/`PATHEXT` via `fs.ExecutableNames`, wired into `core.LookPath`.
+      Note `isExecutable`'s `0111` check is only reachable on the FreeBSD path, so it needed
+      nothing — the design doc over-stated this
+- [x] `src/run/run_step.go` — `ExitError.ExitCode()`; `syscall.Chdir` → `os.Chdir`
 
 **Landed early from M3** (M1 is untestable under Wine without it): platform-specific shell
 init args, since busybox rejects `--noprofile`/`--norc`. Note this is a property of the shell
@@ -121,8 +125,9 @@ being invoked, not the host — remote execution keeps the full flag set via a n
 Design: `01-os-abstraction.md` (the `.exe` model) and `02-shell-and-build-actions.md` (the
 path-format rule).
 
-- [ ] Promote `splitPathList` → `fs.SplitPathList`/`fs.JoinPathList`; replace 7 raw `":"`
-      splits in `src/core/config.go`, `src/core/utils.go`, `src/remote/action.go`
+- [x] Promote `splitPathList` → `fs.SplitPathList` (done in M1, needed by `LookPath`)
+- [ ] Replace the remaining raw `":"` splits in `src/core/config.go` and
+      `src/remote/action.go` — `core.LookPath` is already done
 - [ ] `src/fs/home.go` — `os.UserHomeDir()`; rework the `~` regex
 - [ ] `src/core/config.go` — platform-conditional `MachineConfigFileName`, `DefaultPath`
 - [ ] `src/core/build_env.go` — `USERPROFILE`, `TEMP`/`TMP`
