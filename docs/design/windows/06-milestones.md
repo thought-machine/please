@@ -141,10 +141,10 @@ path-format rule).
 - [ ] Bug fixes: raw `"/"` splits in `src/fs/sort.go`, `src/fs/glob.go`,
       `src/build/build_step.go` (the `src/cli/logging.go` `path.Dir` fix moved to M1 — it
       blocks startup entirely)
-- [ ] Forward-slash normalisation in `BuildEnvironment` + a test asserting no `\`.
-      **Confirmed still needed:** a genrule under Wine sees
-      `HOME=Z:\...\plz-out\tmp\envcheck._build`. It survives `echo`, but any command where
-      backslash is an escape will break on it
+- [x] Forward-slash normalisation in `BuildEnvironment` + a test asserting no `\`.
+      Confirmed by experiment rather than assumption: `echo` and `printf '%s'` round-trip a
+      backslash path unharmed, but `sed -e "s#x#$TMP_DIR#"` turned `\tmp` into a literal tab
+      and ate the rest — and the cc rules build their link line with `sed`
 
 ## M3 — Build actions and the bundled shell
 

@@ -171,8 +171,22 @@ in the release's licence file.
 
 ## The path-format rule
 
-**This is the highest-risk detail in the milestone.** Get it wrong and failures will be
-intermittent and baffling.
+**Implemented and verified.** `BuildEnv.normalisePathSeparators` (`src/core/pathsep_windows.go`)
+rewrites the paths Please generates; `TestBuildEnvironmentUsesForwardSlashes` asserts the
+invariant.
+
+The hazard is narrower than first assumed, and worth stating precisely, because the obvious
+mental model is wrong. Shell *variable expansion* does not reprocess escapes, so a backslash
+path survives `echo "$TMP_DIR"` and `printf '%s' "$TMP_DIR"` intact. It is passing the value
+to something that interprets its own arguments that destroys it. Measured under Wine:
+
+```console
+$ # cmd = echo placeholder | sed -e "s#placeholder#$TMP_DIR#" > $OUT
+Z:^Impclaude-1000-...scratchpadwinrepoplz-out^Impsedtest._build
+```
+
+`\t` became a literal tab and every other backslash was consumed. The C/C++ rules build their
+link line with `sed`, so this is squarely on the path of the primary use case.
 
 Build actions receive paths through the environment — `$TMP_DIR`, `$OUT`, `$OUTS`, `$SRCS`,
 `$SRCS_<NAME>`, `$TOOLS_<NAME>` — assembled in `src/core/build_env.go`. Those values are
