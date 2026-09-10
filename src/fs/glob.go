@@ -3,6 +3,7 @@ package fs
 import (
 	"fmt"
 	iofs "io/fs"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -15,7 +16,9 @@ type matcher interface {
 type builtInGlob string
 
 func (p builtInGlob) Match(name string) (bool, error) {
-	matched, err := filepath.Match(string(p), name)
+	// path.Match, not filepath.Match: the names come from io/fs and are slash-separated, and
+	// on Windows filepath would treat the separator as a backslash and let * cross directories.
+	matched, err := path.Match(string(p), name)
 	if err != nil {
 		return false, fmt.Errorf("failed to glob, invalid patern: %v, %w", string(p), err)
 	}
@@ -33,7 +36,9 @@ func (r regexGlob) Match(name string) (bool, error) {
 // This converts the string pattern into a matcher. A matcher can either be one of our homebrew compiled regexs that
 // support ** or a matcher that uses the built in filesystem.Match functionality.
 func patternToMatcher(root, pattern string) (matcher, error) {
-	fullPattern := filepath.Join(root, pattern)
+	// These patterns are matched against paths from io/fs, which are always slash-separated
+	// whatever the host OS, so they have to be built with path rather than filepath.
+	fullPattern := path.Join(root, pattern)
 
 	// Use the built in filesystem.Match globs when not using double star as it's far more efficient
 	if !strings.Contains(pattern, "**") {

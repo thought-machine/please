@@ -11,7 +11,7 @@ go_library(
         "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
         "///third_party/go/github.com_pkg_xattr//:xattr",
         "//src/cli/logging",
-    ],
+    ] + (["///third_party/go/golang.org_x_sys//windows"] if is_platform(os = "windows") else []),
 )
 
 go_test(

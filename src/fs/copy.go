@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 )
+
+// warnSymlinkFallback ensures we only mention the symlink degradation once.
+var warnSymlinkFallback sync.Once
 
 // CopyOrLinkFile either copies or hardlinks a file based on the link argument.
 // Falls back to a copy if link fails and fallback is true.
@@ -17,7 +21,15 @@ func CopyOrLinkFile(from, to string, fromMode, toMode os.FileMode, link, fallbac
 			if err != nil {
 				return err
 			}
-			return os.Symlink(dest, to)
+			if err := os.Symlink(dest, to); err == nil || !isSymlinkPrivilegeError(err) {
+				return err
+			}
+			// Windows won't create a symlink without Developer Mode or
+			// SeCreateSymbolicLinkPrivilege. Copy what it points at instead; for populating
+			// plz-out the content is what matters, not that the link is reproduced.
+			warnSymlinkFallback.Do(func() {
+				log.Warning("Cannot create symlinks; copying instead. Enable Developer Mode to avoid this.")
+			})
 		}
 		if err := os.Link(from, to); err == nil || !fallback {
 			return err

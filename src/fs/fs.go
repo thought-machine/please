@@ -187,7 +187,7 @@ func RemoveAll(path string) error {
 		const writable = 0o220
 		if err != nil {
 			return err
-		} else if d.IsDir() && d.Type()&writable != writable {
+		} else if (d.IsDir() || removeNeedsWritableFiles) && d.Type()&writable != writable {
 			if info, err := d.Info(); err != nil {
 				return fmt.Errorf("could not read info for %s: %w", path, err)
 			} else if err := os.Chmod(path, info.Mode()|writable); err != nil {
