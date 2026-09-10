@@ -145,3 +145,28 @@ wine_plz_test(
     cmd = "query alltargets //...",
     repo = "smoke_repo",
 )
+
+# A .pex is a zip with an executable stub in front of it, so on Windows it needs a Windows stub;
+# the one please_pex prepends everywhere else is an ELF binary and will not run at all. This
+# checks the whole chain - the preamble runs, finds an interpreter, and Python imports the test
+# out of the zip - which is the only way any of it is exercised before a Windows machine exists.
+# These need a python-rules that can build a .pex for Windows, and no release of it can yet, so
+# they only exist against a local checkout selected through .plzconfig.local - see plugins/BUILD.
+# Defined against the pinned plugin they would fail for a reason that has nothing to do with
+# this repo. Drop the condition when the plugin pin can be bumped; see 07-state-of-play.md.
+if CONFIG.get("PYTHON_RULES_PATH"):
+    wine_pex_test(
+        name = "pex_test",
+        data = ["//test/windows/python:data"],
+        pex = "///windows_amd64//test/windows/python:pex_test",
+    )
+
+    # The preamble runs the interpreter as a child rather than replacing itself with it, because
+    # Windows has nothing to replace itself with. That makes passing the exit code back its job.
+    wine_pex_test(
+        name = "pex_exit_code_test",
+        args = "7",
+        exit_code = 7,
+        pex = "///windows_amd64//test/windows/python:exit_code",
+        test_output = False,
+    )

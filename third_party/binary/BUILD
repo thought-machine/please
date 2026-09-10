@@ -41,3 +41,22 @@ remote_file(
         "//test/windows:all",
     ],
 )
+
+# A Python for the Wine tests to run .pex files with. This is the embeddable package from
+# python.org: python.exe, its DLLs and a zipped standard library, with nothing to install.
+#
+# It is here rather than as a toolchain because that is all it is for. Nothing Please builds
+# depends on it, and no part of the Windows release ships it - a user brings their own Python,
+# the same as on any other platform.
+PYTHON_WINDOWS_VERSION = "3.11.9"
+
+remote_file(
+    name = "python-windows",
+    out = "python-windows",
+    extract = True,
+    hashes = ["009d6bf7e3b2ddca3d784fa09f90fe54336d5b60f0e0f305c37f400bf83cfd3b"],
+    licences = ["PSF-2.0"],
+    test_only = True,
+    url = f"https://www.python.org/ftp/python/{PYTHON_WINDOWS_VERSION}/python-{PYTHON_WINDOWS_VERSION}-embed-amd64.zip",
+    visibility = ["//test/windows:all"],
+)

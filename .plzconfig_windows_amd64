@@ -26,3 +26,10 @@ xattrs = false
 ; No mount/network namespace equivalent yet. See M7.
 build = false
 test = false
+
+[Plugin "python"]
+; The Windows preamble that makes a .pex runnable lives in please_pex, and no
+; release of please_pex has it yet, so this builds the tool from the plugin's
+; own source instead of downloading it. Drop this once a release carries it -
+; see docs/design/windows/06-milestones.md under M8.
+PexTool = ///python//tools/please_pex:please_pex

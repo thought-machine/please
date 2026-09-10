@@ -103,6 +103,79 @@ def wine_go_test(
         test_cmd = test_cmd,
     )
 
+def wine_pex_test(
+        name:str,
+        pex:str,
+        args:str="",
+        data:list=[],
+        exit_code:int=0,
+        test_output:bool=True,
+        labels:list=[],
+        timeout:int=600,
+        size:str=None):
+    """Runs a .pex that was cross-compiled for Windows, under Wine.
+
+    A .pex is not a script with a shebang, it is a zip with an executable stub in front of it,
+    and that stub has to be a Windows one. Running it here is therefore a real test of the
+    preamble please_pex prepended, not only of the Python inside.
+
+    The interpreter is the embeddable Python from python.org, put on the Windows PATH rather
+    than installed - which is also what the preamble's default search for "python" expects to
+    find.
+
+    Args:
+      name (str): Name of the rule.
+      pex (str): The python_test or python_binary target to run, which must be in the
+                 windows_amd64 architecture - i.e. a label of the form ///windows_amd64//pkg:it.
+      args (str): Arguments to pass to it.
+      data (list): Runtime data it needs, at the path it expects to read it from. A pex's own
+                   data doesn't come along when another rule depends on it.
+      exit_code (int): The exit code it should finish with.
+      test_output (bool): True if it is a python_test, and so writes JUnit XML that Please
+                          should read. False for a python_binary, which writes none.
+      labels (list): Extra labels for the rule.
+      timeout (int): Test timeout in seconds.
+      size (str): Test size.
+    """
+
+    # Run it where it lands, under its own name. Unlike a go_test there is nothing to rename:
+    # the .pex is already called .pex.exe, which is the whole point.
+    #
+    # The pipe is not only for the log. Wine's console emulation gives a child process handles
+    # that Python rejects at startup unless the output is a pipe, which has nothing to do with
+    # what is being tested; a pipe keeps that out of the way.
+    # The status is captured rather than left to the shell: build actions run with -e, so an
+    # exit code we are expecting would otherwise end the command before we could check it.
+    run = " && ".join([
+        "code=0",
+        f'wine "$DATA_PEX" {args} 2>&1 | tee "$TMP_DIR/output" || code=$?',
+        f'[ "$code" = "{exit_code}" ]',
+    ])
+
+    return gentest(
+        name = name,
+        size = size,
+        timeout = timeout,
+        data = {
+            "PEX": [pex],
+            # WINEPATH is what Wine adds to the Windows PATH. python.exe is looked up on it by
+            # name, which is what a .pex does when nothing has configured an interpreter path.
+            "PYTHON": ["//third_party/binary:python-windows"],
+            "FILES": data,
+        },
+        env = WINE_ENV,
+        # The test runner writes JUnit XML into a directory rather than a single file.
+        labels = labels + ["wine", "windows"] + (["test_results_dir"] if test_output else []),
+        local = True,
+        no_test_output = not test_output,
+        sandbox = False,
+        test_cmd = " && ".join([
+            _wine_setup_cmd(),
+            'export WINEPATH="$(winepath -w "$DATA_PYTHON")"',
+            run,
+        ]),
+    )
+
 def wine_plz_test(
         name:str,
         repo:str,
