@@ -94,6 +94,7 @@ wine_go_test(
             True,
         ),
         ("exec_test", "///windows_amd64//src/exec:exec_test", [], True),
+        ("process_test", "///windows_amd64//src/process:process_test", [], True),
         (
             "remote_test",
             "///windows_amd64//src/remote:remote_test",

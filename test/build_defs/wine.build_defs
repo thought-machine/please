@@ -76,7 +76,11 @@ def wine_go_test(
         'export DATA="${DATA_FILES:-}"',
     ]
     if needs_shell:
-        cmds.append('cp "$DATA_BUSYBOX" "$TMP_DIR/busybox.exe"')
+        # In a directory of its own, on the Windows PATH, rather than in the working directory:
+        # Go's exec refuses to run something it found relative to the current directory, and
+        # this is how an install has it anyway. WINEPATH is what Wine adds to the Windows PATH.
+        cmds.append('mkdir -p "$TMP_DIR/shell" && cp "$DATA_BUSYBOX" "$TMP_DIR/shell/busybox.exe"')
+        cmds.append('export WINEPATH="$(winepath -w "$TMP_DIR/shell")"')
 
     # Go test binaries print in the format Please parses when it isn't given JUnit XML.
     cmds.append('wine "$TMP_DIR/test.exe" -test.v 2>&1 | tee "$TMP_DIR/test.results"')

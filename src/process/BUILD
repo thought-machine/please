@@ -31,8 +31,12 @@ go_test(
         "process_test.go",
         "progress_test.go",
     ],
+    # So //test/windows can run this same binary, cross-built, under Wine. The process layer is
+    # almost entirely separate code there, and nothing else covers it.
+    visibility = ["//test/windows:all"],
     deps = [
         ":process",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
     ],
 )
