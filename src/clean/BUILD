@@ -19,6 +19,8 @@ go_library(
 go_test(
     name = "clean_test",
     srcs = ["clean_test.go"],
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":clean",
         "///third_party/go/github.com_stretchr_testify//assert",

@@ -24,6 +24,8 @@ go_test(
     name = "parse_step_test",
     srcs = ["parse_step_test.go"],
     resources = ["internal.tmpl"],
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":parse",
         "///third_party/go/github.com_stretchr_testify//assert",

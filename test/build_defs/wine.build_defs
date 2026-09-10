@@ -70,6 +70,10 @@ def wine_go_test(
     cmds = [
         _wine_setup_cmd(),
         'cp "$DATA_TEST_BINARY" "$TMP_DIR/test.exe"',
+        # A go_test's $DATA names only its data; here it would also name the test binary, which
+        # is not something the test put there. Tests that read $DATA expect the former.
+        # :- because the shell runs with -u and this is unset when the test has no data.
+        'export DATA="${DATA_FILES:-}"',
     ]
     if needs_shell:
         cmds.append('cp "$DATA_BUSYBOX" "$TMP_DIR/busybox.exe"')

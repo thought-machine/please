@@ -21,7 +21,9 @@ go_library(
 go_test(
     name = "query_test",
     srcs = glob(["*_test.go"]),
-    data = ["completions_test_repo"],
+    data = [":query_test_data"],
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":query",
         "///third_party/go/github.com_stretchr_testify//assert",
@@ -30,4 +32,12 @@ go_test(
         "//src/core",
         "//src/parse",
     ],
+)
+
+# Exposed so //test/windows can put it beside the test binary when running it under Wine.
+filegroup(
+    name = "query_test_data",
+    srcs = ["completions_test_repo"],
+    test_only = True,
+    visibility = ["//test/windows:all"],
 )

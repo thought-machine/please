@@ -26,6 +26,8 @@ go_test(
         "interactive_display_test.go",
         "shell_output_test.go",
     ],
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":output",
         "///third_party/go/github.com_stretchr_testify//assert",

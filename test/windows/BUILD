@@ -36,6 +36,53 @@ wine_go_test(
     test = "///windows_amd64//src/cli:cli_test",
 )
 
+# The rest of the packages whose tests run at all here. Parsing is the valuable one: the BUILD
+# language interpreter handles paths from every direction.
+[
+    wine_go_test(
+        name = name,
+        data = data,
+        test = target,
+    )
+    for name, target, data in [
+        ("parse_test", "///windows_amd64//src/parse:parse_step_test", []),
+        (
+            "asp_test",
+            "///windows_amd64//src/parse/asp:asp_test",
+            ["///windows_amd64//src/parse/asp:asp_test_data"],
+        ),
+        (
+            "query_test",
+            "///windows_amd64//src/query:query_test",
+            ["///windows_amd64//src/query:query_test_data"],
+        ),
+        (
+            "format_test",
+            "///windows_amd64//src/format:format_test",
+            ["///windows_amd64//src/format:format_test_data"],
+        ),
+        (
+            "export_test",
+            "///windows_amd64//src/export:export_test",
+            ["///windows_amd64//src/export:export_test_data"],
+        ),
+        ("output_test", "///windows_amd64//src/output:output_test", []),
+        (
+            "hashes_test",
+            "///windows_amd64//src/hashes:hash_rewriter_test",
+            ["///windows_amd64//src/hashes:hash_rewriter_test_data"],
+        ),
+        (
+            "gc_test",
+            "///windows_amd64//src/gc:gc_test",
+            ["///windows_amd64//src/gc:gc_test_data"],
+        ),
+        ("tool_test", "///windows_amd64//src/tool:tool_test", []),
+        ("plz_test", "///windows_amd64//src/plz:plz_test", []),
+        ("clean_test", "///windows_amd64//src/clean:clean_test", []),
+    ]
+]
+
 # plz watch compares the paths it recorded against the ones fsnotify reports, which use
 # different separators on Windows. A mismatch is silent - every event looks like it belongs to
 # a file we aren't watching - so this only means anything when run here.
