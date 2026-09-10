@@ -17,7 +17,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | # | Milestone | Est. | Status | Owner | Issue |
 |---|---|---|---|---|---|
 | M0 | Baseline and guardrail | 2d | ✅ | — | — |
-| M1 | OS abstraction layer | 1–2w | ⬜ | — | — |
+| M1 | OS abstraction layer | 1–2w | 🟡 | — | — |
 | M2 | Paths, environment and the `.exe` model | 1w | ⬜ | — | — |
 | M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
@@ -94,19 +94,24 @@ gives no signal for.** Do the cheap fixes first to unblock Wine testing, then th
 - [x] `src/cli/logging.go` `path.Dir` → `filepath.Dir` (hard startup blocker)
 - [x] `.plzconfig_windows_amd64` with `[Plugin "go"] BuildTags = forceposix` (D5) —
       `go_binary` has no `tags` param, so this is config, not a BUILD edit
-- [ ] `src/output/shell_output.go` — remove the `SysProcAttr` leak; expose intent from
-      `src/process` instead
-- [ ] `src/core/lock.go` → `lock_unix.go` / `lock_windows.go` (`LockFileEx`) — **real
-      implementation**, the probe's no-op would corrupt concurrent builds
+- [x] `src/output/shell_output.go` — leak removed; `process.ShareParentProcessGroup`
+- [x] `src/core/lock.go` → `lock_other.go` / `lock_windows.go` (`LockFileEx`), real
+      implementation; all 12 lock tests pass under Wine
 - [ ] `process.ExecReplace` helper + 6 call sites — **no compiler signal; write tests first**
-- [ ] `src/process/exec_windows.go` — Job Objects, `CREATE_NEW_PROCESS_GROUP`
-- [ ] `src/process/kill_windows.go` / `kill_unix.go` — Ctrl-Break then `TerminateJobObject`
-- [ ] Narrow `exec_other.go` from `!linux` to `!linux && !windows`
-- [ ] `src/clean/clean.go` — `ForkExec` → detached `exec.Command`
+- [x] `src/process/exec_windows.go` — `CREATE_NEW_PROCESS_GROUP`; job objects in
+      `kill_windows.go`
+- [x] `src/process/kill_windows.go` / `kill_other.go` — Ctrl-Break then `TerminateJobObject`
+- [x] Narrow `exec_other.go` from `!linux` to `!linux && !windows`
+- [x] `src/clean/clean.go` — `ForkExec` → detached `exec.Command` (`DETACHED_PROCESS`)
 - [ ] `src/cli/process.go` — narrow the signal set
 - [ ] `src/fs/attr.go` — default `Build.Xattrs = false` on Windows (no build tag needed)
 - [ ] `src/fs/executable.go` — `.exe` / `PATHEXT`
 - [ ] `src/run/run_step.go` — `ExitError.ExitCode()` instead of `syscall.WaitStatus`
+
+**Landed early from M3** (M1 is untestable under Wine without it): platform-specific shell
+init args, since busybox rejects `--noprofile`/`--norc`. Note this is a property of the shell
+being invoked, not the host — remote execution keeps the full flag set via a new
+`process.RemoteBashCommand`. The `[build] Shell`/`ShellArgs` *config* is still M3.
 
 ## M2 — Paths, environment and the `.exe` model
 

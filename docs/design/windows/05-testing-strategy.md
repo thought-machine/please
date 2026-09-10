@@ -75,6 +75,18 @@ export WINEPATH='Z:\path\to\wbin'
 ```
 
 `WINEDEBUG=-all` suppresses Wine's chatter; a job-local `WINEPREFIX` keeps runs isolated.
+
+**Clear Please's cache between runs, or you will verify nothing.** `rm -rf plz-out` is not
+enough: Please also keeps a directory cache, which under Wine lands in
+`$WINEPREFIX/drive_c/users/<user>/AppData/Local/please`. A build that appears to succeed may
+be replaying cached artifacts from an earlier, differently-built binary — this happened during
+M0 and produced a false pass on a binary whose shell handling was in fact broken. Wipe both:
+
+```bash
+rm -rf plz-out "$WINEPREFIX"/drive_c/users/*/AppData/Local/please
+```
+
+(Incidentally this confirms `os.UserCacheDir()` resolves correctly on Windows.)
 Note Wine maps Unix paths to the `Z:` drive, so `$PWD` becomes `Z:\...` inside the binary —
 useful to know when reading error messages.
 
