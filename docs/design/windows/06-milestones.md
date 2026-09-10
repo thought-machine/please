@@ -324,7 +324,23 @@ Design: `03-cc-toolchain.md`. Repo: `please-build/cc-rules`.
       broke the link, so this is noise reduction rather than a blocker
 - [x] `DefaultLdFlags` → `-lpthread`. Only `-ldl` was wrong. Note a repeatable config key
       **cannot be cleared by assigning empty** — that yields `[""]`, which becomes a bare
-      `-Wl,` and the linker rejects it
+      `-Wl,` and the linker rejects it.
+
+      **It was set that way anyway**, in *this* repo's `.plzconfig_windows_amd64`, and stayed
+      broken because nothing here built a C++ target for Windows until one was added. The
+      platform default now comes from the plugin's build defs, where `CONFIG.OS` is the target;
+      the plugin's own `.plzconfig_windows_amd64` never applied to anyone using it as a plugin
+- [x] **`cc_shared_object` can be linked against.** Windows resolves a DLL's symbols through an
+      import library rather than through the DLL, so `-l<name>` had nothing to find. The link
+      now writes one with `--out-implib`, named after the output — `lib<name>.dll.a` for the
+      default `lib<name>.dll`, which is what `-l<name>` looks for.
+
+      The note in the rule said a second output was impossible, because the shared link command
+      names its output `$OUT` and that is unset on a multi-output rule. True of `outs`, not of
+      `optional_outs`, which don't count towards it. `//test/windows:dll_test` builds the pair,
+      links one against the other and runs it under Wine; taking the DLL away makes it exit 53,
+      so the linkage is genuinely dynamic. Windows has no rpath, so the DLL has to sit beside
+      the binary — which is what the test rule's data does
 - [ ] `please_cc` `execvp_windows.go` (needed for native Windows, not for Axis 2)
 - [x] Parse-time error when `pkg_config_libs` is used on Windows, naming the rule that asked
 - [ ] MinGW cross-compile job in `plugin_test_cc.yaml`

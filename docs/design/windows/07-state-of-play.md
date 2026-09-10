@@ -8,20 +8,21 @@ per-milestone tracker with the reasoning; this is the short version for someone 
 ## What works today
 
 `please.exe` cross-builds from Linux, runs under Wine, ships busybox as its build shell, and
-builds a C++ binary end to end through an entirely Windows toolchain. Python works too: a
-`python_test` and a `python_binary` both build for Windows and run there. The release is a
-`.zip` containing `please.exe`, `busybox.exe`, `build_langserver.exe` and a `plz.cmd` shim;
-extracting it and running `plz.cmd` builds a genrule with no configuration at all.
+builds a C++ binary end to end through an entirely Windows toolchain, including a DLL and a
+binary linked against it. Python works too: a `python_test` and a `python_binary` both build
+for Windows and run there. The release is a `.zip` containing `please.exe`, `busybox.exe`,
+`build_langserver.exe` and a `plz.cmd` shim; extracting it and running `plz.cmd` builds a
+genrule with no configuration at all.
 
-Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 27 targets and
-807 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Two of those
-targets only exist when a local `python-rules` checkout is configured — see below.
+Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 28 targets and
+808 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Three of those
+targets only exist when a local plugin checkout is configured — see below.
 
 | # | Milestone | State |
 |---|---|---|
 | M0–M3, M6 | baseline, OS layer, paths, shell, Wine harness | done |
 | M4 | release pipeline | done bar a published `arcat` |
-| M5 | C++ / cc-rules | rules done; `cc_test` and linking against a DLL remain |
+| M5 | C++ / cc-rules | done bar `cc_test`, which is blocked upstream |
 | M7 | sandboxing | decided against, documented |
 | M8 | plugins | go, cc, shell, python done in local clones; `sh_binary` remains |
 | M9 | native Windows CI and GA | not started |
@@ -30,9 +31,9 @@ targets only exist when a local `python-rules` checkout is configured — see be
 
 | Repo | Branch | Head |
 |---|---|---|
-| `~/code/please` | `wine` | 50 commits ahead of `master` |
+| `~/code/please` | `wine` | 52 commits ahead of `master` |
 | `~/code/go-rules` | `windows` | don't double the `.exe` |
-| `~/code/cc-rules` | `windows` | build for Windows |
+| `~/code/cc-rules` | `windows` | emit an import library |
 | `~/code/shell-rules` | `windows` | default the shell from the build defs |
 | `~/code/python-rules` | `windows` | build a `.pex` Windows can run |
 
@@ -41,9 +42,10 @@ access to any of them, so nothing is upstreamed; the branches are the deliverabl
 
 `.plzconfig.local` (gitignored) selects the local checkouts through `[buildconfig]` keys —
 `go-rules-path` and friends. Delete it to go back to the pinned downloads. Both directions are
-verified, but they are not equivalent any more: the two Wine python tests are only *defined*
-when `python-rules-path` is set, because no released `python-rules` can build a Windows `.pex`.
-`//test/export:...` fails while it is set, for an unrelated reason — see below.
+verified, but they are not equivalent any more. Three Wine tests are only *defined* when the
+matching checkout is configured, because no released plugin has the fix each one tests: two pex
+tests behind `python-rules-path`, and the DLL test behind `cc-rules-path`. `//test/export:...`
+fails while `.plzconfig.local` is present at all, for an unrelated reason — see below.
 
 ## Environment
 
@@ -60,22 +62,22 @@ when `python-rules-path` is set, because no released `python-rules` can build a 
 
 In rough order of value.
 
-1. **`cc_shared_object` cannot be linked against on Windows.** `-l<name>` needs an import library
-   describing the DLL's exports. Declaring one makes the rule multi-output, which breaks the
-   command template that names its output `$OUT`. Noted in `cc.build_defs` where it bites.
-2. **`cc_test` is blocked upstream of us** — `UnitTest++` as packaged needs its `Win32/` sources
-   to compile at all.
-3. **`sh_binary`** writes a shebang, appends the script, then appends a zip, and relies on the
+1. **`cc_test` is blocked upstream of us** — `UnitTest++` as packaged needs its `Win32/` sources
+   to compile at all. It is the last thing in M5.
+2. **`sh_binary`** writes a shebang, appends the script, then appends a zip, and relies on the
    shebang. The payload is fine (busybox has `unzip`); only the launching is broken, and it
    cannot emit a `.cmd` alongside because `plz run` requires a single output.
-4. **Bump `plugins/BUILD`** once the plugin branches are published somewhere. In the same change,
-   delete the `out = "please.exe" if is_platform(...)` workarounds from `src/BUILD.plz` and
-   `//tools/build_langserver`, drop the `PexTool` override from `.plzconfig_windows_amd64`, and
-   remove the `CONFIG.get("PYTHON_RULES_PATH")` condition around the pex tests in
-   `//test/windows`. All four are there because this repo pins plugins that don't have the fixes.
-5. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
+3. **Bump `plugins/BUILD`** once the plugin branches are published somewhere. In the same change,
+   delete everything this repo carries because it pins plugins without the fixes: the
+   `out = "please.exe" if is_platform(...)` workarounds in `src/BUILD.plz` and
+   `//tools/build_langserver`, the `PexTool` and `defaultldflags` lines in
+   `.plzconfig_windows_amd64`, and the `CONFIG.get(...)` conditions around the pex and DLL tests
+   in `//test/windows`.
+4. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
+5. **`plz run` and `plz debug` on a Windows target** are untested. So is `plz cover`, whose
+   coverage paths come back from the Python side with backslashes in them.
 
 Blocked on push access we do not have: publishing `windows_amd64` releases of `arcat`,
 `please_go`, `please_cc`, and a `please_pex` of any platform carrying the Windows preamble.
@@ -100,7 +102,9 @@ Each of these has already cost time once.
   doing the building. A platform default set that way works in the plugin's own tests and
   nowhere else. Put it in the build defs instead.
 - **A repeatable config key cannot be cleared by assigning it empty** — that yields a list of one
-  empty string. Three separate bugs so far.
+  empty string. Four separate bugs so far. The most recent sat in this repo's own
+  `.plzconfig_windows_amd64` for weeks, because nothing here built a C++ target for Windows
+  until a test did.
 - **Go's `os/exec` will not run a file with no `PATHEXT` extension**, even given its full path.
   Windows itself is fine with it; `os.StartProcess` proves that. Only the lookup refuses.
 - **Never run a cross-built test binary by hand in the source tree.** Under `plz test` they get a
