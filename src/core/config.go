@@ -9,6 +9,7 @@ import (
 	iofs "io/fs"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -376,7 +377,7 @@ func defaultPathIfExists(conf *string, dir, file string) {
 // DefaultConfiguration returns the default configuration object with no overrides.
 // N.B. Slice fields are not populated by this (since it interferes with reading them)
 func DefaultConfiguration() *Configuration {
-	config := Configuration{buildEnvStored: &storedBuildEnv{}}
+	config := Configuration{buildEnvStored: &storedBuildEnv{}, shellStored: &storedShell{}}
 	config.Please.SelfUpdate = true
 	config.Please.Autoclean = true
 	config.Please.DownloadLocation = "https://get.please.build"
@@ -698,6 +699,8 @@ type Configuration struct {
 
 	// buildEnvStored is a cached form of BuildEnv.
 	buildEnvStored *storedBuildEnv
+	// shellStored is a cached form of Shell().
+	shellStored *storedShell
 
 	FeatureFlags struct {
 	} `help:"Flags controlling preview features for the next release. Typically these config options gate breaking changes and only have a lifetime of one major release."`
@@ -747,6 +750,62 @@ type storedBuildEnv struct {
 	Env  BuildEnv
 	Path []string
 	Once sync.Once
+}
+
+type storedShell struct {
+	Shell string
+	Once  sync.Once
+}
+
+// Shell returns the shell that build actions, tests and the command cache run in.
+//
+// A bare name is left for the OS to resolve on Please's own PATH, as it always has been. The
+// exception is when it isn't there at all: then we look on the build path, which includes
+// Please's own install directory. That is how the shell Please bundles on Windows gets found,
+// since nothing puts that directory on the user's PATH.
+func (config *Configuration) Shell() string {
+	if config.shellStored == nil {
+		// A Configuration built by hand rather than through DefaultConfiguration; nothing to
+		// cache in, so just work it out each time.
+		return config.resolveShell()
+	}
+	config.shellStored.Once.Do(func() {
+		config.shellStored.Shell = config.resolveShell()
+	})
+	return config.shellStored.Shell
+}
+
+// ShellArgs returns the arguments passed to the shell before the command itself.
+// A Configuration built by hand has none set - the defaults for a repeatable key can only be
+// applied after parsing, or they would be appended to rather than replaced - so the platform
+// default stands in.
+func (config *Configuration) ShellArgs() []string {
+	if len(config.Build.ShellArgs) == 0 {
+		return process.DefaultShellArgs
+	}
+	return config.Build.ShellArgs
+}
+
+func (config *Configuration) resolveShell() string {
+	shell := config.Build.Shell
+	if shell == "" {
+		return process.DefaultShell
+	} else if filepath.IsAbs(shell) || strings.ContainsRune(shell, filepath.Separator) {
+		return shell
+	} else if _, err := exec.LookPath(shell); err == nil {
+		return shell
+	} else if path, err := LookPath(shell, config.Path()); err == nil {
+		return path
+	} else if exe, err := fs.Executable(); err == nil {
+		// Last resort: next to the binary that is running. That is where a bundled shell sits
+		// in an install, and unlike the build path above it doesn't depend on Please.Location
+		// having been resolved yet.
+		if path, err := LookPath(shell, []string{filepath.Dir(exe)}); err == nil {
+			return path
+		}
+	}
+	// Leave it as it is; the exec will fail with a better message than anything we'd write.
+	return shell
 }
 
 // Hash returns a hash of the parts of this configuration that affect building targets in general.

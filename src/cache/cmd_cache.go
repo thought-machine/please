@@ -139,7 +139,7 @@ func newCmdCache(config *core.Configuration) *cmdCache {
 	// These are shell strings like any build action, so they run in the configured shell -
 	// on Windows there is no 'sh' to fall back on. Clipped so that appending the command to
 	// it can't write into this slice from two goroutines at once.
-	shell := process.ShellArgv(config.Build.Shell, config.Build.ShellArgs)
+	shell := process.ShellArgv(config.Shell(), config.ShellArgs())
 	return &cmdCache{
 		storeCommand:    config.Cache.StoreCommand,
 		retrieveCommand: config.Cache.RetrieveCommand,
