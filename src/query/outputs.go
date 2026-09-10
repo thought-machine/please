@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -22,7 +22,7 @@ func targetOutputsFlat(graph *core.BuildGraph, labels []core.BuildLabel) {
 	for _, label := range labels {
 		target := graph.TargetOrDie(label)
 		for _, out := range target.Outputs() {
-			fmt.Printf("%s\n", filepath.Join(target.OutDir(), out))
+			fmt.Printf("%s\n", path.Join(target.OutDir(), out))
 		}
 	}
 }
@@ -32,7 +32,7 @@ func targetOutputsJSON(graph *core.BuildGraph, labels []core.BuildLabel) {
 	for _, label := range labels {
 		target := graph.TargetOrDie(label)
 		for _, out := range target.Outputs() {
-			data[label.String()] = append(data[label.String()], filepath.Join(target.OutDir(), out))
+			data[label.String()] = append(data[label.String()], path.Join(target.OutDir(), out))
 		}
 	}
 	encoder := json.NewEncoder(os.Stdout)

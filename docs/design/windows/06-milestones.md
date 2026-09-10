@@ -420,6 +420,12 @@ diagnose in the field.
 Note the grandchild has to be a separate process to test any of this. busybox implements a
 subshell as a thread on Windows, so `( ... ) &` would die with its parent and prove nothing.
 
+A sweep for the same mistake elsewhere, rather than waiting for a test to find it, turned up
+four more places where a path Please *prints* came out backslashed: `plz query outputs`, `plz
+query graph`, the paths `plz build` reports, and the entries `plz generate` writes into a
+`.gitignore` — the last of which would simply not have matched, since git speaks forward slashes
+on every platform. None of these has a test that would notice, so they are worth naming.
+
 A further kind of finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
 whose name has no extension in `PATHEXT`, even given its full path.** The `wine_go_test` macro
 copies each test binary to a `.exe` before running it. The same trap is why `//src:please`
@@ -479,8 +485,13 @@ Three tests are honestly unrunnable rather than fixed:
       something that does not exist. It now says sandboxing is not implemented on this platform
       and that actions will run without isolation, and does not construct a sandboxing executor
 - [ ] `sandbox_windows.go` — Job Objects (reuse M1), restricted token, scrubbed environment
-- [ ] Document the filesystem-isolation gap: no mount-namespace analogue; Windows Containers
-      rejected as too large a dependency
+- [x] Document the filesystem-isolation gap. There is no mount-namespace analogue on Windows.
+      A job object can bound processes and a restricted token can drop privileges, but neither
+      hides a directory, and the only thing that does is a Windows Container — a dependency far
+      too large to take on for a build tool. So a Windows sandbox could isolate *processes* but
+      not the *filesystem*, which is the half that matters most for build hermeticity. That is
+      why refusing to act on the setting, rather than half-implementing it, is the right shape
+      until someone has a use for the process half on its own
 
 Note `resolveOut` already guards its sandbox branch on `runtime.GOOS == "linux"`, so `$OUT`
 does not change shape on a platform without a sandbox. `target.Sandbox` is still folded into

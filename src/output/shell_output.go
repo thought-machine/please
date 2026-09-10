@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -474,10 +475,12 @@ func buildResult(target *core.BuildTarget) []string {
 	results := []string{}
 	if target != nil {
 		for _, out := range target.Outputs() {
+			// Slash-separated: these are printed for a person to read and paste into a
+			// command, where a backslash would be an escape character rather than a separator.
 			if core.StartedAtRepoRoot() {
-				results = append(results, filepath.Join(target.OutDir(), out))
+				results = append(results, path.Join(target.OutDir(), out))
 			} else {
-				results = append(results, filepath.Join(core.RepoRoot, target.OutDir(), out))
+				results = append(results, filepath.ToSlash(filepath.Join(core.RepoRoot, target.OutDir(), out)))
 			}
 		}
 	}

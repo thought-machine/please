@@ -1,6 +1,7 @@
 package generate
 
 import (
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -33,10 +34,12 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 				}
 				relativePkg = strings.TrimPrefix(strings.TrimPrefix(t.Label.PackageName, pkg), "/")
 			}
-			if vcs.AreIgnored(filepath.Join(t.Label.PackageName, out)) {
+			// path, not filepath: these are matched against .gitignore patterns and then
+			// written into one, and git speaks forward slashes on every platform.
+			if vcs.AreIgnored(path.Join(t.Label.PackageName, out)) {
 				continue
 			}
-			files = append(files, filepath.Join(relativePkg, out))
+			files = append(files, path.Join(relativePkg, out))
 		}
 	}
 	return vcs.IgnoreFiles(gitignore, files)
