@@ -305,11 +305,11 @@ Design: `05-testing-strategy.md`.
       `wine_go_test` and `wine_plz_test`
 - [x] Wine CI job — `test-windows-wine`, blocking, and a third pass in `test.sh` where Wine is
       installed. Every `//src/...` package whose tests run there at all: 19 targets, 717 tests,
-      713 passing and 4 skipped. **Not** `//src/process`, whose tests run `true`, `false` and
-      `sleep` as bare argv and so assume a Unix toolbox on the PATH; and not `//src/cache`,
-      `//src/exec`, `//src/remote`, `//src/run` or `//src/update`, which still have failures to
-      work through. `//src/build` is the valuable one — it runs real build actions, so it
-      covers the process layer and the bundled shell as well as whatever it is nominally about
+      756 passing and 7 skipped. **Not** `//src/process`, whose tests run `true`, `false` and
+      `sleep` as bare argv and so assume a Unix toolbox on the PATH, and not `//src/update`,
+      which is left. `//src/build` and `//src/exec` are the valuable ones — they run real build
+      actions, so they cover the process layer and the bundled shell as well as whatever they
+      are nominally about
 - [x] The genrule shell smoke test — plus a `query alltargets //...` test, which is the
       `forceposix` guard the risk register asked for
 - [x] **The headline end-to-end passes.** `wine plz.exe` extracts the cc plugin with
@@ -378,6 +378,20 @@ more — including the worst one so far:
     every completion below the top level was unusable.
 11. **`plz query changes` matched no package** for a changed file, because it walked up the
     directory tree with `filepath.Dir` and looked the result up as a package name.
+
+And the last packages found a gap in M3's own work:
+
+12. **The command cache never got the resolved shell.** `resolveShell` lived in
+    `executorFromConfig`, so only build actions and tests benefited; `[cache] storecommand` and
+    `retrievecommand` were handed the bare name and could not find the bundled busybox. It is
+    now `Configuration.Shell()`, resolved once and shared, with a final fallback to the
+    directory of the running binary — which is where a bundled shell sits, and unlike the build
+    path does not depend on `Please.Location` having been resolved yet.
+13. **`ShellArgs` was empty for any hand-built configuration.** The defaults for a repeatable
+    key can only be applied after parsing, or gcfg appends to them rather than replacing, so
+    anything using `DefaultConfiguration()` directly got none. On Unix that quietly dropped
+    `--noprofile --norc`; on Windows it dropped the applet name, so the shell did not run at
+    all. `Configuration.ShellArgs()` supplies the platform default when nothing is set.
 
 A further kind of finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
 whose name has no extension in `PATHEXT`, even given its full path.** The `wine_go_test` macro
