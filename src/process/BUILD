@@ -3,6 +3,8 @@ go_library(
     srcs = [
         "exec_linux.go",
         "exec_other.go",
+        "exec_replace_other.go",
+        "exec_replace_windows.go",
         "exec_windows.go",
         "kill_other.go",
         "kill_windows.go",

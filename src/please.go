@@ -12,7 +12,6 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/thought-machine/go-flags"
@@ -716,10 +715,9 @@ var buildFunctions = map[string]func() int{
 	"op": func() int {
 		cmd := core.ReadPreviousOperationOrDie()
 		log.Notice("OP PLZ: %s", strings.Join(cmd, " "))
-		// Annoyingly we don't seem to have any access to execvp() which would be rather useful here...
 		executable, err := os.Executable()
 		if err == nil {
-			err = syscall.Exec(executable, append([]string{executable}, cmd...), os.Environ())
+			err = process.ExecReplace(executable, append([]string{executable}, cmd...), os.Environ())
 		}
 		log.Fatalf("SORRY OP: %s", err) // On success Run never returns.
 		return 1

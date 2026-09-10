@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -178,13 +177,13 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 
 	if !fork {
 		if dir != "" {
-			err := syscall.Chdir(dir)
+			err := os.Chdir(dir)
 			if err != nil {
 				log.Fatalf("Error changing directory %s: %s", dir, err)
 			}
 		}
 		// Plain 'plz run'. One way or another we never return from the following line.
-		must(syscall.Exec(args[0], args, env), args)
+		must(process.ExecReplace(args[0], args, env), args)
 	} else if detach {
 		// Bypass the whole process management system since we explicitly aim not to manage this subprocess.
 		cmd := exec.Command(args[0], args[1:]...)
@@ -272,11 +271,7 @@ func toExitError(err error, cmd []string, out []byte) error {
 	if err == nil {
 		return nil
 	} else if exitError, ok := err.(*exec.ExitError); ok {
-		// This is a little hairy; there isn't a good way of getting the exit code,
-		// but this should be reasonably portable (at least to the platforms we care about).
-		if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
-			exitCode = status.ExitStatus()
-		}
+		exitCode = exitError.ExitCode()
 	}
 	return &exitError{
 		msg:  fmt.Sprintf("Error running command %s: %s\n%s", strings.Join(cmd, " "), err, string(out)),

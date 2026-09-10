@@ -7,6 +7,8 @@ go_library(
         "progress.go",
         "prompt.go",
         "replacements.go",
+        "signals_other.go",
+        "signals_windows.go",
         "suggest.go",
         "winch_other.go",
         "winch_windows.go",

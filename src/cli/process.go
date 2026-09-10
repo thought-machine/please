@@ -3,7 +3,6 @@ package cli
 import (
 	"os"
 	"os/signal"
-	"syscall"
 )
 
 var atexitHandlers []func()
@@ -16,7 +15,7 @@ func init() {
 // functions previously registered with AtExit, and then exits the process.
 func handleSignals() {
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGABRT, syscall.SIGTERM)
+	signal.Notify(ch, terminatingSignals...)
 	sig := <-ch
 	log.Info("Received signal %s", sig)
 	// Allow a second signal to terminate the process regardless
@@ -47,8 +46,5 @@ func AtExit(f func()) {
 
 // exit kills the process with an exit code suitable for the given signal.
 func exit(sig os.Signal) {
-	if s, ok := sig.(syscall.Signal); ok {
-		os.Exit(128 + int(s))
-	}
-	os.Exit(1)
+	os.Exit(exitCodeForSignal(sig))
 }

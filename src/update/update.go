@@ -19,7 +19,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/hashicorp/go-retryablehttp"
@@ -95,7 +94,11 @@ func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, f
 	core.ReturnToInitialWorkingDir()
 	args := filterArgs(forceUpdate, append([]string{newPlease}, os.Args[1:]...))
 	log.Info("Executing %s", strings.Join(args, " "))
-	if err := syscall.Exec(newPlease, args, os.Environ()); err != nil {
+	// Release the repo lock before handing over. On Unix the exec would drop it for us, since
+	// Go opens files O_CLOEXEC; on Windows we stay alive as the new process's parent and would
+	// otherwise deadlock it against ourselves.
+	core.ReleaseRepoLock()
+	if err := process.ExecReplace(newPlease, args, os.Environ()); err != nil {
 		log.Fatalf("Failed to exec new Please version %s: %s", newPlease, err)
 	}
 	// Shouldn't ever get here. We should have either exec'd or died above.

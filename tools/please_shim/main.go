@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/thought-machine/go-flags"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/update"
 	"github.com/thought-machine/please/src/version"
 )
@@ -226,7 +226,7 @@ func main() {
 	command := cli.ActiveFullCommand(parser.Command)
 	maybeUpdatePlease(state, command == "update")
 
-	if err := syscall.Exec(state.pleaseExecutable, os.Args, os.Environ()); err != nil {
+	if err := process.ExecReplace(state.pleaseExecutable, os.Args, os.Environ()); err != nil {
 		log.Fatalf("Failed to execute Please: %s", err)
 	}
 }

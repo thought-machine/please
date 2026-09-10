@@ -21,6 +21,7 @@ go_library(
         "///third_party/go/github.com_thought-machine_go-flags//:go-flags",
         "///third_party/go/github.com_zeebo_blake3//:blake3",
         "///third_party/go/golang.org_x_sync//errgroup",
+        "///third_party/go/golang.org_x_sys//windows",
         "//src/cli",
         "//src/cli/logging",
         "//src/cmap",

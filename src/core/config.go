@@ -386,7 +386,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Timeout = cli.Duration(10 * time.Minute)
 	config.Build.Config = "opt"         // Optimised builds by default
 	config.Build.FallbackConfig = "opt" // Optimised builds as a fallback on any target that doesn't have a matching one set
-	config.Build.Xattrs = true
+	config.Build.Xattrs = defaultXattrs
 	config.Build.HashFunction = "sha256"
 	config.Build.ParallelDownloads = 4
 	config.BuildConfig = map[string]string{}

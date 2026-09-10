@@ -49,7 +49,7 @@ func executable() (string, error) {
 		return exePath, nil
 	}
 	// Search for executable in $PATH.
-	for _, dir := range splitPathList(os.Getenv("PATH")) {
+	for _, dir := range SplitPathList(os.Getenv("PATH")) {
 		if len(dir) == 0 {
 			dir = "."
 		}
@@ -86,9 +86,9 @@ func isExecutable(path string) error {
 	return nil
 }
 
-// splitPathList splits a path list.
+// SplitPathList splits a PATH-style list on the platform's list separator.
 // This is based on genSplit from strings/strings.go
-func splitPathList(pathList string) []string {
+func SplitPathList(pathList string) []string {
 	if pathList == "" {
 		return nil
 	}

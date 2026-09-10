@@ -10,13 +10,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 
 	"github.com/thought-machine/go-flags"
 
 	"github.com/thought-machine/please/src/cli/logging"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/process"
 )
 
 var log = logging.Log
@@ -45,7 +45,7 @@ func Run(config *core.Configuration, tool Tool, args []string) {
 		target = t
 	}
 	// Hopefully we have an absolute path now, so let's run it.
-	err := syscall.Exec(target, append([]string{target}, args...), os.Environ())
+	err := process.ExecReplace(target, append([]string{target}, args...), os.Environ())
 	log.Fatalf("Failed to exec %s: %s", target, err) // Always a failure, exec never returns.
 }
 
