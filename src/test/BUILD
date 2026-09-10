@@ -36,7 +36,9 @@ go_test(
         "results_test.go",
         "xml_results_test.go",
     ],
-    data = ["test_data"],
+    data = [":test_data"],
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":test",
         "///third_party/go/github.com_peterebden_tools//cover",
@@ -62,4 +64,12 @@ plz_e2e_test(
     cmd = "plz test //src/test:go_test_panic",
     expect_output_contains = "panic: goodbye world",
     expected_failure = True,
+)
+
+# Exposed so //test/windows can put it beside the test binary when running it under Wine.
+filegroup(
+    name = "test_data",
+    srcs = ["test_data"],
+    test_only = True,
+    visibility = ["//test/windows:all"],
 )

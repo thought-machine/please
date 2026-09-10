@@ -14,6 +14,28 @@ wine_go_test(
     test = "///windows_amd64//src/core:core_test",
 )
 
+# These run real build actions, so they exercise the process layer and the bundled shell as
+# well as whatever they are nominally about.
+wine_go_test(
+    name = "build_test",
+    data = ["///windows_amd64//src/build:test_data"],
+    needs_shell = True,
+    test = "///windows_amd64//src/build:build_test",
+)
+
+# Coverage parsing and the command-line layer: neither runs a build action, but both handle
+# paths that came from somewhere else.
+wine_go_test(
+    name = "test_test",
+    data = ["///windows_amd64//src/test:test_data"],
+    test = "///windows_amd64//src/test:test_test",
+)
+
+wine_go_test(
+    name = "cli_test",
+    test = "///windows_amd64//src/cli:cli_test",
+)
+
 # plz watch compares the paths it recorded against the ones fsnotify reports, which use
 # different separators on Windows. A mismatch is silent - every event looks like it belongs to
 # a file we aren't watching - so this only means anything when run here.

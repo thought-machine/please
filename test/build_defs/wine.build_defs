@@ -13,24 +13,38 @@
 # shared prefix for all these tests is enough - wineserver serialises access to it. $TMP_DIR
 # is <repo root>/plz-out/tmp/..., so trimming from the last /plz-out/ gets back to the root.
 # This has to be built in the command rather than passed in env, which isn't expanded.
-WINEPREFIX = '${TMP_DIR%/plz-out/*}/plz-out/wineprefix'
+WINEPREFIX = "${TMP_DIR%/plz-out/*}/plz-out/wineprefix"
 
 # WINEDEBUG=-all silences Wine's own chatter, which would otherwise be interleaved with the
 # test output we are trying to parse.
-WINE_ENV = {'WINEDEBUG': '-all'}
-
+WINE_ENV = {"WINEDEBUG": "-all"}
 
 def _wine_setup_cmd():
-    """Returns a command that makes sure the shared Wine prefix exists."""
-    # wineboot is idempotent but not free, so only run it if the prefix isn't there. Two tests
-    # racing to create it is fine; wineserver serialises access.
-    return ' && '.join([
+    """Returns a command that prepares the shared Wine prefix and isolates this test in it."""
+
+    hosts = '"$WINEPREFIX/drive_c/windows/system32/drivers/etc/hosts"'
+    return " && ".join([
         f'export WINEPREFIX="{WINEPREFIX}"',
+        # wineboot is idempotent but not free, so only run it if the prefix isn't there. Two
+        # tests racing to create it is fine; wineserver serialises access.
         'if [ ! -d "$WINEPREFIX" ]; then wineboot --init >/dev/null 2>&1 || true; fi',
+        # Wine ships a hosts file with the localhost line commented out, so anything that
+        # resolves it - a test's own HTTP server, say - hangs until it gives up.
+        f'grep -q "^127.0.0.1 localhost" {hosts} || echo "127.0.0.1 localhost" >> {hosts}',
+        # Point the Windows home directory at this test's own temp dir. Otherwise every test
+        # shares the one inside the prefix and anything written to ~ leaks between runs; a
+        # read-only file left there can't even be replaced on Windows.
+        'export USERPROFILE="$(winepath -w "$TMP_DIR")"',
     ])
 
-
-def wine_go_test(name:str, test:str, data:list=[], labels:list=[], timeout:int=600, size:str=None):
+def wine_go_test(
+        name:str,
+        test:str,
+        data:list=[],
+        needs_shell:bool=False,
+        labels:list=[],
+        timeout:int=600,
+        size:str=None):
     """Runs a Go test binary that was cross-compiled for Windows, under Wine.
 
     Args:
@@ -40,38 +54,55 @@ def wine_go_test(name:str, test:str, data:list=[], labels:list=[], timeout:int=6
       data (list): Runtime data the test needs. A go_test's own data doesn't come along when
                    another rule depends on it, so anything the test reads has to be repeated
                    here; it lands at the same path it would have under go_test.
+      needs_shell (bool): True if the test runs build actions, which need a shell. Puts the
+                   bundled busybox next to the test binary, which is where Please looks for it
+                   when it isn't on the PATH - the same arrangement as an install.
       labels (list): Extra labels for the rule.
       timeout (int): Test timeout in seconds. Wine is slower than native, and these binaries
                      are being run cold.
       size (str): Test size.
     """
+
     # The binary has to be renamed. The go plugin names its output after the rule, so the
     # cross-built binary is called e.g. 'core_test' with no extension - and Go's exec package
     # on Windows will not run a file whose name has no extension in PATHEXT, even when handed
     # its full path. Any test whose subject re-execs itself fails obscurely without this.
-    test_cmd = ' && '.join([
+    cmds = [
         _wine_setup_cmd(),
         'cp "$DATA_TEST_BINARY" "$TMP_DIR/test.exe"',
-        # Go test binaries print in the format Please parses when it isn't given JUnit XML.
-        'wine "$TMP_DIR/test.exe" -test.v 2>&1 | tee "$TMP_DIR/test.results"',
-    ])
+    ]
+    if needs_shell:
+        cmds.append('cp "$DATA_BUSYBOX" "$TMP_DIR/busybox.exe"')
+
+    # Go test binaries print in the format Please parses when it isn't given JUnit XML.
+    cmds.append('wine "$TMP_DIR/test.exe" -test.v 2>&1 | tee "$TMP_DIR/test.results"')
+    test_cmd = " && ".join(cmds)
+
+    test_data = {"TEST_BINARY": [test], "FILES": data}
+    if needs_shell:
+        test_data["BUSYBOX"] = ["///windows_amd64//third_party/binary:busybox"]
     return gentest(
         name = name,
-        test_cmd = test_cmd,
-        data = {'TEST_BINARY': [test], 'FILES': data},
+        size = size,
+        timeout = timeout,
+        data = test_data,
         env = WINE_ENV,
-        labels = labels + ['wine', 'windows'],
+        labels = labels + ["wine", "windows"],
+        local = True,
         # Wine needs a real filesystem it can put a prefix on, and talks to a wineserver that
         # outlives the process; neither survives the sandbox.
         sandbox = False,
-        local = True,
-        timeout = timeout,
-        size = size,
+        test_cmd = test_cmd,
     )
 
-
-def wine_plz_test(name:str, repo:str, cmd:str, expected_output:dict={}, labels:list=[],
-                  expected_failure:bool=False, timeout:int=600):
+def wine_plz_test(
+        name:str,
+        repo:str,
+        cmd:str,
+        expected_output:dict={},
+        labels:list=[],
+        expected_failure:bool=False,
+        timeout:int=600):
     """Runs the cross-built please.exe under Wine against a small test repo.
 
     This is the counterpart of please_repo_e2e_test for Windows: it checks that Please
@@ -87,6 +118,7 @@ def wine_plz_test(name:str, repo:str, cmd:str, expected_output:dict={}, labels:l
       expected_failure (bool): True if the command is expected to exit non-zero.
       timeout (int): Test timeout in seconds.
     """
+
     # The Windows release layout: please.exe with busybox.exe beside it, which is where the
     # default [build] shell of 'busybox' gets resolved from. Nothing is put on the PATH, so
     # this also covers the resolution the bundling depends on.
@@ -101,22 +133,23 @@ def wine_plz_test(name:str, repo:str, cmd:str, expected_output:dict={}, labels:l
     run = f'wine "$TMP_DIR/plzdir/please.exe" {cmd} 2>&1 | tee "$TMP_DIR/output"'
     if expected_failure:
         # Please exits non-zero, so check that rather than letting the pipeline fail us.
-        run = f'if {run}; then exit 1; fi'
-    test_cmd = ' && '.join(setup + [run] + [
-        f'diff -u "{expected}" "{out}"' for out, expected in expected_output.items()
+        run = f"if {run}; then exit 1; fi"
+    test_cmd = " && ".join(setup + [run] + [
+        f'diff -u "{expected}" "{out}"'
+        for out, expected in expected_output.items()
     ])
     return gentest(
         name = name,
-        test_cmd = test_cmd,
+        timeout = timeout,
         data = {
-            'PLEASE': ['///windows_amd64//src:please'],
-            'BUSYBOX': ['///windows_amd64//third_party/binary:busybox'],
-            'REPO': [repo],
+            "PLEASE": ["///windows_amd64//src:please"],
+            "BUSYBOX": ["///windows_amd64//third_party/binary:busybox"],
+            "REPO": [repo],
         },
         env = WINE_ENV,
-        labels = labels + ['wine', 'windows'],
+        labels = labels + ["wine", "windows"],
+        local = True,
         no_test_output = True,
         sandbox = False,
-        local = True,
-        timeout = timeout,
+        test_cmd = test_cmd,
     )

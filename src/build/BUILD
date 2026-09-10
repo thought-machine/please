@@ -31,7 +31,9 @@ go_test(
         "incrementality_test.go",
         "remote_file_test.go",
     ],
-    data = ["test_data"],
+    data = [":test_data"],
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":build",
         "///third_party/go/github.com_stretchr_testify//assert",
@@ -53,4 +55,12 @@ go_test(
         "//src/fs",
         "//src/plz",
     ],
+)
+
+# Exposed so //test/windows can put it beside the test binary when running it under Wine.
+filegroup(
+    name = "test_data",
+    srcs = ["test_data"],
+    test_only = True,
+    visibility = ["//test/windows:all"],
 )
