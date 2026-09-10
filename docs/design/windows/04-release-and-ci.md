@@ -71,23 +71,44 @@ go_toolchain(
 Add `go1.27.0.windows-amd64.zip`. Note Windows Go distributions are `.zip`, not `.tar.gz` —
 confirm the go plugin's `go_toolchain` rule handles that, or the hash is useless.
 
-### 2. arcat platform gate
+### 2. arcat — the real gate
 
-`src/parse/internal_package.go` has an exhaustive switch that **hard-fails** on unknown
-platforms:
+**What arcat is.** A small standalone Go binary (`github.com/please-build/arcat`, 6 source
+files) that Please downloads as a prebuilt release keyed by `HOSTOS_HOSTARCH`. It is the
+built-in archive toolkit, so rules never depend on the host having `tar`, `zip`, `ar` or
+`unzip`, or on those behaving consistently. Three uses:
 
-```go
-default:
-    return "", fmt.Errorf("arcat tool not supported for platform: %s_%s", runtime.GOOS, runtime.GOARCH)
+| Invocation | Used by |
+|---|---|
+| `arcat x` — extract zip/tar | `remote_file(extract=True)`, `http_archive`, **`plugin_repo`** |
+| `arcat tar` — create tarballs | `tarball()` |
+| `arcat ar -r` / `--combine` — create/merge `.a` static libraries | **`cc_library`** |
+
+**Why it is more severe than "a hash to add".** `plugin_repo` extracts the plugin zip with
+it, and *every language plugin is delivered that way*. So without arcat, Windows cannot load
+the cc rules at all — and `cc_library` then needs it again to build `.a` archives. It is on
+the critical path for any real build. Measured: `plz.exe` under Wine fails with
+
+```
+failed to generate internal package: arcat tool not supported for platform: windows_amd64
 ```
 
-Without a `windows_amd64` entry, `plz.exe` cannot parse a single BUILD file. This is the
-hardest gate in the whole milestone and the easiest to overlook, because it fails at
-*runtime* on Windows, not at build time on Linux.
+as soon as a plugin is involved. Simple genrules and parsing work without it, which is why
+the earlier assessment understated this.
 
-The hash is of `please_tools_<version>.tar.xz` for the platform, which is itself produced by
-`//package:please_tools_tarball` — so it is a chicken-and-egg step: build the tools tarball
-for windows once, record its hash, commit it.
+**Why it is nevertheless easy.** arcat is pure Go with **no** `syscall`, `x/sys/unix` or cgo
+usage anywhere. Verified: it cross-compiles to a PE32+ binary, and under Wine both
+critical paths work — `arcat x` extracts a zip correctly, and `arcat ar -r` produces a `.a`
+that MinGW links into a working `.exe`.
+
+One snag, and it is not a Windows one: arcat's `go.mod` still says `go 1.17` while the code
+uses generics, so it fails to build on *any* platform with a modern toolchain
+(`implicit function instantiation requires go1.18 or later`). Bumping the directive is a
+one-line fix that should go upstream regardless.
+
+**So the work is:** publish a `windows_amd64` arcat release alongside the others, then add its
+hash to the switch in `src/parse/internal_package.go`. The switch is exhaustive and hard-fails
+by default, which is what produces the error above.
 
 ### 3. `.plzconfig_windows_amd64`
 

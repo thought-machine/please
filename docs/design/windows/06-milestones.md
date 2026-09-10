@@ -22,7 +22,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
 | M5 | C++ on Windows: cc-rules (workstream B) | 2w | 🟡 | — | — |
-| M6 | Linux-hosted verification harness | 1w | ⬜ | — | — |
+| M6 | Linux-hosted verification harness | 1w | 🟡 | — | — |
 | M7 | Sandboxing parity | 2w | ⬜ | — | — |
 | M8 | Remote execution and plugin parity | 3w | ⬜ | — | — |
 | M9 | Native Windows CI and GA | 2w | ⬜ | — | — |
@@ -174,9 +174,15 @@ signed `windows_amd64/` folder.
 
 Design: `04-release-and-ci.md`.
 
-- [ ] `src/parse/internal_package.go` — `windows_amd64` arcat hash. Note this did **not**
-      block parsing or simple genrules under Wine; it bites when the `_please` internal
-      package is actually needed
+- [ ] **arcat for `windows_amd64`** — publish the release, then add its hash to
+      `src/parse/internal_package.go`. **Upgraded in severity:** it blocks `plugin_repo`, and
+      every language plugin is delivered that way, so no plugin can load on Windows without
+      it. `cc_library` needs it again for `.a` archives. Simple genrules and parsing work
+      without it, which is why this was first recorded as minor.
+      Good news: arcat is pure Go with no syscall/cgo, cross-compiles to PE32+, and both
+      `arcat x` and `arcat ar -r` verified working under Wine. Its `go.mod` says `go 1.17`
+      while the code uses generics, so it fails to build on *any* platform with a modern
+      toolchain — a one-line upstream fix, unrelated to Windows
 - [x] `.plzconfig_windows_amd64` — landed early in M1 (needed for `forceposix`)
 - [ ] `package/BUILD` — gate `please_sandbox` on `is_platform(os = "linux")`
 - [ ] `package/BUILD` — `.zip` release target
@@ -227,7 +233,11 @@ Design: `05-testing-strategy.md`.
 - [ ] Wine test macro for cross-compiled Go test binaries
 - [ ] Wine CI job — `//src/core/...`, `//src/fs/...`, `//src/process/...`
 - [ ] The genrule shell smoke test
-- [ ] The headline end-to-end: `wine plz.exe` + MinGW + `cc_test`
+- [ ] The headline end-to-end: `wine plz.exe` + MinGW + `cc_test`. **Blocked on two things,
+      both now understood:** arcat needs a Windows release before `plugin_repo` can extract
+      the cc plugin, and Wine in this environment has no working DNS, so the plugin cannot be
+      fetched from inside it. A local `subrepo(path=...)` would sidestep the download, but
+      `[Plugin]` config requires `Target` to be set, which `subrepo()` alone does not provide
 - [ ] Make the Wine job blocking
 
 ## M7 — Sandboxing parity
@@ -265,6 +275,7 @@ Design: `05-testing-strategy.md`.
 | `go_repo` won't generate Windows-only third-party packages on a Linux host | Any unconditional dep on `x/sys/windows` breaks the normal Linux build | Guard such deps with `is_platform(os = "windows")`; `go_library` filters the `_windows.go` srcs to match |
 | Assuming `filepath` is always right on Windows | `glob()` silently matched nothing | Paths from `io/fs` are always `/`-separated: use `path`. The inverse of the `logging.go` bug, where `filepath` was the fix |
 | BUILD files verified only by `go build` | Real breakage invisible until someone runs `plz` | Always verify through `plz build`, not `go build` — this found 3 bugs in one pass |
+| Prebuilt per-platform helper binaries with no Windows release | Blocks plugins (arcat) and native cc builds (please_cc) | Both are pure Go and cross-compile cleanly; the work is publishing releases and recording hashes, not porting |
 | A dropped `forceposix` tag silently breaks every label | Total CLI breakage, only visible at runtime | Add a Wine smoke test asserting `query alltargets //...` works |
 | Backslash escaping in shell command strings | Intermittent, hard-to-diagnose build failures | The forward-slash rule in `02-shell-and-build-actions.md`, plus an assertion test |
 | `.exe` needs to be a core concept after all | Rework of the M2 decision | Verify `plz run` on a `cc_binary` early in M5, before the rest of M5 depends on it |
