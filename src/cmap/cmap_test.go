@@ -56,6 +56,33 @@ func TestReAdd(t *testing.T) {
 	assert.False(t, first)
 }
 
+func TestDelete(t *testing.T) {
+	m := New[int, int](DefaultShardCount, hashInts)
+	assert.True(t, m.Add(5, 7))
+	v, deleted := m.Delete(5)
+	assert.True(t, deleted)
+	assert.Equal(t, 7, v)
+	assert.False(t, m.Contains(5))
+	// Deleting it again does nothing, and the key is free to be added afresh.
+	_, deleted = m.Delete(5)
+	assert.False(t, deleted)
+	assert.True(t, m.Add(5, 9))
+	assert.Equal(t, 9, m.Get(5))
+}
+
+func TestDeleteLeavesWaitersAlone(t *testing.T) {
+	// A key that only exists because something is waiting on it has no value to delete, and
+	// removing it would leave the waiter waiting on a channel nothing can close.
+	m := New[int, int](DefaultShardCount, hashInts)
+	_, ch, first := m.GetOrWait(5)
+	assert.True(t, first)
+	_, deleted := m.Delete(5)
+	assert.False(t, deleted)
+	m.Set(5, 7)
+	<-ch
+	assert.Equal(t, 7, m.Get(5))
+}
+
 func TestAddOrGet(t *testing.T) {
 	m := New[int, int](DefaultShardCount, hashInts)
 	x, inserted := m.AddOrGet(5, func() int { return 7 })

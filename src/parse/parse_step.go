@@ -167,6 +167,12 @@ func maybeParseSubrepoPackage(state *core.BuildState, subrepoPkg, subrepoSubrepo
 			// When we try and parse a subrepo package, but the BUILD file or directory doesn't exist, return nil so
 			// this gets handled later on, in the same way as when the package does exist but doesn't define the subrepo
 			if errors.Is(err, ErrMissingBuildFile) {
+				// The parse above claimed the right to parse this package, and we are about to
+				// throw its error away, so the claim has to go back. Without this, the next
+				// caller to ask about the same non-existent package blocks forever waiting for
+				// a parse that is never going to happen - and since a package that isn't there
+				// is the normal answer here, that is a hang on an ordinary lookup.
+				state.ReleasePendingParse(label)
 				return nil, nil
 			}
 			return nil, err

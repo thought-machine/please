@@ -1,0 +1,8 @@
+# Declared in a package called "nested", so the subrepo is registered as nested/one - which is
+# what makes resolving it look for a package called "nested" in the host repo first.
+#
+# N.B. path is relative to the repo root rather than to suba, which is where this is declared.
+local_repository(
+    name = "one",
+    path = "suba/nested/one",
+)

@@ -1,0 +1,7 @@
+genrule(
+    name = "t",
+    srcs = ["///nested/one//:f"],
+    outs = ["a.txt"],
+    cmd = "cp $SRCS $OUT",
+    visibility = ["PUBLIC"],
+)

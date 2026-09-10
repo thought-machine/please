@@ -1,0 +1,21 @@
+# Two subrepos, each of which reaches for a subrepo of its own that is declared in a package
+# called "nested". This repo deliberately has no "nested" directory: resolving ///nested/one and
+# ///nested/two makes Please look here first, find nothing, and fall back to the subrepo that
+# asked. Whichever of the two looks here first has to leave the lookup usable for the other.
+local_repository(
+    name = "suba",
+    path = "suba",
+)
+
+local_repository(
+    name = "subb",
+    path = "subb",
+)
+
+filegroup(
+    name = "both",
+    srcs = [
+        "///suba//:t",
+        "///subb//:t",
+    ],
+)

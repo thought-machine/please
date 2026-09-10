@@ -887,6 +887,19 @@ func (state *BuildState) SyncParsePackage(label BuildLabel) *Package {
 	return state.Graph.PackageByLabel(label) // Important to check again; it's possible to race against this whole lot.
 }
 
+// ReleasePendingParse gives back the claim on parsing a package that SyncParsePackage granted,
+// for a package that has not been parsed and is not going to be.
+//
+// It exists for callers that parse a package speculatively - to find out whether it exists at
+// all - and swallow the error when it doesn't. Such a caller still took the claim, and if it
+// keeps it every later caller asking about the same package waits forever for a parse nobody is
+// going to do. That shows up as a hang with no output rather than an error.
+func (state *BuildState) ReleasePendingParse(label BuildLabel) {
+	if ch, present := state.progress.pendingPackages.Delete(label.packageKey()); present {
+		close(ch) // Anything already waiting goes back to trying for itself.
+	}
+}
+
 func waitOnChan[T any](ch chan T, message string, args ...any) {
 	start := time.Now()
 	t := time.NewTimer(10 * time.Second)

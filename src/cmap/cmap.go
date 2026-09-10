@@ -84,6 +84,13 @@ func (m *Map[K, V]) GetOrWait(key K) (val V, wait <-chan struct{}, first bool) {
 	return m.shards[m.hasher(key)&m.mask].Get(key)
 }
 
+// Delete removes the given key from the map, returning the value it had and whether there was
+// one. A key that only exists because something is waiting on it through GetOrWait is left
+// alone: deleting a key is not the same as it arriving, and the waiters would never be woken.
+func (m *Map[K, V]) Delete(key K) (V, bool) {
+	return m.shards[m.hasher(key)&m.mask].Delete(key)
+}
+
 // Values returns a slice of all the current values in the map.
 // No particular consistency guarantees are made.
 func (m *Map[K, V]) Values() []V {
@@ -181,6 +188,19 @@ func (s *shard[K, V]) Get(key K) (val V, wait <-chan struct{}, first bool) {
 	wait = ch
 	first = true
 	return
+}
+
+// Delete removes a key that has a value, returning it. It reports false, and does nothing, for
+// a key that is absent or is only a placeholder something is waiting on.
+func (s *shard[K, V]) Delete(key K) (V, bool) {
+	s.l.Lock()
+	defer s.l.Unlock()
+	if v, present := s.m[key]; present && v.Wait == nil {
+		delete(s.m, key)
+		return v.Val, true
+	}
+	var zero V
+	return zero, false
 }
 
 // Values returns a copy of all the targets currently in the map.

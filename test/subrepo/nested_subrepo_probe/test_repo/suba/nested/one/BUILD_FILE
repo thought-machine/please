@@ -1,0 +1,6 @@
+genrule(
+    name = "f",
+    outs = ["f.txt"],
+    cmd = "echo one > $OUT",
+    visibility = ["PUBLIC"],
+)
