@@ -50,7 +50,8 @@ const LocalConfigFileName string = ".plzconfig.local"
 
 // MachineConfigFileName is the file name for the machine-level config - can use this to override
 // things for a particular machine (e.g. build machine with different caching behaviour).
-const MachineConfigFileName = "/etc/please/plzconfig"
+// This is platform-specific; see config_other.go and config_windows.go.
+var MachineConfigFileName = machineConfigFileName
 
 // UserConfigFileName is the file name for user-specific config (for all their repos).
 const UserConfigFileName = "~/.config/please/plzconfig"
@@ -58,8 +59,9 @@ const UserConfigFileName = "~/.config/please/plzconfig"
 // DefaultPleaseLocation is the default location where Please is installed.
 const DefaultPleaseLocation = "~/.please"
 
-// DefaultPath is the default location please looks for programs in
-var DefaultPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
+// DefaultPath is the default location please looks for programs in.
+// This is platform-specific; see config_other.go and config_windows.go.
+var DefaultPath = defaultPath
 
 // readConfigFileOnly reads a single config file into the config struct
 func readConfigFileOnly(fs iofs.FS, config *Configuration, filename string, quiet bool) error {
@@ -154,7 +156,7 @@ func defaultGlobalConfigFiles() []string {
 	}
 
 	if xdgConfigDirs := os.Getenv("XDG_CONFIG_DIRS"); xdgConfigDirs != "" {
-		for _, p := range strings.Split(xdgConfigDirs, ":") {
+		for _, p := range fs.SplitPathList(xdgConfigDirs) {
 			if !filepath.IsAbs(p) {
 				continue
 			}
@@ -347,12 +349,12 @@ func setBuildPath(conf *[]string, passEnv []string, passUnsafeEnv []string) {
 	pathVal := DefaultPath
 	for _, i := range passUnsafeEnv {
 		if i == "PATH" {
-			pathVal = strings.Split(os.Getenv("PATH"), ":")
+			pathVal = fs.SplitPathList(os.Getenv("PATH"))
 		}
 	}
 	for _, i := range passEnv {
 		if i == "PATH" {
-			pathVal = strings.Split(os.Getenv("PATH"), ":")
+			pathVal = fs.SplitPathList(os.Getenv("PATH"))
 		}
 	}
 	setDefault(conf, pathVal...)
@@ -771,7 +773,7 @@ func (config *Configuration) GetBuildEnv() BuildEnv {
 	config.buildEnvStored.Once.Do(func() {
 		config.buildEnvStored.Env = config.getBuildEnv(true, true)
 		if path, present := config.buildEnvStored.Env["PATH"]; present {
-			config.buildEnvStored.Path = strings.Split(path, ":")
+			config.buildEnvStored.Path = fs.SplitPathList(path)
 		}
 	})
 	return config.buildEnvStored.Env
@@ -823,7 +825,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) B
 			if v, isSet := os.LookupEnv(k); isSet {
 				if k == "PATH" {
 					// plz's install location always needs to be on the path.
-					v = config.Please.Location + ":" + v
+					v = config.Please.Location + string(os.PathListSeparator) + v
 					includePath = false // skip this in a bit
 				}
 				env[k] = v
@@ -842,7 +844,7 @@ func (config *Configuration) getBuildEnv(includePath bool, includeUnsafe bool) B
 		// but really external environment variables shouldn't affect this.
 		// The only concession is that ~ is expanded as the user's home directory
 		// in PATH entries.
-		env["PATH"] = strings.Join(append([]string{config.Please.Location}, config.Build.Path...), ":")
+		env["PATH"] = strings.Join(append([]string{config.Please.Location}, config.Build.Path...), string(os.PathListSeparator))
 	}
 	return env
 }

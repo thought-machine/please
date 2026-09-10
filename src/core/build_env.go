@@ -80,6 +80,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 	env["TMPDIR"] = tmpDir
 	env["OUTS"] = strings.Join(outEnv, " ")
 	env["HOME"] = tmpDir
+	setPlatformTmpEnv(env, tmpDir)
 	// Set a consistent hash seed for Python. Important for build determinism.
 	env["PYTHONHASHSEED"] = "42"
 
@@ -164,6 +165,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run
 	env["TMP_DIR"] = testDir
 	env["TMPDIR"] = testDir
 	env["HOME"] = testDir
+	setPlatformTmpEnv(env, testDir)
 	env["TEST_ARGS"] = strings.Join(state.TestArgs, ",")
 	env["RESULTS_FILE"] = resultsFile
 	// We shouldn't really have specific things like this here, but it really is just easier to set it.
@@ -213,6 +215,7 @@ func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) Bui
 	env["TMP_DIR"] = execDir
 	env["TMPDIR"] = execDir
 	env["HOME"] = execDir
+	setPlatformTmpEnv(env, execDir)
 	// This is used by programs that use display terminals for correct handling
 	// of input and output in the terminal where the program is run.
 	env["TERM"] = os.Getenv("TERM")

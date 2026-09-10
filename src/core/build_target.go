@@ -40,7 +40,8 @@ const SubrepoDir = "plz-out/subrepos"
 const DefaultBuildingDescription = "Building..."
 
 // SandboxDir is the directory that sandboxed actions are run in.
-const SandboxDir = "/tmp/plz_sandbox"
+// This is platform-specific; see sandboxdir_other.go and sandboxdir_windows.go.
+var SandboxDir = sandboxDir
 
 // Suffixes for temporary directories
 const buildDirSuffix = "._build"

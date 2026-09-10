@@ -587,7 +587,9 @@ func (c *Client) buildEnv(target *core.BuildTarget, env core.BuildEnv, sandbox b
 		if name == "PATH" {
 			// Strip out anything prefixed with the local user's home directory; it can't be
 			// useful remotely but will affect determinism of the action.
-			parts := strings.Split(v, ":")
+			// Note the asymmetry: we split with the local separator because the value was
+			// built locally, but rejoin with ":" because the worker is a POSIX machine.
+			parts := fs.SplitPathList(v)
 			replaced := make([]string, 0, len(parts))
 			for _, part := range parts {
 				if part != c.state.Config.Please.Location && !strings.HasPrefix(part, c.userHome) {
