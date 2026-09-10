@@ -275,6 +275,36 @@ Design: `04-release-and-ci.md`.
    is a URL key, not a filename; the updater downloads it and writes it as `please.exe`
    locally. Only the archive members need the suffix.
 
+## Working on the plugins locally
+
+All four plugins are separate repos we have no push access to, so they are cloned into
+`~/code/<plugin>-rules` on a `windows` branch each, branched at the tag `plugins/BUILD` pins.
+
+`plugins/BUILD` takes each checkout path from a `[buildconfig]` key, so switching is a
+gitignored `.plzconfig.local` and nothing else:
+
+```ini
+[buildconfig]
+go-rules-path = /home/peter/code/go-rules
+```
+
+Delete that file and you are back on the pinned downloads. Verified both directions.
+
+Three things learned wiring this up:
+
+- **`local_repository` is not usable** for this. It omits `plugin = True`, so the subrepo
+  registers as `plugins/go` rather than `go` and `///go//...` never resolves. Call the
+  `subrepo()` builtin directly.
+- **A subrepo `path` outside the repo root is fine.** It is used verbatim with no containment
+  check, so no symlink is needed.
+- **The local definition has to replace the download, not sit beside it.** The first attempt put
+  the `subrepo()` calls in a separate untracked package and pointed `[Plugin "go"] Target` at it.
+  That builds fine until anything parses `plugins/BUILD` as well — `plz test //...` does — and
+  then dies with *"Found multiple definitions for subrepo 'go'"*. Hence the conditional in the
+  one file, which costs a few tracked lines but cannot conflict with itself.
+
+Expect every hash to change when you flip, since the full source path goes into the digest.
+
 ## M5 — C++ on Windows (workstream B)
 
 **Exit:** `plz build --arch windows_amd64 //test/...` in cc-rules produces PE32+ `.exe` and
@@ -284,19 +314,19 @@ Design: `03-cc-toolchain.md`. Repo: `please-build/cc-rules`.
 
 - [x] **D1 confirmed.** Both a WinLibs 16.2.0 and an Ubuntu 13 MinGW match the existing GCC
       and GNU ld matchers; the Clang matcher correctly does not. No new matchers needed
-- [ ] `build_defs/arch.build_defs` — add `windows_amd64` (gates the plugin's own release,
+- [x] `build_defs/arch.build_defs` — add `windows_amd64` (gates the plugin's own release,
       not its use)
 - [x] `cc_binary` / `cc_test` → `.exe`; `cc_shared_object` → `.dll`. **Must be a function,
       not a module-level constant** — subincluded `CONFIG.OS` reflects the host at module level
 - [x] A `cc_library` + `cc_binary` + `cc_shared_object` triple builds and `prog.exe` runs
       under Wine, linking the static lib correctly
-- [ ] Drop `-fPIC` and `-Wl,--build-id=none` for Windows — both were passed and neither
+- [x] Drop `-fPIC` and `-Wl,--build-id=none` for Windows — both were passed and neither
       broke the link, so this is noise reduction rather than a blocker
 - [x] `DefaultLdFlags` → `-lpthread`. Only `-ldl` was wrong. Note a repeatable config key
       **cannot be cleared by assigning empty** — that yields `[""]`, which becomes a bare
       `-Wl,` and the linker rejects it
 - [ ] `please_cc` `execvp_windows.go` (needed for native Windows, not for Axis 2)
-- [ ] Parse-time error when `pkg_config_libs` is used on Windows
+- [x] Parse-time error when `pkg_config_libs` is used on Windows, naming the rule that asked
 - [ ] MinGW cross-compile job in `plugin_test_cc.yaml`
 - [ ] **`please_cc` needs a `windows_amd64` release.** `tools/BUILD` fetches it as a prebuilt
       binary with a pinned hash per platform. Not a blocker under Axis 2, where tools build for
@@ -529,8 +559,30 @@ the right shape.
       What is fixed here is the message. `executable file not found in %PATH%` for a file that
       is plainly there is baffling; `fs.ExplainUnrunnable` adds that the name has no extension
       Windows will run, and what it would need to be called
-- [ ] shell plugin — `sh_binary` needs a `.cmd`/busybox shim instead of `#!`
-- [ ] python plugin — pex on Windows (prior art: ChangeLog #947)
+- [x] **go plugin — `.exe` naming done** in the local clone. `go_binary`, `go_test` and
+      `go_benchmark` append the suffix from a per-call function. Proof it works: the
+      `out = "please.exe" if is_platform(...)` workarounds in `src/BUILD.plz` and
+      `//tools/build_langserver` can be deleted and `please.exe` still comes out with the right
+      name. **They are deliberately still in the tree**, because this repo pins the unfixed
+      upstream plugin; drop them in the same change that bumps `plugins/BUILD`
+- [ ] go plugin — `windows_amd64` arch for its own release. `tools/please_go:bootstrap` runs
+      `go build ... && mv please_go $OUT`, which fails where `go build` writes `please_go.exe`,
+      and hardcodes `TMPDIR=/tmp`. Native-Windows only
+- [x] **shell plugin — `sh_test` and `sh_cmd` done.** Windows has no shebang mechanism, so a
+      `.sh` is not runnable by name however it is written. `sh_test` hands the script to a shell
+      explicitly and `sh_cmd` takes its interpreter from a new `shell_tool` plugin config rather
+      than hardcoding `/bin/sh`. Verified under Wine through the bundled busybox
+- [ ] shell plugin — `sh_binary`. It writes a shebang, appends the script, then appends a zip,
+      and relies on the shebang. The payload is fine, since busybox has `unzip`; only the
+      launching is broken, and it **cannot emit a `.cmd` alongside** because `plz run` requires
+      a single output
+- [ ] python plugin — pex on Windows (prior art: ChangeLog #947). **Not started, and the shape
+      is not what it looks like:** a pex is not a shebang script but a static ELF preamble with a
+      zip appended, so a Windows cross-build today produces an ELF-prefixed file that is dead on
+      arrival. Two stages: skip the preamble and pass the interpreter in `test_cmd`, which gets
+      `python_test` working cheaply; then a small Go preamble cross-compiled for Windows for
+      `python_binary`. A C port was rejected — Windows has no true `exec`, so `_execv` breaks
+      exit codes and console attachment
 - [x] `src/watch` — **this was a bug, not a documentation task.** `plz watch` compares the
       paths it recorded against the ones fsnotify reports. Ours are slash-separated; fsnotify
       on Windows reports backslashes. Nothing matched, so every event was discarded as
