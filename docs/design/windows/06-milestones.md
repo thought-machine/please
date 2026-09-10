@@ -18,7 +18,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 |---|---|---|---|---|---|
 | M0 | Baseline and guardrail | 2d | ✅ | — | — |
 | M1 | OS abstraction layer | 1–2w | ✅ | — | — |
-| M2 | Paths, environment and the `.exe` model | 1w | 🟡 | — | — |
+| M2 | Paths, environment and the `.exe` model | 1w | ✅ | — | — |
 | M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
 | M5 | C++ on Windows: cc-rules (workstream B) | 2w | ⬜ | — | — |
@@ -136,11 +136,14 @@ path-format rule).
       no equivalent of `/usr/bin` holding build tools)
 - [x] `USERPROFILE`, `TEMP`, `TMP` — Windows only, so Unix hashes are untouched
 - [x] `src/core/build_target.go` — platform-conditional `SandboxDir`
-- [ ] `src/fs/copy.go` — symlink privilege fallback
-- [ ] `src/fs/fs.go` — `RemoveAll` clears `FILE_ATTRIBUTE_READONLY`
-- [ ] Bug fixes: raw `"/"` splits in `src/fs/sort.go`, `src/fs/glob.go`,
-      `src/build/build_step.go` (the `src/cli/logging.go` `path.Dir` fix moved to M1 — it
-      blocks startup entirely)
+- [x] `src/fs/copy.go` — symlink privilege fallback (copies the target, warns once)
+- [x] `src/fs/fs.go` — `RemoveAll` clears the read-only attribute on files too
+- [x] **`glob()` returned nothing at all on Windows** — not on the original list, and fatal.
+      `patternToMatcher` built the pattern with `filepath.Join` while the walk goes through
+      `io/fs`, whose paths are always slash-separated. Fixed by using `path` throughout
+- [x] The raw `"/"` handling in `src/fs/sort.go` and elsewhere in `glob.go` turns out to be
+      **correct** for the same reason — `io/fs` paths are always `/`. The design doc was
+      wrong to flag them
 - [x] Forward-slash normalisation in `BuildEnvironment` + a test asserting no `\`.
       Confirmed by experiment rather than assumption: `echo` and `printf '%s'` round-trip a
       backslash path unharmed, but `sed -e "s#x#$TMP_DIR#"` turned `\tmp` into a literal tab
@@ -249,6 +252,7 @@ Design: `05-testing-strategy.md`.
 | ~~busybox-w64 diverges from Linux busybox~~ | **Materialised, resolved.** `--noprofile`/`--norc` rejected | Audit re-run against busybox-w64 in M0; `ShellArgs` promoted from hedge to requirement |
 | ~~go-flags `/` option delimiter breaks label syntax~~ | **Found and resolved in M0** | `-tags forceposix` (D5). Must not regress — it is invisible in Please's own source |
 | `go_repo` won't generate Windows-only third-party packages on a Linux host | Any unconditional dep on `x/sys/windows` breaks the normal Linux build | Guard such deps with `is_platform(os = "windows")`; `go_library` filters the `_windows.go` srcs to match |
+| Assuming `filepath` is always right on Windows | `glob()` silently matched nothing | Paths from `io/fs` are always `/`-separated: use `path`. The inverse of the `logging.go` bug, where `filepath` was the fix |
 | BUILD files verified only by `go build` | Real breakage invisible until someone runs `plz` | Always verify through `plz build`, not `go build` — this found 3 bugs in one pass |
 | A dropped `forceposix` tag silently breaks every label | Total CLI breakage, only visible at runtime | Add a Wine smoke test asserting `query alltargets //...` works |
 | Backslash escaping in shell command strings | Intermittent, hard-to-diagnose build failures | The forward-slash rule in `02-shell-and-build-actions.md`, plus an assertion test |
