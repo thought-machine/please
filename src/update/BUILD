@@ -34,7 +34,7 @@ go_test(
         "verify_test.go",
     ],
     data = [
-        "test_data",
+        ":test_data",
         ":test_please",
         ":test_tarball",
         "//src:please",
@@ -44,6 +44,8 @@ go_test(
     },
     labels = ["xz"],
     resources = ["key.pub"],
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":update",
         "///third_party/go/github.com_hashicorp_go-retryablehttp//:go-retryablehttp",
@@ -63,6 +65,8 @@ tarball(
     out = "please_test.tar.gz",
     subdir = "please",
     test_only = True,
+    # So //test/windows can put it beside the test binary when running it under Wine.
+    visibility = ["//test/windows:all"],
 )
 
 genrule(
@@ -72,4 +76,14 @@ genrule(
     binary = True,
     cmd = "cp $SRC $OUT",
     test_only = True,
+    # So //test/windows can put it beside the test binary when running it under Wine.
+    visibility = ["//test/windows:all"],
+)
+
+# Exposed so //test/windows can put it beside the test binary when running it under Wine.
+filegroup(
+    name = "test_data",
+    srcs = ["test_data"],
+    test_only = True,
+    visibility = ["//test/windows:all"],
 )

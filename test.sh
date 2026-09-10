@@ -51,7 +51,7 @@ plz-out/bin/src/please -p -v2 $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=e
 # platform, which is slow and pointless for someone who just wants the unit tests.
 if has_wine; then
   notice "Running Windows tests under Wine..."
-  plz-out/bin/src/please -p -v2 $PLZ_ARGS ${PLZ_COVER:-test} --include=wine --log_file plz-out/log/wine_build.log --log_file_level 4 $@
+  plz-out/bin/src/please -p -v2 $PLZ_ARGS ${PLZ_COVER:-test} $EXCLUDES --include=wine --log_file plz-out/log/wine_build.log --log_file_level 4 $@
 else
   warn "wine not found, skipping the Windows tests"
 fi

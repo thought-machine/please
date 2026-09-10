@@ -305,8 +305,8 @@ Design: `05-testing-strategy.md`.
       `wine_go_test` and `wine_plz_test`
 - [x] Wine CI job — `test-windows-wine`, blocking, and a third pass in `test.sh` where Wine is
       installed. Every `//src/...` package whose tests run there at all: 19 targets, 717 tests,
-      766 passing and 7 skipped. Only `//src/update` is left out. `//src/build`, `//src/exec`
-      and `//src/process` are the valuable ones — they run real build actions and real
+      787 passing and 7 skipped — **every `//src/...` package**. `//src/build`, `//src/exec`
+      and `//src/process` are the valuable ones: they run real build actions and real
       subprocesses, so they cover the layers that are almost entirely separate code on Windows
 - [x] The genrule shell smoke test — plus a `query alltargets //...` test, which is the
       `forceposix` guard the risk register asked for

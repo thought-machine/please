@@ -66,7 +66,9 @@ func TestDownloadNewPlease(t *testing.T) {
 	c := makeConfig("downloadnewplease")
 	downloadPlease(c, false, true)
 	// Should have written new file
-	assert.True(t, core.PathExists(filepath.Join(c.Please.Location, c.Please.Version.String(), "please")))
+	// pleaseExeName rather than "please": the downloaded binary needs the extension on Windows
+	// or nothing will run it.
+	assert.True(t, core.PathExists(filepath.Join(c.Please.Location, c.Please.Version.String(), pleaseExeName)))
 	// Should not have written this yet though
 	assert.False(t, core.PathExists(filepath.Join(c.Please.Location, "please")))
 	// Panics because it's not a valid .tar.gz

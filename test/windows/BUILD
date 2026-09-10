@@ -96,6 +96,17 @@ wine_go_test(
         ("exec_test", "///windows_amd64//src/exec:exec_test", [], True),
         ("process_test", "///windows_amd64//src/process:process_test", [], True),
         (
+            "update_test",
+            "///windows_amd64//src/update:update_test",
+            [
+                "///windows_amd64//src/update:test_data",
+                "///windows_amd64//src/update:test_please",
+                "///windows_amd64//src/update:test_tarball",
+                "///windows_amd64//src:please",
+            ],
+            False,
+        ),
+        (
             "remote_test",
             "///windows_amd64//src/remote:remote_test",
             ["///windows_amd64//src/remote:remote_test_data"],
