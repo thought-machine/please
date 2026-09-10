@@ -112,6 +112,10 @@ accept = Artistic License
 accept = ISC
 # Not really a licence, but Bazel projects commonly describe things this way.
 accept = notice
+# Only for the busybox we ship in the Windows release. Please neither links it nor derives
+# from it - it is execed as the shell - so the two are separately distributed works, and the
+# release records the licence and where to get the source.
+accept = GPL-2.0
 
 [remote]
 url =

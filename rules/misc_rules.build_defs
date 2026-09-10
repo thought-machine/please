@@ -650,6 +650,11 @@ def tarball(name:str, srcs:list, out:str=None, deps:list=None, subdir:str=None, 
     tar_out = out or (name + ('.tar.gz' if gzip else '.tar'))
     cmd = '$TOOL tar '
     tar_name = name
+    if xzip and CONFIG.OS == 'windows':
+        # The xz applet in the busybox we bundle on Windows only decompresses, and Windows
+        # has no other xz to fall back on. Callers that need a compressed archive there
+        # should use gzip, which is built into the tar tool.
+        fail('tarball(xzip = True) is not supported on Windows; use gzip = True instead')
     if xzip:
         tar_out = name + '.tar'
         tar_name = f'_{name}#tar'

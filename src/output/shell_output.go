@@ -452,7 +452,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			fmt.Printf("   Expanded: %s\n", os.Expand(cmd, env.ReplaceEnvironment))
 		} else {
 			fmt.Printf("\n")
-			argv := []string{"bash", "--noprofile", "--norc", "-o", "pipefail"}
+			argv := state.ProcessExecutor.InteractiveShellCommand()
 			if shellRun {
 				argv = append(argv, "-c", cmd)
 			}

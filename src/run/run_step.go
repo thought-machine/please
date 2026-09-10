@@ -130,7 +130,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 	case overrideCmd != "":
 		command, _ := core.ReplaceSequences(state, target, overrideCmd)
 		// We don't care about passed in args when an override command is provided
-		args = process.BashCommand("bash", strings.Trim(command, "\""), true)
+		args = state.ProcessExecutor.BashCommand(strings.Trim(command, "\""), true)
 	case label.Annotation != "":
 		entryPoint, ok := target.EntryPoints[label.Annotation]
 		if !ok {
@@ -156,7 +156,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 	}
 
 	// Handle targets where $(exe ...) returns something nontrivial
-	if !strings.Contains(args[0], "/") {
+	if !strings.Contains(args[0], "/") && !strings.ContainsRune(args[0], filepath.Separator) {
 		// Probably it's a java -jar, we need an absolute path to it.
 		cmd, err := exec.LookPath(args[0])
 		if err != nil {

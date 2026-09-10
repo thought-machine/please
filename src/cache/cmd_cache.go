@@ -8,14 +8,18 @@ import (
 	"io"
 	"os/exec"
 	"path/filepath"
+	"slices"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
+	"github.com/thought-machine/please/src/process"
 )
 
 type cmdCache struct {
 	storeCommand    string
 	retrieveCommand string
+	// The shell the two commands run in, as argv up to but not including the command.
+	shell []string
 }
 
 func keyToString(key []byte) string {
@@ -30,7 +34,8 @@ func (cache *cmdCache) Store(target *core.BuildTarget, key []byte, files []strin
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		cmd := exec.CommandContext(ctx, "sh", "-c", cache.storeCommand)
+		argv := append(cache.shell, cache.storeCommand)
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 		cmd.Env = append(cmd.Env, "CACHE_KEY="+strKey)
 
 		r, w := io.Pipe()
@@ -52,7 +57,8 @@ func (cache *cmdCache) Retrieve(target *core.BuildTarget, key []byte, _ []string
 	strKey := keyToString(key)
 	log.Debug("Retrieve %s: %s from custom cache...", target.Label, strKey)
 
-	cmd := exec.Command("sh", "-c", cache.retrieveCommand)
+	argv := append(cache.shell, cache.retrieveCommand)
+	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Env = append(cmd.Env, "CACHE_KEY="+strKey)
 
 	var cmdOutputBuffer bytes.Buffer
@@ -130,8 +136,13 @@ func write(w io.WriteCloser, target *core.BuildTarget, files []string, cancel co
 }
 
 func newCmdCache(config *core.Configuration) *cmdCache {
+	// These are shell strings like any build action, so they run in the configured shell -
+	// on Windows there is no 'sh' to fall back on. Clipped so that appending the command to
+	// it can't write into this slice from two goroutines at once.
+	shell := process.ShellArgv(config.Build.Shell, config.Build.ShellArgs)
 	return &cmdCache{
 		storeCommand:    config.Cache.StoreCommand,
 		retrieveCommand: config.Cache.RetrieveCommand,
+		shell:           slices.Clip(append(shell, "-c")),
 	}
 }

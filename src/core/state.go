@@ -11,6 +11,7 @@ import (
 	"io"
 	iofs "io/fs"
 	"iter"
+	"os/exec"
 	"path/filepath"
 	"runtime/pprof"
 	"sort"
@@ -1494,7 +1495,29 @@ func executorFromConfig(config *Configuration) *process.Executor {
 		config.Sandbox.Tool == "" && (config.Sandbox.Build || config.Sandbox.Test),
 		process.NamespacingPolicy(config.Sandbox.Namespace),
 		tool,
+		resolveShell(config),
+		config.Build.ShellArgs,
 	)
+}
+
+// resolveShell returns the shell that build actions should run in.
+// A bare name is left for the OS to resolve on Please's own PATH, as it always has been. The
+// exception is when it isn't there at all: then we look on the build path, which includes
+// Please's own install directory. That is how the shell Please bundles on Windows gets found,
+// since nothing puts that directory on the user's PATH.
+func resolveShell(config *Configuration) string {
+	shell := config.Build.Shell
+	if shell == "" {
+		return process.DefaultShell
+	} else if filepath.IsAbs(shell) || strings.ContainsRune(shell, filepath.Separator) {
+		return shell
+	} else if _, err := exec.LookPath(shell); err == nil {
+		return shell
+	} else if path, err := LookBuildPath(shell, config); err == nil {
+		return path
+	}
+	// Leave it as it is; the exec will fail with a better message than anything we'd write.
+	return shell
 }
 
 // NewBuildState constructs and returns a new BuildState.

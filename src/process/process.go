@@ -34,24 +34,30 @@ type Executor struct {
 	// The tool that will do the network/mount sandboxing
 	sandboxTool      string
 	usePleaseSandbox bool
-	processes        map[*exec.Cmd]<-chan error
-	mutex            sync.Mutex
+	// The shell that build actions and tests are run in, and the arguments given to it
+	// before the command itself.
+	shell     string
+	shellArgs []string
+	processes map[*exec.Cmd]<-chan error
+	mutex     sync.Mutex
 }
 
-func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, sandboxTool string) *Executor {
+func NewSandboxingExecutor(usePleaseSandbox bool, namespace NamespacingPolicy, sandboxTool, shell string, shellArgs []string) *Executor {
 	o := &Executor{
 		namespace:        namespace,
 		usePleaseSandbox: usePleaseSandbox,
 		sandboxTool:      sandboxTool,
+		shell:            shell,
+		shellArgs:        shellArgs,
 		processes:        map[*exec.Cmd]<-chan error{},
 	}
 	cli.AtExit(o.killAll) // Kill any subprocess if we are ourselves killed
 	return o
 }
 
-// New returns a new Executor.
+// New returns a new Executor using the default shell for this platform.
 func New() *Executor {
-	return NewSandboxingExecutor(false, NamespaceNever, "")
+	return NewSandboxingExecutor(false, NamespaceNever, "", DefaultShell, DefaultShellArgs)
 }
 
 // SandboxConfig contains what namespaces should be sandboxed
@@ -157,7 +163,7 @@ func (e *Executor) ExecWithTimeoutShell(target Target, dir string, env []string,
 
 // ExecWithTimeoutShellStdStreams is as ExecWithTimeoutShell but optionally attaches stdin to the subprocess.
 func (e *Executor) ExecWithTimeoutShellStdStreams(target Target, dir string, env []string, timeout time.Duration, showOutput, foreground bool, sandbox SandboxConfig, cmd string, attachStdStreams bool) ([]byte, []byte, error) {
-	c := BashCommand("bash", cmd, target.ShouldExitOnError())
+	c := e.BashCommand(cmd, target.ShouldExitOnError())
 	return e.ExecWithTimeout(context.Background(), target, dir, env, timeout, showOutput, attachStdStreams, attachStdStreams, foreground, sandbox, c)
 }
 
@@ -295,11 +301,33 @@ func ExecCommand(args ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
-// BashCommand returns the command that we'd use to execute a subprocess in a shell with.
+// BashCommand returns the command that this executor runs a subprocess in a shell with.
 // This is for the shell on the machine we're running on; see RemoteBashCommand for the
 // remote execution equivalent.
-func BashCommand(binary, command string, exitOnError bool) []string {
-	return shellCommand(binary, shellInitArgs, command, exitOnError)
+func (e *Executor) BashCommand(command string, exitOnError bool) []string {
+	return shellCommand(e.shell, e.shellArgs, command, exitOnError)
+}
+
+// InteractiveShellCommand returns the command to start an interactive shell of the same kind
+// build actions run in. It has no -e or -u, since those are hostile in an interactive shell,
+// and no command to run.
+func (e *Executor) InteractiveShellCommand() []string {
+	return append(ShellArgv(e.shell, e.shellArgs), "-o", "pipefail")
+}
+
+// ShellArgv returns the leading argv for invoking the given shell: the shell itself followed
+// by its arguments. Empty arguments are dropped, because a repeatable config key can't be
+// cleared by assigning it empty - that yields a single empty string rather than nothing - and
+// an empty argument would otherwise be passed through to the shell.
+func ShellArgv(binary string, args []string) []string {
+	argv := make([]string, 0, len(args)+8)
+	argv = append(argv, binary)
+	for _, arg := range args {
+		if arg != "" {
+			argv = append(argv, arg)
+		}
+	}
+	return argv
 }
 
 // RemoteBashCommand is as BashCommand, but for a shell on a remote worker. That is a real
@@ -309,8 +337,7 @@ func RemoteBashCommand(binary, command string, exitOnError bool) []string {
 }
 
 func shellCommand(binary string, initArgs []string, command string, exitOnError bool) []string {
-	argv := make([]string, 0, len(initArgs)+7)
-	argv = append(append(argv, binary), initArgs...)
+	argv := ShellArgv(binary, initArgs)
 	if exitOnError {
 		argv = append(argv, "-e")
 	}

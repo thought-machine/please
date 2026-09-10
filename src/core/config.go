@@ -28,6 +28,7 @@ import (
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/fs"
 	"github.com/thought-machine/please/src/metrics"
+	"github.com/thought-machine/please/src/process"
 	"github.com/thought-machine/please/src/version"
 )
 
@@ -227,6 +228,7 @@ func ReadConfigFiles(fs iofs.FS, filenames []string, profiles []string) (*Config
 	}
 	setBuildPath(&config.Build.Path, config.Build.PassEnv, config.Build.PassUnsafeEnv)
 	setDefault(&config.Build.HashCheckers, "sha1", "sha256", "blake3")
+	setDefault(&config.Build.ShellArgs, process.DefaultShellArgs...)
 	setDefault(&config.Build.PassUnsafeEnv)
 	setDefault(&config.Build.PassEnv)
 	setDefault(&config.Cover.FileExtension, ".go", ".py", ".java", ".tsx", ".ts", ".js", ".cc", ".h", ".c", ".rs")
@@ -391,6 +393,7 @@ func DefaultConfiguration() *Configuration {
 	config.Build.Xattrs = defaultXattrs
 	config.Build.HashFunction = "sha256"
 	config.Build.ParallelDownloads = 4
+	config.Build.Shell = process.DefaultShell
 	config.BuildConfig = map[string]string{}
 	config.BuildEnv = map[string]string{}
 	config.Cache.HTTPWriteable = true
@@ -530,6 +533,8 @@ type Configuration struct {
 		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
 		ParallelDownloads    int          `help:"Max number of remote_file downloads to run in parallel."`
 		ArcatTool            string       `help:"Defines the tool used to concatenate files which we use in various build rules. Defaults to Arcat." var:"ARCAT_TOOL"`
+		Shell                string       `help:"The shell that build actions and tests are run in. Defaults to 'bash', which is looked up on Please's PATH; on Windows it defaults to the busybox that Please bundles, since Windows has no system shell that can run a build action." example:"bash | /bin/sh"`
+		ShellArgs            []string     `help:"Arguments passed to the shell before the command to run. Defaults to --noprofile and --norc, which stop bash reading the invoking user's startup files. On Windows the default is 'bash', selecting busybox's shell applet; busybox reads no startup files and rejects those two flags. Note that -u, -o pipefail and (where applicable) -e are always passed and are not configurable here."`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
