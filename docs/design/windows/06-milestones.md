@@ -305,11 +305,9 @@ Design: `05-testing-strategy.md`.
       `wine_go_test` and `wine_plz_test`
 - [x] Wine CI job — `test-windows-wine`, blocking, and a third pass in `test.sh` where Wine is
       installed. Every `//src/...` package whose tests run there at all: 19 targets, 717 tests,
-      756 passing and 7 skipped. **Not** `//src/process`, whose tests run `true`, `false` and
-      `sleep` as bare argv and so assume a Unix toolbox on the PATH, and not `//src/update`,
-      which is left. `//src/build` and `//src/exec` are the valuable ones — they run real build
-      actions, so they cover the process layer and the bundled shell as well as whatever they
-      are nominally about
+      766 passing and 7 skipped. Only `//src/update` is left out. `//src/build`, `//src/exec`
+      and `//src/process` are the valuable ones — they run real build actions and real
+      subprocesses, so they cover the layers that are almost entirely separate code on Windows
 - [x] The genrule shell smoke test — plus a `query alltargets //...` test, which is the
       `forceposix` guard the risk register asked for
 - [x] **The headline end-to-end passes.** `wine plz.exe` extracts the cc plugin with
@@ -393,6 +391,35 @@ And the last packages found a gap in M3's own work:
     `--noprofile --norc`; on Windows it dropped the applet name, so the shell did not run at
     all. `Configuration.ShellArgs()` supplies the platform default when nothing is set.
 
+### The job objects from M1, finally under test
+
+`//src/process` used to be excluded because its tests ran `true`, `false` and `sleep` as bare
+argv — programs on the PATH on Unix, applets inside the shell on Windows, so only one spelling
+works anywhere. Building the argv through the configured shell instead makes them portable, and
+that puts the whole process layer under test on Windows for the first time.
+
+`TestKillsProcessTree` is new, and covers what process groups on Unix and job objects on Windows
+both exist for: when a command times out, what it started has to die with it. Nothing tested
+that on **any** platform before. It fails on Linux if the signal goes to the process rather than
+the group.
+
+What the Windows side of it actually proves took some establishing, and the answer is not the
+obvious one:
+
+- Disabling `TerminateJobObject` — the test still passes.
+- Disabling the Ctrl-Break path as well — the test still passes.
+- Disabling `trackProcessTree`, so there is no job object at all — **the run hangs
+  indefinitely.**
+
+So it is `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` that does the work, when the handle is closed on
+the way out of `ExecWithTimeout`, rather than either explicit kill. And the failure mode without
+it is not a surviving grandchild but a hang: the orphans keep Please's pipes open, so it never
+finishes rather than failing. That is worth knowing, because a hang is the harder thing to
+diagnose in the field.
+
+Note the grandchild has to be a separate process to test any of this. busybox implements a
+subshell as a thread on Windows, so `( ... ) &` would die with its parent and prove nothing.
+
 A further kind of finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
 whose name has no extension in `PATHEXT`, even given its full path.** The `wine_go_test` macro
 copies each test binary to a `.exe` before running it. The same trap is why `//src:please`
@@ -416,8 +443,6 @@ Three tests are honestly unrunnable rather than fixed:
   `os.Symlink` reports success and produces a link that cannot even be `Lstat`ed. The testing
   strategy predicted Wine would grant the privilege unconditionally and so never exercise the
   copy fallback; the reality is worse, and belongs on the M9 agenda.
-- **`//src/process/...` is not in the Wine job.** Its tests exec `true`, `false` and `sleep`
-  directly, which assumes a Unix toolbox on the PATH rather than anything about Please.
 - **`TestSymlinkedOutputs` and `TestCreatePlzOutGo` skip on Windows**, for the same symlink
   reason, and the permission assertions in `TestOutputDirDoubleStar` skip because Windows has
   no mode to preserve — Go synthesises one from the read-only attribute.
