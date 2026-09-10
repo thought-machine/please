@@ -19,7 +19,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | M0 | Baseline and guardrail | 2d | ✅ | — | — |
 | M1 | OS abstraction layer | 1–2w | ✅ | — | — |
 | M2 | Paths, environment and the `.exe` model | 1w | ✅ | — | — |
-| M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
+| M3 | Build actions and the bundled shell | 1w | ✅ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
 | M5 | C++ on Windows: cc-rules (workstream B) | 2w | 🟡 | — | — |
 | M6 | Linux-hosted verification harness | 1w | ✅ | — | — |
@@ -149,23 +149,68 @@ path-format rule).
       backslash path unharmed, but `sed -e "s#x#$TMP_DIR#"` turned `\tmp` into a literal tab
       and ate the rest — and the cc rules build their link line with `sed`
 
-## M3 — Build actions and the bundled shell
+## M3 — Build actions and the bundled shell ✅
 
 **Exit:** a `genrule` with `cmd = "cat $SRCS | sort > $OUT"` builds under `plz.exe` on Wine.
-*Already demonstrated in M0 with a hand-placed `bash.exe`; this milestone is about doing it
-through config and packaging rather than by hand.*
+**Met**, and this time through config and packaging rather than by hand: nothing was placed on
+the PATH and no file was renamed to `bash.exe`. The repo has no `[build] shell` line at all;
+`plz.exe` finds the `busybox.exe` sitting next to it and runs the action through it.
 
 Design: `02-shell-and-build-actions.md`.
 
-- [ ] `[build] Shell` / `ShellArgs` config
-- [ ] `src/process/process.go`, `src/run/run_step.go` — use it instead of literal `"bash"`
-- [ ] `src/cache/cmd_cache.go` — replace hardcoded `sh -c` (2 sites)
-- [ ] Vendor `busybox.exe` (`remote_file`, pinned hash, GPL-2.0 noted)
-- [ ] Add to `//package:installed_files` under `is_platform(os = "windows")`
+- [x] `[build] Shell` / `ShellArgs` config. Defaults are per-platform, from
+      `process.DefaultShell` / `DefaultShellArgs`: `bash` with `--noprofile --norc` on Unix,
+      `busybox` with `bash` (the applet name) on Windows
+- [x] `src/process/process.go`, `src/run/run_step.go` — `BashCommand` is now a method on
+      `Executor`, which carries the shell. `RemoteBashCommand` is untouched and still hardcodes
+      the full flag set, because the remote worker is a real bash whatever we are running on
+- [x] `src/cache/cmd_cache.go` — both `sh -c` sites use the configured shell
+- [x] `src/output/shell_output.go` — `plz build --shell` had a third hardcoded shell, not on
+      the original list. It gets `Executor.InteractiveShellCommand`, which is the same shell
+      without `-e`/`-u`
+- [x] Vendor `busybox.exe` (`remote_file`, pinned hash, GPL-2.0 noted)
+- [x] Add to `//package:installed_files` under `is_platform(os = "windows")`
 - [x] Applet and flag audit against busybox-w64 — done in M0, see
       `02-shell-and-build-actions.md`
-- [ ] Gate the `xz -zc` tarball rule to Linux (busybox `xz` is decompress-only)
-- [ ] `plz hash //...` unchanged on Linux
+- [x] Gate the `xz -zc` tarball rule to Linux (busybox `xz` is decompress-only — re-verified
+      against busybox-w64 1.38.0, which is also decompress-only despite listing the applet).
+      `tarball(xzip = True)` now fails at parse time on Windows, and `package/BUILD` defines
+      the two xz tarballs only where they can be built
+- [x] `plz hash //...` unchanged on Linux — verified by hashing the same tree with the old and
+      new binaries, which agree exactly. The config addition is invisible to the hash because
+      `Configuration.Hash` covers only `Build.Lang`, `Build.Nonce`, the rejected licences and
+      the build environment
+
+**Landed early from M4** (`//package:installed_files` does not build for Windows without it):
+`please_sandbox` is gated off Windows. It is built on Linux namespaces, so there was never
+anything to ship there, and MinGW rejects `sandbox.c` outright.
+
+### Findings
+
+1. **Resolving the shell on `$PATH` alone would have made the bundling pointless.** Nothing
+   puts Please's install directory on the user's PATH on Windows, so a default of `busybox`
+   would never have been found. `resolveShell` (`src/core/state.go`) keeps the old behaviour
+   for a shell that is on the PATH and falls back to the *build* path — which already has
+   `Please.Location` prepended — only when it is not. Verified both ways under Wine: with
+   `busybox.exe` beside `plz.exe` the build works with no configuration; with it moved away
+   the build fails with `exec: "busybox": executable file not found in %PATH%`.
+2. **The `busybox bash` applet form behaves exactly like the `bash.exe` copy M0 tested.**
+   Re-verified under Wine: `-e` stops at the first failure (exit 1), `-u` rejects an unset
+   variable (exit 2), `-o pipefail` propagates a failure from the left of a pipe (exit 1).
+   So `ShellArgs = bash` costs nothing over renaming the binary, and avoids installing a file
+   called `bash.exe` that would shadow a user's real bash.
+3. **A repeatable config key still cannot be cleared by assigning it empty** — the M5 trap,
+   met again. `ShellArgs = ` yields `[""]`, so an empty argument would have been passed
+   through to the shell. `ShellArgs` drops empty entries, which is what lets a user turn the
+   shell's arguments off entirely.
+4. **Bundling busybox needed a licence-policy change.** `.plzconfig` rejected `GPL-2.0`, so
+   `//third_party/binary:busybox` failed to build before it was ever run. Accepted with a
+   comment: Please execs busybox rather than linking it, so they are separately distributed
+   works, but the release has to carry the licence and a pointer to the source.
+5. **`plz run` had the same bare-filename bug as `toolPath`** (M6 finding 2), one layer up:
+   `run_step.go` decided "does this need looking up on the PATH?" by searching for `/` only,
+   so an entry-point path built with `filepath.Join` would have been sent to `LookPath`. Now
+   checks `filepath.Separator` too.
 
 ## M4 — Release pipeline
 
@@ -184,7 +229,7 @@ Design: `04-release-and-ci.md`.
       while the code uses generics, so it fails to build on *any* platform with a modern
       toolchain — a one-line upstream fix, unrelated to Windows
 - [x] `.plzconfig_windows_amd64` — landed early in M1 (needed for `forceposix`)
-- [ ] `package/BUILD` — gate `please_sandbox` on `is_platform(os = "linux")`
+- [x] `package/BUILD` — gate `please_sandbox` on `is_platform(os = "linux")` — done in M3
 - [ ] `package/BUILD` — `.zip` release target
 - [ ] `plz.cmd` shim instead of the `ln -sf please plz` symlink
 - [ ] `src/update/update.go` — cannot overwrite a running `.exe`; use the version-directory
