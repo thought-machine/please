@@ -17,6 +17,7 @@ go_binary(
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
+        "//src/process",
         "//src/update",
         "//src/version",
     ],

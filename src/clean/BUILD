@@ -8,13 +8,12 @@ go_library(
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
-        "///third_party/go/golang.org_x_sys//windows",
         "//src/build",
         "//src/cli/logging",
         "//src/core",
         "//src/fs",
         "//src/test",
-    ],
+    ] + (["///third_party/go/golang.org_x_sys//windows"] if is_platform(os = "windows") else []),
 )
 
 go_test(
