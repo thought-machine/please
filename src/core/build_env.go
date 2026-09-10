@@ -133,6 +133,7 @@ func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) Bui
 		env["BINDIR"] = filepath.Join(RepoRoot, BinDir)
 	}
 
+	env.normalisePathSeparators()
 	return withUserProvidedEnv(target, env)
 }
 
@@ -192,6 +193,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run
 	if len(state.TestArgs) > 0 {
 		env["TESTS"] = strings.Join(state.TestArgs, " ")
 	}
+	env.normalisePathSeparators()
 	return withUserProvidedEnv(target, env)
 }
 
@@ -206,6 +208,7 @@ func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) Build
 		env["OUT"] = resolveOut(outEnv[0], ".", false)
 	}
 
+	env.normalisePathSeparators()
 	return withUserProvidedEnv(target, env)
 }
 
@@ -231,6 +234,7 @@ func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) Bui
 		}
 	}
 
+	env.normalisePathSeparators()
 	return withUserProvidedEnv(target, env)
 }
 

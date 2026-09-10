@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,4 +203,24 @@ func TestDeduplicateEnvVars(t *testing.T) {
 
 	env := TestEnvironment(state, target, "/path/to/runtime/dir", 1)
 	assert.Equal(t, env["COVERAGE"], "wibble")
+}
+
+// TestBuildEnvironmentUsesForwardSlashes asserts the invariant that the environment Please
+// generates never contains a backslash. Build commands are shell strings, and anything that
+// interprets its arguments - sed, for one, which the C/C++ rules use to build their link line
+// - will silently mangle a Windows path embedded in one. This is trivially true on platforms
+// whose separator is already a forward slash; it is the real assertion on Windows.
+func TestBuildEnvironmentUsesForwardSlashes(t *testing.T) {
+	target := NewBuildTarget(NewBuildLabel("pkg", "t"))
+	target.AddOutput("out_file1")
+	target.AddSource(FileLabel{File: "src_file1", Package: "pkg"})
+
+	for name, env := range map[string]BuildEnv{
+		"build": BuildEnvironment(NewDefaultBuildState(), target, filepath.Join("path", "to", "tmp")),
+		"exec":  ExecEnvironment(NewDefaultBuildState(), target, filepath.Join("path", "to", "run")),
+	} {
+		for k, v := range env {
+			assert.NotContains(t, v, `\`, "%s environment: %s contains a backslash", name, k)
+		}
+	}
 }
