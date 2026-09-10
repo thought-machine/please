@@ -23,8 +23,8 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | 🟡 | — | — |
 | M5 | C++ on Windows: cc-rules (workstream B) | 2w | 🟡 | — | — |
 | M6 | Linux-hosted verification harness | 1w | ✅ | — | — |
-| M7 | Sandboxing parity | 2w | ⬜ | — | — |
-| M8 | Remote execution and plugin parity | 3w | ⬜ | — | — |
+| M7 | Sandboxing parity | 2w | 🟡 | — | — |
+| M8 | Remote execution and plugin parity | 3w | 🟡 | — | — |
 | M9 | Native Windows CI and GA | 2w | ⬜ | — | — |
 
 Rough total: 14–15 weeks of focused work. M0–M6 (the C++ vertical slice) is 7–8 weeks.
@@ -380,20 +380,41 @@ Two tests are honestly unrunnable rather than fixed:
    in path` until `[build] path` is configured. That is the intended design, but it means a
    Windows user must configure tool locations before anything builds.
 
-## M7 — Sandboxing parity
+## M7 — Sandboxing parity 🟡
 
-- [ ] Default `Sandbox.Build`/`Sandbox.Test` false on Windows, with a clear log line
+- [x] Default `Sandbox.Build`/`Sandbox.Test` false on Windows, with a clear log line. The
+      defaults were already false — the zero value — so the work was the log line, and it
+      mattered more than it looks. Setting either on Windows previously produced
+      `Can't find sandbox tool please_sandbox on the path`, which invites you to install
+      something that does not exist. It now says sandboxing is not implemented on this platform
+      and that actions will run without isolation, and does not construct a sandboxing executor
 - [ ] `sandbox_windows.go` — Job Objects (reuse M1), restricted token, scrubbed environment
 - [ ] Document the filesystem-isolation gap: no mount-namespace analogue; Windows Containers
       rejected as too large a dependency
 
-## M8 — Remote execution and plugin parity
+Note `resolveOut` already guards its sandbox branch on `runtime.GOOS == "linux"`, so `$OUT`
+does not change shape on a platform without a sandbox. `target.Sandbox` is still folded into
+the target hash, so a Windows user who turns sandboxing on gets different hashes for no
+benefit — which is why refusing to act on the setting, rather than quietly ignoring it, is
+the right shape.
 
-- [ ] `src/remote/action.go` `translateOS` — add `windows`
-- [ ] go plugin — `windows_amd64` arch, `.exe` naming
+## M8 — Remote execution and plugin parity 🟡
+
+- [x] ~~`src/remote/action.go` `translateOS` — add `windows`~~ — **nothing to do.**
+      `reallyTranslateOS` special-cases only `darwin` → `macos` and passes everything else
+      through, so `windows` already comes out as `windows`. Recorded rather than changed
+- [ ] go plugin — `windows_amd64` arch, `.exe` naming. **Now blocking more than it looks:**
+      Go's `exec` on Windows will not run a file with no `PATHEXT` extension even given its
+      full path, so `plz run` on any `go_binary` fails until this lands. `//src:please` and
+      `//tools/build_langserver` work around it per-target (M4)
 - [ ] shell plugin — `sh_binary` needs a `.cmd`/busybox shim instead of `#!`
 - [ ] python plugin — pex on Windows (prior art: ChangeLog #947)
-- [ ] `src/watch` — document fsnotify's Windows limits
+- [x] `src/watch` — **this was a bug, not a documentation task.** `plz watch` compares the
+      paths it recorded against the ones fsnotify reports. Ours are slash-separated; fsnotify
+      on Windows reports backslashes. Nothing matched, so every event was discarded as
+      belonging to a file we weren't watching, and the watch would simply never fire — silently,
+      since the mismatch looks exactly like an unrelated file changing. Both sides now go
+      through `watchKey`. `//test/windows:watch_test` guards it, and fails without the fix
 
 ## M9 — Native Windows CI and GA
 
