@@ -20,7 +20,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | M1 | OS abstraction layer | 1–2w | ✅ | — | — |
 | M2 | Paths, environment and the `.exe` model | 1w | ✅ | — | — |
 | M3 | Build actions and the bundled shell | 1w | ✅ | — | — |
-| M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
+| M4 | Release pipeline: cross-built Windows artifacts | 1w | 🟡 | — | — |
 | M5 | C++ on Windows: cc-rules (workstream B) | 2w | 🟡 | — | — |
 | M6 | Linux-hosted verification harness | 1w | ✅ | — | — |
 | M7 | Sandboxing parity | 2w | ⬜ | — | — |
@@ -60,11 +60,11 @@ build under Wine.*
 - [x] `pkg/xattr` verified: ships `xattr_unsupported.go`, no build tag needed
 - [x] These design documents
 - [x] `probe/m1-skeleton.patch` — verified to apply cleanly and produce a working `please.exe`
-- [ ] Non-blocking CI job: `plz build --arch windows_amd64 //src:please` — **the command
-      itself already passes**; only the CI wiring is left
+- [x] ~~Non-blocking CI job~~ — overtaken by events. M4 added a *blocking* `build-windows`
+      job that builds the whole release, which is strictly stronger
 - [x] ~~`go1.27.0.windows-amd64` hash in `third_party/go/BUILD`~~ — **not needed.** Go
       cross-compiles from the host toolchain; there is no Windows distribution to fetch
-- [ ] `tools/images/windows_builder/Dockerfile`, added to `tools/images/build.sh`
+- [x] `tools/images/windows_builder/Dockerfile`, added to `tools/images/build.sh` — done in M4
 
 ### Findings that changed the plan
 
@@ -212,10 +212,11 @@ anything to ship there, and MinGW rejects `sandbox.c` outright.
    so an entry-point path built with `filepath.Join` would have been sent to `LookPath`. Now
    checks `filepath.Separator` too.
 
-## M4 — Release pipeline
+## M4 — Release pipeline 🟡
 
 **Exit:** `plz build --arch windows_amd64 //package:release_files` on Linux CI produces a
-signed `windows_amd64/` folder.
+signed `windows_amd64/` folder. The command **passes locally**; what is left is the arcat
+release it depends on for plugins, and running it on CI for real.
 
 Design: `04-release-and-ci.md`.
 
@@ -227,17 +228,42 @@ Design: `04-release-and-ci.md`.
       Good news: arcat is pure Go with no syscall/cgo, cross-compiles to PE32+, and both
       `arcat x` and `arcat ar -r` verified working under Wine. Its `go.mod` says `go 1.17`
       while the code uses generics, so it fails to build on *any* platform with a modern
-      toolchain — a one-line upstream fix, unrelated to Windows
+      toolchain — a one-line upstream fix, unrelated to Windows.
+      **This is the only thing between here and the exit criterion.**
 - [x] `.plzconfig_windows_amd64` — landed early in M1 (needed for `forceposix`)
 - [x] `package/BUILD` — gate `please_sandbox` on `is_platform(os = "linux")` — done in M3
-- [ ] `package/BUILD` — `.zip` release target
-- [ ] `plz.cmd` shim instead of the `ln -sf please plz` symlink
-- [ ] `src/update/update.go` — cannot overwrite a running `.exe`; use the version-directory
-      layout
-- [ ] `pleasew.ps1` + `src/assets/BUILD` + root `BUILD`
-- [ ] `.circleci/config.yml` — `build-windows` job, workflow entry, `release-gs` requires
-- [ ] `.circleci/release.sh` — `release_folder … windows_amd64/$VERSION`
-- [ ] `tools/misc/gen_release.py` — `_arch()` windows branch
+- [x] `package/BUILD` — `.zip` release target, built with `arcat zip` on the Linux release
+      box. The two xz tarballs are replaced by it on Windows rather than added to
+- [x] `plz.cmd` shim instead of the `ln -sf please plz` symlink
+- [x] `src/update/update.go` — `linkFile` is now per-platform. Windows hard-links instead of
+      symlinking, and renames a file it cannot replace out of the way to `.stale`, which the
+      next run sweeps up in `clean()`
+- [x] `pleasew.ps1` + `src/assets/BUILD` + root `BUILD`. **Not executed anywhere yet** —
+      there is no PowerShell on the Linux host, so it has been reviewed but not run
+- [x] `.circleci/config.yml` — `build-windows` job, workflow entry, `release-gs` requires
+- [x] `.circleci/release.sh` — `release_folder … windows_amd64/$VERSION`
+- [x] `tools/misc/gen_release.py` — `_arch()` windows branch, and `.zip` added to the
+      content-type table
+- [x] `tools/images/windows_builder/Dockerfile`, added to `tools/images/build.sh` — the M0
+      item. The image tag in `config.yml` is dated `20260910` and **the image has to be built
+      and pushed before that job can run**
+
+### What the release turned up
+
+1. **The `.exe` suffix had to be asked for per target.** `go_binary` names the output after
+   the rule, so `//src:please` produced a file called `please` for Windows, which cmd will
+   not run and `LookPath` will not find. `out = "please.exe" if is_platform(...)` fixes it
+   where it matters today; the general fix belongs in the go plugin (M8).
+2. **The whole packaging path is verified end to end under Wine.** Extract the zip as a user
+   would, run `plz.cmd`, and a genrule builds: the shim finds `please.exe`, which finds
+   `busybox.exe` beside it with no configuration at all. `query alltargets //...` also works,
+   which is the `forceposix` smoke test the risk register asked for.
+3. **`plz init` now writes `pleasew.ps1` as well as `pleasew`**, on every platform. A repo is
+   often worked on from more than one, and picking by host would give a Linux developer no way
+   to set one up for their Windows colleagues.
+4. **The release artifact names carry no extension and that is correct.** `please_<VERSION>`
+   is a URL key, not a filename; the updater downloads it and writes it as `please.exe`
+   locally. Only the archive members need the suffix.
 
 ## M5 — C++ on Windows (workstream B)
 
