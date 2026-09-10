@@ -138,10 +138,12 @@ is nearly all of them — is broken.
 go build -tags forceposix ./src
 ```
 
-Verified: label parsing works completely with the tag. This is a one-line BUILD-file change
-and must be recorded as a decision, because it is invisible in the source and will silently
-regress if the tag is dropped. It also applies to `tools/please_shim` and any other go-flags
-binary.
+Verified: label parsing works completely with the tag.
+
+Note it is **not** a per-target BUILD change — `go_binary` has no `tags` parameter. The go
+plugin sources build tags from `CONFIG.GO.BUILD_TAGS`, so it goes in
+`.plzconfig_windows_amd64` as `[Plugin "go"] BuildTags = forceposix`, where it covers every
+go-flags binary built for Windows without touching other platforms.
 
 ### R2 — `path.Dir` on a filesystem path blocks startup
 

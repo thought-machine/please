@@ -119,9 +119,20 @@ delimiter and `:` as its name/argument delimiter on Windows, which collides with
 The library guards that file with `// +build !forceposix`, so the fix is a build tag. Verified:
 label parsing works completely with it, and is completely broken without it.
 
+**It is set as config, not per-target.** `go_binary` has no `tags` parameter — the go plugin
+takes build tags from `CONFIG.GO.BUILD_TAGS`, which also feeds the stdlib, every `go_repo`
+and the source filter. So it belongs in `.plzconfig_windows_amd64`:
+
+```ini
+[Plugin "go"]
+BuildTags = forceposix
+```
+
+Scoping it to the arch config means it applies to every go-flags binary built for Windows —
+`//src:please`, `//tools/please_shim` — without affecting any other platform.
+
 This must be recorded as a decision rather than a code comment, because it is invisible in
-Please's own source and will silently regress if the tag is ever dropped. It applies to
-`//src:please`, `tools/please_shim`, and any other go-flags binary.
+Please's own source and will silently regress if the tag is ever dropped.
 
 See R1 in `appendix-baseline-errors.md`.
 

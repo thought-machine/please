@@ -91,8 +91,9 @@ adopted.
 **The compile fixes are ~2 days. The rest of the milestone is the runtime work the compiler
 gives no signal for.** Do the cheap fixes first to unblock Wine testing, then the real ones.
 
-- [ ] **First, to unblock Wine testing:** `src/cli/logging.go` `path.Dir` → `filepath.Dir`
-      (hard startup blocker), and `-tags forceposix` on `//src:please` + `//tools/please_shim`
+- [x] `src/cli/logging.go` `path.Dir` → `filepath.Dir` (hard startup blocker)
+- [x] `.plzconfig_windows_amd64` with `[Plugin "go"] BuildTags = forceposix` (D5) —
+      `go_binary` has no `tags` param, so this is config, not a BUILD edit
 - [ ] `src/output/shell_output.go` — remove the `SysProcAttr` leak; expose intent from
       `src/process` instead
 - [ ] `src/core/lock.go` → `lock_unix.go` / `lock_windows.go` (`LockFileEx`) — **real
@@ -154,7 +155,7 @@ signed `windows_amd64/` folder.
 Design: `04-release-and-ci.md`.
 
 - [ ] `src/parse/internal_package.go` — `windows_amd64` arcat hash **(hard gate)**
-- [ ] `.plzconfig_windows_amd64`
+- [x] `.plzconfig_windows_amd64` — landed early in M1 (needed for `forceposix`)
 - [ ] `package/BUILD` — gate `please_sandbox` on `is_platform(os = "linux")`
 - [ ] `package/BUILD` — `.zip` release target
 - [ ] `plz.cmd` shim instead of the `ln -sf please plz` symlink
