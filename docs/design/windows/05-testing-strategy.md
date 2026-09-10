@@ -169,8 +169,18 @@ variables or config defaults shifts target hashes and invalidates every user's c
 merging M3 in particular:
 
 ```bash
-plz hash //...    # compare against the same command on master
+plz hash //src/...                 # record
+git stash -u -- src && plz hash //src/...   # record again at HEAD
+git stash pop
 ```
+
+**Compare within one working directory.** Hashes are *not* comparable between two checkouts
+of the same commit — a `git worktree` at HEAD produces different hashes from the main repo
+for reasons unrelated to any change, so a worktree-vs-repo diff reports dozens of false
+positives. Stash and unstash in place instead.
+
+Expect the dependency cone of whatever you edited to change; that is content hashing working.
+What matters is that nothing *outside* that cone moves.
 
 A diff here is not necessarily wrong, but it must be *intended* and called out in the PR
 description.

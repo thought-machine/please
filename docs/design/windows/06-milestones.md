@@ -18,7 +18,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 |---|---|---|---|---|---|
 | M0 | Baseline and guardrail | 2d | ✅ | — | — |
 | M1 | OS abstraction layer | 1–2w | ✅ | — | — |
-| M2 | Paths, environment and the `.exe` model | 1w | ⬜ | — | — |
+| M2 | Paths, environment and the `.exe` model | 1w | 🟡 | — | — |
 | M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
 | M5 | C++ on Windows: cc-rules (workstream B) | 2w | ⬜ | — | — |
@@ -129,18 +129,22 @@ Design: `01-os-abstraction.md` (the `.exe` model) and `02-shell-and-build-action
 path-format rule).
 
 - [x] Promote `splitPathList` → `fs.SplitPathList` (done in M1, needed by `LookPath`)
-- [ ] Replace the remaining raw `":"` splits in `src/core/config.go` and
-      `src/remote/action.go` — `core.LookPath` is already done
-- [ ] `src/fs/home.go` — `os.UserHomeDir()`; rework the `~` regex
-- [ ] `src/core/config.go` — platform-conditional `MachineConfigFileName`, `DefaultPath`
-- [ ] `src/core/build_env.go` — `USERPROFILE`, `TEMP`/`TMP`
-- [ ] `src/core/build_target.go` — platform-conditional `SandboxDir`
+- [x] Remaining raw `":"` splits in `src/core/config.go` (6) and `src/remote/action.go`.
+      The remote one splits locally but still joins with `":"` for the POSIX worker
+- [x] `src/fs/home.go` — `os.UserHomeDir()`; `~` regex built from the platform separators
+- [x] `MachineConfigFileName` (ProgramData) and `DefaultPath` (empty on Windows — there is
+      no equivalent of `/usr/bin` holding build tools)
+- [x] `USERPROFILE`, `TEMP`, `TMP` — Windows only, so Unix hashes are untouched
+- [x] `src/core/build_target.go` — platform-conditional `SandboxDir`
 - [ ] `src/fs/copy.go` — symlink privilege fallback
 - [ ] `src/fs/fs.go` — `RemoveAll` clears `FILE_ATTRIBUTE_READONLY`
 - [ ] Bug fixes: raw `"/"` splits in `src/fs/sort.go`, `src/fs/glob.go`,
       `src/build/build_step.go` (the `src/cli/logging.go` `path.Dir` fix moved to M1 — it
       blocks startup entirely)
-- [ ] Forward-slash normalisation in `BuildEnvironment` + a test asserting no `\`
+- [ ] Forward-slash normalisation in `BuildEnvironment` + a test asserting no `\`.
+      **Confirmed still needed:** a genrule under Wine sees
+      `HOME=Z:\...\plz-out\tmp\envcheck._build`. It survives `echo`, but any command where
+      backslash is an escape will break on it
 
 ## M3 — Build actions and the bundled shell
 
