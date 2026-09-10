@@ -3,11 +3,11 @@
 genrule(
     name = "slowrepo_files",
     srcs = [
-        "repo_src/build_file",
+        "repo_src/subrepo_build_file",
         "repo_src/plzconfig",
     ],
     outs = ["slowrepo_files"],
-    cmd = "sleep 1 && mkdir -p $OUT && cp $PKG_DIR/repo_src/build_file $OUT/BUILD_FILE && cp $PKG_DIR/repo_src/plzconfig $OUT/.plzconfig",
+    cmd = "sleep 1 && mkdir -p $OUT && cp $PKG_DIR/repo_src/subrepo_build_file $OUT/BUILD_FILE && cp $PKG_DIR/repo_src/plzconfig $OUT/.plzconfig",
 )
 
 subrepo(
