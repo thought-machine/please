@@ -572,17 +572,68 @@ the right shape.
       `.sh` is not runnable by name however it is written. `sh_test` hands the script to a shell
       explicitly and `sh_cmd` takes its interpreter from a new `shell_tool` plugin config rather
       than hardcoding `/bin/sh`. Verified under Wine through the bundled busybox
+
+      **Its Windows default was in the wrong place, and did nothing.** It was set in the
+      plugin's own `.plzconfig_windows_amd64`, and *a plugin's architecture config is never read
+      when it is used as a plugin*: `readSubrepoConfig` reads only `.plzconfig` from the
+      subrepo, and the `.plzconfig_<arch>` that `state.ForArch` merges belongs to the repo doing
+      the building. So it worked in the plugin's own tests, where it *is* that repo, and a
+      Windows user of the plugin silently got `/bin/sh` — a path Windows does not have.
+
+      Reading the subrepo's arch file would not be enough on its own either: a plugin's own
+      `[Plugin "x"]` values are not consulted for its config, only `[PluginConfig "x"]
+      DefaultValue`, and merging that appends rather than replaces, so a scalar default cannot
+      be overridden by a second file. The platform default now lives in the build defs, where
+      the rest of the platform handling already is. The python plugin does the same for its
+      run-time interpreters, for the same reason
 - [ ] shell plugin — `sh_binary`. It writes a shebang, appends the script, then appends a zip,
       and relies on the shebang. The payload is fine, since busybox has `unzip`; only the
       launching is broken, and it **cannot emit a `.cmd` alongside** because `plz run` requires
       a single output
-- [ ] python plugin — pex on Windows (prior art: ChangeLog #947). **Not started, and the shape
-      is not what it looks like:** a pex is not a shebang script but a static ELF preamble with a
-      zip appended, so a Windows cross-build today produces an ELF-prefixed file that is dead on
-      arrival. Two stages: skip the preamble and pass the interpreter in `test_cmd`, which gets
-      `python_test` working cheaply; then a small Go preamble cross-compiled for Windows for
-      `python_binary`. A C port was rejected — Windows has no true `exec`, so `_execv` breaks
-      exit codes and console attachment
+- [x] **python plugin — `python_binary` and `python_test` done** in the local clone. A pex is a
+      static ELF preamble with a zip appended, so a Windows cross-build produced an ELF-prefixed
+      file that was dead on arrival. Four things were needed, and only one of them was the one
+      we expected:
+
+      1. **A Windows preamble**, in Go, cross-compiled and embedded in `please_pex` beside the
+         native C one; `--os`, defaulting to the build environment's `OS`, picks between them.
+         It reads the same configuration from the same place in the archive. It is a separate
+         program rather than a port because Windows has no `exec`: it runs the interpreter as a
+         child and passes the exit status back, which `_execv` cannot do
+      2. **`plz.py` built a regex out of `os.sep`** to match distribution metadata inside the
+         zip. Zip member names are always `/`-separated, so on Windows that was a backslash,
+         which the regex compiler read as an escape — every pex died on startup, before any of
+         its own code ran. The `filepath`-for-`path` mistake again, in Python
+      3. **`.pex.exe` naming**, for the same reason `go_binary` needs `.exe`
+      4. **A run-time interpreter default of `python` then `py`.** The fallback elsewhere is the
+         interpreter that compiled the sources, which cross-compiling makes the host's, and
+         `python3` is a spelling a normal Windows install does not have
+
+      **The two-stage plan in the original note was unnecessary.** It assumed the Python inside
+      would need work too. It does not: Python skips leading non-zip data, so an ELF-prefixed
+      pex already imported and ran correctly under Wine once the `os.sep` bug was fixed. Only
+      the launcher was broken, so only the launcher was replaced
+
+      Measured under Wine by `//test/windows:pex_test`, against the embeddable Python from
+      python.org: `os.name`, importing the test module out of the zip, reading a data file
+      beside it, and importing third-party code through the meta path hook. Exit-code
+      propagation is separately guarded by `//test/windows:pex_exit_code_test`, because a
+      preamble that always returned 0 would make every failing `python_binary` look fine
+- [ ] python plugin — a `please_pex` release carrying the Windows preamble. Until there is one
+      this repo builds the tool from the plugin's source, through `PexTool` in
+      `.plzconfig_windows_amd64`. Same blocker as `arcat`: no push access, not a porting problem
+- [ ] python plugin — `.pyd` extension modules. `SoImport` writes one to a `NamedTemporaryFile`
+      and loads it while the handle is still open, which Windows does not allow. Only affects
+      pexes containing native wheels; none of the tests here do
+- [x] **A parse deadlock in Please itself**, found building the python plugin's `please_pex`
+      from source. Resolving a subrepo declared inside another subrepo makes Please look for
+      the package that would declare it in the host repo first, and fall back to the subrepo
+      that asked when it isn't there. Not being there is the ordinary case, so that lookup
+      swallows the error — and it swallowed the parse claim with it, leaving the next caller
+      waiting on a parse nobody was going to do. Twelve targets hung with no output at all.
+      `//test/subrepo/nested_subrepo_probe` guards it; two subrepos are needed, because the
+      first to look is the one that poisons the lookup
+
 - [x] `src/watch` — **this was a bug, not a documentation task.** `plz watch` compares the
       paths it recorded against the ones fsnotify reports. Ours are slash-separated; fsnotify
       on Windows reports backslashes. Nothing matched, so every event was discarded as
