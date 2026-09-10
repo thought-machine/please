@@ -52,6 +52,7 @@ class ReleaseGen:
         self.known_content_types = {
             '.gz': 'application/gzip',
             '.xz': 'application/x-xz',
+            '.zip': 'application/zip',
             '.asc': 'text/plain',
             '.sha256': 'text/plain',
         }
@@ -111,6 +112,8 @@ class ReleaseGen:
             return f'darwin_{cpu}'
         elif 'freebsd' in artifact:
             return f'freebsd_{cpu}'
+        elif 'windows' in artifact:
+            return f'windows_{cpu}'
         return f'linux_{cpu}'
 
     def sign_pgp(self, artifact:str) -> str:

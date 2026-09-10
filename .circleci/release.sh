@@ -50,6 +50,7 @@ release_folder /tmp/workspace/darwin_arm64 darwin_arm64/$VERSION
 release_folder /tmp/workspace/linux_amd64 linux_amd64/$VERSION
 release_folder /tmp/workspace/linux_arm64 linux_arm64/$VERSION
 release_folder /tmp/workspace/freebsd_amd64 freebsd_amd64/$VERSION
+release_folder /tmp/workspace/windows_amd64 windows_amd64/$VERSION
 
 # Sign the download script with our release key
 /tmp/workspace/release_signer pgp -o get_plz.sh.asc -i tools/misc/get_plz.sh

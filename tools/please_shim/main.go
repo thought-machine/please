@@ -214,7 +214,7 @@ func main() {
 	}
 
 	resolvePleaseLocation(config)
-	state.pleaseExecutable = filepath.Join(config.Please.Location, "please")
+	state.pleaseExecutable = filepath.Join(config.Please.Location, "please"+fs.ExeSuffix)
 
 	// Install Please if not found.
 	if !fs.FileExists(state.pleaseExecutable) {

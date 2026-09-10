@@ -41,6 +41,9 @@ var httpClient *retryablehttp.Client
 
 const milestoneURL = "https://please.build/milestones"
 
+// pleaseExeName is what the Please binary is called inside a version directory.
+const pleaseExeName = "please" + fs.ExeSuffix
+
 // pleaseVersion returns the current version of Please as a semver.
 func pleaseVersion() semver.Version {
 	return *semver.New(version.PleaseVersion)
@@ -187,7 +190,7 @@ func shouldUpdate(config *core.Configuration, updatesEnabled, updateCommand, pre
 // downloadAndLinkPlease downloads a new Please version and links it into place, if needed.
 // It returns the new location and dies on failure.
 func downloadAndLinkPlease(config *core.Configuration, verify bool, progress bool) string {
-	newPlease := filepath.Join(config.Please.Location, config.Please.Version.VersionString(), "please")
+	newPlease := filepath.Join(config.Please.Location, config.Please.Version.VersionString(), pleaseExeName)
 
 	if !core.PathExists(newPlease) {
 		downloadPlease(config, verify, progress)
@@ -262,7 +265,7 @@ func copyFile(r io.Reader, newDir string) {
 	if err := os.MkdirAll(newDir, fs.DirPermissions); err != nil {
 		panic(err)
 	}
-	f, err := os.OpenFile(filepath.Join(newDir, "please"), os.O_RDWR|os.O_CREATE, 0555)
+	f, err := os.OpenFile(filepath.Join(newDir, pleaseExeName), os.O_RDWR|os.O_CREATE, 0555)
 	if err != nil {
 		panic(err)
 	}
@@ -318,10 +321,7 @@ func linkNewFile(config *core.Configuration, file string) {
 	newDir := filepath.Join(config.Please.Location, config.Please.Version.VersionString())
 	globalFile := filepath.Join(config.Please.Location, file)
 	downloadedFile := filepath.Join(newDir, file)
-	if err := fs.RemoveAll(globalFile); err != nil {
-		log.Fatalf("Failed to remove existing file %s: %s", globalFile, err)
-	}
-	if err := os.Symlink(downloadedFile, globalFile); err != nil {
+	if err := linkFile(downloadedFile, globalFile); err != nil {
 		log.Fatalf("Error linking %s -> %s: %s", downloadedFile, globalFile, err)
 	}
 	log.Info("Linked %s -> %s", globalFile, downloadedFile)

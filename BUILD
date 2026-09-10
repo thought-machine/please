@@ -29,7 +29,10 @@ filegroup(
 
 filegroup(
     name = "pleasew",
-    srcs = ["pleasew"],
+    srcs = [
+        "pleasew",
+        "pleasew.ps1",
+    ],
     binary = True,
     visibility = ["//src/assets/..."],
 )

@@ -5,7 +5,7 @@ set -euvo pipefail
 tag=$(date +%Y%m%d)
 
 reporoot=$(plz query reporoot)
-images=("alpine" "freebsd_builder" "ubuntu" "ubuntu_alt")
+images=("alpine" "freebsd_builder" "ubuntu" "ubuntu_alt" "windows_builder")
 
 for image in ${images[@]}; do
   cd "$reporoot/tools/images/$image"

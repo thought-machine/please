@@ -1,8 +1,12 @@
 subinclude("//build_defs:version")
 
+# The go plugin names a binary after its rule, with no extension. Windows needs the .exe: a
+# PE file without it can't be found by PATHEXT lookup or run from cmd. Until the plugin does
+# this itself, every binary we ship has to ask for it.
 go_binary(
     name = "please",
     srcs = ["please.go"],
+    out = "please.exe" if is_platform(os = "windows") else None,
     definitions = {
         "github.com/thought-machine/please/src/version.PleaseVersion": VERSION,
     },

@@ -4,6 +4,8 @@ go_library(
     name = "update",
     srcs = [
         "clean.go",
+        "link_other.go",
+        "link_windows.go",
         "update.go",
         "verify.go",
     ],

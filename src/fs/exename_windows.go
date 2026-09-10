@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+// ExeSuffix is what an executable's filename ends in. Windows will not run a file without
+// it, whatever the file actually contains.
+const ExeSuffix = ".exe"
+
 // defaultPathExt is used when PATHEXT isn't set in the environment; it matches what Windows
 // itself defaults to.
 const defaultPathExt = ".COM;.EXE;.BAT;.CMD"

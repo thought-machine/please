@@ -32,6 +32,10 @@ compatibility = true
 `
 const wrapperScriptName = "pleasew"
 
+// A repo is often worked on from more than one platform, so both wrappers are written
+// whichever one we happen to be running on.
+const windowsWrapperScriptName = "pleasew.ps1"
+
 const pleasingsSubrepoTemplate = `
 github_repo(
   name = "pleasings",
@@ -112,10 +116,12 @@ func readConfig(filename string) []byte {
 	return b
 }
 
-// InitWrapperScript initialises the pleasew script.
+// InitWrapperScript initialises the pleasew scripts.
 func InitWrapperScript() {
-	data := assets.Pleasew
-	if err := os.WriteFile(wrapperScriptName, data, 0755); err != nil {
+	if err := os.WriteFile(wrapperScriptName, assets.Pleasew, 0755); err != nil {
+		log.Fatalf("Failed to write file: %s", err)
+	}
+	if err := os.WriteFile(windowsWrapperScriptName, assets.PleasewPS1, 0755); err != nil {
 		log.Fatalf("Failed to write file: %s", err)
 	}
 }

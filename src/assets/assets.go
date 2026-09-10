@@ -10,6 +10,11 @@ import (
 //go:embed pleasew
 var Pleasew []byte
 
+// PleasewPS1 is the Windows counterpart of the wrapper script
+//
+//go:embed pleasew.ps1
+var PleasewPS1 []byte
+
 // PlzComplete is the plz completion script
 //
 //go:embed plz_complete.sh

@@ -21,18 +21,27 @@ filegroup(
         # Windows has no shell that can run a build action, so we ship one. The default
         # [build] shell is 'busybox', which resolves to this once it's installed.
         "//third_party/binary:busybox",
+        # install.sh gets the short name with 'ln -sf please plz'. Symlinks need Developer
+        # Mode on Windows, so a one-line batch file stands in for it.
+        ":plz_cmd",
     ] if is_platform(os = "windows") else []),
     binary = True,
     entry_points = {
-        "please": "please",
+        "please": "please.exe" if is_platform(os = "windows") else "please",
     },
     labels = ["link:plz-out/please"],
     visibility = ["PUBLIC"],
 )
 
+filegroup(
+    name = "plz_cmd",
+    srcs = ["plz.cmd"],
+    binary = True,
+)
+
 # xz only compresses where there is an xz binary to do it, which excludes Windows - the
-# busybox we bundle there decompresses only. The gzip tarball is built everywhere, so the
-# Windows release is simply the smaller set until it grows a .zip of its own.
+# busybox we bundle there decompresses only. Windows gets a .zip in place of the two xz
+# tarballs; the gzip one is built everywhere.
 XZIP = not is_platform(os = "windows")
 
 if XZIP:
@@ -59,6 +68,19 @@ tarball(
     subdir = "please",
 )
 
+# Windows has no guaranteed tar, so its release is a zip. This is built on the Linux release
+# box like everything else, so it uses the host's arcat, not a Windows one.
+if is_platform(os = "windows"):
+    genrule(
+        name = "please_zip",
+        srcs = [":installed_files"],
+        outs = ["please_%s.zip" % VERSION],
+        # --rename_dir, rather than --prefix, because entries come out under the package
+        # directory they were built in and the release wants them at the top of a please/.
+        cmd = "$TOOL zip --dumb --input package --output $OUT --rename_dir package:please",
+        tools = [CONFIG.ARCAT_TOOL],
+    )
+
 genrule(
     name = "please",
     srcs = ["//src:please"],
@@ -84,7 +106,7 @@ filegroup(
     ] + ([
         ":please_tarball_xz",
         ":please_tools_tarball",
-    ] if XZIP else []),
+    ] if XZIP else [":please_zip"]),
     labels = ["hlink:plz-out/pkg/${OS}_${ARCH}"],
 )
 

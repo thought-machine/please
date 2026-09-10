@@ -3,3 +3,5 @@ BUILD.plz linguist-language=Starlark diff=python
 docs/* linguist-documentation
 *_bindata.go linguist-generated
 third_party/go/zip/* linguist-vendored
+
+*.cmd text eol=crlf

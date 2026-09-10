@@ -15,6 +15,10 @@ import (
 
 // clean checks for any stale versions in the download directory and wipes them out if OK.
 func clean(config *core.Configuration, manualUpdate bool) {
+	// Anything an update couldn't replace because it was running at the time is still lying
+	// around under a .stale name; it will be free now.
+	cleanStaleFiles(config.Please.Location)
+
 	dir, _ := os.ReadDir(config.Please.Location)
 	versions := make(semver.Versions, 0, len(dir))
 	// Convert these to semver

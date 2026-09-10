@@ -201,6 +201,33 @@ jobs:
        - save_cache:
            key: go-freebsd-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
+
+   build-windows:
+     working_directory: ~/please
+     docker:
+       - image: ghcr.io/thought-machine/please_windows_builder:20260910
+     resource_class: large
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - restore_cache:
+           key: go-windows-v1-{{ checksum "third_party/go/BUILD" }}
+       - run:
+           name: Extract plz
+           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
+       - run:
+           name: Cross-compile
+           command: ./please/please build -p -v2 --profile ci --arch windows_amd64 //package:release_files
+       - persist_to_workspace:
+           root: plz-out/pkg
+           paths:
+             - windows_amd64/*
+       - store_artifacts:
+           path: plz-out/log
+       - save_cache:
+           key: go-windows-v1-{{ checksum "third_party/go/BUILD" }}
+           paths: [ ".plz-cache/third_party/go" ]
    build-linux-arm64:
      working_directory: ~/please
      docker:
@@ -515,6 +542,9 @@ workflows:
       - build-freebsd:
           requires:
             - build-alpine
+      - build-windows:
+          requires:
+            - build-alpine
       - test-rex:
           requires:
             - build-alpine
@@ -531,6 +561,7 @@ workflows:
           requires:
             - build-alpine
             - build-freebsd
+            - build-windows
             - build-darwin-amd64
             - build-linux-arm64
             - build-linux
