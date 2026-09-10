@@ -4,6 +4,7 @@ package watch
 import (
 	"context"
 	"fmt"
+	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -59,7 +60,7 @@ func Watch(state *core.BuildState, labels core.BuildLabels, testArgs []string, n
 		select {
 		case event := <-watcher.Events:
 			log.Info("Event: %s", event)
-			if _, present := files.Load(event.Name); !present {
+			if _, present := files.Load(watchKey(event.Name)); !present {
 				log.Notice("Skipping notification for %s", event.Name)
 				continue
 			}
@@ -123,17 +124,27 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 	fmt.Println("And now my watch begins...")
 }
 
+// watchKey normalises a path so that the names we record and the names fsnotify reports back
+// can be compared. On Windows they need not agree otherwise: our sources are slash-separated,
+// while anything that has been through filepath, or that fsnotify built from a watched
+// directory, comes back with backslashes. A mismatch is silent - every event is discarded as
+// belonging to a file we aren't watching - so `plz watch` would simply never fire.
+func watchKey(path string) string {
+	return filepath.ToSlash(path)
+}
+
 func addSource(watcher *fsnotify.Watcher, state *core.BuildState, source core.BuildInput, dirs map[string]struct{}, files *sync.Map) {
 	if _, ok := source.Label(); !ok {
 		for _, src := range source.Paths(state.Graph) {
 			if err := fs.Walk(src, func(src string, isDir bool) error {
+				src = watchKey(src)
 				files.Store(src, struct{}{})
 				if !filepath.IsAbs(src) {
 					files.Store("./"+src, struct{}{})
 				}
 				dir := src
 				if !isDir {
-					dir = filepath.Dir(src)
+					dir = path.Dir(src)
 				}
 				if _, present := dirs[dir]; !present {
 					log.Notice("Adding watch on %s", dir)

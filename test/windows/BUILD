@@ -14,6 +14,14 @@ wine_go_test(
     test = "///windows_amd64//src/core:core_test",
 )
 
+# plz watch compares the paths it recorded against the ones fsnotify reports, which use
+# different separators on Windows. A mismatch is silent - every event looks like it belongs to
+# a file we aren't watching - so this only means anything when run here.
+wine_go_test(
+    name = "watch_test",
+    test = "///windows_amd64//src/watch:watch_test",
+)
+
 # The shell smoke test: a real build action with a pipe and a redirect, run by the busybox
 # that ships in the Windows release, found the way a user's install would find it.
 wine_plz_test(

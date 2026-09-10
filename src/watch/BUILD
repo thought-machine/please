@@ -13,3 +13,15 @@ go_library(
         "//src/run",
     ],
 )
+
+go_test(
+    name = "watch_test",
+    srcs = ["watch_test.go"],
+    # So //test/windows can run this same binary, cross-built, under Wine, which is the only
+    # platform where the assertion means anything.
+    visibility = ["//test/windows:all"],
+    deps = [
+        ":watch",
+        "///third_party/go/github.com_stretchr_testify//assert",
+    ],
+)
