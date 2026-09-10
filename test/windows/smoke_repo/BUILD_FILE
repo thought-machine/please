@@ -1,0 +1,11 @@
+# The shell smoke test from docs/design/windows/02-shell-and-build-actions.md: a pipe, a
+# redirect and two applets in one build action.
+genrule(
+    name = "pipeline",
+    srcs = [
+        "a.txt",
+        "b.txt",
+    ],
+    outs = ["sorted.txt"],
+    cmd = "cat $SRCS | sort > $OUT",
+)

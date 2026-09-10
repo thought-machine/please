@@ -36,5 +36,8 @@ remote_file(
     hashes = ["07bb1e5b095b00d68a695481f9240879f33c5724b40aa2308f999d54ed78f075"],
     licences = ["GPL-2.0"],
     url = f"https://frippery.org/files/busybox/busybox-w64-{BUSYBOX_VERSION}.exe",
-    visibility = ["//package:all"],
+    visibility = [
+        "//package:all",
+        "//test/windows:all",
+    ],
 )

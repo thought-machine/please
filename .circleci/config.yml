@@ -228,6 +228,31 @@ jobs:
        - save_cache:
            key: go-windows-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
+
+   # Runs the Windows binaries we just cross-built, under Wine, on Linux. This is the only
+   # thing in CI that checks the port's runtime behaviour rather than that it compiles; see
+   # docs/design/windows/05-testing-strategy.md for what it does and does not cover.
+   test-windows-wine:
+     working_directory: ~/please
+     docker:
+       - image: ghcr.io/thought-machine/please_windows_builder:20260910
+     resource_class: large
+     steps:
+       - checkout
+       - attach_workspace:
+           at: /tmp/workspace
+       - restore_cache:
+           key: go-windows-v1-{{ checksum "third_party/go/BUILD" }}
+       - run:
+           name: Extract plz
+           command: tar -xzf /tmp/workspace/linux_amd64/please_*.tar.gz
+       - run:
+           name: Test under Wine
+           command: ./please/please test -p -v2 --profile ci --include=wine
+       - store_test_results:
+           path: plz-out/log/test_results.xml
+       - store_artifacts:
+           path: plz-out/log
    build-linux-arm64:
      working_directory: ~/please
      docker:
@@ -545,6 +570,9 @@ workflows:
       - build-windows:
           requires:
             - build-alpine
+      - test-windows-wine:
+          requires:
+            - build-alpine
       - test-rex:
           requires:
             - build-alpine
@@ -562,6 +590,7 @@ workflows:
             - build-alpine
             - build-freebsd
             - build-windows
+            - test-windows-wine
             - build-darwin-amd64
             - build-linux-arm64
             - build-linux

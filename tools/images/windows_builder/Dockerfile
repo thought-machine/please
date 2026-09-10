@@ -3,8 +3,11 @@ LABEL org.opencontainers.image.authors="please <at> thoughtmachine <dot> net"
 LABEL org.opencontainers.image.source=https://github.com/thought-machine/please
 
 # A few miscellaneous dependencies. MinGW is here for the C/C++ rules, which cross-compile to
-# Windows with it; the Go cross-build itself needs no C toolchain.
-RUN apt-get update && apt-get install -y curl git gcc xz-utils g++-mingw-w64-x86-64 && apt-get clean
+# Windows with it; the Go cross-build itself needs no C toolchain. Wine runs the results, which
+# is the only way anything about the port's runtime behaviour gets checked before there is a
+# Windows machine. It needs the i386 architecture enabled even for a 64-bit-only install.
+RUN dpkg --add-architecture i386 && apt-get update && \
+    apt-get install -y curl git gcc xz-utils g++-mingw-w64-x86-64 wine wine64 && apt-get clean
 
 # Go
 RUN curl -fsSL https://dl.google.com/go/go1.26.1.linux-amd64.tar.gz | tar -xzC /usr/local

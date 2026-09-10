@@ -1,0 +1,9 @@
+; Named BUILD_FILE so the outer repo doesn't parse this as one of its own packages.
+[parse]
+BuildFileName = BUILD_FILE
+
+; No dir cache. Please's cache is content-addressed and lands outside the test's tmp dir, so
+; leaving it on lets a run replay artifacts an earlier, differently-built binary produced -
+; which has already caused one false pass during this port.
+[cache]
+dir =
