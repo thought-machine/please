@@ -60,9 +60,10 @@ build under Wine.*
 - [x] `pkg/xattr` verified: ships `xattr_unsupported.go`, no build tag needed
 - [x] These design documents
 - [x] `probe/m1-skeleton.patch` — verified to apply cleanly and produce a working `please.exe`
-- [ ] Non-blocking CI job: `plz build --arch windows_amd64 //src:please`
-- [ ] `go1.27.0.windows-amd64` hash in `third_party/go/BUILD` (note: `.zip`, not `.tar.gz` —
-      confirm `go_toolchain` handles it)
+- [ ] Non-blocking CI job: `plz build --arch windows_amd64 //src:please` — **the command
+      itself already passes**; only the CI wiring is left
+- [x] ~~`go1.27.0.windows-amd64` hash in `third_party/go/BUILD`~~ — **not needed.** Go
+      cross-compiles from the host toolchain; there is no Windows distribution to fetch
 - [ ] `tools/images/windows_builder/Dockerfile`, added to `tools/images/build.sh`
 
 ### Findings that changed the plan
@@ -82,7 +83,9 @@ build under Wine.*
 ## M1 — OS abstraction layer
 
 **Exit:** `plz build --arch windows_amd64 //src:please` produces `please.exe` via the real
-BUILD-file path (not raw `go build`), and `//src/...` unit tests compile.
+BUILD-file path (not raw `go build`), and `//src/...` unit tests compile. ✅ **Met.**
+Full suite: 837 tests, 835 passed, 2 skipped. The cross-built binary parses labels and runs
+cold-cache builds under Wine.
 
 Design: `01-os-abstraction.md`. `probe/m1-skeleton.patch` is a starting shape — but its
 `lock_windows.go` and `kill_windows.go` are deliberately wrong and must be replaced, not
@@ -164,7 +167,9 @@ signed `windows_amd64/` folder.
 
 Design: `04-release-and-ci.md`.
 
-- [ ] `src/parse/internal_package.go` — `windows_amd64` arcat hash **(hard gate)**
+- [ ] `src/parse/internal_package.go` — `windows_amd64` arcat hash. Note this did **not**
+      block parsing or simple genrules under Wine; it bites when the `_please` internal
+      package is actually needed
 - [x] `.plzconfig_windows_amd64` — landed early in M1 (needed for `forceposix`)
 - [ ] `package/BUILD` — gate `please_sandbox` on `is_platform(os = "linux")`
 - [ ] `package/BUILD` — `.zip` release target
@@ -239,6 +244,8 @@ Design: `05-testing-strategy.md`.
 | MinGW does not match `please_cc`'s existing regexes | Blocks all of M5 | One-command check, first task in M5 |
 | ~~busybox-w64 diverges from Linux busybox~~ | **Materialised, resolved.** `--noprofile`/`--norc` rejected | Audit re-run against busybox-w64 in M0; `ShellArgs` promoted from hedge to requirement |
 | ~~go-flags `/` option delimiter breaks label syntax~~ | **Found and resolved in M0** | `-tags forceposix` (D5). Must not regress — it is invisible in Please's own source |
+| `go_repo` won't generate Windows-only third-party packages on a Linux host | Any unconditional dep on `x/sys/windows` breaks the normal Linux build | Guard such deps with `is_platform(os = "windows")`; `go_library` filters the `_windows.go` srcs to match |
+| BUILD files verified only by `go build` | Real breakage invisible until someone runs `plz` | Always verify through `plz build`, not `go build` — this found 3 bugs in one pass |
 | A dropped `forceposix` tag silently breaks every label | Total CLI breakage, only visible at runtime | Add a Wine smoke test asserting `query alltargets //...` works |
 | Backslash escaping in shell command strings | Intermittent, hard-to-diagnose build failures | The forward-slash rule in `02-shell-and-build-actions.md`, plus an assertion test |
 | `.exe` needs to be a core concept after all | Rework of the M2 decision | Verify `plz run` on a `cc_binary` early in M5, before the rest of M5 depends on it |
