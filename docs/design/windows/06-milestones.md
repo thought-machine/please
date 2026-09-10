@@ -21,7 +21,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | M2 | Paths, environment and the `.exe` model | 1w | ✅ | — | — |
 | M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
-| M5 | C++ on Windows: cc-rules (workstream B) | 2w | ⬜ | — | — |
+| M5 | C++ on Windows: cc-rules (workstream B) | 2w | 🟡 | — | — |
 | M6 | Linux-hosted verification harness | 1w | ⬜ | — | — |
 | M7 | Sandboxing parity | 2w | ⬜ | — | — |
 | M8 | Remote execution and plugin parity | 3w | ⬜ | — | — |
@@ -195,16 +195,27 @@ Design: `04-release-and-ci.md`.
 
 Design: `03-cc-toolchain.md`. Repo: `please-build/cc-rules`.
 
-- [ ] **First:** verify `x86_64-w64-mingw32-g++ -v -Wl,-v` matches the existing GCC and GNU ld
-      regexes in `cctool/tool.go`. D1 rests on this.
-- [ ] `build_defs/arch.build_defs` — add `windows_amd64`
-- [ ] `cc_binary` / `cc_test` → `.exe`; `cc_shared_object` → `.dll` + import library
-- [ ] Verify `plz run //some:cc_binary` still resolves the renamed output
-- [ ] Flag review: drop `-fPIC` and `-Wl,--build-id=none` for Windows
-- [ ] `DefaultLdFlags` override — `-lpthread -ldl` are both wrong on MinGW
+- [x] **D1 confirmed.** Both a WinLibs 16.2.0 and an Ubuntu 13 MinGW match the existing GCC
+      and GNU ld matchers; the Clang matcher correctly does not. No new matchers needed
+- [ ] `build_defs/arch.build_defs` — add `windows_amd64` (gates the plugin's own release,
+      not its use)
+- [x] `cc_binary` / `cc_test` → `.exe`; `cc_shared_object` → `.dll`. **Must be a function,
+      not a module-level constant** — subincluded `CONFIG.OS` reflects the host at module level
+- [x] A `cc_library` + `cc_binary` + `cc_shared_object` triple builds and `prog.exe` runs
+      under Wine, linking the static lib correctly
+- [ ] Drop `-fPIC` and `-Wl,--build-id=none` for Windows — both were passed and neither
+      broke the link, so this is noise reduction rather than a blocker
+- [x] `DefaultLdFlags` → `-lpthread`. Only `-ldl` was wrong. Note a repeatable config key
+      **cannot be cleared by assigning empty** — that yields `[""]`, which becomes a bare
+      `-Wl,` and the linker rejects it
 - [ ] `please_cc` `execvp_windows.go` (needed for native Windows, not for Axis 2)
 - [ ] Parse-time error when `pkg_config_libs` is used on Windows
 - [ ] MinGW cross-compile job in `plugin_test_cc.yaml`
+- [ ] **`please_cc` needs a `windows_amd64` release.** `tools/BUILD` fetches it as a prebuilt
+      binary with a pinned hash per platform. Not a blocker under Axis 2, where tools build for
+      the Linux host, but required for a native Windows plz
+- [ ] **`UnitTest++` does not compile for Windows** as packaged — needs its `Win32/` sources.
+      Blocks `cc_test`, not `cc_library`/`cc_binary`
 - [ ] Upstream PR; bump `plugins/BUILD` revision
 
 ## M6 — Linux-hosted verification harness

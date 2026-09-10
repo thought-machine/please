@@ -65,12 +65,23 @@ any `{{ … }}` expressions in the arguments against that identity, and `exec`s 
 Known identities today (`tools/please_cc/cctool/tool.go`): GCC, Clang, Apple Clang, GNU ld,
 GNU gold, LLD, ld64, Apple ld.
 
-### The assumption D1 rests on
+### The assumption D1 rests on — **confirmed**
 
-MinGW's `g++` should identify as `gcc version N`, matched by the existing GCC regex; MinGW's
-`ld` should identify as `GNU ld (GNU Binutils) N`, matched by the existing GNU ld regex.
+Measured against two toolchains, both by regex and in the real pipeline:
 
-**Verify this before committing to the milestone.** It is one command:
+| Toolchain | Compiler line | Linker line | `please_cc` says |
+|---|---|---|---|
+| WinLibs GCC 16.2.0 (Windows-native, under Wine) | `gcc version 16.2.0 (MinGW-W64 …)` | `GNU ld (Binutils for MinGW-W64 …) 2.47.20260726` | GCC 16.2.0 / GNU ld 2.47.20260726 |
+| Ubuntu `g++-mingw-w64-x86-64` 13 (Linux cross) | `gcc version 13-win32 (GCC)` | `GNU ld (GNU Binutils) 2.41.90.20240122` | GCC 13 / GNU ld 2.41.90 |
+
+Both match the existing GCC and GNU ld matchers, and the Clang matcher correctly does not.
+**No new matchers are needed.**
+
+Note the Ubuntu build reports `13-win32`, so the captured version is a bare `13`.
+`MustParseVersion` handles a single component, and `Compare` zero-pads the shorter of two
+version numbers, so `gcc >= 9` style expressions still evaluate correctly.
+
+The original check, kept for reference:
 
 ```bash
 x86_64-w64-mingw32-g++ -v -Wl,-v 2>&1 | head -20
@@ -238,12 +249,50 @@ Extend the plugin's own CI (`.github/workflows/plugin_test_cc.yaml`) with a MinG
 cross-compile job on `ubuntu-latest` — `apt-get install g++-mingw-w64-x86-64` plus
 `plz build --arch windows_amd64 //test/...`.
 
-## Exit criterion
+## Exit criterion — met
 
-On a Linux box, in the cc-rules repo:
+On a Linux box, in the cc-rules repo with `cc-rules-windows.patch` applied:
 
-```bash
-plz build --arch windows_amd64 //test/...
-file plz-out/bin/windows_amd64/test/binary/test_binary.exe
-# expect: PE32+ executable (console) x86-64, for MS Windows
+```console
+$ plz build --arch windows_amd64 //test/binary:test_binary
+plz-out/bin/windows_amd64/test/binary/test_binary.exe
+$ file plz-out/bin/windows_amd64/test/binary/test_binary.exe
+PE32+ executable (console) x86-64, for MS Windows
 ```
+
+A `cc_library` + `cc_binary` + `cc_shared_object` triple produces `lib.a`, `prog.exe` and
+`libshared.dll`; `prog.exe` links against the static library and prints the right answer under
+Wine. The same targets still produce `prog` and `libshared.so` on Linux, and all 12 of
+cc-rules' own tests pass there.
+
+### What the experiments changed
+
+1. **Module-level `CONFIG` does not see the target architecture.** The first attempt defined
+   `_EXE_SUFFIX` as a module-level constant and it silently had no effect — these build defs
+   are subincluded, and `CONFIG.OS` at module level reflects the host. It has to be a function
+   evaluated per call. This is a trap for any future platform-conditional logic here.
+2. **A repeatable config key cannot be cleared by assigning empty.** `defaultldflags =`
+   yields a list containing one empty string rather than an empty list, which
+   `_escape_linker_flag` turns into a bare `-Wl,` and the linker rejects with
+   `cannot find : Invalid argument`. Set an actual value instead.
+3. **`-lpthread` is fine on MinGW**, so only `-ldl` had to go. The Windows default is
+   `defaultldflags = -lpthread`.
+4. **`-fPIC` and `-Wl,--build-id=none` were passed and neither broke the link.** They remain
+   worth removing as noise, but they are not blockers, so that is deferred rather than done.
+5. **A `cc_shared_object` that sets `out` explicitly keeps whatever extension it was given.**
+   The rules' *default* is now correct, but a BUILD file hardcoding `out = "libfoo.so"` — as
+   cc-rules' own `//test/so:libdolphin` does — will still produce a `.so` on Windows. That is
+   arguably right, since `out` is an explicit instruction, but it is a portability trap worth
+   documenting for users.
+
+### Still open
+
+- **`please_cc` has no `windows_amd64` release.** `tools/BUILD` fetches it as a prebuilt
+  binary per platform with a pinned hash, so upstreaming needs a Windows build published
+  alongside the others. It did not block this work because tools are built for the *host*,
+  which is Linux under Axis 2 — but a native Windows `plz` will need it.
+- **`UnitTest++` does not compile for Windows** as packaged: it needs its `Win32/` platform
+  sources, which the plugin's target does not include. This blocks `cc_test`, not
+  `cc_library`/`cc_binary`.
+- `SUPPORTED_ARCHITECTURES` still lacks `windows_amd64`; it gates the plugin's own release
+  rather than its use.

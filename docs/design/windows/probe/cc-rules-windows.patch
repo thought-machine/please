@@ -1,0 +1,56 @@
+diff --git a/build_defs/cc.build_defs b/build_defs/cc.build_defs
+index bfdfaa6..92db3cd 100644
+--- a/build_defs/cc.build_defs
++++ b/build_defs/cc.build_defs
+@@ -26,6 +26,23 @@ _ACTION_FLAGS = [
+ 
+ _COVERAGE_FLAGS = ["--coverage", "-fprofile-dir=."]
+ 
++def _exe_suffix():
++    """Returns the filename suffix for an executable on the target platform.
++
++    Windows decides what is executable by extension, and the toolchain appends .exe to a -o
++    name that has none, so the rule has to declare the name the compiler will actually write.
++
++    N.B. this has to be evaluated per call rather than once at module level: these build defs
++    are subincluded, and CONFIG.OS there reflects the host until a rule is actually being
++    instantiated for the target architecture.
++    """
++    return ".exe" if CONFIG.OS == "windows" else ""
++
++
++def _so_suffix():
++    """Returns the filename suffix for a shared library on the target platform."""
++    return ".dll" if CONFIG.OS == "windows" else ".so"
++
+ # Clang >= 16 just require C++20 features to be enabled in order to enable modules, while older versions explicitly
+ # require the -fmodules-ts flag.
+ _MODULE_FLAGS = ["""'{{ clang && clang < 16 ? "-fmodules-ts" : "-std=c++20" }}'"""]
+@@ -436,7 +453,8 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
+         }
+     cmds, tools = _binary_cmds(_c, linker_flags, pkg_config_libs, strip, shared=True, test=False)
+     if not out:
+-        out = f'{name}.so' if name.startswith('lib') else f'lib{name}.so'
++        so = _so_suffix()
++        out = f'{name}{so}' if name.startswith('lib') else f'lib{name}{so}'
+     return build_rule(
+         name=name,
+         srcs={'srcs': srcs, 'hdrs': hdrs},
+@@ -584,7 +602,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
+         deps += [lib_rule]
+     return build_rule(
+         name=name,
+-        outs=[name],
++        outs=[name + _exe_suffix()],
+         deps=deps,
+         visibility=visibility,
+         cmd=cmds,
+@@ -675,7 +693,7 @@ def cc_test(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&cflags&cop
+ 
+     return build_rule(
+         name=name,
+-        outs=[name],
++        outs=[name + _exe_suffix()],
+         deps=deps,
+         data=data,
+         visibility=visibility,

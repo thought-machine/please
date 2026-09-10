@@ -1,0 +1,5 @@
+[Plugin "cc"]
+cctool = x86_64-w64-mingw32-gcc
+cpptool = x86_64-w64-mingw32-g++
+artool = x86_64-w64-mingw32-ar
+defaultldflags = -lpthread
