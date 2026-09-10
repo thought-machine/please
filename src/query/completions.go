@@ -58,6 +58,10 @@ func CompletePackages(config *core.Configuration, query string) *CompletionPacka
 	}
 }
 
+// Everything below deals in package names, which are slash-separated on every platform because
+// they become build labels. They are only incidentally filesystem paths, and Win32 is happy to
+// read a directory named with forward slashes, so path rather than filepath throughout.
+//
 // findPrefixedPackages finds any packages that match a prefix in a directory e.g. src/plz matches src/plz, and
 // src/plzinit
 func findPrefixedPackages(config *core.Configuration, root, prefix string) []string {
@@ -72,7 +76,7 @@ func findPrefixedPackages(config *core.Configuration, root, prefix string) []str
 	var matchedPkgs []string
 	for _, d := range dirs {
 		if d.IsDir() && strings.HasPrefix(d.Name(), prefix) {
-			p := filepath.Join(root, d.Name())
+			p := path.Join(root, d.Name())
 			if containsPackage(config, p) {
 				matchedPkgs = append(matchedPkgs, p)
 			}
@@ -94,10 +98,10 @@ func getPackagesAndPackageToParse(config *core.Configuration, query string) ([]s
 	prefix := ""
 	if info, err := os.Lstat(root); err != nil || !info.IsDir() {
 		_, prefix = filepath.Split(root)
-		currentPackage = filepath.Dir(query)
+		currentPackage = path.Dir(query)
 	} else if !packageOnly {
 		// If we match a package directly but that's also a prefix for another package, we should return those packages
-		root, prefix := filepath.Split(query)
+		root, prefix := path.Split(query)
 		packages := findPrefixedPackages(config, root, prefix)
 		if len(packages) > 1 {
 			return packages, ""
@@ -119,7 +123,7 @@ func isExcluded(config *core.Configuration, dir string) bool {
 		return true
 	}
 	for _, blacklisted := range config.Parse.BlacklistDirs {
-		if filepath.Base(dir) == blacklisted {
+		if path.Base(dir) == blacklisted {
 			return true
 		}
 	}
@@ -142,7 +146,7 @@ func containsPackage(config *core.Configuration, dir string) bool {
 
 		for _, info := range infos {
 			if info.IsDir() {
-				dirQueue = append(dirQueue, filepath.Join(dir, info.Name()))
+				dirQueue = append(dirQueue, path.Join(dir, info.Name()))
 			}
 			if config.IsABuildFile(info.Name()) {
 				return true

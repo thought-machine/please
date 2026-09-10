@@ -3,7 +3,7 @@ package query
 import (
 	"bytes"
 	"crypto/sha1"
-	"path/filepath"
+	"path"
 	"sort"
 
 	"github.com/thought-machine/please/src/build"
@@ -46,7 +46,9 @@ func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
 func changedTargets(state *core.BuildState, files []string, changed map[*core.BuildTarget]struct{}, level int, includeSubrepos bool) core.BuildLabels {
 	for _, filename := range files {
 		for dir := filename; dir != "." && dir != "/"; {
-			dir = filepath.Dir(dir)
+			// path, not filepath: dir becomes a package name to look up in the graph, and
+			// those are slash-separated everywhere.
+			dir = path.Dir(dir)
 			pkgName := dir
 			if pkgName == "." {
 				pkgName = ""
