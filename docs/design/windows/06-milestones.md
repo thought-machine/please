@@ -301,9 +301,13 @@ Design: `03-cc-toolchain.md`. Repo: `please-build/cc-rules`.
 
 Design: `05-testing-strategy.md`.
 
-- [ ] Wine test macro for cross-compiled Go test binaries
-- [ ] Wine CI job — `//src/core/...`, `//src/fs/...`, `//src/process/...`
-- [ ] The genrule shell smoke test
+- [x] Wine test macro for cross-compiled Go test binaries — `test/build_defs/wine.build_defs`,
+      `wine_go_test` and `wine_plz_test`
+- [x] Wine CI job — `test-windows-wine`, blocking, and a third pass in `test.sh` where Wine is
+      installed. `//src/core/...` and `//src/fs/...`; **not** `//src/process/...`, whose tests
+      run `true`, `false` and `sleep` as bare argv and so assume a Unix toolbox on the PATH
+- [x] The genrule shell smoke test — plus a `query alltargets //...` test, which is the
+      `forceposix` guard the risk register asked for
 - [x] **The headline end-to-end passes.** `wine plz.exe` extracts the cc plugin with
       `arcat.exe`, runs build actions through busybox, identifies the toolchain with
       `please_cc.exe`, compiles and links with MinGW `g++.exe`, and the resulting `hello.exe`
@@ -315,7 +319,49 @@ Design: `05-testing-strategy.md`.
       `windows_amd64` release yet. Both stand in for release infrastructure, not code.
 
       Getting there surfaced two real bugs — see the M6 findings below.
-- [ ] Make the Wine job blocking
+- [x] Make the Wine job blocking
+
+### What running the unit tests under Wine surfaced
+
+Doing this properly for the first time found **four correctness bugs**, all of the same shape
+and none visible on Linux: code handling repo-relative or label-derived paths through
+`filepath`, whose separator on Windows is a backslash. M2 recorded the inverse of this lesson
+(`io/fs` paths are always `/`, so use `path`) and fixed the producers; these are the consumers
+it missed.
+
+1. **`glob()` crossed package boundaries.** `isBuildFile` called `filepath.Base` on a path from
+   `io/fs`, so on Windows it compared the whole path against `BUILD` and never matched. No
+   subpackage was ever detected, and a glob in one package would take files belonging to
+   another. This is the same function M2 fixed the *pattern* side of.
+2. **The initial package was wrong from any subdirectory.** `getRepoRoot` returned it with
+   backslashes, which are illegal in a package name, so validation failed and Please walked up
+   until something parsed — usually the repo root. `plz build ...` from `src/core` would have
+   built the wrong thing silently.
+3. **Relative labels didn't parse at all.** `path/to:thingy` became `//current_package\path\to`.
+4. **`$(location)`, `$(exe)`, `$(worker)` and tool paths expanded with backslashes** into shell
+   commands, where a backslash is an escape character. M2 normalised the *environment*, which is
+   a different path.
+
+**This overturned an M2 decision.** `02-shell-and-build-actions.md` argued for normalising only
+at the environment boundary because it was the smaller change. It isn't: the replacements above
+are not environment values, and the existing tests already assumed forward slashes throughout.
+`plz-out` paths are now built with `path`, so they are slash-separated on every platform. Win32
+accepts either, and it is a no-op on Unix.
+
+A fifth finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
+whose name has no extension in `PATHEXT`, even given its full path.** The `wine_go_test` macro
+copies each test binary to a `.exe` before running it. The same trap is why `//src:please`
+needs `out = "please.exe"` (M4), and it will bite `plz run` on any `go_binary` until the go
+plugin names Windows outputs properly (M8).
+
+Two tests are honestly unrunnable rather than fixed:
+
+- **`TestSymlink` skips on Windows.** Creating a symlink needs Developer Mode, and under Wine
+  `os.Symlink` reports success and produces a link that cannot even be `Lstat`ed. The testing
+  strategy predicted Wine would grant the privilege unconditionally and so never exercise the
+  copy fallback; the reality is worse, and belongs on the M9 agenda.
+- **`//src/process/...` is not in the Wine job.** Its tests exec `true`, `false` and `sleep`
+  directly, which assumes a Unix toolbox on the PATH rather than anything about Please.
 
 ### What the end-to-end test surfaced
 
@@ -367,10 +413,10 @@ Design: `05-testing-strategy.md`.
 | ~~busybox-w64 diverges from Linux busybox~~ | **Materialised, resolved.** `--noprofile`/`--norc` rejected | Audit re-run against busybox-w64 in M0; `ShellArgs` promoted from hedge to requirement |
 | ~~go-flags `/` option delimiter breaks label syntax~~ | **Found and resolved in M0** | `-tags forceposix` (D5). Must not regress — it is invisible in Please's own source |
 | `go_repo` won't generate Windows-only third-party packages on a Linux host | Any unconditional dep on `x/sys/windows` breaks the normal Linux build | Guard such deps with `is_platform(os = "windows")`; `go_library` filters the `_windows.go` srcs to match |
-| Assuming `filepath` is always right on Windows | `glob()` silently matched nothing | Paths from `io/fs` are always `/`-separated: use `path`. The inverse of the `logging.go` bug, where `filepath` was the fix |
+| Assuming `filepath` is always right on Windows | **Materialised twice.** `glob()` matched nothing (M2), then crossed package boundaries and broke relative labels (M6) | Paths from `io/fs`, build labels, and anything going into a shell command are all `/`-separated: use `path`. The inverse of the `logging.go` bug, where `filepath` was the fix. The Wine unit-test job is the guard |
 | BUILD files verified only by `go build` | Real breakage invisible until someone runs `plz` | Always verify through `plz build`, not `go build` — this found 3 bugs in one pass |
 | Prebuilt per-platform helper binaries with no Windows release | Blocks plugins (arcat) and native cc builds (please_cc) | Both are pure Go and cross-compile cleanly; the work is publishing releases and recording hashes, not porting |
-| A dropped `forceposix` tag silently breaks every label | Total CLI breakage, only visible at runtime | Add a Wine smoke test asserting `query alltargets //...` works |
+| A dropped `forceposix` tag silently breaks every label | Total CLI breakage, only visible at runtime | ~~Add a Wine smoke test~~ — done: `//test/windows:label_test` |
 | Backslash escaping in shell command strings | Intermittent, hard-to-diagnose build failures | The forward-slash rule in `02-shell-and-build-actions.md`, plus an assertion test |
 | `.exe` needs to be a core concept after all | Rework of the M2 decision | Verify `plz run` on a `cc_binary` early in M5, before the rest of M5 depends on it |
 | Hash drift invalidates every user's cache | Silent, affects all platforms | `plz hash //...` diff on every M1–M3 PR |

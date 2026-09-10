@@ -110,6 +110,24 @@ wine plz-out/bin/windows_amd64/test/cc/binary.exe
 
 ### CI
 
+**Implemented.** `test/build_defs/wine.build_defs` has two macros — `wine_go_test` for a
+cross-built Go test binary, and `wine_plz_test` for `please.exe` driving a small repo laid out
+the way the release is. `//test/windows` uses them; the `test-windows-wine` CircleCI job runs
+them and blocks the release.
+
+They are labelled `wine` and excluded from the other test passes, because building them means
+cross-compiling the Go standard library for another platform. `test.sh` runs them as a third
+pass where Wine is installed.
+
+Two things learned building it:
+
+- **Rename the binary to `.exe` first.** Go's `exec` on Windows will not run a file whose name
+  has no extension in `PATHEXT`, even given its full path, and the go plugin names test
+  binaries after the rule. Any test whose subject re-execs itself — `TestComplete` in
+  `src/core` does — fails obscurely otherwise.
+- **A `go_test`'s own `data` doesn't come with it** when another rule depends on the binary, so
+  anything the test reads has to be repeated on the `wine_go_test`.
+
 A Wine job on `ubuntu-latest` (`apt-get install wine64`) is cheap. Make it blocking once M1
 lands — the whole point is to catch Windows regressions from contributors who are not
 thinking about Windows.
@@ -135,9 +153,11 @@ should be listed in the M9 issue rather than discovered during it.
   manifest opt-in. `plz-out/bin/<subrepo>/<pkg>/<target>` nests deeply; a monorepo will hit
   this. Wine does not enforce it.
 - **Symlink privileges.** `os.Symlink` needs Developer Mode or
-  `SeCreateSymbolicLinkPrivilege`. Wine grants it unconditionally, so the M2 copy-fallback
-  path is never exercised under Wine. **Test it explicitly** by injecting a failure, not by
-  hoping.
+  `SeCreateSymbolicLinkPrivilege`. This entry predicted Wine would grant it unconditionally, so
+  that the M2 copy-fallback path would never be exercised. **Measured, and it is worse than
+  that:** Wine's `os.Symlink` returns no error and produces a link that `os.Lstat` then cannot
+  find. `TestSymlink` skips on Windows for that reason. So Wine tells us nothing either way
+  here, and the fallback still needs testing by injecting a failure, not by hoping.
 
 ### Process and console
 
