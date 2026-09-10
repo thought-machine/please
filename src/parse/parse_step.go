@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	iofs "io/fs"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/thought-machine/please/src/cli/logging"
@@ -252,7 +252,11 @@ func buildFileName(state *core.BuildState, subrepo *core.Subrepo, fs iofs.FS, pk
 		return "WORKSPACE", ""
 	}
 	for _, buildFileName := range config.Parse.BuildFileName {
-		filename := filepath.Join(pkgName, buildFileName)
+		// path, not filepath: this is an io/fs path, which is always slash-separated whatever
+		// the host OS. filepath.Join would produce a backslash on Windows and iofs.Stat would
+		// then look for a single file whose name contains one, so no package below the top
+		// level would ever be found.
+		filename := path.Join(pkgName, buildFileName)
 		if info, err := iofs.Stat(fs, filename); err == nil && !info.IsDir() {
 			return filename, pkgName
 		}

@@ -357,7 +357,10 @@ func toolPath(state *BuildState, tool BuildInput, abs bool) string {
 			entryPoint = o.Annotation
 		}
 		path := state.Graph.TargetOrDie(label).toolPath(abs, entryPoint)
-		if !strings.Contains(path, "/") {
+		// A bare filename is made explicit so the shell runs it rather than searching PATH.
+		// Check both separators: on Windows the path may still contain backslashes at this
+		// point, and treating one as a bare name yields nonsense like "./C:\dir\tool.exe".
+		if !strings.ContainsRune(path, '/') && !strings.ContainsRune(path, os.PathSeparator) {
 			path = "./" + path
 		}
 		return path
