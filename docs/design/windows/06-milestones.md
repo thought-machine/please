@@ -304,11 +304,12 @@ Design: `05-testing-strategy.md`.
 - [x] Wine test macro for cross-compiled Go test binaries — `test/build_defs/wine.build_defs`,
       `wine_go_test` and `wine_plz_test`
 - [x] Wine CI job — `test-windows-wine`, blocking, and a third pass in `test.sh` where Wine is
-      installed. Now `//src/core`, `//src/fs`, `//src/build`, `//src/test`, `//src/cli` and
-      `//src/watch`: 428 tests, 424 passing and 4 skipped. **Not** `//src/process`, whose tests
-      run `true`, `false` and `sleep` as bare argv and so assume a Unix toolbox on the PATH.
-      `//src/build` is the valuable one — it runs real build actions, so it covers the process
-      layer and the bundled shell as well as whatever it is nominally about
+      installed. Every `//src/...` package whose tests run there at all: 19 targets, 717 tests,
+      713 passing and 4 skipped. **Not** `//src/process`, whose tests run `true`, `false` and
+      `sleep` as bare argv and so assume a Unix toolbox on the PATH; and not `//src/cache`,
+      `//src/exec`, `//src/remote`, `//src/run` or `//src/update`, which still have failures to
+      work through. `//src/build` is the valuable one — it runs real build actions, so it
+      covers the process layer and the bundled shell as well as whatever it is nominally about
 - [x] The genrule shell smoke test — plus a `query alltargets //...` test, which is the
       `forceposix` guard the risk register asked for
 - [x] **The headline end-to-end passes.** `wine plz.exe` extracts the cc plugin with
@@ -366,7 +367,19 @@ Extending the job past `core` and `fs` found **four more of the same kind**:
    letter, so `file:///C:/foo` arrives as `/C:/foo`, which `filepath.IsAbs` rejects. No
    `remote_file` with a local URL could work.
 
-A fifth kind of finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
+And widening it again, past `build` to the parser, the query layer and the rest, found three
+more — including the worst one so far:
+
+9. **`join_path` in the BUILD language returned backslashes on Windows.** The BUILD language is
+   the same language on every platform: its paths become labels, sources and command strings,
+   and every hash that reaches one would have differed. `subinclude`, `subrepo` names and
+   Bazel-compatibility `load()` had the same problem.
+10. **Completion returned backslashed package names**, which are not valid build labels, so
+    every completion below the top level was unusable.
+11. **`plz query changes` matched no package** for a changed file, because it walked up the
+    directory tree with `filepath.Dir` and looked the result up as a package name.
+
+A further kind of finding is recorded rather than fixed: **Go's `exec` on Windows will not run a file
 whose name has no extension in `PATHEXT`, even given its full path.** The `wine_go_test` macro
 copies each test binary to a `.exe` before running it. The same trap is why `//src:please`
 needs `out = "please.exe"` (M4), and it will bite `plz run` on any `go_binary` until the go

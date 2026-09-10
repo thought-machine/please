@@ -119,14 +119,29 @@ They are labelled `wine` and excluded from the other test passes, because buildi
 cross-compiling the Go standard library for another platform. `test.sh` runs them as a third
 pass where Wine is installed.
 
-Two things learned building it:
+**Never run these binaries by hand in the source tree.** Under `plz test` they run in a
+sandboxed temp directory; run directly from the repo root they operate on the repo. Doing that
+once during this work deleted the whole of `test/` — `AsyncDeleteDir` re-executes
+`os.Executable()`, which for a test binary is the test binary, with arguments it then ignores.
+Everything below was found by running them through the macros, which is the only safe way.
+
+Things learned building it:
 
 - **Rename the binary to `.exe` first.** Go's `exec` on Windows will not run a file whose name
   has no extension in `PATHEXT`, even given its full path, and the go plugin names test
   binaries after the rule. Any test whose subject re-execs itself — `TestComplete` in
   `src/core` does — fails obscurely otherwise.
 - **A `go_test`'s own `data` doesn't come with it** when another rule depends on the binary, so
-  anything the test reads has to be repeated on the `wine_go_test`.
+  anything the test reads has to be repeated on the `wine_go_test`. `$DATA` has to be set to
+  just that, too: a `gentest` would otherwise include the test binary in it, and tests that
+  read `$DATA` expect only their own data.
+- **Wine's hosts file leaves the `localhost` line commented out.** Anything that resolves it
+  hangs until it gives up; three `remote_file` tests were each burning fifteen seconds. The
+  macro appends the line to the prefix.
+- **`~` resolves inside the shared prefix**, so anything a test writes to its home directory
+  leaks into the next run — and a read-only file left there cannot be replaced on Windows at
+  all. Tests that write to `~` set `USERPROFILE` themselves, which is what `os.UserHomeDir`
+  reads there.
 
 A Wine job on `ubuntu-latest` (`apt-get install wine64`) is cheap. Make it blocking once M1
 lands — the whole point is to catch Windows regressions from contributors who are not
