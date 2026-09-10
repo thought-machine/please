@@ -42,44 +42,70 @@ wine_go_test(
     wine_go_test(
         name = name,
         data = data,
+        needs_shell = shell,
         test = target,
     )
-    for name, target, data in [
-        ("parse_test", "///windows_amd64//src/parse:parse_step_test", []),
+    for name, target, data, shell in [
+        ("parse_test", "///windows_amd64//src/parse:parse_step_test", [], False),
         (
             "asp_test",
             "///windows_amd64//src/parse/asp:asp_test",
             ["///windows_amd64//src/parse/asp:asp_test_data"],
+            False,
         ),
         (
             "query_test",
             "///windows_amd64//src/query:query_test",
             ["///windows_amd64//src/query:query_test_data"],
+            False,
         ),
         (
             "format_test",
             "///windows_amd64//src/format:format_test",
             ["///windows_amd64//src/format:format_test_data"],
+            False,
         ),
         (
             "export_test",
             "///windows_amd64//src/export:export_test",
             ["///windows_amd64//src/export:export_test_data"],
+            False,
         ),
-        ("output_test", "///windows_amd64//src/output:output_test", []),
+        ("output_test", "///windows_amd64//src/output:output_test", [], False),
         (
             "hashes_test",
             "///windows_amd64//src/hashes:hash_rewriter_test",
             ["///windows_amd64//src/hashes:hash_rewriter_test_data"],
+            False,
         ),
         (
             "gc_test",
             "///windows_amd64//src/gc:gc_test",
             ["///windows_amd64//src/gc:gc_test_data"],
+            False,
         ),
-        ("tool_test", "///windows_amd64//src/tool:tool_test", []),
-        ("plz_test", "///windows_amd64//src/plz:plz_test", []),
-        ("clean_test", "///windows_amd64//src/clean:clean_test", []),
+        ("tool_test", "///windows_amd64//src/tool:tool_test", [], False),
+        ("plz_test", "///windows_amd64//src/plz:plz_test", [], False),
+        ("clean_test", "///windows_amd64//src/clean:clean_test", [], False),
+        (
+            "cache_test",
+            "///windows_amd64//src/cache:cache_test",
+            ["///windows_amd64//src/cache:cache_test_data"],
+            True,
+        ),
+        ("exec_test", "///windows_amd64//src/exec:exec_test", [], True),
+        (
+            "remote_test",
+            "///windows_amd64//src/remote:remote_test",
+            ["///windows_amd64//src/remote:remote_test_data"],
+            False,
+        ),
+        (
+            "run_test",
+            "///windows_amd64//src/run:run_test",
+            ["///windows_amd64//src/run:run_test_data"],
+            False,
+        ),
     ]
 ]
 

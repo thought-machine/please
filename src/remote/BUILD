@@ -52,9 +52,11 @@ go_test(
         "impl_test.go",
         "remote_test.go",
     ],
-    data = ["test_data"],
+    data = [":remote_test_data"],
     # TODO(#1412): find out why this flakes on circle
     flaky = True,
+    # So //test/windows can run this same binary, cross-built, under Wine.
+    visibility = ["//test/windows:all"],
     deps = [
         ":remote",
         "///third_party/go/cloud.google.com_go_longrunning//autogen/longrunningpb",
@@ -77,4 +79,12 @@ go_test(
         "//src/core",
         "//src/fs",
     ],
+)
+
+# Exposed so //test/windows can put it beside the test binary when running it under Wine.
+filegroup(
+    name = "remote_test_data",
+    srcs = ["test_data"],
+    test_only = True,
+    visibility = ["//test/windows:all"],
 )
