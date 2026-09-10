@@ -6,7 +6,9 @@ This directory holds the engineering design documents for adding a Windows port 
 They are working documents for contributors, not user-facing documentation — the docs site
 build (`docs/BUILD`) only globs `milestones/*.html` and does not pick this directory up.
 
-Read this file first, then `06-milestones.md` for current status.
+**Starting cold? Read `07-state-of-play.md`.** It is the short version: what works, where the
+five repos are, what to pick up next, and the mistakes that have already cost time once each.
+Then this file for the why, and `06-milestones.md` for the per-milestone detail.
 
 ## Why
 
