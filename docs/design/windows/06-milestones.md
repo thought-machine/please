@@ -22,7 +22,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | M3 | Build actions and the bundled shell | 1w | ⬜ | — | — |
 | M4 | Release pipeline: cross-built Windows artifacts | 1w | ⬜ | — | — |
 | M5 | C++ on Windows: cc-rules (workstream B) | 2w | 🟡 | — | — |
-| M6 | Linux-hosted verification harness | 1w | 🟡 | — | — |
+| M6 | Linux-hosted verification harness | 1w | ✅ | — | — |
 | M7 | Sandboxing parity | 2w | ⬜ | — | — |
 | M8 | Remote execution and plugin parity | 3w | ⬜ | — | — |
 | M9 | Native Windows CI and GA | 2w | ⬜ | — | — |
@@ -233,12 +233,35 @@ Design: `05-testing-strategy.md`.
 - [ ] Wine test macro for cross-compiled Go test binaries
 - [ ] Wine CI job — `//src/core/...`, `//src/fs/...`, `//src/process/...`
 - [ ] The genrule shell smoke test
-- [ ] The headline end-to-end: `wine plz.exe` + MinGW + `cc_test`. **Blocked on two things,
-      both now understood:** arcat needs a Windows release before `plugin_repo` can extract
-      the cc plugin, and Wine in this environment has no working DNS, so the plugin cannot be
-      fetched from inside it. A local `subrepo(path=...)` would sidestep the download, but
-      `[Plugin]` config requires `Target` to be set, which `subrepo()` alone does not provide
+- [x] **The headline end-to-end passes.** `wine plz.exe` extracts the cc plugin with
+      `arcat.exe`, runs build actions through busybox, identifies the toolchain with
+      `please_cc.exe`, compiles and links with MinGW `g++.exe`, and the resulting `hello.exe`
+      runs and prints correctly. Every component in that chain is a Windows binary.
+
+      Two environmental caveats, neither a Please defect: Wine here has no working DNS, so
+      the plugin zip has to be supplied locally rather than downloaded; and `arcat` is pointed
+      at a cross-built binary via `[build] arcattool`, since there is no published
+      `windows_amd64` release yet. Both stand in for release infrastructure, not code.
+
+      Getting there surfaced two real bugs — see the M6 findings below.
 - [ ] Make the Wine job blocking
+
+### What the end-to-end test surfaced
+
+1. **No package below the top level parsed on Windows.** `buildFileName` joined with
+   `filepath.Join` and then called `iofs.Stat`, so it looked for a file whose *name* contained
+   a backslash. Only the root package worked, because `filepath.Join("", "BUILD")` has no
+   separator to get wrong — which is exactly why every earlier test missed it. This alone
+   would have made Windows unusable for any real repo.
+2. **`toolPath` prepended `./` to absolute paths**, producing
+   `./Z:/tmp/.../please_cc.exe`, because it decided "is this a bare filename?" by looking for
+   `/` only.
+3. **`.plzconfig` rejects unquoted backslashes** — `unquoted '\' must be followed by new line
+   or double quote`. Windows paths in config files must use forward slashes or be quoted.
+   Worth a note in the user docs.
+4. **`DefaultPath` being empty on Windows is load-bearing**, not cosmetic: `ar.exe not found
+   in path` until `[build] path` is configured. That is the intended design, but it means a
+   Windows user must configure tool locations before anything builds.
 
 ## M7 — Sandboxing parity
 
