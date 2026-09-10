@@ -29,6 +29,7 @@ go_test(
     deps = [
         ":parse",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/core",
     ],
 )

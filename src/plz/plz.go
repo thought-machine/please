@@ -2,6 +2,7 @@ package plz
 
 import (
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -35,6 +36,11 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, config *
 	}
 
 	parse.InitParser(state)
+	if parse.ArcatUnavailable(config) {
+		// Nothing that needs arcat can work, which includes extracting any plugin. Say so here
+		// rather than letting it surface much later as a target that doesn't exist.
+		log.Warning("No arcat is published for %s_%s, so anything that needs one - including loading a plugin - will fail. Build it yourself and point [build] arcattool at it.", runtime.GOOS, runtime.GOARCH)
+	}
 
 	// Start looking for the initial targets to kick the build off
 	go findOriginalTasks(state, preTargets, targets, arch)

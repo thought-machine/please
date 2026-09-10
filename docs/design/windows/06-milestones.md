@@ -229,7 +229,17 @@ Design: `04-release-and-ci.md`.
       `arcat x` and `arcat ar -r` verified working under Wine. Its `go.mod` says `go 1.17`
       while the code uses generics, so it fails to build on *any* platform with a modern
       toolchain — a one-line upstream fix, unrelated to Windows.
-      **This is the only thing between here and the exit criterion.**
+      **This is the only thing between here and the exit criterion**, and it needs someone with
+      push access to the arcat repo. Confirmed still true: the v1.3.1 release has assets for
+      darwin, freebsd and linux only.
+
+      **What has been done instead is to stop it being a wall.** Generating the internal
+      package used to fail outright on any platform with no published arcat, which stopped
+      everything rather than only the things that need one. The arcat rule is simply left out
+      now, so the rest of `//_please` still works, and `plz` warns once at startup that anything
+      needing arcat — including loading a plugin — will fail unless `[build] arcattool` points
+      at a build of your own. That is the difference between "Windows cannot parse anything" and
+      "supply this one binary yourself".
 - [x] `.plzconfig_windows_amd64` — landed early in M1 (needed for `forceposix`)
 - [x] `package/BUILD` — gate `please_sandbox` on `is_platform(os = "linux")` — done in M3
 - [x] `package/BUILD` — `.zip` release target, built with `arcat zip` on the Linux release
