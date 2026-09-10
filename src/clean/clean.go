@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/cli/logging"
@@ -91,10 +90,9 @@ func AsyncDeleteDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	// Note that we can't fork() directly and continue running Go code, but ForkExec() works okay,
-	// so we re-execute ourselves with a specific command that will remove this.
-	_, err = syscall.ForkExec(exec, []string{exec, "clean", "--rm", newDir}, nil)
-	return err
+	// Note that we can't fork() directly and continue running Go code, so we re-execute
+	// ourselves detached, with a specific command that will remove this.
+	return startDetached(exec, []string{"clean", "--rm", newDir})
 }
 
 // moveDir moves a directory to a new location and returns that new location.

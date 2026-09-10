@@ -464,7 +464,7 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			// TODO(jpoole): Read the docs. Attaching stdin and out doesn't seem to work with this.
-			cmd.SysProcAttr.Setpgid = false
+			process.ShareParentProcessGroup(cmd)
 			cmd.Run() // Ignore errors, it will typically end by the user killing it somehow.
 		}
 	}

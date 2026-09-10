@@ -129,7 +129,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
 		Platform:             c.targetPlatformProperties(target), //nolint:staticcheck
-		Arguments:            process.BashCommand(c.shellPath, commandPrefixBuilder.String()+cmd, state.Config.Build.ExitOnError),
+		Arguments:            process.RemoteBashCommand(c.shellPath, commandPrefixBuilder.String()+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
 		OutputPaths:          outs,
 	}, err
@@ -169,7 +169,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 				},
 			},
 		},
-		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
+		Arguments:            process.RemoteBashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
 		OutputPaths:          paths,
 	}, err

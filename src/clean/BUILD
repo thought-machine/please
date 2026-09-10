@@ -1,9 +1,14 @@
 go_library(
     name = "clean",
-    srcs = ["clean.go"],
+    srcs = [
+        "clean.go",
+        "detach_other.go",
+        "detach_windows.go",
+    ],
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
+        "///third_party/go/golang.org_x_sys//windows",
         "//src/build",
         "//src/cli/logging",
         "//src/core",

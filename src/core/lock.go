@@ -1,4 +1,4 @@
-// The logic below relies heavily on flock (advisory locks).
+// The logic below relies heavily on advisory file locking; see lock_other.go and lock_windows.go.
 
 package core
 
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"syscall"
 
 	"github.com/thought-machine/please/src/fs"
 )
@@ -25,7 +24,7 @@ var repoLockFile *os.File
 // AcquireSharedRepoLock acquires a shared lock on the repo lock file. The file descriptor is reused if already opened
 // allowing its lock mode to be replaced. Dies if the lock cannot be successfully acquired.
 func AcquireSharedRepoLock() {
-	if err := acquireRepoLock(syscall.LOCK_SH); err != nil {
+	if err := acquireRepoLock(lockShared); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -33,7 +32,7 @@ func AcquireSharedRepoLock() {
 // AcquireExclusiveRepoLock acquires an exclusive lock on the repo lock file. The file descriptor is reused if already opened
 // allowing its lock mode to be replaced. Dies if the lock cannot be successfully acquired.
 func AcquireExclusiveRepoLock() {
-	if err := acquireRepoLock(syscall.LOCK_EX); err != nil {
+	if err := acquireRepoLock(lockExclusive); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -75,13 +74,13 @@ func openRepoLockFile() error {
 
 // AcquireExclusiveFileLock opens a file to acquire an exclusive lock.
 func AcquireExclusiveFileLock(filePath string) (*os.File, error) {
-	return acquireOpenFileLock(filePath, syscall.LOCK_EX)
+	return acquireOpenFileLock(filePath, lockExclusive)
 }
 
 // AcquireSharedFileLock opens a file to acquire a shared lock.
 // Multiple of these can be held at once, but not concurrently with an exclusive lock (ala a RWMutex or similar).
 func AcquireSharedFileLock(filePath string) (*os.File, error) {
-	return acquireOpenFileLock(filePath, syscall.LOCK_SH)
+	return acquireOpenFileLock(filePath, lockShared)
 }
 
 // Base function that allows to set up different lock modes and facilitate testing.
@@ -105,7 +104,7 @@ func ReleaseFileLock(file *os.File) {
 		return
 	}
 
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_UN); err != nil {
+	if err := flock(file, lockUnlock); err != nil {
 		log.Errorf("Failed to release lock for %s: %s", file.Name(), err) // No point making this fatal really
 	}
 	if err := file.Close(); err != nil {
@@ -118,7 +117,7 @@ type logFunc func(format string, args ...interface{})
 func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 	// Try a non-blocking acquire first so we can warn the user if we're waiting.
 	log.Debug("Attempting to acquire lock for %s...", file.Name())
-	err := syscall.Flock(int(file.Fd()), how|syscall.LOCK_NB)
+	err := flock(file, how|lockNonBlocking)
 	if err != nil {
 		pid, err := os.ReadFile(file.Name())
 		if err == nil && len(pid) > 0 {
@@ -127,14 +126,14 @@ func acquireFileLock(file *os.File, how int, levelLog logFunc) error {
 			levelLog("Looks like another process has already acquired the lock for %s. Waiting for it to finish...", file.Name())
 		}
 
-		if err := syscall.Flock(int(file.Fd()), how); err != nil {
+		if err := flock(file, how); err != nil {
 			return fmt.Errorf("Failed to acquire lock for %s: %w", file.Name(), err)
 		}
 	}
 	log.Debug("Acquired lock for %s", file.Name())
 
 	// Record content, only if we have an exclusive lock.
-	if how&syscall.LOCK_EX != 0 {
+	if how&lockExclusive != 0 {
 		if err := file.Truncate(0); err == nil {
 			file.WriteAt([]byte(strconv.Itoa(os.Getpid())), 0)
 		}

@@ -127,6 +127,8 @@ func (e *Executor) ExecWithTimeout(ctx context.Context, target Target, dir strin
 	if err != nil {
 		return nil, nil, err
 	}
+	trackProcessTree(cmd)
+	defer untrackProcessTree(cmd)
 	ch := make(chan error)
 	e.registerProcess(cmd, ch)
 	defer e.removeProcess(cmd)
@@ -203,7 +205,9 @@ func sendSignal(cmd *exec.Cmd, ch <-chan error, sig syscall.Signal, timeout time
 	// This is a bit of a fiddle. We want to wait for the process to exit but only for just so
 	// long (we do not want to get hung up if it ignores our SIGTERM).
 	log.Debug("Sending signal %s to -%d", sig, cmd.Process.Pid)
-	syscall.Kill(-cmd.Process.Pid, sig) // Kill the group - we always set one in ExecCommand.
+	if err := killProcessTree(cmd, sig); err != nil {
+		log.Debug("Failed to signal process %d: %s", cmd.Process.Pid, err)
+	}
 
 	select {
 	case <-ch:
@@ -292,9 +296,23 @@ func ExecCommand(args ...string) ([]byte, error) {
 }
 
 // BashCommand returns the command that we'd use to execute a subprocess in a shell with.
+// This is for the shell on the machine we're running on; see RemoteBashCommand for the
+// remote execution equivalent.
 func BashCommand(binary, command string, exitOnError bool) []string {
+	return shellCommand(binary, shellInitArgs, command, exitOnError)
+}
+
+// RemoteBashCommand is as BashCommand, but for a shell on a remote worker. That is a real
+// bash whatever we happen to be running on, so it always gets the full set of flags.
+func RemoteBashCommand(binary, command string, exitOnError bool) []string {
+	return shellCommand(binary, []string{"--noprofile", "--norc"}, command, exitOnError)
+}
+
+func shellCommand(binary string, initArgs []string, command string, exitOnError bool) []string {
+	argv := make([]string, 0, len(initArgs)+7)
+	argv = append(append(argv, binary), initArgs...)
 	if exitOnError {
-		return []string{binary, "--noprofile", "--norc", "-e", "-u", "-o", "pipefail", "-c", command}
+		argv = append(argv, "-e")
 	}
-	return []string{binary, "--noprofile", "--norc", "-u", "-o", "pipefail", "-c", command}
+	return append(argv, "-u", "-o", "pipefail", "-c", command)
 }
