@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"iter"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -20,7 +21,8 @@ var RepoRoot string
 var InitialWorkingDir string
 
 // InitialPackagePath is the initial subdir of the working directory, ie. what package did we start in.
-// This is similar but not identical to InitialWorkingDir.
+// This is similar but not identical to InitialWorkingDir. It is a build label package name, so it
+// is always slash-separated, even on Windows.
 var InitialPackagePath string
 
 // usingBazelWorkspace is true if we detected a Bazel WORKSPACE file to find our repo root.
@@ -78,7 +80,8 @@ func InitialPackage() []BuildLabel {
 			label.Name = "..."
 			return []BuildLabel{label}
 		}
-		dir = filepath.Dir(dir)
+		// path, not filepath: this is a package name, which is slash-separated everywhere.
+		dir = path.Dir(dir)
 	}
 	return WholeGraph
 }
@@ -93,10 +96,13 @@ func getRepoRoot(filename string) (string, string) {
 	initial := dir
 	for dir != "" {
 		if PathExists(filepath.Join(dir, filename)) {
-			return dir, strings.TrimLeft(initial[len(dir):], "/")
+			// The second return is a package name, so it has to come back slash-separated
+			// whatever the OS gave us - anything else fails build label validation, and the
+			// initial package silently becomes the whole repo.
+			return dir, strings.Trim(filepath.ToSlash(initial[len(dir):]), "/")
 		}
 		dir, _ = filepath.Split(dir)
-		dir = strings.TrimRight(dir, "/")
+		dir = strings.TrimRight(dir, fs.PathSeparators)
 	}
 	return "", ""
 }
@@ -125,7 +131,9 @@ func IterSources(state *BuildState, graph *BuildGraph, target *BuildTarget, incl
 		for input := range IterInputs(state, graph, target, includeTools, false) {
 			fullPaths := input.FullPaths(graph)
 			for i, sourcePath := range input.Paths(graph) {
-				if tmpPath := filepath.Join(tmpDir, sourcePath); !done[tmpPath] {
+				// path, not filepath: these are plz-out paths, and they reach build actions
+				// through the environment as $SRCS.
+				if tmpPath := path.Join(tmpDir, sourcePath); !done[tmpPath] {
 					if !yield(fullPaths[i], tmpPath) {
 						return
 					}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -74,7 +74,7 @@ func (label BuildLabel) ShortString(context BuildLabel) string {
 		return label.String()
 	} else if label.PackageName == context.PackageName {
 		return ":" + label.Name
-	} else if label.Name == filepath.Base(label.PackageName) {
+	} else if label.Name == path.Base(label.PackageName) {
 		return "//" + label.PackageName
 	}
 	label.Subrepo = ""
@@ -258,7 +258,8 @@ func parseMaybeRelativeBuildLabel(target, subdir string) (BuildLabel, error) {
 		return TryParseBuildLabel(target, subdir, "")
 	}
 	// Presumably it's just underneath this directory (note that if it was absolute we returned above)
-	return TryParseBuildLabel("//"+filepath.Join(subdir, target), "", "")
+	// path, not filepath: this is a build label, which is slash-separated on every platform.
+	return TryParseBuildLabel("//"+path.Join(subdir, target), "", "")
 }
 
 // ParseBuildLabels parses a bunch of build labels from strings. It dies on failure.
@@ -352,10 +353,12 @@ func (label BuildLabel) FullPaths(graph *BuildGraph) []string {
 }
 
 // addPathPrefix adds a prefix to all the entries in a slice.
+// path, not filepath: these are plz-out paths, which stay slash-separated - they are what
+// $(location) and friends expand to inside a shell command.
 func addPathPrefix(paths []string, prefix string) []string {
 	ret := make([]string, len(paths))
 	for i, output := range paths {
-		ret[i] = filepath.Join(prefix, output)
+		ret[i] = path.Join(prefix, output)
 	}
 	return ret
 }

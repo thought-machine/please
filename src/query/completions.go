@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -29,7 +30,8 @@ func CompletePackages(config *core.Configuration, query string) *CompletionPacka
 		if strings.HasPrefix(query, ":") {
 			query = fmt.Sprintf("//%s%s", core.InitialPackagePath, query)
 		} else {
-			query = "//" + filepath.Join(core.InitialPackagePath, query)
+			// path, not filepath: this is being assembled into a build label.
+			query = "//" + path.Join(core.InitialPackagePath, query)
 		}
 	}
 	query = strings.ReplaceAll(query, "\\:", ":")

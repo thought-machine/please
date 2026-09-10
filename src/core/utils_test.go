@@ -4,9 +4,14 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/thought-machine/please/src/fs"
 )
 
 func TestCollapseHash(t *testing.T) {
@@ -118,28 +123,38 @@ func TestInitialPackageUpToRoot(t *testing.T) {
 	assert.Equal(t, []BuildLabel{{PackageName: "", Name: "..."}}, p)
 }
 
+// writeFakeTool creates an executable named tool, plus whatever extension the platform needs
+// to consider it one, in a new directory, and returns the directory and the full path.
+func writeFakeTool(t *testing.T, tool string) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	file := filepath.Join(dir, tool+fs.ExeSuffix)
+	require.NoError(t, os.WriteFile(file, nil, 0o755))
+	return dir, file
+}
+
 func TestLookPath(t *testing.T) {
-	// Assume this will be present on the path somewhere (you've really got to have bash for plz)
-	path, err := LookPath("bash", []string{"/usr/local/bin", "/usr/bin", "/bin"})
-	assert.NoError(t, err)
-	assert.Contains(t, []string{"/usr/local/bin/bash", "/usr/bin/bash", "/bin/bash"}, path)
-	info, err := os.Stat(path)
-	assert.NoError(t, err)
-	assert.Equal(t, "bash", info.Name())
+	// A tool we put there ourselves, rather than something the host is assumed to have: the
+	// directories Please looks in by default differ per platform, and on Windows there are none.
+	dir, file := writeFakeTool(t, "plz_look_path_test")
+	found, err := LookPath("plz_look_path_test", []string{filepath.Join(dir, "nonexistent"), dir})
+	require.NoError(t, err)
+	assert.Equal(t, file, found)
 }
 
 func TestLookPathColons(t *testing.T) {
-	// We support having colons inside the path elements because people might find that more natural.
-	path, err := LookPath("bash", []string{"/usr/local/bin:/usr/bin:/bin"})
-	assert.NoError(t, err)
-	assert.Contains(t, []string{"/usr/local/bin/bash", "/usr/bin/bash", "/bin/bash"}, path)
-	info, err := os.Stat(path)
-	assert.NoError(t, err)
-	assert.Equal(t, "bash", info.Name())
+	// We support having the list separator inside the path elements because people might find
+	// that more natural.
+	dir, file := writeFakeTool(t, "plz_look_path_test")
+	joined := strings.Join([]string{filepath.Join(dir, "nonexistent"), dir}, string(os.PathListSeparator))
+	found, err := LookPath("plz_look_path_test", []string{joined})
+	require.NoError(t, err)
+	assert.Equal(t, file, found)
 }
 
 func TestLookPathDoesntExist(t *testing.T) {
-	_, err := LookPath("wibblewobbleflibble", []string{"/usr/local/bin", "/usr/bin", "/bin"})
+	dir, _ := writeFakeTool(t, "plz_look_path_test")
+	_, err := LookPath("wibblewobbleflibble", []string{dir})
 	assert.Error(t, err)
 }
 

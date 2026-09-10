@@ -419,13 +419,19 @@ func (target *BuildTarget) String() string {
 	return target.Label.String()
 }
 
+// The directories below are built with path, not filepath, and so are slash-separated on every
+// platform. They are assembled from build label components, which are slash-separated by
+// definition, and they end up interpolated into shell commands, where a backslash is an escape
+// character rather than a separator. Win32 accepts either, so nothing is lost by being
+// consistent. See docs/design/windows/02-shell-and-build-actions.md.
+//
 // TmpDir returns the temporary working directory for this target, eg.
 // //mickey/donald:goofy -> plz-out/tmp/mickey/donald/goofy._build
 // Note the extra subdirectory to keep rules separate from one another, and the .build suffix
 // to attempt to keep rules from duplicating the names of sub-packages; obviously that is not
 // 100% reliable but we don't have a better solution right now.
 func (target *BuildTarget) TmpDir() string {
-	return filepath.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
+	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+buildDirSuffix)
 }
 
 // BuildLockFile returns the lock filename for the target's build stage.
@@ -437,17 +443,17 @@ func (target *BuildTarget) BuildLockFile() string {
 // //mickey/donald:goofy -> plz-out/gen/mickey/donald (or plz-out/bin if it's a binary)
 func (target *BuildTarget) OutDir() string {
 	if target.IsSubrepo {
-		return filepath.Join(SubrepoDir, target.Label.Subrepo, target.Label.PackageName)
+		return path.Join(SubrepoDir, target.Label.Subrepo, target.Label.PackageName)
 	} else if target.IsBinary {
-		return filepath.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
+		return path.Join(BinDir, target.Label.Subrepo, target.Label.PackageName)
 	}
-	return filepath.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
+	return path.Join(GenDir, target.Label.Subrepo, target.Label.PackageName)
 }
 
 // ExecDir returns the exec directory for this target, e.g.
 // //mickey/donald:goofy -> plz-out/exec/mickey/donald/goofy
 func (target *BuildTarget) ExecDir() string {
-	return filepath.Join(ExecDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name)
+	return path.Join(ExecDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name)
 }
 
 // TestDir returns the test directory for this target, eg.
@@ -455,7 +461,7 @@ func (target *BuildTarget) ExecDir() string {
 // This is different to TmpDir so we run tests in a clean environment
 // and to facilitate containerising tests.
 func (target *BuildTarget) TestDir(runNumber int) string {
-	return filepath.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
+	return path.Join(target.TestDirs(), fmt.Sprint("run_", runNumber))
 }
 
 // TestLockFile returns the lock filename for the target's test stage.
@@ -465,7 +471,7 @@ func (target *BuildTarget) TestLockFile(runNumber int) string {
 
 // TestDirs contains the parent directory of all the test run directories above
 func (target *BuildTarget) TestDirs() string {
-	return filepath.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
+	return path.Join(TmpDir, target.Label.Subrepo, target.Label.PackageName, target.Label.Name+testDirSuffix)
 }
 
 // IsTest returns whether or not the target is a test target i.e. has its Test field populated
@@ -484,12 +490,12 @@ func (target *BuildTarget) CompleteRun(state *BuildState) bool {
 
 // TestResultsFile returns the output results file for tests for this target.
 func (target *BuildTarget) TestResultsFile() string {
-	return filepath.Join(target.OutDir(), ".test_results_"+target.Label.Name)
+	return path.Join(target.OutDir(), ".test_results_"+target.Label.Name)
 }
 
 // CoverageFile returns the output coverage file for tests for this target.
 func (target *BuildTarget) CoverageFile() string {
-	return filepath.Join(target.OutDir(), ".test_coverage_"+target.Label.Name)
+	return path.Join(target.OutDir(), ".test_coverage_"+target.Label.Name)
 }
 
 // AddTestResults adds results to the target
@@ -935,7 +941,7 @@ func (target *BuildTarget) FullOutputs() []string {
 	outs := target.Outputs()
 	outDir := target.OutDir()
 	for i, out := range outs {
-		outs[i] = filepath.Join(outDir, out)
+		outs[i] = path.Join(outDir, out)
 	}
 	return outs
 }
@@ -1080,14 +1086,14 @@ func (target *BuildTarget) CheckTargetOwnsBuildOutputs(state *BuildState) error 
 
 	for _, output := range target.Outputs() {
 		targetPackage := target.Label.PackageName
-		out := filepath.Join(targetPackage, output)
+		out := path.Join(targetPackage, output)
 
 		if fs.IsPackage(state.Config.Parse.BuildFileName, out) {
 			return fmt.Errorf("trying to output file %s, but that directory is another package", out)
 		}
 
 		// If the output is just a file in the package root, we don't need to check anything else.
-		if filepath.Dir(output) == "." {
+		if path.Dir(output) == "." {
 			continue
 		}
 
@@ -1862,9 +1868,11 @@ func (target *BuildTarget) toolPath(abs bool, namedOutput string) string {
 		ret := make([]string, len(outputs))
 		for i, o := range outputs {
 			if abs {
-				ret[i] = filepath.Join(RepoRoot, target.OutDir(), o)
+				// ToSlash because RepoRoot is a native path: this whole string is about to be
+				// interpolated into a shell command.
+				ret[i] = filepath.ToSlash(filepath.Join(RepoRoot, target.OutDir(), o))
 			} else {
-				ret[i] = filepath.Join(target.PackageDir(), o)
+				ret[i] = path.Join(target.PackageDir(), o)
 			}
 		}
 		return strings.Join(ret, " ")
@@ -2074,7 +2082,7 @@ func (target *BuildTarget) HasLinks(state *BuildState) bool {
 
 func (target *BuildTarget) PackageDir() string {
 	if target.Subrepo != nil {
-		return filepath.Join(target.Subrepo.PackageRoot, target.Label.PackageDir())
+		return path.Join(target.Subrepo.PackageRoot, target.Label.PackageDir())
 	}
 	return target.Label.PackageDir()
 }

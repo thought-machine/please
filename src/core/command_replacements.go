@@ -55,6 +55,7 @@ package core
 import (
 	"encoding/base64"
 	"fmt"
+	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -220,12 +221,12 @@ func replaceSequence(state *BuildState, target *BuildTarget, in string, runnable
 		}
 	}
 	if hash {
-		return base64.RawURLEncoding.EncodeToString(state.PathHasher.MustHash(filepath.Join(target.Label.PackageName, in), target.HashLastModified()))
+		return base64.RawURLEncoding.EncodeToString(state.PathHasher.MustHash(path.Join(target.Label.PackageName, in), target.HashLastModified()))
 	}
 	if strings.HasPrefix(in, "/") {
 		return in // Absolute path, probably on a tool or system src.
 	}
-	return quote(filepath.Join(target.Label.PackageName, in))
+	return quote(path.Join(target.Label.PackageName, in))
 }
 
 // replaceWorkerSequence is like replaceSequence but for worker commands, which do not
@@ -288,7 +289,9 @@ func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, ep, in
 					if err != nil {
 						log.Fatalf("Couldn't calculate relative path: %s", err)
 					}
-					outputBuilder.WriteString(quote(abs))
+					// ToSlash because the absolute part comes from the OS: this is going
+					// straight into a shell command.
+					outputBuilder.WriteString(quote(filepath.ToSlash(abs)))
 				} else {
 					outputBuilder.WriteString(quote(fileDestination(target, dep, out, dir, outPrefix, test)))
 				}
@@ -327,9 +330,10 @@ func quote(s string) string {
 }
 
 // handleDir chooses either the out dir or the actual output location depending on the 'dir' flag.
+// path, not filepath: the result is interpolated into a shell command.
 func handleDir(outDir, output string, dir bool) string {
 	if dir {
 		return outDir
 	}
-	return filepath.Join(outDir, output)
+	return path.Join(outDir, output)
 }

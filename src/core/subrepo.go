@@ -4,7 +4,7 @@ import (
 	"fmt"
 	iofs "io/fs"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 
@@ -110,8 +110,9 @@ func LabelToArch(label BuildLabel, arch cli.Arch) BuildLabel {
 }
 
 // Dir returns the directory for a package of this name.
+// path, not filepath: subrepo roots are plz-out paths, which stay slash-separated.
 func (s *Subrepo) Dir(dir string) string {
-	return filepath.Join(s.Root, dir)
+	return path.Join(s.Root, dir)
 }
 
 func readSubrepoConfig(repoConfig *Configuration, subrepo *Subrepo) error {

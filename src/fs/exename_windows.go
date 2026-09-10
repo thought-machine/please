@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+// PathSeparators are the characters that separate elements of a path. Windows accepts either,
+// and both turn up in practice: its own APIs return backslashes, but plenty of paths reaching
+// us were written with forward slashes.
+const PathSeparators = `/\`
+
 // ExeSuffix is what an executable's filename ends in. Windows will not run a file without
 // it, whatever the file actually contains.
 const ExeSuffix = ".exe"

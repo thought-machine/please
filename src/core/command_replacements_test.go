@@ -108,7 +108,7 @@ func TestToolReplacement(t *testing.T) {
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
-	expected := quote(filepath.Join(wd, "plz-out/gen/path/to/target2.py"))
+	expected := quote(filepath.ToSlash(filepath.Join(wd, "plz-out/gen/path/to/target2.py")))
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
@@ -119,7 +119,7 @@ func TestToolReplacementSubrepo(t *testing.T) {
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
-	expected := quote(filepath.Join(wd, "plz-out/gen/subrepo/path/to/target2.py"))
+	expected := quote(filepath.ToSlash(filepath.Join(wd, "plz-out/gen/subrepo/path/to/target2.py")))
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
@@ -151,7 +151,7 @@ func TestToolDirReplacement(t *testing.T) {
 	target1.Tools = append(target1.Tools, target2.Label)
 
 	wd, _ := os.Getwd()
-	expected := quote(filepath.Join(wd, "plz-out/gen/path/to"))
+	expected := quote(filepath.ToSlash(filepath.Join(wd, "plz-out/gen/path/to")))
 	cmd, _ := ReplaceSequences(state, target1, target1.Command)
 	assert.Equal(t, expected, cmd)
 }
@@ -191,7 +191,7 @@ func TestWorkerReplacement(t *testing.T) {
 	target.Tools = append(target.Tools, tool.Label)
 	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
 	assert.NoError(t, err)
-	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
+	assert.Equal(t, filepath.ToSlash(wd)+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "", localCmd)
 }
@@ -213,7 +213,7 @@ func TestLocalCommandWorker(t *testing.T) {
 	target.Tools = append(target.Tools, tool.Label)
 	worker, remoteArgs, localCmd, err := WorkerCommandAndArgs(state, target)
 	assert.NoError(t, err)
-	assert.Equal(t, wd+"/plz-out/bin/path/to/target2.py", worker)
+	assert.Equal(t, filepath.ToSlash(wd)+"/plz-out/bin/path/to/target2.py", worker)
 	assert.Equal(t, "--some_arg", remoteArgs)
 	assert.Equal(t, "find . | xargs rm && echo hello", localCmd)
 }

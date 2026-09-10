@@ -4,6 +4,7 @@ package core
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -395,7 +396,9 @@ func TestToolPath(t *testing.T) {
 	target.AddOutput("file2.go")
 	wd, _ := os.Getwd()
 	RepoRoot = wd
-	root := wd + "/plz-out/gen/src/core"
+	// Tool paths are interpolated into shell commands, so they are slash-separated even where
+	// the working directory we started from isn't.
+	root := filepath.ToSlash(wd) + "/plz-out/gen/src/core"
 	assert.Equal(t, fmt.Sprintf("%s/file1.go %s/file2.go", root, root), target.toolPath(true, ""))
 	assert.Equal(t, "src/core/file1.go src/core/file2.go", target.toolPath(false, ""))
 }
@@ -407,7 +410,7 @@ func TestToolPathWithEntryPoint(t *testing.T) {
 	target.EntryPoints = map[string]string{"f1": "file1.go"}
 	wd, _ := os.Getwd()
 	RepoRoot = wd
-	root := wd + "/plz-out/gen/src/core"
+	root := filepath.ToSlash(wd) + "/plz-out/gen/src/core"
 	assert.Equal(t, root+"/file1.go", target.toolPath(true, "f1"))
 	assert.Equal(t, "src/core/file1.go", target.toolPath(false, "f1"))
 }

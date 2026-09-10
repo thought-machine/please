@@ -3,6 +3,9 @@
 
 package fs
 
+// PathSeparators are the characters that separate elements of a path.
+const PathSeparators = "/"
+
 // ExeSuffix is what an executable's filename ends in. Unix decides by the executable bit
 // rather than the name, so there is nothing to add.
 const ExeSuffix = ""

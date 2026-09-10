@@ -173,10 +173,13 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 		return dir, nil
 	}
 	dir := walkedDir{}
-	err := iofs.WalkDir(globber.fs, rootPath, func(path string, d iofs.DirEntry, err error) error {
+	err := iofs.WalkDir(globber.fs, rootPath, func(name string, d iofs.DirEntry, err error) error {
 		typeMode := mode(d.Type())
-		if isBuildFile(globber.buildFileNames, path) {
-			packageName := filepath.Dir(path)
+		if isBuildFile(globber.buildFileNames, name) {
+			// path, not filepath: this comes from io/fs and is slash-separated whatever the
+			// host OS. filepath.Dir on Windows splits on backslashes only, so it would return
+			// the whole string here and no subpackage would ever be found.
+			packageName := path.Dir(name)
 			if packageName != rootPath {
 				dir.subPackages = append(dir.subPackages, packageName)
 				return filepath.SkipDir
@@ -187,9 +190,9 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 			return filepath.SkipDir
 		}
 		if typeMode.IsSymlink() {
-			dir.symlinks = append(dir.symlinks, path)
+			dir.symlinks = append(dir.symlinks, name)
 		} else {
-			dir.fileNames = append(dir.fileNames, path)
+			dir.fileNames = append(dir.fileNames, name)
 		}
 		return nil
 	})
@@ -212,7 +215,8 @@ func isBathPathOf(path string, base string) bool {
 	}
 
 	rest := strings.TrimPrefix(path, base)
-	return rest == "" || rest[0] == filepath.Separator
+	// Always '/', not os.PathSeparator: these paths come from io/fs.
+	return rest == "" || rest[0] == '/'
 }
 
 // shouldExcludeMatch checks if the match also matches any of the exclude patterns. If the exclude pattern is a relative
@@ -226,14 +230,14 @@ func shouldExcludeMatch(root, match string, excludes []string) (bool, error) {
 		rootPath := root
 		m := match
 
-		if isBathPathOf(match, filepath.Join(root, excl)) {
+		if isBathPathOf(match, path.Join(root, excl)) {
 			return true, nil
 		}
 
 		// If the exclude pattern doesn't contain any slashes and the match does, we only match against the base of the
 		// match path.
 		if strings.ContainsRune(match, '/') && !strings.ContainsRune(excl, '/') {
-			m = filepath.Base(match)
+			m = path.Base(match)
 			rootPath = ""
 		}
 
@@ -255,7 +259,7 @@ func shouldExcludeMatch(root, match string, excludes []string) (bool, error) {
 
 // isBuildFile checks if the filename is considered a build filename
 func isBuildFile(buildFileNames []string, name string) bool {
-	fileName := filepath.Base(name)
+	fileName := path.Base(name)
 	for _, buildFileName := range buildFileNames {
 		if fileName == buildFileName {
 			return true
@@ -276,6 +280,6 @@ func isInDirectories(name string, directories []string) bool {
 
 // isHidden checks if the file is a hidden file i.e. starts with . or, starts and ends with #.
 func isHidden(name string) bool {
-	file := filepath.Base(name)
+	file := path.Base(name)
 	return strings.HasPrefix(file, ".") || (strings.HasPrefix(file, "#") && strings.HasSuffix(file, "#"))
 }
