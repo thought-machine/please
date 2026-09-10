@@ -3,8 +3,8 @@ package query
 import (
 	"fmt"
 	"os"
-	"strings"
 	"slices"
+	"strings"
 
 	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"

@@ -126,7 +126,7 @@ type runner struct {
 	progress      *Progress
 	buildOnce     *cmap.ErrMap[core.BuildLabel, *core.BuildTarget]
 	parseOnce     *cmap.Map[core.BuildLabel, struct{}]
-	preloadOnce   *cmap.ErrMap[string, struct{}]  // Keyed by the subrepo that we're preloading for
+	preloadOnce   *cmap.ErrMap[string, struct{}] // Keyed by the subrepo that we're preloading for
 	localLimiter  limiter
 	remoteLimiter limiter
 	anyRemote     bool

@@ -460,7 +460,7 @@ func (s *scope) newScope(ctx context.Context, pkg *core.Package, filename string
 		// We only track metadata at the top level scope created with [scope.NewPackagedScope]; Every
 		// other child scope or non-packaged (e.g. subincludes) defaults to a noop implementation.
 		metadata: &noopScopeMetadata{},
-		Preload:     s.Preload,
+		Preload:  s.Preload,
 	}
 	if pkg != nil && pkg.Subrepo != nil && pkg.Subrepo.State != nil {
 		s2.state = pkg.Subrepo.State

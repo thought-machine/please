@@ -423,12 +423,12 @@ func TestDependencies(t *testing.T) {
 	resolved, unresolved := target1.Dependencies(graph)
 	assert.Empty(t, resolved)
 	assert.Empty(t, unresolved)
-	
+
 	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.DeclaredDependencies()))
 	resolved, unresolved = target2.Dependencies(graph)
 	assert.Equal(t, []*BuildTarget{target1}, resolved)
 	assert.Empty(t, unresolved)
-	
+
 	assert.Equal(t, []BuildLabel{target1.Label, target2.Label}, slices.Collect(target3.DeclaredDependencies()))
 	resolved, unresolved = target3.Dependencies(graph)
 	assert.Equal(t, []*BuildTarget{target1, target2}, resolved)
