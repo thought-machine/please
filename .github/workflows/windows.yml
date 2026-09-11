@@ -47,6 +47,11 @@ jobs:
         with:
           name: windows-test-bundle
           path: plz-out/gen/test/windows/native_test_bundle
+          # The bundle's repo-root marker is a .plzconfig, and this action drops hidden files
+          # unless told not to. Without it the tests that look for a repo root find none and
+          # die, which nothing on the Linux side can catch - the Wine test runs the bundle
+          # directly, never through an artifact.
+          include-hidden-files: true
           retention-days: 7
       - name: Upload the release
         uses: actions/upload-artifact@v4
