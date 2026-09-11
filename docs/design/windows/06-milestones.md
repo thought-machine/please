@@ -602,10 +602,33 @@ the right shape.
       be overridden by a second file. The platform default now lives in the build defs, where
       the rest of the platform handling already is. The python plugin does the same for its
       run-time interpreters, for the same reason
-- [ ] shell plugin — `sh_binary`. It writes a shebang, appends the script, then appends a zip,
-      and relies on the shebang. The payload is fine, since busybox has `unzip`; only the
-      launching is broken, and it **cannot emit a `.cmd` alongside** because `plz run` requires
-      a single output
+- [x] **shell plugin — `sh_binary` done** in the local clone. It wrote a shebang, appended the
+      script, then appended a zip, and relied on the shebang. The payload was never the
+      problem, since busybox has `unzip`; only the launching was. It **cannot emit a `.cmd`
+      alongside** because `plz run` requires a single output, so on Windows the single output
+      *is* the `.cmd`: a four-line batch preamble with the same zip appended after it. cmd.exe
+      reads a batch file a line at a time and stops at `exit /b`, so it never reaches the
+      archive.
+
+      The script is left inside the zip rather than inlined the way the Unix version inlines
+      it. There is no syntax a batch file and a shell script both ignore — a shebang line
+      works precisely because it is a comment to the shell — so the preamble unpacks the
+      payload and hands the script to `busybox sh`. It sources it rather than running it, so
+      that `$0` is the file the user ran, as it is on Unix where the two are one file. Scripts
+      find their unpacked dependencies relative to `$0`, and would not otherwise.
+
+      **Two things bit on the way, neither of them about batch files.** Build outputs are
+      read-only and the zip preserved that, so the second run of an `sh_binary` could not
+      replace what the first one unpacked — Windows forbids it outright — and went on to run
+      the stale payload, having complained only on stderr. The rule now zips a *copy* of the
+      build directory with the modes relaxed, because the originals are hardlinked to
+      `plz-out` and a `chmod` there would quietly make another target's outputs writable.
+
+      And `wine foo.cmd` is not the same thing as running it: what Wine cannot load as a PE it
+      hands to the host, so the unfixed `.cmd` — still carrying a Unix shebang — ran under
+      `/bin/sh` and printed exactly what the test wanted. `//test/windows:sh_binary_test` goes
+      through `cmd.exe` explicitly, runs it twice in the one directory, and fails without
+      either fix
 - [x] **python plugin — `python_binary` and `python_test` done** in the local clone. A pex is a
       static ELF preamble with a zip appended, so a Windows cross-build produced an ELF-prefixed
       file that was dead on arrival. Four things were needed, and only one of them was the one
