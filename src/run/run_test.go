@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/process"
@@ -59,11 +60,27 @@ func TestEnvVars(t *testing.T) {
 
 	t.Setenv("PATH", hostPath)
 	env := environ(state, state.Graph.TargetOrDie(lab1[0].BuildLabel), false, false)
-	assert.Contains(t, env, "PATH="+hostPath)
-	assert.NotContains(t, env, "PATH=/wibble")
+	assert.Equal(t, hostPath, envValue(t, env, "PATH"))
 	env = environ(state, state.Graph.TargetOrDie(lab1[0].BuildLabel), true, false)
-	assert.NotContains(t, env, "PATH="+hostPath)
-	assert.Contains(t, env, "PATH="+sep+"/wibble", env)
+	assert.Equal(t, sep+"/wibble", envValue(t, env, "PATH"))
+}
+
+// envValue returns the value of one variable, and asserts there is exactly one entry for it.
+//
+// Looked up by name rather than matched as a whole string, because the OS decides how the name
+// is spelled: Windows stores PATH as Path, so asserting on the literal "PATH=" finds nothing.
+// The count is the point of the second assertion - appending a second entry instead of
+// replacing the first is the bug this guards, and os/exec hides it by deduplicating.
+func envValue(t *testing.T, env []string, name string) string {
+	t.Helper()
+	var values []string
+	for _, entry := range env {
+		if k, v, ok := strings.Cut(entry, "="); ok && envNamesEqual(k, name) {
+			values = append(values, v)
+		}
+	}
+	require.Len(t, values, 1, "expected exactly one %s in %v", name, env)
+	return values[0]
 }
 
 func makeState(config *core.Configuration) (*core.BuildState, []core.AnnotatedOutputLabel, []core.AnnotatedOutputLabel) {

@@ -250,8 +250,11 @@ func addEnv(env []string, e core.BuildEnv) []string {
 
 func addOneEnv(env []string, k, v string) []string {
 	for i, existing := range env {
-		if strings.HasPrefix(existing, k+"=") {
-			env[i] = k + "=" + v
+		if name, _, ok := strings.Cut(existing, "="); ok && envNamesEqual(name, k) {
+			// The OS's own spelling of the name is kept, not ours. On Windows they differ -
+			// PATH is stored as Path - and rewriting it here would leave two entries for one
+			// variable in anything that reads this slice without deduplicating.
+			env[i] = name + "=" + v
 			return env
 		}
 	}

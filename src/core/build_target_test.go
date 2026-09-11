@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTmpDir(t *testing.T) {
@@ -629,7 +630,12 @@ func TestAllURLs(t *testing.T) {
 func TestCheckSecrets(t *testing.T) {
 	target := makeTarget1("//src/core:target1", "")
 	assert.NoError(t, target.CheckSecrets())
-	target.Secrets = append(target.Secrets, "/bin/sh")
+	// A file that exists, made rather than assumed. This used to be /bin/sh, which Windows
+	// does not have - and which passed under Wine anyway, because its Z: drive maps the host's
+	// root, so the test proved nothing there and failed on a real machine.
+	existing := filepath.Join(t.TempDir(), "a_secret")
+	require.NoError(t, os.WriteFile(existing, []byte("shhh"), 0644))
+	target.Secrets = append(target.Secrets, existing)
 	assert.NoError(t, target.CheckSecrets())
 	// Checking for files in the home directory is awkward because nothing is really
 	// guaranteed to exist. We just check the directory itself for now.

@@ -1,6 +1,10 @@
 go_library(
     name = "run",
-    srcs = ["run_step.go"],
+    srcs = [
+        "env_other.go",
+        "env_windows.go",
+        "run_step.go",
+    ],
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
@@ -23,6 +27,7 @@ go_test(
     deps = [
         ":run",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
         "//src/core",
         "//src/process",
     ],
