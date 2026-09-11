@@ -392,3 +392,48 @@ def wine_plz_release_test(
         sandbox = False,
         test_cmd = test_cmd,
     )
+
+def wine_bundle_test(
+        name:str,
+        bundle:str,
+        test:str,
+        labels:list=[],
+        timeout:int=600):
+    """Runs one entry out of the native test bundle, under Wine, the way Windows will run it.
+
+    This is the only thing that checks how windows_test_bundle packages a test without a
+    Windows machine: the data placement, the $DATA it records, the .exe rename, and the shell
+    marker. It deliberately does not reuse wine_go_test's staging - the point is to run what
+    came out of the bundle, from the bundle's own directory layout.
+
+    Args:
+      name (str): Name of the rule.
+      bundle (str): The windows_test_bundle target to take the test out of.
+      test (str): Which entry to run, e.g. "fs_test".
+      labels (list): Extra labels for the rule.
+      timeout (int): Test timeout in seconds.
+    """
+
+    # Copied out because the tests write to their working directory, and the bundle is a build
+    # output; chmod so unpacking over read-only outputs doesn't fail the way it does on Windows.
+    cmds = [
+        _wine_setup_cmd(),
+        f'cp -r "$DATA_BUNDLE/tests/{test}" "$TMP_DIR/run"',
+        'chmod -R u+w "$TMP_DIR/run"',
+        'cd "$TMP_DIR/run"',
+        # Exactly what the PowerShell driver does: $DATA from the file beside the binary, and
+        # the bundled shell on the PATH when the marker says the test runs build actions.
+        'if [ -f DATA.txt ]; then export DATA="$(cat DATA.txt)"; else export DATA=""; fi',
+        f'if [ -f NEEDS_SHELL ]; then export WINEPATH="$(winepath -w "$DATA_BUNDLE/shell")"; fi',
+        'wine test.exe -test.v 2>&1 | tee "$TMP_DIR/test.results"',
+    ]
+    return gentest(
+        name = name,
+        timeout = timeout,
+        data = {"BUNDLE": [bundle]},
+        env = WINE_ENV,
+        labels = labels + ["wine", "windows"],
+        local = True,
+        sandbox = False,
+        test_cmd = " && ".join(cmds),
+    )

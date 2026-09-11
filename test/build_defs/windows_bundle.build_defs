@@ -1,0 +1,88 @@
+# Packages the cross-built Windows test binaries so a real Windows machine can run them.
+#
+# The port's whole problem is that everything it claims rests on Wine. These are the same
+# binaries //test/windows already runs under Wine; shipping them to a windows-latest runner
+# turns that into evidence from Windows for almost no new test code. See
+# docs/design/windows/05-testing-strategy.md for the list of things Wine cannot show.
+#
+# Everything here is labelled wine as well as windows, not because any of it runs under Wine
+# but because building it means cross-compiling for Windows, which is what that label gates.
+
+def _windows_test_dir(name:str, test:str, data:list, needs_shell:bool):
+    """Stages one cross-built Go test binary with its data where the test expects to find it.
+
+    The data lands correctly for free. An architecture subrepo has an empty root and package
+    root, so ///windows_amd64//src/fs:test_data stages at src/fs/test_data - which is the
+    literal path the test opens - and cp --parents relocates that subtree intact.
+    """
+    srcs = {"BINARY": [test]}
+    cmds = [
+        'mkdir -p "$OUT"',
+        # Renamed for the same reason wine_go_test renames it: Go's exec will not run a file
+        # whose name has no extension in PATHEXT, even when handed its full path.
+        'cp "$SRCS_BINARY" "$OUT/test.exe"',
+    ]
+    if data:
+        srcs["DATA"] = data
+        cmds.append('cp -r --parents $SRCS_DATA "$OUT/"')
+
+        # What the runner must set $DATA to. Not knowable at parse time - these are the staged
+        # paths of another rule's outputs - so it is recorded here, where they are known.
+        cmds.append('echo "$SRCS_DATA" > "$OUT/DATA.txt"')
+    if needs_shell:
+        cmds.append('touch "$OUT/NEEDS_SHELL"')
+    return genrule(
+        name = f"_{name}#bundle",
+        srcs = srcs,
+        outs = [f"tests/{name}"],
+        cmd = " && ".join(cmds),
+        labels = ["wine", "windows"],
+        test_only = True,
+    )
+
+def windows_test_bundle(name:str, tests:list, visibility:list=None):
+    """Packages the cross-built Windows test binaries for a real Windows machine to run.
+
+    Every entry becomes tests/<name>/, holding test.exe, that test's data at the relative paths
+    it expects, and marker files saying what environment it needs.
+
+    A directory per test rather than one shared tree, for three reasons. The data is a couple
+    of hundred megabytes, so copying it per test on the runner to isolate them would be most of
+    a gigabyte of IO. The tests have to be isolated: running these binaries in a shared tree
+    once deleted the whole of test/. And several of them want the harness directory itself
+    rather than only their data.
+
+    The result is a directory rather than an archive because actions/upload-artifact zips
+    whatever it is handed.
+
+    Args:
+      name (str): Name of the rule.
+      tests (list): (name, test target, data, needs_shell) tuples, the same list //test/windows
+                    hands to wine_go_test.
+      visibility (list): Visibility declaration of the rule.
+    """
+    dirs = [_windows_test_dir(n, t, d, s) for n, t, d, s in tests]
+
+    # One test name per line, in the order this file declares them. Parse-time facts only; the
+    # build-time ones are the marker files beside each binary. A test silently disappearing
+    # from the list is then something the runner can notice.
+    manifest = "\n".join([n for n, _, _, _ in tests])
+    return genrule(
+        name = name,
+        srcs = {
+            "DIRS": dirs,
+            "SHELL": ["///windows_amd64//third_party/binary:busybox"],
+        },
+        outs = [name],
+        cmd = " && ".join([
+            'mkdir -p "$OUT/shell"',
+            # -l because these are already hardlinks into plz-out, and this is a few hundred
+            # megabytes that does not need copying twice.
+            'cp -rl test/windows/tests "$OUT/tests"',
+            'cp "$SRCS_SHELL" "$OUT/shell/busybox.exe"',
+            f'printf "%s\\n" "{manifest}" > "$OUT/manifest.txt"',
+        ]),
+        labels = ["wine", "windows"],
+        test_only = True,
+        visibility = visibility,
+    )

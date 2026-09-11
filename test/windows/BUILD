@@ -1,43 +1,123 @@
-subinclude("//test/build_defs:wine")
+subinclude("//test/build_defs:wine", "//test/build_defs:windows_bundle")
 
-# The unit tests worth running under Wine are the ones the port actually changed: process
-# management and locking, the filesystem layer, and config and path handling.
-wine_go_test(
-    name = "fs_test",
-    data = ["///windows_amd64//src/fs:test_data"],
-    test = "///windows_amd64//src/fs:fs_test",
-)
+# The unit tests worth running on Windows are the ones the port actually changed: process
+# management and locking, the filesystem layer, and config and path handling. Each entry is
+# (name, cross-built test target, runtime data, whether it needs a shell).
+#
+# This list has one definition because it is consumed twice: wine_go_test runs each binary
+# under Wine here, and windows_test_bundle packages the same binaries and the same data for a
+# real Windows machine to run natively. See docs/design/windows/05-testing-strategy.md for what
+# each of those is worth.
+WINDOWS_GO_TESTS = [
+    (
+        "fs_test",
+        "///windows_amd64//src/fs:fs_test",
+        ["///windows_amd64//src/fs:test_data"],
+        False,
+    ),
+    (
+        "core_test",
+        "///windows_amd64//src/core:core_test",
+        ["///windows_amd64//src/core:test_data"],
+        False,
+    ),
+    # Runs real build actions, so it exercises the process layer and the bundled shell as well
+    # as whatever it is nominally about.
+    (
+        "build_test",
+        "///windows_amd64//src/build:build_test",
+        ["///windows_amd64//src/build:test_data"],
+        True,
+    ),
+    # Coverage parsing and the command-line layer: neither runs a build action, but both handle
+    # paths that came from somewhere else.
+    (
+        "test_test",
+        "///windows_amd64//src/test:test_test",
+        ["///windows_amd64//src/test:test_data"],
+        False,
+    ),
+    ("cli_test", "///windows_amd64//src/cli:cli_test", [], False),
+    # Parsing is the valuable one: the BUILD language interpreter handles paths from every
+    # direction.
+    ("parse_test", "///windows_amd64//src/parse:parse_step_test", [], False),
+    (
+        "asp_test",
+        "///windows_amd64//src/parse/asp:asp_test",
+        ["///windows_amd64//src/parse/asp:asp_test_data"],
+        False,
+    ),
+    (
+        "query_test",
+        "///windows_amd64//src/query:query_test",
+        ["///windows_amd64//src/query:query_test_data"],
+        False,
+    ),
+    (
+        "format_test",
+        "///windows_amd64//src/format:format_test",
+        ["///windows_amd64//src/format:format_test_data"],
+        False,
+    ),
+    (
+        "export_test",
+        "///windows_amd64//src/export:export_test",
+        ["///windows_amd64//src/export:export_test_data"],
+        False,
+    ),
+    ("output_test", "///windows_amd64//src/output:output_test", [], False),
+    (
+        "hashes_test",
+        "///windows_amd64//src/hashes:hash_rewriter_test",
+        ["///windows_amd64//src/hashes:hash_rewriter_test_data"],
+        False,
+    ),
+    (
+        "gc_test",
+        "///windows_amd64//src/gc:gc_test",
+        ["///windows_amd64//src/gc:gc_test_data"],
+        False,
+    ),
+    ("tool_test", "///windows_amd64//src/tool:tool_test", [], False),
+    ("plz_test", "///windows_amd64//src/plz:plz_test", [], False),
+    ("clean_test", "///windows_amd64//src/clean:clean_test", [], False),
+    (
+        "cache_test",
+        "///windows_amd64//src/cache:cache_test",
+        ["///windows_amd64//src/cache:cache_test_data"],
+        True,
+    ),
+    ("exec_test", "///windows_amd64//src/exec:exec_test", [], True),
+    ("process_test", "///windows_amd64//src/process:process_test", [], True),
+    (
+        "update_test",
+        "///windows_amd64//src/update:update_test",
+        [
+            "///windows_amd64//src/update:test_data",
+            "///windows_amd64//src/update:test_please",
+            "///windows_amd64//src/update:test_tarball",
+            "///windows_amd64//src:please",
+        ],
+        False,
+    ),
+    (
+        "remote_test",
+        "///windows_amd64//src/remote:remote_test",
+        ["///windows_amd64//src/remote:remote_test_data"],
+        False,
+    ),
+    (
+        "run_test",
+        "///windows_amd64//src/run:run_test",
+        ["///windows_amd64//src/run:run_test_data"],
+        False,
+    ),
+    # plz watch compares the paths it recorded against the ones fsnotify reports, which use
+    # different separators on Windows. A mismatch is silent - every event looks like it belongs
+    # to a file we aren't watching - so this only means anything when run on one.
+    ("watch_test", "///windows_amd64//src/watch:watch_test", [], False),
+]
 
-wine_go_test(
-    name = "core_test",
-    data = ["///windows_amd64//src/core:test_data"],
-    test = "///windows_amd64//src/core:core_test",
-)
-
-# These run real build actions, so they exercise the process layer and the bundled shell as
-# well as whatever they are nominally about.
-wine_go_test(
-    name = "build_test",
-    data = ["///windows_amd64//src/build:test_data"],
-    needs_shell = True,
-    test = "///windows_amd64//src/build:build_test",
-)
-
-# Coverage parsing and the command-line layer: neither runs a build action, but both handle
-# paths that came from somewhere else.
-wine_go_test(
-    name = "test_test",
-    data = ["///windows_amd64//src/test:test_data"],
-    test = "///windows_amd64//src/test:test_test",
-)
-
-wine_go_test(
-    name = "cli_test",
-    test = "///windows_amd64//src/cli:cli_test",
-)
-
-# The rest of the packages whose tests run at all here. Parsing is the valuable one: the BUILD
-# language interpreter handles paths from every direction.
 [
     wine_go_test(
         name = name,
@@ -45,88 +125,14 @@ wine_go_test(
         needs_shell = shell,
         test = target,
     )
-    for name, target, data, shell in [
-        ("parse_test", "///windows_amd64//src/parse:parse_step_test", [], False),
-        (
-            "asp_test",
-            "///windows_amd64//src/parse/asp:asp_test",
-            ["///windows_amd64//src/parse/asp:asp_test_data"],
-            False,
-        ),
-        (
-            "query_test",
-            "///windows_amd64//src/query:query_test",
-            ["///windows_amd64//src/query:query_test_data"],
-            False,
-        ),
-        (
-            "format_test",
-            "///windows_amd64//src/format:format_test",
-            ["///windows_amd64//src/format:format_test_data"],
-            False,
-        ),
-        (
-            "export_test",
-            "///windows_amd64//src/export:export_test",
-            ["///windows_amd64//src/export:export_test_data"],
-            False,
-        ),
-        ("output_test", "///windows_amd64//src/output:output_test", [], False),
-        (
-            "hashes_test",
-            "///windows_amd64//src/hashes:hash_rewriter_test",
-            ["///windows_amd64//src/hashes:hash_rewriter_test_data"],
-            False,
-        ),
-        (
-            "gc_test",
-            "///windows_amd64//src/gc:gc_test",
-            ["///windows_amd64//src/gc:gc_test_data"],
-            False,
-        ),
-        ("tool_test", "///windows_amd64//src/tool:tool_test", [], False),
-        ("plz_test", "///windows_amd64//src/plz:plz_test", [], False),
-        ("clean_test", "///windows_amd64//src/clean:clean_test", [], False),
-        (
-            "cache_test",
-            "///windows_amd64//src/cache:cache_test",
-            ["///windows_amd64//src/cache:cache_test_data"],
-            True,
-        ),
-        ("exec_test", "///windows_amd64//src/exec:exec_test", [], True),
-        ("process_test", "///windows_amd64//src/process:process_test", [], True),
-        (
-            "update_test",
-            "///windows_amd64//src/update:update_test",
-            [
-                "///windows_amd64//src/update:test_data",
-                "///windows_amd64//src/update:test_please",
-                "///windows_amd64//src/update:test_tarball",
-                "///windows_amd64//src:please",
-            ],
-            False,
-        ),
-        (
-            "remote_test",
-            "///windows_amd64//src/remote:remote_test",
-            ["///windows_amd64//src/remote:remote_test_data"],
-            False,
-        ),
-        (
-            "run_test",
-            "///windows_amd64//src/run:run_test",
-            ["///windows_amd64//src/run:run_test_data"],
-            False,
-        ),
-    ]
+    for name, target, data, shell in WINDOWS_GO_TESTS
 ]
 
-# plz watch compares the paths it recorded against the ones fsnotify reports, which use
-# different separators on Windows. A mismatch is silent - every event looks like it belongs to
-# a file we aren't watching - so this only means anything when run here.
-wine_go_test(
-    name = "watch_test",
-    test = "///windows_amd64//src/watch:watch_test",
+# The same binaries and the same data, packaged for a windows-latest runner to run natively.
+# This is what turns "passes under Wine" into evidence from Windows.
+windows_test_bundle(
+    name = "native_test_bundle",
+    tests = WINDOWS_GO_TESTS,
 )
 
 # The shell smoke test: a real build action with a pipe and a redirect, run by the busybox
@@ -288,3 +294,12 @@ if CONFIG.get("BUNDLED_PLUGINS"):
             "done",
         ]),
     )
+
+# One entry from the bundle, run out of the bundle, under Wine. It is the only check on how the
+# bundle is packaged that does not need a Windows machine, and packaging is the part most
+# likely to be quietly wrong.
+wine_bundle_test(
+    name = "bundle_smoke_test",
+    bundle = ":native_test_bundle",
+    test = "fs_test",
+)
