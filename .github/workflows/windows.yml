@@ -66,11 +66,10 @@ jobs:
     name: test
     needs: cross-build
     runs-on: windows-latest
-    # Advisory for now. The first run's job is to produce a failure list, and a check that goes
-    # red before anyone has read it teaches people to ignore it. Once the list is in
-    # test/windows/known_failures.txt this comes off and the job blocks - an advisory Windows
-    # job is worse than none, because the port's whole problem is that nobody thinks about it.
-    continue-on-error: true
+    # Blocking. It was advisory for exactly one run, to produce a failure list without a red
+    # check nobody had read yet; everything that run found is fixed. Anything genuinely left
+    # over belongs in test/windows/known_failures.txt with a reason, not behind a flag that
+    # makes the whole job ignorable.
     steps:
       - name: Keep Unix line endings
         # The fixtures are compared byte for byte against output the bundled busybox produced,

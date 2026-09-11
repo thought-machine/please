@@ -80,6 +80,12 @@ def windows_test_bundle(name:str, tests:list, visibility:list=None):
             # megabytes that does not need copying twice.
             'cp -rl test/windows/tests "$OUT/tests"',
             'cp "$SRCS_SHELL" "$OUT/shell/busybox.exe"',
+            # A repo root above every test directory. Several of these tests call
+            # MustFindRepoRoot, and under Wine they get one by accident, because the harness
+            # runs them inside this repo's own plz-out. Natively the bundle sits wherever the
+            # runner unpacked it, with nothing above it, so without this they fail on a missing
+            # root rather than on whatever they are about.
+            'echo "; Marks the bundle as a repo, for the tests that expect to be in one." > "$OUT/.plzconfig"',
             f'printf "%s\\n" "{manifest}" > "$OUT/manifest.txt"',
         ]),
         labels = ["wine", "windows"],
