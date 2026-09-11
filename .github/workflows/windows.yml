@@ -1,0 +1,115 @@
+# The only thing anywhere that runs Please on a real Windows machine.
+#
+# Everything else the port claims rests on Wine, and docs/design/windows/05-testing-strategy.md
+# is explicit that Wine passing is evidence rather than proof. The classes it cannot show are
+# the ones Please works hardest in: sharing violations on teardown, path length, case-insensitive
+# collisions, symlink privileges.
+#
+# CircleCI cross-builds the same artifacts, but its workspaces are scoped to one CircleCI run
+# and cannot be read from here, so this cross-builds its own on a Linux runner and hands them
+# over. That duplication is the price of there being no Windows runner in CircleCI's config.
+name: Windows
+
+on:
+  push:
+    branches:
+      - master
+      - wine
+  pull_request:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-build:
+    name: cross-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Please
+        run: |
+          ./pleasew --version
+          echo "$HOME/.please" >> "$GITHUB_PATH"
+      - name: Build this repo's Please
+        # The released Please is not this one, and the difference is not cosmetic: it predates
+        # the parse-deadlock fix and hangs parsing //test/windows, silently and for ever.
+        # Everything below uses the one we just built, the same two-step test.sh insists on.
+        run: ./pleasew build -p -v2 --profile ci //src:please
+      - name: Cross-build the test bundle
+        run: plz-out/bin/src/please build -p -v2 --profile ci //test/windows:native_test_bundle
+      - name: Cross-build the release
+        # The same command CircleCI's build-windows job runs, so what the Windows job gets here
+        # is what a user would get.
+        run: plz-out/bin/src/please build -p -v2 --profile ci --arch windows_amd64 //package:release_files
+      - name: Upload the test bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-bundle
+          path: plz-out/gen/test/windows/native_test_bundle
+          retention-days: 7
+      - name: Upload the release
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: plz-out/pkg/windows_amd64/please_*.zip
+          retention-days: 7
+      - name: Upload the logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-build-logs
+          path: plz-out/log
+          retention-days: 7
+
+  test:
+    name: test
+    needs: cross-build
+    runs-on: windows-latest
+    # Advisory for now. The first run's job is to produce a failure list, and a check that goes
+    # red before anyone has read it teaches people to ignore it. Once the list is in
+    # test/windows/known_failures.txt this comes off and the job blocks - an advisory Windows
+    # job is worse than none, because the port's whole problem is that nobody thinks about it.
+    continue-on-error: true
+    steps:
+      - name: Keep Unix line endings
+        # The fixtures are compared byte for byte against output the bundled busybox produced,
+        # and busybox does not translate line endings. Has to precede the checkout.
+        run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-test-bundle
+          path: ${{ runner.temp }}\bundle
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: ${{ runner.temp }}\release
+      - name: Report the machine
+        # Both of these change what is reachable, both differ between runner images, and
+        # guessing either has already cost time. Print them rather than assuming.
+        run: |
+          (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -EA SilentlyContinue) |
+            Select-Object -ExpandProperty LongPathsEnabled -EA SilentlyContinue |
+            ForEach-Object { "LongPathsEnabled=$_" } | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          whoami /priv | Select-String SeCreateSymbolicLinkPrivilege |
+            Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+      - name: Run the cross-built unit tests
+        run: |
+          ./test/windows/run_native_tests.ps1 `
+            -Bundle "$env:RUNNER_TEMP\bundle" `
+            -Logs "$env:RUNNER_TEMP\logs" `
+            -KnownFailures test/windows/known_failures.txt
+      - name: Build a repo with the release
+        if: ${{ !cancelled() }}
+        run: |
+          ./test/windows/run_native_probes.ps1 `
+            -Release "$env:RUNNER_TEMP\release" `
+            -Logs "$env:RUNNER_TEMP\logs"
+      - name: Upload the logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-logs
+          path: ${{ runner.temp }}\logs
+          retention-days: 7
