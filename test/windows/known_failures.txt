@@ -1,0 +1,5 @@
+# Tests that are known to fail on Windows. One "name" or "name::TestCase" per line,
+# with a comment above each saying why and linking whatever tracks it.
+#
+# A test listed here that starts passing fails the job too, so that this list only ever
+# shrinks. Nothing is in it yet; the first native run is what fills it in.
