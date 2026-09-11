@@ -13,16 +13,18 @@ binary linked against it. Python works too: a `python_test` and a `python_binary
 for Windows and run there, and so does an `sh_binary`, as a `.cmd` with its payload appended.
 The release is a `.zip` containing `please.exe`, `busybox.exe`, `build_langserver.exe` and a
 `plz.cmd` shim; extracting it and running `plz.cmd` builds a genrule with no configuration at
-all.
+all. Built with `bundled-plugins` set it also carries all four plugins and the helper tools, and
+then builds an `sh_binary` with the network taken away — see `08-offline-release.md`.
 
-Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 29 targets and
-809 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Four of those
+Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 31 targets and
+814 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Six of those
 targets only exist when a local plugin checkout is configured — see below.
 
 | # | Milestone | State |
 |---|---|---|
 | M0–M3, M6 | baseline, OS layer, paths, shell, Wine harness | done |
-| M4 | release pipeline | done bar a published `arcat` |
+| M4 | release pipeline | done; `arcat` is built from source rather than downloaded |
+| M4a | offline release zip | done, for internal use — see `08-offline-release.md` |
 | M5 | C++ / cc-rules | done bar `cc_test`, which is blocked upstream |
 | M7 | sandboxing | decided against, documented |
 | M8 | plugins | go, cc, shell, python all done in local clones |
@@ -32,7 +34,7 @@ targets only exist when a local plugin checkout is configured — see below.
 
 | Repo | Branch | Head |
 |---|---|---|
-| `~/code/please` | `wine` | 54 commits ahead of `master` |
+| `~/code/please` | `wine` | 60 commits ahead of `master` |
 | `~/code/go-rules` | `windows` | don't double the `.exe` |
 | `~/code/cc-rules` | `windows` | emit an import library |
 | `~/code/shell-rules` | `windows` | build an `sh_binary` as a `.cmd` |
@@ -42,11 +44,11 @@ The plugin clones are branched at the tag `plugins/BUILD` pins, not at `master`.
 access to any of them, so nothing is upstreamed; the branches are the deliverable for now.
 
 `.plzconfig.local` (gitignored) selects the local checkouts through `[buildconfig]` keys —
-`go-rules-path` and friends. Delete it to go back to the pinned downloads. Both directions are
-verified, but they are not equivalent any more. Four Wine tests are only *defined* when the
+`go-rules-path` and friends, plus `bundled-plugins` to put them in the release. Delete it to go back to the pinned downloads. Both directions are
+verified, but they are not equivalent any more. Six Wine tests are only *defined* when the
 matching checkout is configured, because no released plugin has the fix each one tests: two pex
-tests behind `python-rules-path`, the DLL test behind `cc-rules-path`, and the `sh_binary` test
-behind `shell-rules-path`. `//test/export:...` fails while `.plzconfig.local` is present at all,
+tests behind `python-rules-path`, the DLL test behind `cc-rules-path`, the `sh_binary` test
+behind `shell-rules-path`, and the two offline-release tests behind `bundled-plugins`. `//test/export:...` fails while `.plzconfig.local` is present at all,
 for an unrelated reason — see below.
 
 ## Environment
@@ -77,8 +79,8 @@ In rough order of value.
    delete everything this repo carries because it pins plugins without the fixes: the
    `out = "please.exe" if is_platform(...)` workarounds in `src/BUILD.plz` and
    `//tools/build_langserver`, the `PexTool` and `defaultldflags` lines in
-   `.plzconfig_windows_amd64`, and the `CONFIG.get(...)` conditions around the pex, DLL and
-   `sh_binary` tests in `//test/windows`.
+   `.plzconfig_windows_amd64`, the `CONFIG.get(...)` conditions around the pex, DLL and
+   `sh_binary` tests in `//test/windows`, and the whole of `08-offline-release.md`'s machinery.
 4. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
@@ -127,12 +129,20 @@ Each of these has already cost time once.
   Unpacking an archive of build outputs over a previous unpacking of itself therefore fails,
   and tools tend to report it on stderr and carry on with the stale copy. `sh_binary` hit this;
   anything else that unpacks build outputs beside themselves will too.
+- **`plz-out/pkg` is never refreshed once it exists.** The `hlink:` label goes through
+  `fs.LinkIfNotExists`, and the destination is named after the version, so rebuilding a release
+  at the same version leaves the previous bytes there, silently. `plz-out/gen/<arch>/package/`
+  always has the real artifact. Affects every platform; cost an hour here, twice.
 - **`chmod` in a build directory writes through to `plz-out`.** Inputs are hardlinked in, so
   relaxing a mode there silently makes another target's outputs writable. Copy first if the
   modes need changing.
 - **`wine foo.cmd` does not run it as Windows would.** What Wine cannot load as a PE it hands
   to the host, so a `.cmd` that still has a Unix shebang on it runs under `/bin/sh` and passes
   the test you wrote to catch exactly that. Go through `cmd.exe` explicitly.
+- **`plz update` on Windows fetches only the bare binary, not the zip.** Everything else the
+  release ships - busybox, and anything `08-offline-release.md` adds beside it - stays at the
+  version it was first installed at, silently, getting staler with each update. Nothing has
+  ever exercised this.
 - **Python under Wine needs its output to be a pipe.** Wine's console emulation hands it handles
   it rejects at startup otherwise, and the error — `can't initialize sys standard streams` — reads
   like a problem with whatever you were testing. It is not.
