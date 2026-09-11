@@ -92,7 +92,12 @@ func getRepoRoot(filename string) (string, string) {
 	if err != nil {
 		log.Fatalf("Couldn't determine working directory: %s", err)
 	}
-	// Walk up directories looking for a .plzconfig file, which we use to identify the root.
+	return findRepoRootFrom(dir, filename)
+}
+
+// findRepoRootFrom walks up from the given directory looking for the file that marks a repo
+// root, and returns that directory and the package the walk started in.
+func findRepoRootFrom(dir, filename string) (string, string) {
 	initial := dir
 	for dir != "" {
 		if PathExists(filepath.Join(dir, filename)) {
@@ -101,10 +106,58 @@ func getRepoRoot(filename string) (string, string) {
 			// initial package silently becomes the whole repo.
 			return dir, strings.Trim(filepath.ToSlash(initial[len(dir):]), "/")
 		}
-		dir, _ = filepath.Split(dir)
-		dir = strings.TrimRight(dir, fs.PathSeparators)
+		// Stop when the walk stops going anywhere, rather than when it reaches an empty
+		// string. On Windows it never reaches one: trimming the separator off "C:\" leaves
+		// "C:", and splitting that returns it unchanged, because the volume name is the whole
+		// path. Before this, any plz run outside a repo spun here for ever, one stat per
+		// iteration, instead of reporting that it couldn't find a root.
+		parent, _ := filepath.Split(dir)
+		parent = strings.TrimRight(parent, fs.PathSeparators)
+		if parent == dir {
+			break
+		}
+		dir = parent
 	}
 	return "", ""
+}
+
+// IsInRepoRoot returns true if the given path is inside the repo.
+//
+// It exists because comparing against RepoRoot directly is wrong on Windows. RepoRoot is in the
+// OS's own separator, so it is backslashed there, while paths that arrive from outside - a
+// file:// URL, a coverage report from another tool - are usually slash-separated. A plain
+// HasPrefix then never matches, and a guard written that way silently stops guarding.
+//
+// It also only matches at a path boundary, so that /repo/elsewhere is not inside /repo/else.
+func IsInRepoRoot(path string) bool {
+	_, ok := trimRepoRoot(path)
+	return ok
+}
+
+// TrimRepoRoot returns the given path relative to the repo root, or unchanged if it is not
+// inside it. The result keeps whatever separators it arrived with.
+func TrimRepoRoot(path string) string {
+	if trimmed, ok := trimRepoRoot(path); ok {
+		return trimmed
+	}
+	return path
+}
+
+func trimRepoRoot(path string) (string, bool) {
+	root := filepath.ToSlash(RepoRoot)
+	normalised := filepath.ToSlash(path)
+	if root == "" || !strings.HasPrefix(normalised, root) {
+		return path, false
+	}
+	rest := path[len(root):]
+	if rest == "" {
+		return "", true
+	}
+	// Only a match at a boundary; "/repo" is not a prefix of "/repository".
+	if !strings.ContainsRune(fs.PathSeparators, rune(rest[0])) && !strings.HasSuffix(root, "/") {
+		return path, false
+	}
+	return strings.TrimLeft(rest, fs.PathSeparators), true
 }
 
 // StartedAtRepoRoot returns true if the build was initiated from the repo root.

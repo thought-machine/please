@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -205,4 +206,73 @@ func makeTarget4(graph *BuildGraph, label string, deps ...string) *BuildTarget {
 	})
 	target.AddOutput(target.Label.Name + ".a")
 	return target
+}
+
+func TestFindRepoRootFromTerminatesAtTheRoot(t *testing.T) {
+	// A walk that reaches the top of the filesystem without finding a marker has to stop.
+	// On Windows it used not to: trimming the separator off "C:\" leaves "C:", and splitting
+	// that returns it unchanged, so this spun for ever at one stat per iteration and every plz
+	// run outside a repo hung instead of reporting that it could not find a root.
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	root := filepath.VolumeName(wd) + string(filepath.Separator)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		dir, pkg := findRepoRootFrom(root, "a_file_that_is_not_there_"+t.Name())
+		assert.Empty(t, dir)
+		assert.Empty(t, pkg)
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		// Failing rather than hanging the whole package, which is what this used to do.
+		t.Fatal("findRepoRootFrom did not terminate at the filesystem root")
+	}
+}
+
+func TestFindRepoRootFromFindsTheMarker(t *testing.T) {
+	root := t.TempDir()
+	nested := filepath.Join(root, "some", "package")
+	require.NoError(t, os.MkdirAll(nested, os.ModeDir|0755))
+	marker := "marker_" + t.Name()
+	require.NoError(t, os.WriteFile(filepath.Join(root, marker), nil, 0644))
+
+	dir, pkg := findRepoRootFrom(nested, marker)
+	assert.Equal(t, root, dir)
+	// Slash-separated whatever the OS gave us, because it is a package name.
+	assert.Equal(t, "some/package", pkg)
+}
+
+func TestIsInRepoRoot(t *testing.T) {
+	// The comparison this replaces was a plain HasPrefix against RepoRoot, which is in the
+	// OS's own separator. Paths that arrive from outside - a file:// URL, a coverage report
+	// from another tool - are slash-separated, so on Windows it never matched and the guard
+	// that uses it silently stopped guarding.
+	old := RepoRoot
+	defer func() { RepoRoot = old }()
+	RepoRoot = filepath.Join(string(filepath.Separator)+"home", "user", "repo")
+	slashed := filepath.ToSlash(RepoRoot)
+
+	assert.True(t, IsInRepoRoot(RepoRoot))
+	assert.True(t, IsInRepoRoot(slashed), "a slash-separated path inside the repo is inside it")
+	assert.True(t, IsInRepoRoot(slashed+"/src/core/utils.go"))
+	assert.True(t, IsInRepoRoot(filepath.Join(RepoRoot, "src", "core")))
+
+	assert.False(t, IsInRepoRoot(slashed+"sitory/src"), "only matches at a path boundary")
+	assert.False(t, IsInRepoRoot("/somewhere/else"))
+	assert.False(t, IsInRepoRoot(""))
+}
+
+func TestTrimRepoRoot(t *testing.T) {
+	old := RepoRoot
+	defer func() { RepoRoot = old }()
+	RepoRoot = filepath.Join(string(filepath.Separator)+"home", "user", "repo")
+	slashed := filepath.ToSlash(RepoRoot)
+
+	assert.Equal(t, "src/core", TrimRepoRoot(slashed+"/src/core"))
+	assert.Equal(t, filepath.Join("src", "core"), TrimRepoRoot(filepath.Join(RepoRoot, "src", "core")))
+	// Left alone rather than mangled when it isn't ours.
+	assert.Equal(t, "/somewhere/else", TrimRepoRoot("/somewhere/else"))
 }
