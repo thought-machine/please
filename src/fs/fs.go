@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/thought-machine/please/src/cli/logging"
 )
@@ -180,8 +181,30 @@ func copyFile(from, to string) (err error) {
 
 // RemoveAll will try and remove the path with `os.RemoveAll`; if that fails with a permission error,
 // it will attempt to adjust permissions to make things writable, then remove them.
+//
+// On Windows it also retries briefly where the failure was something else holding the file open,
+// which real-time virus scanning causes routinely and which is usually over in a moment. A handle
+// that is genuinely held outlives the retries and is reported, since no amount of waiting will
+// help - see docs/design/windows/05-testing-strategy.md.
 func RemoveAll(path string) error {
+	err := removeAll(path)
+	for i := 1; i < removeRetries && isTransientRemoveError(err); i++ {
+		time.Sleep(removeRetryDelay)
+		err = removeAll(path)
+	}
+	if isTransientRemoveError(err) {
+		return fmt.Errorf("%w; something else has a file in %s open. On Windows a file cannot be "+
+			"deleted while any process holds it open, virus scanners included", err, path)
+	}
+	return err
+}
+
+func removeAll(path string) error {
 	if err := os.RemoveAll(path); err == nil || !errors.Is(err, os.ErrPermission) {
+		return err
+	} else if isTransientRemoveError(err) {
+		// Not a permissions problem however much it looks like one: the chmod walk below would
+		// make every file in the tree writable and then fail again for the same reason.
 		return err
 	} else if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 		const writable = 0o220

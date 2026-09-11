@@ -75,11 +75,28 @@ func InitFileLogging(logFile string, logFileLevel Verbosity, append bool) {
 	fileBackend = logging.NewLogBackend(file, "", 0)
 	fileBackend = logging.NewBackendFormatter(fileBackend, logFormatter(false))
 	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
-	AtExit(func() {
-		fileBackend = nil
-		setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
-		file.Close()
-	})
+	openLogFile = file
+	AtExit(CloseFileLogging)
+}
+
+// openLogFile is the open log file, if there is one, so that CloseFileLogging can reach it.
+var openLogFile *os.File
+
+// CloseFileLogging stops logging to a file and closes it, leaving stderr logging in place.
+//
+// Anything that deletes or renames a directory the log file is in has to call this first.
+// Windows refuses to rename or unlink a file another handle has open, and the default log file
+// lives at plz-out/log/build.log - which is inside the directory plz clean removes, so a clean
+// could not do either. AtExit is not enough on its own: it only runs on a terminating signal,
+// never on an ordinary exit.
+func CloseFileLogging() {
+	if openLogFile == nil {
+		return
+	}
+	fileBackend = nil
+	setLogBackend(logging.NewLogBackend(os.Stderr, "", 0))
+	openLogFile.Close()
+	openLogFile = nil
 }
 
 func logFormatter(coloured bool) logging.Formatter {

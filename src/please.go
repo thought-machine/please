@@ -696,6 +696,11 @@ var buildFunctions = map[string]func() int{
 		if len(opts.Clean.Args.Targets) == 0 && core.InitialPackage()[0].PackageName == "" {
 			if len(opts.BuildFlags.Include) == 0 && len(opts.BuildFlags.Exclude) == 0 {
 				// Clean everything, doesn't require parsing at all.
+				// The log file lives under plz-out by default, and on Windows a directory
+				// cannot be renamed or deleted while this process holds a file inside it open,
+				// so let go of it first. The detached child that does the deletion avoids
+				// opening one at all, for the same reason.
+				cli.CloseFileLogging()
 				state := core.NewBuildState(config)
 				clean.Clean(config, cache.NewCache(state), !opts.Clean.NoBackground)
 				return 0
