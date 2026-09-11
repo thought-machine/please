@@ -185,3 +185,25 @@ if CONFIG.get("CC_RULES_PATH"):
         data = ["///windows_amd64//test/windows/cc:greeting"],
         expected_output = "hello from a dll",
     )
+
+# Windows has no shebang mechanism, so an sh_binary comes out as a .cmd there: a batch preamble
+# that unpacks the zip appended to it and hands the script to the bundled busybox. This runs one
+# the way a user would, and covers all three things the preamble has to get right - the payload
+# is unpacked, arguments reach the script, and its exit status comes back out.
+#
+# Needs a local shell-rules checkout, for the same reason the pex and DLL tests need theirs: no
+# released plugin builds an sh_binary Windows can run. See plugins/BUILD and 07-state-of-play.md.
+if CONFIG.get("SHELL_RULES_PATH"):
+    wine_binary_test(
+        name = "sh_binary_test",
+        args = "world 3",
+        batch = True,
+        binary = "///windows_amd64//test/windows/shell:greet",
+        exit_code = 3,
+        expected_output = "hello from world",
+        needs_shell = True,
+        # Twice, in the one directory. The payload it unpacks is a set of build outputs, which
+        # are read-only, and a read-only file on Windows cannot be replaced at all - so the
+        # second run is where a stale payload would go unnoticed.
+        runs = 2,
+    )

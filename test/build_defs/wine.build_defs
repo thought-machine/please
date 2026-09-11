@@ -103,7 +103,7 @@ def wine_go_test(
         test_cmd = test_cmd,
     )
 
-def _wine_run_cmd(binary:str, args:str, exit_code:int):
+def _wine_run_cmd(binary:str, args:str, exit_code:int, batch:bool=False):
     """Returns a command that runs a Windows binary under Wine and checks how it finished.
 
     The status is captured rather than left to the shell: build actions run with -e, so an exit
@@ -112,10 +112,19 @@ def _wine_run_cmd(binary:str, args:str, exit_code:int):
     The pipe is not only for the log. Wine's console emulation gives a child process handles
     that some programs - Python among them - reject at startup unless the output is a pipe,
     which has nothing to do with whatever is being tested.
+
+    A batch file is handed to cmd.exe explicitly, and it matters that it is. Handing one to
+    `wine` looks like it works and is not the same thing: what Wine cannot load as a PE it
+    passes to the host, so a file that still has a Unix shebang on it runs under /bin/sh and
+    produces exactly the output the test was hoping for. The whole point of the wrapper is
+    that Windows has no shebang mechanism, so a test that leaves this to Wine tests nothing.
     """
+    run = f'wine "{binary}" {args}'
+    if batch:
+        run = f'wine cmd /c "$(winepath -w "{binary}")" {args}'
     return " && ".join([
         "code=0",
-        f'wine "{binary}" {args} 2>&1 | tee "$TMP_DIR/output" || code=$?',
+        f'{run} 2>&1 | tee "$TMP_DIR/output" || code=$?',
         f'[ "$code" = "{exit_code}" ]',
     ])
 
@@ -126,6 +135,9 @@ def wine_binary_test(
         data:list=[],
         expected_output:str="",
         exit_code:int=0,
+        batch:bool=False,
+        needs_shell:bool=False,
+        runs:int=1,
         labels:list=[],
         timeout:int=600,
         size:str=None):
@@ -143,12 +155,29 @@ def wine_binary_test(
                    how a DLL is found: there is no rpath, so it has to be in the same directory.
       expected_output (str): Text its output should contain. Empty to check nothing.
       exit_code (int): The exit code it should finish with.
+      batch (bool): True if it is a .cmd rather than a .exe, so that it is run through cmd.exe
+                   rather than left to Wine, which would fall back to the host shell.
+      needs_shell (bool): True if running it involves a shell - an sh_binary's wrapper does.
+                   Puts the bundled busybox on the Windows PATH, which is where such a wrapper
+                   expects to find it.
+      runs (int): How many times to run it, all in the same directory. More than one is worth
+                   asking for when it writes something it will meet again on the next run: a
+                   read-only file left behind cannot be replaced on Windows at all.
       labels (list): Extra labels for the rule.
       timeout (int): Test timeout in seconds.
       size (str): Test size.
     """
 
-    cmds = [_wine_setup_cmd(), _wine_run_cmd("$DATA_BINARY", args, exit_code)]
+    cmds = [_wine_setup_cmd()]
+    test_data = {"BINARY": [binary], "FILES": data}
+    if needs_shell:
+        # Its own directory rather than the working one: this is how an install has it, and Go's
+        # exec refuses to run something found relative to the current directory anyway.
+        test_data["BUSYBOX"] = ["///windows_amd64//third_party/binary:busybox"]
+        cmds.append('mkdir -p "$TMP_DIR/shell" && cp "$DATA_BUSYBOX" "$TMP_DIR/shell/busybox.exe"')
+        cmds.append('export WINEPATH="$(winepath -w "$TMP_DIR/shell")"')
+    for _ in range(runs):
+        cmds.append(_wine_run_cmd("$DATA_BINARY", args, exit_code, batch = batch))
     if expected_output:
         cmds.append(f'grep -q "{expected_output}" "$TMP_DIR/output"')
 
@@ -156,7 +185,7 @@ def wine_binary_test(
         name = name,
         size = size,
         timeout = timeout,
-        data = {"BINARY": [binary], "FILES": data},
+        data = test_data,
         env = WINE_ENV,
         labels = labels + ["wine", "windows"],
         local = True,
