@@ -16,8 +16,8 @@ The release is a `.zip` containing `please.exe`, `busybox.exe`, `build_langserve
 all. Built with `bundled-plugins` set it also carries all four plugins and the helper tools, and
 then builds an `sh_binary` with the network taken away — see `08-offline-release.md`.
 
-Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 31 targets and
-814 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Six of those
+Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 32 targets and
+815 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Seven of those
 targets only exist when a local plugin checkout is configured — see below.
 
 | # | Milestone | State |
@@ -48,7 +48,7 @@ access to any of them, so nothing is upstreamed; the branches are the deliverabl
 verified, but they are not equivalent any more. Six Wine tests are only *defined* when the
 matching checkout is configured, because no released plugin has the fix each one tests: two pex
 tests behind `python-rules-path`, the DLL test behind `cc-rules-path`, the `sh_binary` test
-behind `shell-rules-path`, and the two offline-release tests behind `bundled-plugins`. `//test/export:...` fails while `.plzconfig.local` is present at all,
+behind `shell-rules-path`, and the three offline-release tests behind `bundled-plugins`. `//test/export:...` fails while `.plzconfig.local` is present at all,
 for an unrelated reason — see below.
 
 ## Environment

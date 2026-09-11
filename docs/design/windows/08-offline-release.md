@@ -78,7 +78,8 @@ The `--prefix` produces exactly one top-level directory containing a `.plzconfig
 what `plugin_repo()`'s extract step requires.
 
 The script also writes `plugin_revisions.txt`, which ships inside the zip, so a bug report from
-a Windows user carries its own provenance.
+a Windows user carries its own provenance. `package/Install.md` ships beside it: Windows has no
+installer and no package manager to carry the instructions, so they travel in the archive.
 
 ### Why not a build rule
 
@@ -235,10 +236,11 @@ does not bundle language toolchains and should not: cc needs a Windows-hosted Mi
 Windows Go distribution whose hash is not in `third_party/go/BUILD` yet, and neither is on this
 machine.
 
-**Shape test, on Linux, no Wine.** A `gentest` that unzips `//package:please_zip`, asserts the
-member list is exactly the expected set, and asserts each `plugin_*.zip` has one top-level
-directory containing a `.plzconfig`. Cheap, and it catches the rename-to-`.exe` regressions
-that would otherwise surface only on real Windows. Do it early; it gates the rest.
+**Shape test, on Linux, no Wine.** `//test/windows:release_shape_test` unzips
+`//package:please_zip`, asserts the member list is exactly the expected set, and asserts each
+`plugin_*.zip` has one top-level directory containing a `.plzconfig`. Cheap, and it catches the
+rename-to-`.exe` regressions and dropped files that would otherwise surface only on real
+Windows.
 
 **The load-bearing test.** A `test/windows/offline_repo/` fixture modelled on `smoke_repo`,
 with stock `plugin_repo()` calls for all four plugins preloaded and an `sh_binary` to build. A

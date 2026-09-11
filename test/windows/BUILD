@@ -232,3 +232,59 @@ if CONFIG.get("BUNDLED_PLUGINS"):
         remove = ["plugin_shell-rules.zip"],
         repo = "offline_repo",
     )
+
+    # Everything the release zip should contain, and nothing else. None of these names needs
+    # quoting in a shell word, which is what lets them go straight into the printf below.
+    RELEASE_MEMBERS = [
+        "please",
+        "please/Install.md",
+        "please/arcat.exe",
+        "please/build_langserver.exe",
+        "please/busybox.exe",
+        "please/please.exe",
+        "please/please_cc.exe",
+        "please/please_go.exe",
+        "please/please_pex.exe",
+        "please/plugin_cc-rules.zip",
+        "please/plugin_go-rules.zip",
+        "please/plugin_python-rules.zip",
+        "please/plugin_revisions.txt",
+        "please/plugin_shell-rules.zip",
+        "please/plz.cmd",
+    ]
+
+    # The shape of the artifact, checked on Linux without Wine. It catches the things that
+    # would otherwise only show up on a real Windows machine: a tool that lost its .exe and so
+    # cannot be run at all, a plugin archive whose top level is not the single directory holding
+    # a .plzconfig that plugin_repo() looks for, or a file quietly dropped from the release.
+    #
+    # Labelled wine like the rest of this package, not because anything here runs under Wine but
+    # because building it means cross-compiling for Windows, which is what that label gates.
+    gentest(
+        name = "release_shape_test",
+        data = {"ZIP": ["///windows_amd64//package:please_zip"]},
+        labels = [
+            "wine",
+            "windows",
+        ],
+        no_test_output = True,
+        test_cmd = " && ".join([
+            # $DATA_ZIP is relative to the test directory, and unzip is about to leave it.
+            'zip="$PWD/$DATA_ZIP"',
+            'unzip -Z1 "$zip" | sed "s|/$||" | sort > "$TMP_DIR/got"',
+            # Both sides sorted by the same sort, so the list above can stay in a readable
+            # order rather than whatever collation this machine happens to use.
+            'printf "%s\\n" ' + " ".join(RELEASE_MEMBERS) + ' | sort > "$TMP_DIR/want"',
+            'diff -u "$TMP_DIR/want" "$TMP_DIR/got"',
+            'mkdir -p "$TMP_DIR/x" && cd "$TMP_DIR/x" && unzip -q "$zip"',
+            # One top-level directory per plugin archive, with a .plzconfig inside it.
+            # The listing goes to a file rather than into a pipe: grep -q stops at the first
+            # match, and the SIGPIPE that gives unzip fails the whole pipeline under pipefail.
+            "for p in please/plugin_*.zip; do " +
+            'unzip -Z1 "$p" > "$TMP_DIR/members"; ' +
+            'tops="$(cut -d/ -f1 "$TMP_DIR/members" | sort -u | wc -l)"; ' +
+            '[ "$tops" = 1 ] || { echo "$p has $tops top-level entries" >&2; exit 1; }; ' +
+            'grep -q "^[^/]*/\\.plzconfig$" "$TMP_DIR/members" || { echo "$p has no .plzconfig" >&2; exit 1; }; ' +
+            "done",
+        ]),
+    )

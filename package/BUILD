@@ -47,6 +47,9 @@ filegroup(
         # install.sh gets the short name with 'ln -sf please plz'. Symlinks need Developer
         # Mode on Windows, so a one-line batch file stands in for it.
         ":plz_cmd",
+        # Windows has no installer and no package manager to carry the instructions, so they
+        # travel in the zip.
+        ":install_md",
         # Extracting a plugin needs arcat, and there is no arcat release for Windows, so a
         # fresh install there cannot get a plugin at all without one of its own.
         ":arcat",
@@ -70,6 +73,11 @@ filegroup(
     name = "plz_cmd",
     srcs = ["plz.cmd"],
     binary = True,
+)
+
+filegroup(
+    name = "install_md",
+    srcs = ["Install.md"],
 )
 
 # xz only compresses where there is an xz binary to do it, which excludes Windows - the
