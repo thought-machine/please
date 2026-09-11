@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/thought-machine/please/src/fs"
@@ -304,9 +303,7 @@ func MergeCoverageLines(existing, coverage []LineCoverage) []LineCoverage {
 func (coverage *TestCoverage) OrderedFiles() []string {
 	files := make([]string, 0, len(coverage.Files))
 	for file := range coverage.Files {
-		if strings.HasPrefix(file, RepoRoot) {
-			file = strings.TrimLeft(file[len(RepoRoot):], "/")
-		}
+		file = TrimRepoRoot(file)
 		files = append(files, file)
 	}
 	fs.SortPaths(files)

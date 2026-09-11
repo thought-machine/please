@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"math"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/thought-machine/please/src/cli"
@@ -20,7 +19,7 @@ func parseXMLCoverageResults(target *core.BuildTarget, coverage *core.TestCovera
 	}
 	for _, pkg := range xcoverage.Packages.Package {
 		for _, cls := range pkg.Classes.Class {
-			filename := strings.TrimPrefix(cls.Filename, core.RepoRoot)
+			filename := core.TrimRepoRoot(cls.Filename)
 			// There can be multiple classes per file so we must merge here, not overwrite.
 			coverage.Files[filename] = core.MergeCoverageLines(coverage.Files[filename], parseXMLLines(cls.Lines.Line))
 		}

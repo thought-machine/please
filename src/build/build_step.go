@@ -1112,7 +1112,7 @@ func fetchOneRemoteFile(state *core.BuildState, target *core.BuildTarget, url st
 		filename := fileURLPath(url)
 		if !filepath.IsAbs(filename) {
 			return fmt.Errorf("URL %s must be an absolute path", url)
-		} else if strings.HasPrefix(filename, core.RepoRoot) {
+		} else if core.IsInRepoRoot(filename) {
 			return fmt.Errorf("URL %s is within the repo, you cannot use remote_file for this", url)
 		}
 		fromfile, err := os.Open(filename)
