@@ -374,6 +374,26 @@ go_repo(
     version = "v0.0.0-20210914205149-d1177395e3b8",
 )
 
+# arcat, and the two of its requirements nothing else here already pins. Please normally
+# downloads a prebuilt arcat release keyed by platform, and there is none for Windows; building
+# it from source is how the offline Windows release gets one. See
+# docs/design/windows/08-offline-release.md.
+go_repo(
+    module = "github.com/xi2/xz",
+    version = "v0.0.0-20171230120015-48954b6210f8",
+)
+
+go_repo(
+    module = "github.com/please-build/ar",
+    version = "v0.0.0-20251128102243-20fe5956df94",
+)
+
+go_repo(
+    module = "github.com/please-build/arcat",
+    patch = ["arcat_windows_rename.patch"],
+    version = "v1.3.1",
+)
+
 go_repo(
     module = "github.com/klauspost/cpuid/v2",
     version = "v2.4.0",

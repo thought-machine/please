@@ -1,0 +1,51 @@
+Two Windows fixes for arcat, both of which stop it producing a usable zip at all.
+
+1. The output file is created with ioutil.TempFile, which returns it open, and the handle is
+   never closed - zip.NewFile opens the same path again and closes only its own. Unix does not
+   care that a file being renamed is still open. Windows refuses:
+
+       panic: Failed to rename output file: rename .\arcat-1624372107 ...: Sharing violation.
+
+   which is every zip arcat is asked to write, so nothing needing one builds.
+
+2. Zip member names are always /-separated, and filepath.WalkDir hands back the OS separator.
+   On Windows every name added by a directory walk therefore carried backslashes, so --rename_dir
+   and --strip_prefix silently matched nothing and the members came out with names no reader
+   splits into directories. The rest of writer.go already assumes slashes - samePaths uses
+   path.IsAbs, not filepath.IsAbs.
+
+Carried here rather than upstream because there is nowhere to push it to yet. See
+docs/design/windows/08-offline-release.md.
+
+--- a/main.go
++++ b/main.go
+@@ -173,6 +173,9 @@
+ 	tempFile, err := ioutil.TempFile(".", "arcat-")
+ 	must(err)
+ 	filename := tempFile.Name()
++	// Windows will not rename a file that is still open, and zip.NewFile opens this path
++	// again for itself, so this handle has no further use.
++	must(tempFile.Close())
+ 
+ 	f := zip.NewFile(filename, opts.Zip.Strict)
+ 	f.RenameDirs = opts.Zip.RenameDirs
+--- a/zip/writer.go
++++ b/zip/writer.go
+@@ -215,6 +215,10 @@
+ 	if err != nil {
+ 		return err
+ 	}
++	// A zip member name is always /-separated, whatever the host separator is. Everything
++	// downstream of here - the rename and strip-prefix options, and the names written into
++	// the archive - depends on that.
++	path = filepath.ToSlash(path)
+ 	mode := entry.Type()
+ 	if path != f.input && ((mode & fs.ModeSymlink) == fs.ModeSymlink) {
+ 		if resolved, err := filepath.EvalSymlinks(path); err != nil {
+@@ -303,7 +307,7 @@
+ // AddFiles walks the given directory and adds any zip files (determined by suffix) that it finds within.
+ func (f *File) AddFiles(in string) error {
+-	f.input = in
++	f.input = filepath.ToSlash(in)
+ 	return filepath.WalkDir(in, f.walk)
+ }
