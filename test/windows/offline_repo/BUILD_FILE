@@ -1,0 +1,13 @@
+# An sh_binary rather than a genrule: building one needs the plugin's build defs, the bundled
+# arcat to write its payload, and busybox to run the action, so a single target covers the
+# whole chain.
+sh_binary(
+    name = "greet",
+    main = "greet.sh",
+    deps = [":lib"],
+)
+
+sh_library(
+    name = "lib",
+    src = "lib.sh",
+)

@@ -207,3 +207,28 @@ if CONFIG.get("SHELL_RULES_PATH"):
         # second run is where a stale payload would go unnoticed.
         runs = 2,
     )
+
+# The release zip, extracted and run with the network taken away. This is the only test that
+# covers what a Windows user actually gets: the plugin archives it carries, the arcat it carries
+# because there is no release of one for Windows, and the tools the plugins reach for. Building
+# a single sh_binary exercises all of it at once - the file:// plugin template, arcat unpacking
+# the archive, the plugin's build defs parsing, and busybox running the action.
+#
+# Only defined when the plugins have been vendored, since the zip has nothing in it otherwise.
+# See tools/misc/vendor_plugins.sh and docs/design/windows/08-offline-release.md.
+if CONFIG.get("BUNDLED_PLUGINS"):
+    wine_plz_release_test(
+        name = "offline_release_test",
+        cmd = "build //:greet",
+        repo = "offline_repo",
+    )
+
+    # The negative control. Without it a warm cache or a stray install would pass the test
+    # above without the bundled archive being read at all.
+    wine_plz_release_test(
+        name = "offline_release_negative_test",
+        cmd = "build //:greet",
+        expected_failure = True,
+        remove = ["plugin_shell-rules.zip"],
+        repo = "offline_repo",
+    )

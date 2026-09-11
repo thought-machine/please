@@ -1,0 +1,20 @@
+; A repo that asks for a plugin the ordinary way, so that the only thing under test is where
+; the plugin comes from. Named BUILD_FILE so the outer repo doesn't parse this as one of its
+; own packages.
+[parse]
+; BUILD_FILE so the outer repo doesn't parse this as one of its own packages, and BUILD as
+; well because a subrepo inherits this list: without it the plugin's own build files, which
+; are named BUILD, cannot be found once it has been unpacked. Nothing here is called BUILD.
+BuildFileName = BUILD_FILE
+BuildFileName = BUILD
+preloadsubincludes = ///shell//build_defs:shell
+
+[Plugin "shell"]
+Target = //plugins:shell
+
+; No dir cache. Please's cache is content-addressed and lands outside the test's tmp dir, so
+; leaving it on lets a run replay artifacts an earlier, differently-built binary produced -
+; which has already caused one false pass during this port. Here it would also let a plugin
+; that was once downloaded stand in for the bundled one, which is the whole point.
+[cache]
+dir =

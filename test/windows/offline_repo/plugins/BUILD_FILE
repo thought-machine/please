@@ -1,0 +1,8 @@
+# Stock, with the revision the plugin is released as rather than the one that is bundled. The
+# bundled archive answers for whatever revision is asked for, which is what makes an ordinary
+# repo work offline and is also the footgun documented in plugin_revisions.txt.
+plugin_repo(
+    name = "shell",
+    plugin = "shell-rules",
+    revision = "v0.2.1",
+)
