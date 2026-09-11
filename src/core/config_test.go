@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -470,4 +471,29 @@ func TestPluginConfig(t *testing.T) {
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/plugin.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
+}
+
+func TestDefaultPluginReposOffWindows(t *testing.T) {
+	// The URL list is hashed into every plugin download's rule hash, so an extra entry here
+	// would change hashes on every platform. Only Windows bundles anything to point at.
+	config := DefaultConfiguration()
+	config.Please.Location = "/opt/please"
+	repos := config.defaultPluginRepos()
+	if runtime.GOOS == "windows" {
+		assert.Len(t, repos, 3)
+		assert.Equal(t, "file:///opt/please/plugin_{plugin}.zip", repos[0])
+		return
+	}
+	assert.Len(t, repos, 2)
+	for _, repo := range repos {
+		assert.True(t, strings.HasPrefix(repo, "https://github.com/"), repo)
+	}
+}
+
+func TestUseBundledToolsLeavesAConfiguredArcatAlone(t *testing.T) {
+	config := DefaultConfiguration()
+	config.Please.Location = "/opt/please"
+	config.Build.ArcatTool = "//my/own:arcat"
+	config.useBundledTools()
+	assert.Equal(t, "//my/own:arcat", config.Build.ArcatTool)
 }

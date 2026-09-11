@@ -227,12 +227,15 @@ func ReadConfigFiles(fs iofs.FS, filenames []string, profiles []string) (*Config
 		}
 	}
 
+	// Resolve the full path to Please's own location. This has to happen before the plugin
+	// repo defaults below, which are relative to it. It is idempotent, and the call further
+	// down is left alone.
+	config.EnsurePleaseLocation()
+
 	// Set default values for slices. These add rather than overwriting so we can't set
 	// them upfront as we would with other config values.
-	setDefault(&config.Please.PluginRepo,
-		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
-		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
-	)
+	setDefault(&config.Please.PluginRepo, config.defaultPluginRepos()...)
+	config.useBundledTools()
 	if usingBazelWorkspace {
 		setDefault(&config.Parse.BuildFileName, "BUILD.bazel", "BUILD", "BUILD.plz")
 	} else {
@@ -303,9 +306,6 @@ func ReadConfigFiles(fs iofs.FS, filenames []string, profiles []string) (*Config
 			config.Size[size.TimeoutName] = size
 		}
 	}
-
-	// Resolve the full path to its location.
-	config.EnsurePleaseLocation()
 
 	// If the HTTP proxy config is set and there is no env var overriding it, set it now
 	// so various other libraries will honour it.
@@ -483,7 +483,7 @@ func DefaultConfiguration() *Configuration {
 	config.Python.PexTool = "/////_please:please_pex"
 	config.Java.JavacWorker = "/////_please:javac_worker"
 	config.Java.JarCatTool = "/////_please:arcat"
-	config.Build.ArcatTool = "/////_please:arcat"
+	config.Build.ArcatTool = DefaultArcatTool
 	config.Java.JUnitRunner = "/////_please:junit_runner"
 
 	config.Metrics.Timeout = cli.Duration(2 * time.Second)
@@ -852,6 +852,60 @@ func (config *Configuration) GetBuildEnv() BuildEnv {
 		}
 	})
 	return config.buildEnvStored.Env
+}
+
+// DefaultArcatTool is the [build] arcattool that means "whichever one Please downloads".
+// parse.ArcatUnavailable recognises it, to say something useful on a platform where there is
+// nothing to download.
+// The literal is parse.InternalPackageName, which core cannot import; parse asserts they agree.
+const DefaultArcatTool = "/////_please:arcat"
+
+// defaultPluginRepos returns the templates a plugin_repo() is resolved against when nothing is
+// configured. Setting any [please] pluginrepo replaces the whole list, as it always has.
+//
+// On Windows the list starts with the plugin archives a release bundles beside the binary.
+// Windows is the only platform that ships any, and it is also the only one where a fresh
+// install cannot get a plugin at all without them: extracting a downloaded plugin needs arcat,
+// and there is no arcat release for it. See docs/design/windows/08-offline-release.md.
+//
+// The location itself, not a subdirectory of it. pleasew.ps1 and the self-updater both link an
+// install back up a level file by file and skip directories, so a plugins/ subdirectory would
+// be stranded under <Location>/<version> while this looked for it at <Location>.
+//
+// The name carries no revision. There is one bundled build of each plugin and it answers for
+// whatever revision is asked for; the plugin_revisions.txt beside it says which build that is.
+// A repo that pins some other version gets this one on Windows, which is the price of working
+// with no network at all.
+func (config *Configuration) defaultPluginRepos() []string {
+	repos := []string{
+		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
+		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
+	}
+	if runtime.GOOS != "windows" {
+		return repos
+	}
+	bundled := "file://" + filepath.ToSlash(config.Please.Location) + "/plugin_{plugin}.zip"
+	return append([]string{bundled}, repos...)
+}
+
+// useBundledTools points the config at any helper tool the release bundles beside the binary,
+// where nothing else has been configured.
+//
+// This is only arcat. The plugins' own tools - please_go, please_cc, please_pex - are chosen by
+// the plugins' build defs, because a plugin's config is not ours to default.
+//
+// Only Windows bundles anything. Everywhere else there is a published arcat to download, and
+// the internal package rule is the better answer because it is hashed and cached like anything
+// else.
+func (config *Configuration) useBundledTools() {
+	if runtime.GOOS != "windows" || config.Build.ArcatTool != DefaultArcatTool {
+		return
+	}
+	if fs.FileExists(filepath.Join(config.Please.Location, "arcat"+fs.ExeSuffix)) {
+		// A bare name rather than a path: Please.Location is already the head of the build
+		// PATH, and the lookup adds the .exe. The same route the bundled busybox takes.
+		config.Build.ArcatTool = "arcat"
+	}
 }
 
 // EnsurePleaseLocation will resolve `config.Please.Location` to a full path location where it is to be found.

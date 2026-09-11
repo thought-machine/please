@@ -189,3 +189,10 @@ func TestArcatUnavailableOnlyWhenNothingElseIsConfigured(t *testing.T) {
 	config.Build.ArcatTool = "C:/tools/arcat.exe"
 	assert.False(t, ArcatUnavailable(config), "a configured arcat is never unavailable")
 }
+
+func TestDefaultArcatToolNamesTheInternalPackage(t *testing.T) {
+	// core cannot import this package, so it spells the label out. If the internal package is
+	// ever renamed, the default arcat tool and the check that recognises it drift apart
+	// silently and ArcatUnavailable starts answering false for a default config.
+	assert.Equal(t, "/////"+InternalPackageName+":arcat", core.DefaultArcatTool)
+}

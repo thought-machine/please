@@ -82,5 +82,5 @@ func arcatHashFor(platform string) string {
 // work in that state - which includes extracting any plugin - so it is worth saying up front
 // rather than letting it surface as a missing target much later.
 func ArcatUnavailable(config *core.Configuration) bool {
-	return publishedArcatHash() == "" && config.Build.ArcatTool == "/////"+InternalPackageName+":arcat"
+	return publishedArcatHash() == "" && config.Build.ArcatTool == core.DefaultArcatTool
 }
