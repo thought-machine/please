@@ -1,0 +1,64 @@
+<h1 class="title-1">Please 17.34.0</h1>
+
+<p>
+    This release adds native Windows support. You can find the complete changelog
+    <a class="copy-link" href="https://github.com/thought-machine/please/releases/tag/v17.34.0">here</a>.
+</p>
+
+<section class="mt4">
+    <h2 class="title-2">Windows</h2>
+    <p>
+        Please now runs natively on Windows, on amd64. Extract the release and run
+        <code class="code">plz</code>; there is nothing to configure. Windows has no shell that can run a
+        build action, so the release bundles <a class="copy-link" href="https://busybox.net/">busybox</a> and
+        uses it by default.
+    </p>
+    <p>
+        Install it with:
+    </p>
+    <pre class="code-container"><code>irm https://get.please.build/get_plz.ps1 | iex</code></pre>
+    <p>
+        Building Go, C++ and Python all work. C++ builds through MinGW-w64, including shared libraries,
+        which Windows links through an import library rather than through the DLL itself. A
+        <code class="code">sh_binary</code> becomes a <code class="code">.cmd</code>, because Windows has no
+        shebang mechanism and a batch file is the only kind of script it will run by name.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">What to expect</h2>
+    <p>
+        Two things behave differently, and neither is a bug we intend to fix soon.
+    </p>
+    <p>
+        <b>There is no build sandbox.</b> Please's sandbox is built on Linux namespaces and Windows has no
+        equivalent, so build actions and tests see the whole machine. <code class="code">plz</code> will not
+        pretend otherwise: sandboxing is off in the default Windows configuration rather than silently
+        ineffective.
+    </p>
+    <p>
+        <b>Real-time virus scanning holds freshly written files open</b>, which Windows treats as a reason to
+        refuse deleting or renaming them. That surfaces as intermittent sharing-violation errors and slower
+        builds. Excluding your <code class="code">plz-out</code> directories from scanning is worth doing.
+    </p>
+    <p>
+        Symlinks need Developer Mode or <code class="code">SeCreateSymbolicLinkPrivilege</code>, which an
+        ordinary account has neither of. Where Please would make one it copies instead, so nothing fails; you
+        will see a single warning saying so.
+    </p>
+</section>
+
+<section class="mt4">
+    <h2 class="title-2">How it is tested</h2>
+    <p>
+        The Windows build is exercised two ways. A Wine job on Linux runs the cross-built binaries on every
+        change, which is what made the port developable at all. On top of that, a
+        <code class="code">windows-latest</code> job runs the same test binaries natively, alongside probes
+        that build a repository with the release itself, clean and rebuild it repeatedly under a live virus
+        scanner, and build at a long path.
+    </p>
+    <p>
+        The native job is the one that counts, and it is blocking. Wine passing is evidence, not proof, and
+        most of the bugs found late in this work were ones Wine had been passing for months.
+    </p>
+</section>

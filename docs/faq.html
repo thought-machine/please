@@ -37,9 +37,24 @@
   </p>
 
   <p>
-    Windows is unfortunately not supported natively, since it's just too
-    different from the Unix environment Please is designed for. It is possible
-    to run it within
+    Windows is supported natively on amd64. Please ships busybox as its build
+    shell there, so a fresh install needs no configuration: extract the release
+    and run <pre><code class="code">plz</code></pre>. Building Go, C++ and Python
+    all work, and the test suite runs on Windows in CI rather than only under
+    emulation.
+  </p>
+
+  <p>
+    Two differences are worth knowing. There is no build sandbox on Windows,
+    because it is built on Linux namespaces and there is no equivalent; build
+    actions and tests see the whole machine. And real-time virus scanning holds
+    freshly written files open, which shows up as intermittent sharing-violation
+    errors and slow builds, so excluding your
+    <pre><code class="code">plz-out</code></pre> directories is worth doing.
+  </p>
+
+  <p>
+    Running under
     <a
       class="copy-link"
       href="https://docs.microsoft.com/en-us/windows/wsl/install-win10"
@@ -47,7 +62,8 @@
       rel="noopener"
       >WSL</a
     >
-    though.
+    also works, and is still the better choice if your build depends on Unix
+    tooling that has no Windows equivalent.
   </p>
 
   <p>

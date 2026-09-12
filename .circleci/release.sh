@@ -59,6 +59,14 @@ release_file tools/misc/get_plz.sh get_plz.sh text/x-shellscript
 release_file get_plz.sh.asc get_plz.sh.asc text/plain
 release_file get_plz.sh.sig get_plz.sh.sig application/octet-stream
 
+# The Windows installer, served the same way and signed the same way. Windows has no shell to
+# curl | sh with; this is run with irm ... | iex instead.
+/tmp/workspace/release_signer pgp -o get_plz.ps1.asc -i tools/misc/get_plz.ps1
+/tmp/workspace/release_signer kms -o get_plz.ps1.sig -i tools/misc/get_plz.ps1
+release_file tools/misc/get_plz.ps1 get_plz.ps1 text/plain
+release_file get_plz.ps1.asc get_plz.ps1.asc text/plain
+release_file get_plz.ps1.sig get_plz.ps1.sig application/octet-stream
+
 if [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"prerelease"* ]]; then
   echo "$VERSION is a prerelease, only setting latest_prerelease_version"
 else

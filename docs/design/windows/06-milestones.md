@@ -713,10 +713,13 @@ the right shape.
       with a date. Two items remain out of reach from a CI step: console behaviour, because a
       step's stdout is a pipe so the interactive display never engages, and Ctrl-C, which needs
       a console the sender is attached to. Both need a machine with a real session
-- [ ] `get_plz.sh` Windows equivalent
-- [ ] `README.md`, `docs/faq.html`
-- [ ] `docs/milestones/<version>.html` announcement (fragment HTML — see the existing files)
-- [ ] `VERSION` bump + `ChangeLog` entry
+- [x] **`get_plz.ps1`**, served and signed from the same bucket as `get_plz.sh` and run the
+      same way: `irm https://get.please.build/get_plz.ps1 | iex`
+- [x] **`README.md` and `docs/faq.html`.** The FAQ said Windows was not supported natively;
+      it now says what is supported, and names the two things that behave differently - no
+      sandbox, and virus scanners holding files open
+- [x] **`docs/milestones/17.34.0.html`**
+- [x] **`VERSION` 17.34.0 + `ChangeLog` entry**
 
 ## Risk register
 

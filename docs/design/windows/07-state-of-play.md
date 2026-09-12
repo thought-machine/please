@@ -32,7 +32,7 @@ only thing anywhere that is not taking Wine's word for it.
 | M5 | C++ / cc-rules | done, `cc_test` included |
 | M7 | sandboxing | decided against, documented |
 | M8 | plugins | go, cc, shell, python all done in local clones |
-| M9 | native Windows CI and GA | CI done and blocking; GA not started |
+| M9 | native Windows CI and GA | done — 17.34.0 |
 
 ## The five repos
 
@@ -74,7 +74,11 @@ change, which is where they were always meant to run.
 
 In rough order of value.
 
-1. **Ctrl-Break is delivered but never verified.** `KillProcess` sends one, waits 30ms, then
+1. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
+   given to `<name>.sh` and hands that to a shell, and a `.cmd` is not a shell script. The
+   plugin's own tests are written that way, so they are the thing to fix it against. The
+   smallest real functional gap left.
+2. **Ctrl-Break is delivered but never verified.** `KillProcess` sends one, waits 30ms, then
    terminates the job object. `TestKillsProcessTree` passes natively, but it only asserts a
    grandchild died, which terminating the job achieves either way — so the graceful path could
    be dead code on Windows and no test would notice.
@@ -84,9 +88,6 @@ In rough order of value.
    shut down gracefully is racing that timer on a CI machine, and a flaky test in a blocking job
    is worse than no test. Either call `killProcessTree` directly and wait generously, which
    tests the delivery without the timer, or widen the window and say why.
-2. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
-   given to `<name>.sh` and hands that to a shell, and a `.cmd` is not a shell script. The
-   plugin's own tests are written that way, so they are the thing to fix it against.
 3. **Publish a `please_pex` carrying the Windows preamble for a platform Linux can use.**
    `please_go`, `please_cc` and `please_pex` all have `windows_amd64` releases now, published
    from the forks, so a native Windows `plz` has everything it needs to download. What is left
@@ -96,16 +97,15 @@ In rough order of value.
 4. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
-5. **`plz debug` and `plz cover` on a Windows target** are untested. So is `plz cover`, whose
-   coverage paths come back from the Python side with backslashes in them. `plz run` on an
-   `sh_binary` is the interesting case: Go's `os/exec` launches a `.cmd` happily under Wine,
-   which is the part that was in doubt, and is exactly the kind of answer Wine gives more
-   readily than Windows does.
+5. **`plz debug` and `plz cover` on a Windows target** are untested. `plz cover` has one
+   concrete suspicion against it: coverage paths come back from the Python side with
+   backslashes in them. Both are unknowns rather than known defects, so the native job is
+   likely to find them faster than guessing will.
 
-Blocked on push access we do not have: publishing `windows_amd64` releases of `arcat`,
-`please_go`, `please_cc`, and a `please_pex` of any platform carrying the Windows preamble.
-**None of that blocks cross-building** — tools resolve to the host under `--arch` — it blocks a
-*native* Windows `plz` only.
+Nothing is blocked on access any more. `arcat` is built from source in this repo, and
+`please_go`, `please_cc` and `please_pex` all have `windows_amd64` releases published from the
+forks, so a native Windows `plz` has everything it needs to download. What remains is upstream
+adoption, which is a matter of someone merging rather than of permission.
 
 ## Things that will bite you again
 

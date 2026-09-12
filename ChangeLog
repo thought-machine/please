@@ -1,3 +1,25 @@
+Version 17.34.0
+---------------
+    * Native Windows support on amd64. `plz` runs, builds and tests on Windows,
+      with busybox bundled as the build shell so a fresh install needs no
+      configuration. Go, C++ and Python targets all build; `sh_binary` produces a
+      `.cmd`, since Windows has no shebang mechanism.
+    * Windows installer at https://get.please.build/get_plz.ps1, and a
+      `pleasew.ps1` counterpart to `pleasew`.
+    * Releases for `windows_amd64` are a `.zip`, with a `plz.cmd` shim in place of
+      the `plz` symlink, which Windows will not create without Developer Mode.
+    * `plz clean` no longer fails on Windows. Please held its own log file open
+      inside the directory it was deleting.
+    * `plz` no longer hangs when run outside a repo on Windows. The walk towards
+      the filesystem root never terminated at a drive letter.
+    * `link:` labels fall back to copying where Windows refuses to create a
+      symlink, rather than silently doing nothing.
+    * `remote_file` with a `file://` URL is correctly refused when it points
+      inside the repo on Windows; the check compared path separators that never
+      matched.
+    * No build sandbox on Windows: it is built on Linux namespaces, and there is
+      no equivalent.
+
 Version 17.33.0
 ---------------
     * Fix macOS tmpdir cleanup race caused by system daemons creating `~/Library` (#3515)

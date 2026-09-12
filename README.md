@@ -7,7 +7,7 @@ nearly any aspect of your build process.
 
 See [please.build](https://please.build) for more information.
 
-Currently Linux (tested on Ubuntu), macOS and FreeBSD are actively supported.
+Currently Linux (tested on Ubuntu), macOS, FreeBSD and Windows (amd64) are actively supported.
 
 If you're a fan of Please, don't forget to add yourself
 to the [adopters](https://github.com/thought-machine/please/blob/master/ADOPTERS.md)
