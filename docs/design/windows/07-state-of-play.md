@@ -20,7 +20,8 @@ Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* i
 873 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Eight of those
 targets only exist when a local plugin checkout is configured — see below.
 
-**And 800 of those tests now run on a real Windows machine.** A blocking GitHub Actions job
+**And 809 of those tests now run on a real Windows machine, with no Windows-specific skips
+left.** The two that still skip there are skipped on every platform and always were. A blocking GitHub Actions job
 cross-builds them on Linux and runs them on `windows-latest`, alongside probes that build a repo
 with the release zip, clean and rebuild it five times, and build at a long path. That job is the
 only thing anywhere that is not taking Wine's word for it.
@@ -78,32 +79,29 @@ for an unrelated reason — see below.
 
 In rough order of value.
 
-1. **Three tests skip on Windows and should not.** `TestSymlinkedOutputs`, `TestCreatePlzOutGo`
-   and `TestSymlink` skip on the one machine where the answer is interesting: the CI runner has
-   `SeCreateSymbolicLinkPrivilege` disabled, which is the case most users are in and the case
-   the copy fallback exists for. They should assert the outcome rather than that a symlink was
-   made, and skip only under Wine, where `os.Symlink` reports success and produces a link that
-   cannot be stat'ed. Needs an `isWine()` helper, about ten lines.
-2. **`plz run` has exactly two skipped tests.** `TestSequential` and `TestParallel` skip with
-   "the fixtures here are `#!` scripts, which Windows cannot execute". The shell plugin already
-   solved that problem by emitting a `.cmd`; the fixtures want the same treatment.
-3. **Ctrl-Break is delivered but never verified.** `KillProcess` sends one, waits 30ms, then
+1. **Ctrl-Break is delivered but never verified.** `KillProcess` sends one, waits 30ms, then
    terminates the job object. `TestKillsProcessTree` passes natively, but it only asserts a
    grandchild died, which terminating the job achieves either way — so the graceful path could
    be dead code on Windows and no test would notice.
-4. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
+
+   Harder than it looks, which is why it is still here. The window is 30ms: `KillProcess` sends
+   the break, waits that long, then terminates the job regardless. A test that asserts the child
+   shut down gracefully is racing that timer on a CI machine, and a flaky test in a blocking job
+   is worse than no test. Either call `killProcessTree` directly and wait generously, which
+   tests the delivery without the timer, or widen the window and say why.
+2. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
    given to `<name>.sh` and hands that to a shell, and a `.cmd` is not a shell script. The
    plugin's own tests are written that way, so they are the thing to fix it against.
-5. **Bump `plugins/BUILD`** once the plugin branches are published somewhere. In the same change,
+3. **Bump `plugins/BUILD`** once the plugin branches are published somewhere. In the same change,
    delete everything this repo carries because it pins plugins without the fixes: the
    `out = "please.exe" if is_platform(...)` workarounds in `src/BUILD.plz` and
    `//tools/build_langserver`, the `PexTool` and `defaultldflags` lines in
    `.plzconfig_windows_amd64`, the `CONFIG.get(...)` conditions around the pex, DLL and
    `sh_binary` tests in `//test/windows`, and the whole of `08-offline-release.md`'s machinery.
-6. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
+4. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
-7. **`plz debug` and `plz cover` on a Windows target** are untested. So is `plz cover`, whose
+5. **`plz debug` and `plz cover` on a Windows target** are untested. So is `plz cover`, whose
    coverage paths come back from the Python side with backslashes in them. `plz run` on an
    `sh_binary` is the interesting case: Go's `os/exec` launches a `.cmd` happily under Wine,
    which is the part that was in doubt, and is exactly the kind of answer Wine gives more
@@ -148,6 +146,10 @@ Each of these has already cost time once.
   Unpacking an archive of build outputs over a previous unpacking of itself therefore fails,
   and tools tend to report it on stderr and carry on with the stale copy. `sh_binary` hit this;
   anything else that unpacks build outputs beside themselves will too.
+- **A skip hides a bug better than a missing test does.** Deleting two has now found two real
+  failures that Wine had passed for months. `plz run` handed `cmd.exe` a forward-slashed path,
+  which it reads as a switch; and every `link:` label silently became a warning. Both were
+  behind `runtime.GOOS == "windows"` skips that looked reasonable when they were written.
 - **`filepath.Split` does not terminate a walk on Windows.** Trimming the separator off `C:\`
   leaves `C:`, and splitting that returns it unchanged, so a loop that stops at an empty string
   never stops. Compare each step against the previous one instead. This hung every `plz` run

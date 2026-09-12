@@ -162,10 +162,11 @@ were mostly right, and the list found one thing nobody had predicted.
 |---|---|
 | `ERROR_SHARING_VIOLATION` | **Materialised, and it broke `plz clean` outright.** Please held its own `plz-out/log/build.log` open and then asked Windows to delete the directory containing it. Both the background rename and the synchronous fallback failed, every time. Fixed by closing the log first; `RemoveAll` now also recognises the case and retries briefly rather than reporting it as a permissions problem |
 | `MAX_PATH` | Not reproduced. The runner has long paths enabled, and a build at a 200-character path succeeded. Still untested with long paths off |
-| Symlink privileges | `SeCreateSymbolicLinkPrivilege` is **disabled** on the runner, so the copy fallback is being exercised for real on every run. It works |
+| Symlink privileges | `SeCreateSymbolicLinkPrivilege` is **disabled** on the runner, which is the case most users are in. `CopyOrLinkFile` already fell back; `buildLinks` did not, so every `link:` label quietly became a warning. Now falls back too, and the three tests that covered it no longer skip |
 | Case-insensitivity | Not yet probed directly, but it caught `plz run` appending a second `PATH`: Windows stores the variable as `Path`, and the name was being compared exactly |
 | Antivirus | Defender runs on the job, so every result above is already under a live scanner. No flakiness seen yet |
 | Console, Ctrl-C | Still unreachable. A step's stdout is a pipe, so the interactive display never engages. Needs a machine with a real console session |
+| **Unpredicted** | **`plz run` could not run anything on Windows.** An `sh_binary` is a `.cmd`, a `.cmd` runs through `cmd.exe`, and `cmd.exe` reads the forward slash in `plz-out/bin/x.cmd` as a switch. Wine's `cmd` parses it happily. Found by deleting a skip, not by adding a test |
 | **Unpredicted** | **Any `plz` run outside a repo hung at 100% CPU for ever.** The walk towards the filesystem root never terminated, because trimming the separator off `C:\` leaves `C:` and splitting that returns it unchanged |
 
 ### Filesystem semantics
