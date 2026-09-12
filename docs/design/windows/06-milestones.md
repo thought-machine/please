@@ -585,6 +585,12 @@ the right shape.
       `//tools/build_langserver` can be deleted and `please.exe` still comes out with the right
       name. **They are deliberately still in the tree**, because this repo pins the unfixed
       upstream plugin; drop them in the same change that bumps `plugins/BUILD`
+- [x] **go plugin — a `windows_amd64` `please_go` release, published from the fork.** Upstream
+      publishes five platforms and not Windows, so a native Windows plz could not build a Go
+      target at all. Only that one architecture is redirected to the fork; everything else
+      still comes from please-build. The download needs an explicit `out`, because the asset
+      name carries the version and platform and so has no extension in PATHEXT. The same was
+      done for `please_cc` and `please_pex`
 - [ ] go plugin — `windows_amd64` arch for its own release. `tools/please_go:bootstrap` runs
       `go build ... && mv please_go $OUT`, which fails where `go build` writes `please_go.exe`,
       and hardcodes `TMPDIR=/tmp`. Native-Windows only

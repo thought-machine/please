@@ -6,10 +6,10 @@
 # that reaches it and leave the cache serving something else. When the work lands upstream, the
 # owner goes back to please-build and these become ordinary version tags.
 PLUGINS = [
-    ("go", "go-rules", "a707213"),
-    ("cc", "cc-rules", "9a130e1"),
+    ("go", "go-rules", "abd06f1"),
+    ("cc", "cc-rules", "90913bb"),
     ("shell", "shell-rules", "7ed07be"),
-    ("python", "python-rules", "5cc7dc2"),
+    ("python", "python-rules", "4a08079"),
 ]
 
 for name, plugin, revision in PLUGINS:

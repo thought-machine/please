@@ -87,15 +87,12 @@ In rough order of value.
 2. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
    given to `<name>.sh` and hands that to a shell, and a `.cmd` is not a shell script. The
    plugin's own tests are written that way, so they are the thing to fix it against.
-3. **Publish `windows_amd64` releases of `please_go`, `please_cc` and `please_pex`** from the
-   forks. This is the last thing between a native Windows `plz` and building anything: it can
-   download and extract plugins, because `arcat` ships in the release, but those three tools
-   have nothing to fetch. They cannot be built from this repo either — cross-compiling a
-   plugin's own tool collides on subrepo names — so a published release is the only route.
-   Cross-building from Linux is unaffected, since tools resolve to the host.
-
-   `PexTool` in `.plzconfig_windows_amd64` comes out at the same time. It builds `please_pex`
-   from the plugin's source because no release carries the Windows preamble.
+3. **Publish a `please_pex` carrying the Windows preamble for a platform Linux can use.**
+   `please_go`, `please_cc` and `please_pex` all have `windows_amd64` releases now, published
+   from the forks, so a native Windows `plz` has everything it needs to download. What is left
+   is the *cross-build* case: `PexTool` in `.plzconfig_windows_amd64` still builds `please_pex`
+   from source, because the released Linux one has no Windows preamble and a Linux host uses
+   the Linux tool. Publishing a Linux build from the fork would retire that override.
 4. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
