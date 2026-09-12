@@ -95,6 +95,28 @@ func copySymlink(name, dest string) error {
 
 type LinkFunc func(string, string) error
 
+// SymlinkOrCopy creates dest as a symlink to src, copying instead where the OS will not make
+// one.
+//
+// Windows needs Developer Mode or SeCreateSymbolicLinkPrivilege to create a symlink at all, and
+// an ordinary user has neither, so every link: label a build declares was quietly turning into
+// a warning there. For populating plz-out the content is what matters, not that the link is
+// reproduced - the same trade CopyOrLinkFile already makes.
+func SymlinkOrCopy(src, dest string) error {
+	err := os.Symlink(src, dest)
+	if err == nil || !isSymlinkPrivilegeError(err) {
+		return err
+	}
+	warnSymlinkFallback.Do(func() {
+		log.Warning("Cannot create symlinks; copying instead. Enable Developer Mode to avoid this.")
+	})
+	info, lerr := os.Lstat(src)
+	if lerr != nil {
+		return lerr
+	}
+	return CopyFile(src, dest, info.Mode())
+}
+
 // LinkIfNotExists creates dest as a link to src if it doesn't already exist.
 func LinkIfNotExists(src, dest string, f LinkFunc) {
 	if PathExists(dest) {

@@ -3,7 +3,6 @@ package fs
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -68,13 +67,12 @@ func TestLink(t *testing.T) {
 }
 
 func TestSymlink(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// Creating a symlink at all needs Developer Mode or SeCreateSymbolicLinkPrivilege, so
-		// what this asserts isn't guaranteed to be available. Under Wine it is worse than
-		// unavailable: os.Symlink reports success and produces a link that can't even be
-		// stat'ed. Please doesn't depend on symlinks working here - see the copy fallback in
-		// CopyOrLinkFile - and real Windows behaviour is on the M9 agenda.
-		t.Skip("symlink behaviour on Windows is environment-dependent; see docs/design/windows")
+	if IsWine() {
+		// Only under Wine, where os.Symlink reports success and produces a link os.Lstat then
+		// cannot find - so this asserts nothing there. Real Windows is the case worth testing:
+		// it refuses without Developer Mode or SeCreateSymbolicLinkPrivilege, which is what
+		// SymlinkOrCopy's fallback exists for, and what the CI runner actually has.
+		t.Skip("Wine's symlinks are not real enough to assert against; see docs/design/windows")
 	}
 	var tests = []struct {
 		description string

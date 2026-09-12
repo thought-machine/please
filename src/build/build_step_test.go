@@ -165,8 +165,11 @@ func TestOutputDir(t *testing.T) {
 // even be stat'ed - so a failure here says nothing about Please. See docs/design/windows.
 func skipIfNoSymlinks(t *testing.T) {
 	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("symlink behaviour on Windows is environment-dependent")
+	if fs.IsWine() {
+		// Only under Wine, where os.Symlink reports success and produces a link that cannot be
+		// stat'ed. Real Windows either makes the link or falls back to a copy, and both leave
+		// the content these tests assert on where it should be.
+		t.Skip("Wine's symlinks are not real enough to assert against")
 	}
 }
 

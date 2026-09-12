@@ -1031,11 +1031,14 @@ func checkLicences(state *core.BuildState, target *core.BuildTarget) {
 // buildLinks builds links from the given target if it's labelled appropriately.
 // For example, Go targets may link themselves into plz-out/go/src etc.
 func buildLinks(state *core.BuildState, target *core.BuildTarget) {
-	buildLinksOfType(state, target, "link:", false, os.Symlink)
+	// SymlinkOrCopy rather than os.Symlink: Windows refuses to create one without a privilege
+	// an ordinary user does not have, and a link: label that silently becomes a warning is
+	// worse than a copy.
+	buildLinksOfType(state, target, "link:", false, fs.SymlinkOrCopy)
 	buildLinksOfType(state, target, "hlink:", false, os.Link)
 
 	// Directly link to the path of the label for these (i.e. don't append out to the destination dir)
-	buildLinksOfType(state, target, "dlink:", true, os.Symlink)
+	buildLinksOfType(state, target, "dlink:", true, fs.SymlinkOrCopy)
 	buildLinksOfType(state, target, "dhlink:", true, os.Link)
 
 	if state.Config.ShouldLinkGeneratedSources() && target.HasLabel("codegen") {
