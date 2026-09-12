@@ -1,7 +1,6 @@
 go_binary(
     name = "build_langserver",
     srcs = ["langserver_main.go"],
-    out = "build_langserver.exe" if is_platform(os = "windows") else None,
     visibility = ["PUBLIC"],
     deps = [
         "///third_party/go/github.com_sourcegraph_jsonrpc2//:jsonrpc2",

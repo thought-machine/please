@@ -862,30 +862,11 @@ const DefaultArcatTool = "/////_please:arcat"
 
 // defaultPluginRepos returns the templates a plugin_repo() is resolved against when nothing is
 // configured. Setting any [please] pluginrepo replaces the whole list, as it always has.
-//
-// On Windows the list starts with the plugin archives a release bundles beside the binary.
-// Windows is the only platform that ships any, and it is also the only one where a fresh
-// install cannot get a plugin at all without them: extracting a downloaded plugin needs arcat,
-// and there is no arcat release for it. See docs/design/windows/08-offline-release.md.
-//
-// The location itself, not a subdirectory of it. pleasew.ps1 and the self-updater both link an
-// install back up a level file by file and skip directories, so a plugins/ subdirectory would
-// be stranded under <Location>/<version> while this looked for it at <Location>.
-//
-// The name carries no revision. There is one bundled build of each plugin and it answers for
-// whatever revision is asked for; the plugin_revisions.txt beside it says which build that is.
-// A repo that pins some other version gets this one on Windows, which is the price of working
-// with no network at all.
 func (config *Configuration) defaultPluginRepos() []string {
-	repos := []string{
+	return []string{
 		"https://github.com/{owner}/{plugin}/archive/{revision}.zip",
 		"https://github.com/{owner}/{plugin}-rules/archive/{revision}.zip",
 	}
-	if runtime.GOOS != "windows" {
-		return repos
-	}
-	bundled := "file://" + filepath.ToSlash(config.Please.Location) + "/plugin_{plugin}.zip"
-	return append([]string{bundled}, repos...)
 }
 
 // useBundledTools points the config at any helper tool the release bundles beside the binary,

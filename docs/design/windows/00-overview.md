@@ -164,7 +164,6 @@ Explicitly out of scope for this programme:
 | `05-testing-strategy.md` | MinGW for Axis 2, Wine for `plz.exe`, and what Wine misses. |
 | `06-milestones.md` | The living tracker. Status, exit criteria, owners. |
 | `07-state-of-play.md` | Where the port actually is, what to pick up next, and the standing traps. |
-| `08-offline-release.md` | Bundling the plugins and helper tools into the release, while the plugin branches stay unpublished. |
 | `appendix-baseline-errors.md` | **Measured** M0 results: compile blockers, runtime findings, what already works. |
 | `probe/` | Throwaway M0 artifacts, incl. `m1-skeleton.patch`. Not implementations. |
 

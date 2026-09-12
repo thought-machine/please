@@ -8,12 +8,13 @@ subinclude("//build_defs:version")
 # go plugin names a binary after its rule. cp, rather than asking for a different out, because
 # the target is not ours to change.
 #
-# The other three bundled tools - please_go, please_cc, please_pex - are not built here. Doing
-# so means cross-compiling a plugin's own tool through ///go//tools/please_go and friends, and
-# that collides on subrepo names: the plugin's third_party/go and ours both register e.g.
-# third_party/go/github.com_stretchr_testify@windows_amd64, because an arch subrepo's name does
-# not carry the subrepo that owns it. vendor_plugins.sh builds them inside their own repos,
-# where there is nothing to collide with.
+# please_go, please_cc and please_pex are not here, and cannot be: cross-compiling a plugin's
+# own tool through ///go//tools/please_go and friends collides on subrepo names, because an arch
+# subrepo's name does not carry the subrepo that owns it, so the plugin's third_party/go and
+# ours both claim third_party/go/github.com_stretchr_testify@windows_amd64. Until those three
+# have windows_amd64 releases to download, a native Windows plz can parse and extract plugins
+# but cannot build a Go, C++ or Python target. Cross-building from Linux is unaffected, since
+# tools resolve to the host.
 if is_platform(os = "windows"):
     genrule(
         name = "arcat",
@@ -53,14 +54,7 @@ filegroup(
         # Extracting a plugin needs arcat, and there is no arcat release for Windows, so a
         # fresh install there cannot get a plugin at all without one of its own.
         ":arcat",
-    ] if is_platform(os = "windows") else []) + ([
-        # The plugin sources and their helper tools, so that a Windows install resolves all
-        # four language plugins with no network. Flat files at the top of please/, because
-        # pleasew.ps1 and the self-updater both link the install up a level file by file and
-        # skip directories; [please] pluginrepo defaults to file://<Location>/plugin_{plugin}.zip
-        # there, which is what finds them.
-        "//third_party/plugins:bundled",
-    ] if is_platform(os = "windows") and CONFIG.get("BUNDLED_PLUGINS") else []),
+    ] if is_platform(os = "windows") else []),
     binary = True,
     entry_points = {
         "please": "please.exe" if is_platform(os = "windows") else "please",

@@ -61,6 +61,8 @@ genrule(
     cmd = 'for dll in $OUTS; do cp "$($TOOL -print-file-name=$(basename $dll))" "$dll"; done',
     labels = ["manual"],
     test_only = True,
-    tools = [CONFIG.CC.CPP_TOOL],
+    # The plugin decides this per platform now and leaves the config key unset, so name the
+    # cross compiler directly, falling back to whatever the repo configured if it did.
+    tools = [CONFIG.CC.CPP_TOOL or "x86_64-w64-mingw32-g++"],
     visibility = ["//test/windows:all"],
 )

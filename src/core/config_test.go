@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -473,17 +472,12 @@ func TestPluginConfig(t *testing.T) {
 	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
 }
 
-func TestDefaultPluginReposOffWindows(t *testing.T) {
-	// The URL list is hashed into every plugin download's rule hash, so an extra entry here
-	// would change hashes on every platform. Only Windows bundles anything to point at.
-	config := DefaultConfiguration()
-	config.Please.Location = "/opt/please"
-	repos := config.defaultPluginRepos()
-	if runtime.GOOS == "windows" {
-		assert.Len(t, repos, 3)
-		assert.Equal(t, "file:///opt/please/plugin_{plugin}.zip", repos[0])
-		return
-	}
+func TestDefaultPluginRepos(t *testing.T) {
+	// The URL list is hashed into every plugin download's rule hash, so an entry added here
+	// moves build hashes on every platform at once. It is the same list everywhere, and was
+	// briefly not: a Windows release used to carry its plugins and point at them with a
+	// file:// template, which is gone now that they are downloadable like anything else.
+	repos := DefaultConfiguration().defaultPluginRepos()
 	assert.Len(t, repos, 2)
 	for _, repo := range repos {
 		assert.True(t, strings.HasPrefix(repo, "https://github.com/"), repo)
