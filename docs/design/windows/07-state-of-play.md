@@ -32,7 +32,7 @@ only thing anywhere that is not taking Wine's word for it.
 | M5 | C++ / cc-rules | done, `cc_test` included |
 | M7 | sandboxing | decided against, documented |
 | M8 | plugins | go, cc, shell, python all done in local clones |
-| M9 | native Windows CI and GA | done — 17.34.0 |
+| M9 | native Windows CI and GA | done — 18.0.0 |
 
 ## The five repos
 

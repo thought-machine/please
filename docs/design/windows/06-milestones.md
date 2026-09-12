@@ -718,8 +718,8 @@ the right shape.
 - [x] **`README.md` and `docs/faq.html`.** The FAQ said Windows was not supported natively;
       it now says what is supported, and names the two things that behave differently - no
       sandbox, and virus scanners holding files open
-- [x] **`docs/milestones/17.34.0.html`**
-- [x] **`VERSION` 17.34.0 + `ChangeLog` entry**
+- [x] **`docs/milestones/18.0.0.html`**
+- [x] **`VERSION` 18.0.0 + `ChangeLog` entry**
 
 ## Risk register
 

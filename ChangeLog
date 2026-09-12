@@ -1,5 +1,5 @@
-Version 17.34.0
----------------
+Version 18.0.0
+--------------
     * Native Windows support on amd64. `plz` runs, builds and tests on Windows,
       with busybox bundled as the build shell so a fresh install needs no
       configuration. Go, C++ and Python targets all build; `sh_binary` produces a

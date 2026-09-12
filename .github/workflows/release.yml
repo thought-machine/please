@@ -1,0 +1,85 @@
+# Builds and publishes a release from this fork.
+#
+# Upstream publishes to a GCS bucket from CircleCI, which only runs on thought-machine/please.
+# A fork cannot drive that, so nothing this branch produces was downloadable by pleasew.ps1,
+# get_plz.ps1 or plz update - the Windows support was real and unreachable at the same time.
+#
+# This publishes the same artifacts as a GitHub Release instead. The asset names carry the
+# platform, which is what gen_release.py does for the GitHub half of an upstream release, so the
+# two layouts agree on names even though they disagree on paths.
+#
+# Delete this whole workflow if upstream ever starts publishing Windows builds.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  # So a release can be cut without tagging, while this is still being worked out.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, e.g. v17.34.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Please
+        run: |
+          ./pleasew --version
+          echo "$HOME/.please" >> "$GITHUB_PATH"
+      - name: Build this repo's Please
+        # The released Please is not this one, and it hangs parsing //test/windows. Everything
+        # below uses the one we just built, the same two-step test.sh insists on.
+        run: ./pleasew build -p -v2 --profile ci //src:please
+      - name: Work out what we are releasing
+        id: version
+        run: |
+          tag="${{ github.event.inputs.tag }}"
+          [ -n "$tag" ] || tag="${GITHUB_REF#refs/tags/}"
+          version="$(cat VERSION)"
+          # A tag that disagrees with VERSION would publish assets nobody can find, since every
+          # consumer builds the filename out of the version rather than out of the tag.
+          [ "$tag" = "v$version" ] || { echo "tag $tag does not match VERSION $version" >&2; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build the releases
+        run: |
+          plz-out/bin/src/please build -p -v2 --profile ci --arch windows_amd64 //package:release_files
+          plz-out/bin/src/please build -p -v2 --profile ci //package:release_files
+      - name: Name the assets by platform
+        id: assets
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          mkdir -p assets
+          for arch in windows_amd64 linux_amd64; do
+            for f in plz-out/pkg/$arch/*; do
+              [ -f "$f" ] || continue
+              # The same rename gen_release.py does: please_1.2.3.zip -> please_1.2.3_arch.zip.
+              base="$(basename "$f")"
+              cp "$f" "assets/${base/$version/${version}_$arch}"
+            done
+          done
+          ls -l assets
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --title "Please ${{ steps.version.outputs.version }}" \
+            --notes "Built from this fork, which carries Windows support that is not upstream yet.
+
+          Install on Windows:
+
+              irm https://raw.githubusercontent.com/${{ github.repository }}/${{ steps.version.outputs.tag }}/tools/misc/get_plz.ps1 | iex
+
+          See docs/design/windows/07-state-of-play.md for what works and what does not." \
+            assets/*

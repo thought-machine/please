@@ -17,7 +17,17 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$UrlBase = 'https://get.please.build'
+# This fork publishes GitHub Releases rather than to the bucket upstream uses, because CircleCI
+# only runs the publishing job on thought-machine/please. The asset names carry the platform,
+# which is the layout gen_release.py already produces for the GitHub half of a release.
+#
+# Point PLZ_DOWNLOAD_BASE at 'https://get.please.build' to use the upstream bucket instead; the
+# path shape differs, so the script picks the right one from the base.
+$UrlBase = if ($env:PLZ_DOWNLOAD_BASE) {
+    $env:PLZ_DOWNLOAD_BASE
+} else {
+    'https://github.com/PeterNeiss/please/releases/download'
+}
 
 if ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'AMD64') {
     $Arch = 'amd64'
@@ -26,7 +36,15 @@ if ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64' -or $env:PROCESSOR_ARCHITEW6432 -eq 
     exit 1
 }
 
-$Version = (Invoke-WebRequest -UseBasicParsing "$UrlBase/latest_version").Content.Trim()
+# A GitHub release has no latest_version file; the redirect on /releases/latest names the tag.
+if ($UrlBase -like '*github.com*') {
+    $Repo = ($UrlBase -replace '/releases/download$', '')
+    $Latest = (Invoke-WebRequest -UseBasicParsing "$Repo/releases/latest" -MaximumRedirection 0 -ErrorAction SilentlyContinue).Headers.Location
+    if (-not $Latest) { $Latest = (Invoke-WebRequest -UseBasicParsing "$Repo/releases/latest").BaseResponse.RequestMessage.RequestUri.AbsoluteUri }
+    $Version = ($Latest -split '/')[-1] -replace '^v', ''
+} else {
+    $Version = (Invoke-WebRequest -UseBasicParsing "$UrlBase/latest_version").Content.Trim()
+}
 $Location = Join-Path $env:USERPROFILE '.please'
 $Dir = Join-Path $Location $Version
 $Zip = Join-Path ([System.IO.Path]::GetTempPath()) "please_$Version.zip"
@@ -34,7 +52,14 @@ $Zip = Join-Path ([System.IO.Path]::GetTempPath()) "please_$Version.zip"
 Write-Host "Downloading Please $Version..." -ForegroundColor Green
 if (Test-Path $Dir) { Remove-Item -Recurse -Force $Dir }
 New-Item -ItemType Directory -Force -Path $Dir | Out-Null
-Invoke-WebRequest -UseBasicParsing "$UrlBase/windows_${Arch}/$Version/please_$Version.zip" -OutFile $Zip
+# The two layouts differ: a release keeps everything under one tag with the platform in the
+# filename, the bucket keeps a directory per platform and version.
+$Url = if ($UrlBase -like '*github.com*') {
+    "$UrlBase/v$Version/please_${Version}_windows_${Arch}.zip"
+} else {
+    "$UrlBase/windows_${Arch}/$Version/please_$Version.zip"
+}
+Invoke-WebRequest -UseBasicParsing $Url -OutFile $Zip
 
 # The zip holds everything under a please/ directory, which is the layer the tarball strips with
 # --strip-components=1. Expand-Archive has no equivalent, so unpack and move up.

@@ -5,7 +5,10 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$DefaultUrlBase = 'https://get.please.build'
+# This fork publishes GitHub Releases rather than to the bucket upstream uses; see
+# tools/misc/get_plz.ps1. Set [please] downloadlocation to the bucket to use that instead - the
+# path shape differs, and the base says which one to build.
+$DefaultUrlBase = 'https://github.com/PeterNeiss/please/releases/download'
 
 if ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'AMD64') {
     $Arch = 'amd64'
@@ -87,7 +90,14 @@ $Version = Read-Config '^\s*version[^a-z]'
 $Version = $Version -replace '^>=', ''
 if (-not $Version) {
     Write-Warning "Can't determine version, will use latest."
-    $Version = (Invoke-WebRequest -UseBasicParsing "$UrlBase/latest_version").Content.Trim()
+    if ($UrlBase -like '*github.com*') {
+        # A GitHub release has no latest_version file; the redirect on /releases/latest names
+        # the tag.
+        $Repo = ($UrlBase -replace '/releases/download$', '')
+        $Version = ((Invoke-WebRequest -UseBasicParsing "$Repo/releases/latest").BaseResponse.RequestMessage.RequestUri.AbsoluteUri -split '/')[-1] -replace '^v', ''
+    } else {
+        $Version = (Invoke-WebRequest -UseBasicParsing "$UrlBase/latest_version").Content.Trim()
+    }
 }
 
 $Dir = Join-Path $Location $Version
@@ -96,7 +106,14 @@ $Zip = Join-Path ([System.IO.Path]::GetTempPath()) "please_$Version.zip"
 Write-Host "Downloading Please $Version to $Dir..." -ForegroundColor Green
 if (Test-Path $Dir) { Remove-Item -Recurse -Force $Dir }
 New-Item -ItemType Directory -Force -Path $Dir | Out-Null
-Invoke-WebRequest -UseBasicParsing "$UrlBase/${Os}_${Arch}/$Version/please_$Version.zip" -OutFile $Zip
+# The two layouts differ: a release keeps everything under one tag with the platform in the
+# filename, the bucket keeps a directory per platform and version.
+$Url = if ($UrlBase -like '*github.com*') {
+    "$UrlBase/v$Version/please_${Version}_${Os}_${Arch}.zip"
+} else {
+    "$UrlBase/${Os}_${Arch}/$Version/please_$Version.zip"
+}
+Invoke-WebRequest -UseBasicParsing $Url -OutFile $Zip
 
 # The zip holds everything under a please/ directory, which is the layer the tarball strips
 # with --strip-components=1. Expand-Archive has no equivalent, so unpack and move up.
