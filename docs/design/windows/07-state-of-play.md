@@ -88,16 +88,11 @@ In rough order of value.
    shut down gracefully is racing that timer on a CI machine, and a flaky test in a blocking job
    is worse than no test. Either call `killProcessTree` directly and wait generously, which
    tests the delivery without the timer, or widen the window and say why.
-3. **Publish a `please_pex` carrying the Windows preamble for a platform Linux can use.**
-   `please_go`, `please_cc` and `please_pex` all have `windows_amd64` releases now, published
-   from the forks, so a native Windows `plz` has everything it needs to download. What is left
-   is the *cross-build* case: `PexTool` in `.plzconfig_windows_amd64` still builds `please_pex`
-   from source, because the released Linux one has no Windows preamble and a Linux host uses
-   the Linux tool. Publishing a Linux build from the fork would retire that override.
-4. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
+3. **`.pyd` extension modules in a pex.**
+   `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
-5. **`plz debug` and `plz cover` on a Windows target** are untested. `plz cover` has one
+4. **`plz debug` and `plz cover` on a Windows target** are untested. `plz cover` has one
    concrete suspicion against it: coverage paths come back from the Python side with
    backslashes in them. Both are unknowns rather than known defects, so the native job is
    likely to find them faster than guessing will.

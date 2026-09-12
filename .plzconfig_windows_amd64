@@ -17,12 +17,3 @@ xattrs = false
 ; No mount/network namespace equivalent yet. See M7.
 build = false
 test = false
-
-[Plugin "python"]
-; Build please_pex from the plugin's own source rather than downloading it. The Windows
-; preamble that makes a .pex runnable lives there, and no published please_pex release carries
-; it - not even from the fork, which publishes no releases at all. Without this the pex comes
-; out with an ELF stub that Windows cannot run.
-;
-; Drop it when a please_pex release carries the preamble. See docs/design/windows/06-milestones.md.
-PexTool = ///python//tools/please_pex:please_pex
