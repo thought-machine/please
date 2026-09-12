@@ -347,7 +347,11 @@ Design: `03-cc-toolchain.md`. Repo: `please-build/cc-rules`.
 - [ ] **`please_cc` needs a `windows_amd64` release.** `tools/BUILD` fetches it as a prebuilt
       binary with a pinned hash per platform. Not a blocker under Axis 2, where tools build for
       the Linux host, but required for a native Windows plz
-- [ ] **`UnitTest++` does not compile for Windows** as packaged — needs its `Win32/` sources.
+- [x] **`cc_test` works on Windows.** Recorded as blocked on `UnitTest++` needing its `Win32/`
+      sources; that was never true. The sources were selected and then compiled with the host
+      toolchain, because a target inside a plugin does not see the using repo's plugin config.
+      One portability fix went with it: the test main called `unsetenv`, which Windows has no
+      such function for. Guarded by `//test/windows:cc_test_test`
       Blocks `cc_test`, not `cc_library`/`cc_binary`
 - [ ] Upstream PR; bump `plugins/BUILD` revision
 

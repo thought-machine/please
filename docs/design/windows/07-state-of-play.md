@@ -16,8 +16,8 @@ The release is a `.zip` containing `please.exe`, `busybox.exe`, `build_langserve
 all. Built with `bundled-plugins` set it also carries all four plugins and the helper tools, and
 then builds an `sh_binary` with the network taken away — see `08-offline-release.md`.
 
-Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 33 targets and
-872 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Seven of those
+Test coverage on Linux is unchanged and green. Coverage *of Windows behaviour* is 34 targets and
+873 tests under Wine, run by a blocking CI job and by `./test.sh` as a third pass. Eight of those
 targets only exist when a local plugin checkout is configured — see below.
 
 **And 800 of those tests now run on a real Windows machine.** A blocking GitHub Actions job
@@ -30,7 +30,7 @@ only thing anywhere that is not taking Wine's word for it.
 | M0–M3, M6 | baseline, OS layer, paths, shell, Wine harness | done |
 | M4 | release pipeline | done; `arcat` is built from source rather than downloaded |
 | M4a | offline release zip | done, for internal use — see `08-offline-release.md` |
-| M5 | C++ / cc-rules | done bar `cc_test`, which is blocked upstream |
+| M5 | C++ / cc-rules | done, `cc_test` included |
 | M7 | sandboxing | decided against, documented |
 | M8 | plugins | go, cc, shell, python all done in local clones |
 | M9 | native Windows CI and GA | CI done and blocking; GA not started |
@@ -39,21 +39,24 @@ only thing anywhere that is not taking Wine's word for it.
 
 | Repo | Branch | Head |
 |---|---|---|
-| `~/code/please` | `wine` | 60 commits ahead of `master` |
+| `~/code/please` | `wine` | merged to `master` on the fork |
 | `~/code/go-rules` | `windows` | don't double the `.exe` |
 | `~/code/cc-rules` | `windows` | emit an import library |
 | `~/code/shell-rules` | `windows` | build an `sh_binary` as a `.cmd` |
 | `~/code/python-rules` | `windows` | build a `.pex` Windows can run |
 
-The plugin clones are branched at the tag `plugins/BUILD` pins, not at `master`. We have no push
-access to any of them, so nothing is upstreamed; the branches are the deliverable for now.
+The plugin clones are branched at the tag `plugins/BUILD` pins, not at `master`. There is no
+push access to any of the *upstream* repos, so nothing is upstreamed, but all five are pushed to
+forks at `PeterNeiss/{please,go-rules,cc-rules,shell-rules,python-rules}` and that is where the
+branches live.
 
 `.plzconfig.local` (gitignored) selects the local checkouts through `[buildconfig]` keys —
 `go-rules-path` and friends, plus `bundled-plugins` to put them in the release. Delete it to go back to the pinned downloads. Both directions are
 verified, but they are not equivalent any more. Six Wine tests are only *defined* when the
 matching checkout is configured, because no released plugin has the fix each one tests: two pex
-tests behind `python-rules-path`, the DLL test behind `cc-rules-path`, the `sh_binary` test
-behind `shell-rules-path`, and the three offline-release tests behind `bundled-plugins`. `//test/export:...` fails while `.plzconfig.local` is present at all,
+tests behind `python-rules-path`, the DLL and `cc_test` tests behind `cc-rules-path`, the
+`sh_binary` test behind `shell-rules-path`, and the three offline-release tests behind
+`bundled-plugins`. `//test/export:...` fails while `.plzconfig.local` is present at all,
 for an unrelated reason — see below.
 
 ## Environment
@@ -75,25 +78,32 @@ for an unrelated reason — see below.
 
 In rough order of value.
 
-1. **Work through what the native job has not reached.** `exec_test` had five tests pass and
-   then hang before the repo-root fix, so nothing after `TestCommandMountNotSandboxed` in that
-   binary has ever run on Windows. Console behaviour and Ctrl-C need a machine with a real
-   console session, which a CI step does not have.
-2. **`cc_test` is blocked upstream of us** — `UnitTest++` as packaged needs its `Win32/` sources
-   to compile at all. It is the last thing in M5.
-3. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
+1. **Three tests skip on Windows and should not.** `TestSymlinkedOutputs`, `TestCreatePlzOutGo`
+   and `TestSymlink` skip on the one machine where the answer is interesting: the CI runner has
+   `SeCreateSymbolicLinkPrivilege` disabled, which is the case most users are in and the case
+   the copy fallback exists for. They should assert the outcome rather than that a symlink was
+   made, and skip only under Wine, where `os.Symlink` reports success and produces a link that
+   cannot be stat'ed. Needs an `isWine()` helper, about ten lines.
+2. **`plz run` has exactly two skipped tests.** `TestSequential` and `TestParallel` skip with
+   "the fixtures here are `#!` scripts, which Windows cannot execute". The shell plugin already
+   solved that problem by emitting a `.cmd`; the fixtures want the same treatment.
+3. **Ctrl-Break is delivered but never verified.** `KillProcess` sends one, waits 30ms, then
+   terminates the job object. `TestKillsProcessTree` passes natively, but it only asserts a
+   grandchild died, which terminating the job achieves either way — so the graceful path could
+   be dead code on Windows and no test would notice.
+4. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
    given to `<name>.sh` and hands that to a shell, and a `.cmd` is not a shell script. The
    plugin's own tests are written that way, so they are the thing to fix it against.
-4. **Bump `plugins/BUILD`** once the plugin branches are published somewhere. In the same change,
+5. **Bump `plugins/BUILD`** once the plugin branches are published somewhere. In the same change,
    delete everything this repo carries because it pins plugins without the fixes: the
    `out = "please.exe" if is_platform(...)` workarounds in `src/BUILD.plz` and
    `//tools/build_langserver`, the `PexTool` and `defaultldflags` lines in
    `.plzconfig_windows_amd64`, the `CONFIG.get(...)` conditions around the pex, DLL and
    `sh_binary` tests in `//test/windows`, and the whole of `08-offline-release.md`'s machinery.
-5. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
+6. **`.pyd` extension modules in a pex.** `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
-6. **`plz run` and `plz debug` on a Windows target** are untested. So is `plz cover`, whose
+7. **`plz debug` and `plz cover` on a Windows target** are untested. So is `plz cover`, whose
    coverage paths come back from the Python side with backslashes in them. `plz run` on an
    `sh_binary` is the interesting case: Go's `os/exec` launches a `.cmd` happily under Wine,
    which is the part that was in doubt, and is exactly the kind of answer Wine gives more

@@ -291,8 +291,14 @@ cc-rules' own tests pass there.
   binary per platform with a pinned hash, so upstreaming needs a Windows build published
   alongside the others. It did not block this work because tools are built for the *host*,
   which is Linux under Axis 2 — but a native Windows `plz` will need it.
-- **`UnitTest++` does not compile for Windows** as packaged: it needs its `Win32/` platform
-  sources, which the plugin's target does not include. This blocks `cc_test`, not
-  `cc_library`/`cc_binary`.
+- ~~**`UnitTest++` does not compile for Windows** as packaged: it needs its `Win32/` platform
+  sources, which the plugin's target does not include.~~ **Wrong, and it cost time.** The
+  plugin's `unittest.build` has selected `Win32` on Windows since before this port started.
+  What actually blocked `cc_test` was that the sources were selected correctly and then
+  compiled by `/usr/bin/c++`: the UnitTest++ test main is a `cc_library` *inside the plugin*,
+  and a target inside a plugin sees the `PluginConfig` defaults rather than the using repo's
+  `[Plugin "cc"]` values. The toolchain the user configures applies to their code and not to
+  the plugin's. Fixed by defaulting the tools per platform in the build defs, which is where
+  the rest of the platform handling already lives. `//test/windows:cc_test_test` guards it.
 - `SUPPORTED_ARCHITECTURES` still lacks `windows_amd64`; it gates the plugin's own release
   rather than its use.
