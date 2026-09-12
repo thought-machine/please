@@ -155,6 +155,19 @@ the prefix is not shared between runs.
 Be honest about this. Wine passing is evidence, not proof. These are the M9 agenda, and they
 should be listed in the M9 issue rather than discovered during it.
 
+**Measured on 2026-09-11**, by the GitHub Actions `windows-latest` job. The predictions below
+were mostly right, and the list found one thing nobody had predicted.
+
+| Item | What a real Windows machine said |
+|---|---|
+| `ERROR_SHARING_VIOLATION` | **Materialised, and it broke `plz clean` outright.** Please held its own `plz-out/log/build.log` open and then asked Windows to delete the directory containing it. Both the background rename and the synchronous fallback failed, every time. Fixed by closing the log first; `RemoveAll` now also recognises the case and retries briefly rather than reporting it as a permissions problem |
+| `MAX_PATH` | Not reproduced. The runner has long paths enabled, and a build at a 200-character path succeeded. Still untested with long paths off |
+| Symlink privileges | `SeCreateSymbolicLinkPrivilege` is **disabled** on the runner, so the copy fallback is being exercised for real on every run. It works |
+| Case-insensitivity | Not yet probed directly, but it caught `plz run` appending a second `PATH`: Windows stores the variable as `Path`, and the name was being compared exactly |
+| Antivirus | Defender runs on the job, so every result above is already under a live scanner. No flakiness seen yet |
+| Console, Ctrl-C | Still unreachable. A step's stdout is a pipe, so the interactive display never engages. Needs a machine with a real console session |
+| **Unpredicted** | **Any `plz` run outside a repo hung at 100% CPU for ever.** The walk towards the filesystem root never terminated, because trimming the separator off `C:\` leaves `C:` and splitting that returns it unchanged |
+
 ### Filesystem semantics
 
 - **Case-insensitivity.** Wine on ext4 is case-*sensitive* by default. A BUILD graph with

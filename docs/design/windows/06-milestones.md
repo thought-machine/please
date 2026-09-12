@@ -682,9 +682,27 @@ the right shape.
 
 ## M9 — Native Windows CI and GA
 
-- [ ] GitHub Actions `windows-latest` job (the only Windows runner available; CircleCI has
-      none in this config)
-- [ ] Work through the Wine-invisible failures listed in `05-testing-strategy.md`
+- [x] **GitHub Actions `windows-latest` job — done, and blocking.** A Linux job cross-builds
+      the twenty-three Windows test binaries with their data, plus the release, and hands both
+      to a `windows-latest` job that runs them. It builds its own artifacts rather than taking
+      CircleCI's, because a CircleCI workspace is scoped to one CircleCI run and cannot be read
+      from Actions; the duplicated cross-compile is the price, and in exchange every pull
+      request produces a downloadable Windows build.
+
+      It was advisory for exactly one run, to produce a failure list without a red check nobody
+      had read yet. 800 of the Wine suite's tests now run natively, and
+      `test/windows/run_native_probes.ps1` also builds a repo with the release, cleans and
+      rebuilds it five times under a live virus scanner, and builds at a long path
+- [x] **Work through the Wine-invisible failures — first pass done.** The first native run
+      found five things, four of them real bugs, and one of those was not on anyone's list:
+      every `plz` run outside a repo hung at 100% CPU for ever, because the walk towards the
+      filesystem root never terminates on Windows. `plz clean` also failed every time, exactly
+      the `ERROR_SHARING_VIOLATION` the risk register predicted, and on Please's own log file.
+
+      `05-testing-strategy.md` now records what a real machine said against each prediction,
+      with a date. Two items remain out of reach from a CI step: console behaviour, because a
+      step's stdout is a pipe so the interactive display never engages, and Ctrl-C, which needs
+      a console the sender is attached to. Both need a machine with a real session
 - [ ] `get_plz.sh` Windows equivalent
 - [ ] `README.md`, `docs/faq.html`
 - [ ] `docs/milestones/<version>.html` announcement (fragment HTML — see the existing files)
