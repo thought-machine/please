@@ -171,6 +171,13 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 		args[0] = abs
 	}
 
+	// The path Please built is slash-separated, and on Windows that is not merely untidy. A
+	// .cmd - which is what an sh_binary is there - runs through cmd.exe, and cmd.exe reads a
+	// forward slash as the start of a switch: plz-out/bin/x.cmd is the command "plz-out" with
+	// two switches, and it says so. Wine's cmd is more forgiving, which is why this only
+	// showed up on a real machine.
+	args[0] = filepath.FromSlash(args[0])
+
 	log.Info("Running target %s...", strings.Join(args, " "))
 	output.SetWindowTitle("plz run: " + strings.Join(args, " "))
 	env := environ(state, target, setenv, tmpDir)
