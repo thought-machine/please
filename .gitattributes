@@ -1,7 +1,7 @@
-*.build_defs linguist-language=Starlark diff=python
-BUILD.plz linguist-language=Starlark diff=python
-docs/* linguist-documentation
-*_bindata.go linguist-generated
-third_party/go/zip/* linguist-vendored
-
-*.cmd text eol=crlf
+# Batch files are read by cmd.exe, which is not reliable on LF-only input, and the fixtures
+# under test/windows are compared byte for byte against output the bundled busybox produced.
+# Neither should be translated on checkout.
+*.cmd -text
+src/run/test_data/** -text
+test/windows/smoke_repo/** -text
+test/windows/offline_repo/** -text

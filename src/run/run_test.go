@@ -20,18 +20,20 @@ func init() {
 	}
 }
 
-// skipIfNoShebang skips a test whose fixtures are shell scripts relying on a #! line. Windows
-// has no such thing: it decides what is executable by extension, and would refuse to run these
-// however they were written.
-func skipIfNoShebang(t *testing.T) {
-	t.Helper()
+// runnable returns the fixture name that this platform can actually execute.
+//
+// The Unix fixtures are shell scripts relying on a #! line, and Windows has no such mechanism:
+// it decides what is executable by extension. The .cmd files beside them are the same two
+// programs written the only way Windows will run one by name - which is exactly what the shell
+// plugin does for an sh_binary there.
+func runnable(name string) string {
 	if runtime.GOOS == "windows" {
-		t.Skip("the fixtures here are #! scripts, which Windows cannot execute")
+		return name + ".cmd"
 	}
+	return name
 }
 
 func TestSequential(t *testing.T) {
-	skipIfNoShebang(t)
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
 	code := Sequential(state, labels1, nil, process.Quiet, false, false, false, "")
 	assert.Equal(t, 0, code)
@@ -40,7 +42,6 @@ func TestSequential(t *testing.T) {
 }
 
 func TestParallel(t *testing.T) {
-	skipIfNoShebang(t)
 	state, labels1, labels2 := makeState(core.DefaultConfiguration())
 	code := Parallel(context.Background(), state, labels1, nil, 5, process.Default, false, false, false, false, "")
 	assert.Equal(t, 0, code)
@@ -87,12 +88,12 @@ func makeState(config *core.Configuration) (*core.BuildState, []core.AnnotatedOu
 	state := core.NewBuildState(config)
 	target1 := core.NewBuildTarget(core.ParseBuildLabel("//:true", ""))
 	target1.IsBinary = true
-	target1.AddOutput("true")
+	target1.AddOutput(runnable("true"))
 	target1.Test = new(core.TestFields)
 	state.Graph.AddTarget(target1)
 	target2 := core.NewBuildTarget(core.ParseBuildLabel("//:false", ""))
 	target2.IsBinary = true
-	target2.AddOutput("false")
+	target2.AddOutput(runnable("false"))
 	target2.Test = new(core.TestFields)
 	state.Graph.AddTarget(target2)
 	return state, annotate([]core.BuildLabel{target1.Label}), annotate([]core.BuildLabel{target1.Label, target2.Label})
