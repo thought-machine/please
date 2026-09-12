@@ -25,3 +25,42 @@ cc_binary(
     visibility = ["//test/windows:all"],
     deps = [":greeting"],
 )
+
+# The subject of //test/windows:cc_test_test. cc_test was recorded as blocked on Windows,
+# because UnitTest++ supposedly needs Win32 sources the plugin does not include - which is not
+# true, upstream selects them. This is here to find out what, if anything, is actually wrong.
+cc_test(
+    name = "greeting_test",
+    srcs = ["greeting_test.cpp"],
+    hdrs = ["greeting.h"],
+    labels = ["manual"],
+    linker_flags = [
+        "-L" + package_name(),
+        "-lgreeting",
+    ],
+    visibility = ["//test/windows:all"],
+    deps = [":greeting"],
+)
+
+# The MinGW C++ runtime, which a cross-built binary needs beside it unless it was linked
+# statically. The cc plugin wraps linker_flags in -Wl, so -static-libstdc++ cannot be passed
+# through it - those are driver flags, and ld rejects them - and target compiler_flags reach the
+# compile step but not the link. So the DLLs travel with the test, the same way the greeting DLL
+# does. A cc_binary doing less C++ gets away without them, which is why the DLL test never
+# needed this.
+#
+# Taken from the toolchain rather than pinned: they have to match the compiler that built the
+# binary, and -print-file-name is how the compiler says where its own runtime is.
+genrule(
+    name = "mingw_runtime",
+    outs = [
+        "libgcc_s_seh-1.dll",
+        "libstdc++-6.dll",
+    ],
+    binary = True,
+    cmd = 'for dll in $OUTS; do cp "$($TOOL -print-file-name=$(basename $dll))" "$dll"; done',
+    labels = ["manual"],
+    test_only = True,
+    tools = [CONFIG.CC.CPP_TOOL],
+    visibility = ["//test/windows:all"],
+)

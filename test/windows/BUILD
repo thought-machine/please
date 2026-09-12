@@ -185,6 +185,26 @@ if CONFIG.get("PYTHON_RULES_PATH"):
 # Needs a local cc-rules checkout for the same reason the pex tests need one: no released plugin
 # emits the import library. See plugins/BUILD and 07-state-of-play.md.
 if CONFIG.get("CC_RULES_PATH"):
+    # cc_test was recorded as blocked on Windows because UnitTest++ supposedly needs Win32
+    # sources the plugin does not include. It does include them. What actually blocked it was
+    # that the plugin's own targets - the UnitTest++ test main is a cc_library here - compiled
+    # with the host toolchain whatever the using repo configured, so the Win32 sources were
+    # handed to a compiler with no windows.h.
+    #
+    # The runtime DLLs travel beside it; see //test/windows/cc:mingw_runtime for why they
+    # cannot simply be linked in.
+    wine_binary_test(
+        name = "cc_test_test",
+        binary = "///windows_amd64//test/windows/cc:greeting_test",
+        data = [
+            "///windows_amd64//test/windows/cc:greeting",
+            "///windows_amd64//test/windows/cc:mingw_runtime",
+        ],
+        # Exit code rather than output: UnitTest++ writes its results as XML to test.results
+        # and prints nothing when everything passes. It returns the number of failures, so zero
+        # is the assertion - and a binary that could not start at all exits 53, not 0.
+    )
+
     wine_binary_test(
         name = "dll_test",
         binary = "///windows_amd64//test/windows/cc:hello",
