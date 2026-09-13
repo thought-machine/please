@@ -57,7 +57,7 @@ func allLabelGenOuts(graph *core.BuildGraph, labels []core.BuildLabel) []string 
 // LinkGeneratedSources will link any generated sources for the outputs of the given labels
 func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 	linker := fs.Symlink
-	if state.Config.Build.LinkGeneratedSources == "hard" {
+	if state.Config.GetGeneratedSourcesLinkType() == "hard" {
 		linker = fs.Link
 	}
 

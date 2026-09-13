@@ -262,6 +262,21 @@ func ReadConfigFiles(fs iofs.FS, filenames []string, profiles []string) (*Config
 		config.Test.DisableCoverage = append(config.Test.DisableCoverage, "cc")
 	}
 
+	// Normalise deprecated LinkGeneratedSources into new fields LinkGeneratedSourcesOnBuild and GeneratedSourcesLinkType.
+	if config.Build.LinkGeneratedSources != "" {
+		if config.Build.LinkGeneratedSourcesOnBuild || config.Build.GeneratedSourcesLinkType != "" {
+			return config, fmt.Errorf("LinkGeneratedSources is deprecated and cannot be used together with LinkGeneratedSourcesOnBuild or GeneratedSourcesLinkType")
+		}
+		log.Warning("LinkGeneratedSources is deprecated; use LinkGeneratedSourcesOnBuild and GeneratedSourcesLinkType instead")
+		isTruthy, _ := gcfgtypes.ParseBool(config.Build.LinkGeneratedSources)
+		if isTruthy || config.Build.LinkGeneratedSources == "hard" || config.Build.LinkGeneratedSources == "soft" {
+			config.Build.LinkGeneratedSourcesOnBuild = true
+		}
+		if config.Build.LinkGeneratedSources == "hard" {
+			config.Build.GeneratedSourcesLinkType = "hard"
+		}
+	}
+
 	if len(config.Size) == 0 {
 		config.Size = map[string]*Size{
 			"small": {
@@ -509,25 +524,27 @@ type Configuration struct {
 	} `help:"Please has an animated display mode which shows the currently building targets.\nBy default it will autodetect whether it is using an interactive TTY session and choose whether to use it or not, although you can force it on or off via flags.\n\nThe display is heavily inspired by Buck's SuperConsole."`
 	Colours map[string]string `help:"Colour code overrides for the targets in interactive output. These colours are map labels on targets to colours e.g. go -> ${YELLOW}."`
 	Build   struct {
-		Arch                 cli.Arch     `help:"The target architecture to compile for. Defaults to the host architecture."`
-		Timeout              cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
-		Path                 []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
-		Config               string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
-		FallbackConfig       string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
-		Lang                 string       `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
-		Xattrs               bool         `help:"True (the default) to attempt to use xattrs to record file metadata. If false Please will fall back to using additional files where needed, which is more compatible but has slightly worse performance."`
-		Nonce                string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
-		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
-		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
-		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
-		HashCheckers         []string     `help:"Set of hash algos supported by the 'hashes' argument on build rules. Defaults to: sha1,sha256,blake3." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
-		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
-		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
-		DownloadLinkable     bool         `help:"True to download targets on remote that have links defined."`
-		LinkGeneratedSources string       `help:"If set, supported build definitions will link generated sources back into the source tree. The list of generated files can be generated for the .gitignore through 'plz query print --label gitignore: //...'. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)"`
-		UpdateGitignore      bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
-		ParallelDownloads    int          `help:"Max number of remote_file downloads to run in parallel."`
-		ArcatTool            string       `help:"Defines the tool used to concatenate files which we use in various build rules. Defaults to Arcat." var:"ARCAT_TOOL"`
+		Arch                        cli.Arch     `help:"The target architecture to compile for. Defaults to the host architecture."`
+		Timeout                     cli.Duration `help:"Default timeout for build actions. Default is ten minutes."`
+		Path                        []string     `help:"The PATH variable that will be passed to the build processes.\nDefaults to /usr/local/bin:/usr/bin:/bin but of course can be modified if you need to get binaries from other locations." example:"/usr/local/bin:/usr/bin:/bin"`
+		Config                      string       `help:"The build config to use when one is not chosen on the command line. Defaults to opt." example:"opt | dbg"`
+		FallbackConfig              string       `help:"The build config to use when one is chosen and a required target does not have one by the same name. Also defaults to opt." example:"opt | dbg"`
+		Lang                        string       `help:"Sets the language passed to build rules when building. This can be important for some tools (although hopefully not many) - we've mostly observed it with Sass."`
+		Xattrs                      bool         `help:"True (the default) to attempt to use xattrs to record file metadata. If false Please will fall back to using additional files where needed, which is more compatible but has slightly worse performance."`
+		Nonce                       string       `help:"This is an arbitrary string that is added to the hash of every build target. It provides a way to force a rebuild of everything when it's changed.\nWe will bump the default of this whenever we think it's required - although it's been a pretty long time now and we hope that'll continue."`
+		PassEnv                     []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
+		PassUnsafeEnv               []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
+		HTTPProxy                   cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
+		HashCheckers                []string     `help:"Set of hash algos supported by the 'hashes' argument on build rules. Defaults to: sha1,sha256,blake3." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
+		HashFunction                string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
+		ExitOnError                 bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
+		DownloadLinkable            bool         `help:"True to download targets on remote that have links defined."`
+		LinkGeneratedSources        string       `help:"DEPRECATED: Use LinkGeneratedSourcesOnBuild and GeneratedSourcesLinkType instead. If set, supported build definitions will link generated sources back into the source tree. The available options are: 'hard' (hardlinks), 'soft' (symlinks), 'true' (symlinks) and 'false' (default)"`
+		LinkGeneratedSourcesOnBuild bool         `help:"If true, generated sources will be linked back into the source tree during builds. Defaults to false."`
+		GeneratedSourcesLinkType    string       `help:"The type of link to create for generated sources. Options are 'soft' (symlinks, default) and 'hard' (hardlinks)." options:"soft,hard"`
+		UpdateGitignore             bool         `help:"Whether to automatically update the nearest gitignore with generated sources"`
+		ParallelDownloads           int          `help:"Max number of remote_file downloads to run in parallel."`
+		ArcatTool                   string       `help:"Defines the tool used to concatenate files which we use in various build rules. Defaults to Arcat." var:"ARCAT_TOOL"`
 	} `help:"A config section describing general settings related to building targets in Please.\nSince Please is by nature about building things, this only has the most generic properties; most of the more esoteric properties are configured in their own sections."`
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
@@ -1104,8 +1121,15 @@ func (config *Configuration) IsRemoteExecution() bool {
 }
 
 func (config *Configuration) ShouldLinkGeneratedSources() bool {
-	isTruthy, _ := gcfgtypes.ParseBool(config.Build.LinkGeneratedSources)
-	return config.Build.LinkGeneratedSources == "hard" || config.Build.LinkGeneratedSources == "soft" || isTruthy
+	return config.Build.LinkGeneratedSourcesOnBuild
+}
+
+// GetGeneratedSourcesLinkType returns the type of link to create for generated sources ("hard" or "soft").
+func (config *Configuration) GetGeneratedSourcesLinkType() string {
+	if config.Build.GeneratedSourcesLinkType == "hard" {
+		return "hard"
+	}
+	return "soft"
 }
 
 func (config Configuration) copyConfig() *Configuration {
