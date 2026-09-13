@@ -19,6 +19,9 @@
 # Windows, and everything after it in the codelab is blocked behind it. The codelab's toolchain
 # step also pins go_toolchain to 1.20, for which the plugin requests go1.20.windows-amd64.tar.gz;
 # golang.org publishes Windows releases only as zips, and the first native run got a 404 for it.
+# Ahead of both, and on every platform: the codelab's third_party/go/BUILD holds only that
+# go_toolchain, so writing it replaces the go_stdlib plz init plugin go generated, and the second
+# native run reported //third_party/go:std missing.
 go_intro::hello-world/b3.1
 
 # The same for Python: plz init plugin python gets upstream python-rules, whose please_pex has no
@@ -45,3 +48,10 @@ genrule::managing-tools/b4.1
 # windows_amd64 release, and its go_toolchain requested go1.20.windows-amd64.tar.gz, a 404. The
 # first plz query cannot resolve the graph, and the rest of the codelab is blocked behind it.
 plz_query::finding-dependencies-of-a-target/b1.1
+
+# Not a Windows failure. plz init plugin go generates third_party/go/BUILD with a go_toolchain and a
+# go_stdlib, and points STDLib at the stdlib. The codelab's "Add a go toolchain" block holds only a
+# go_toolchain: written as the file it replaces the go_stdlib, and appended it would define a second
+# target named toolchain. The second native run stopped here with //third_party/go:std missing. On
+# Windows the upstream please_go and the Go 1.20 .tar.gz would fail next, as they do in go_intro.
+k8s::using-our-base-image/b3.1

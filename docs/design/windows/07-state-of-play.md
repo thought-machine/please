@@ -25,13 +25,15 @@ cross-builds them on Linux and runs them on `windows-latest`, alongside probes t
 with the release zip, clean and rebuild it five times, and build at a long path. That job is the
 only thing anywhere that is not taking Wine's word for it.
 
-**The codelabs are now replayed there as well, in a job of their own, but it has not yet run on a
-Windows machine.** Nothing had ever executed a codelab on any platform. The eight of them reduce
-to 92 commands, 60 files and 13 steps skipped with a stated reason; `github_actions` has nothing
-to run. Four failures are known in advance from facts checked directly, and they are the
-headline: `plz init plugin` points every codelab at upstream plugins whose tools have no Windows
-release, and neither does Puku. The rest of the known-failures list comes from the first native
-run. See Loop D in `05-testing-strategy.md`.
+**The codelabs are now replayed there as well, and only one can be followed to its end.** Nothing
+had ever executed a codelab on any platform. `using_plugins` runs through; `genrule` gets as far
+as its custom tool, a `#!/bin/bash` script Windows cannot run; every codelab that builds Go or
+Python stops at its first build, and `github_actions` has nothing to run. The causes are upstream
+plugin tools and Puku with no Windows release, a Go 1.20 toolchain requested as a `.tar.gz` that
+Windows releases never are, Python absent from the empty default build path, and bash syntax. One
+cause is not Windows at all: the Go codelabs write a `third_party/go/BUILD` that drops the
+`go_stdlib` `plz init plugin go` now generates. Each is in `test/windows/codelab_known_failures.txt`
+with the log line behind it. See Loop D in `05-testing-strategy.md`.
 
 | # | Milestone | State |
 |---|---|---|
@@ -41,7 +43,7 @@ run. See Loop D in `05-testing-strategy.md`.
 | M7 | sandboxing | decided against, documented |
 | M8 | plugins | go, cc, shell, python all done in local clones |
 | M9 | native Windows CI and GA | done — 18.0.0 |
-| M10 | The codelabs, replayed on Windows | built; first native run pending |
+| M10 | The codelabs, replayed on Windows | done; findings recorded, docs decision open |
 
 ## The five repos
 
@@ -83,11 +85,11 @@ change, which is where they were always meant to run.
 
 In rough order of value.
 
-1. **Run the codelabs job on `windows-latest`, and harvest what it finds.** It is built, checked
-   on Linux and dry-run, and has never executed on Windows. The first run is expected to be red
-   beyond the four failures already listed. Each new failure goes into
-   `test/windows/codelab_known_failures.txt` with a reason written for whoever decides what to do
-   about the codelabs, since that file is the input to that decision. No codelab has been edited.
+1. **Decide what to do about the codelabs.** The codelabs job passes only because every failure is
+   listed in `test/windows/codelab_known_failures.txt` with its evidence, and that file is the input
+   to the decision. The largest fixes are not in the prose: `plz init plugin` pointing at plugin
+   releases that exist for Windows, and Go codelabs that do not delete the stdlib it generates. No
+   codelab has been edited.
 2. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
    given to `<name>.sh` and hands that to a shell, and a `.cmd` is not a shell script. The
    plugin's own tests are written that way, so they are the thing to fix it against. The
@@ -185,3 +187,6 @@ Each of these has already cost time once.
 - **`plz init plugin` asks GitHub's API for the latest tag anonymously.** Shared CI addresses hit
   the unauthenticated rate limit, and the failure reads as a plugin that cannot be found. A 403
   from `api.github.com` in the codelabs job is that, not a regression.
+- **The Go codelabs predate `plz init plugin go` generating a toolchain and a stdlib.** Their
+  `third_party/go/BUILD` holds only a `go_toolchain`, so following them replaces the generated
+  `go_stdlib`, and every Go build then fails to find `//third_party/go:std`, on every platform.

@@ -742,10 +742,12 @@ nothing had ever executed a line of the codelabs, on any platform.
       Linux against a synthetic plan; its answers about the real codelabs come only from Windows
 - [x] **A blocking `codelabs` job** in `.github/workflows/windows.yml`, beside `test`, fed a plan
       the Linux job built and checked
-- [ ] **The first native run, and the known-failures list it produces.** Four entries are listed
-      ahead of it from facts checked directly: upstream `please_go`, `please_pex` and Puku publish
-      no Windows release, and a bash environment prefix is not PowerShell. Everything else is
-      harvested from that run, not guessed
+- [x] **The first native runs, and the known-failures list they produced.** Four entries were
+      listed ahead of the first run from facts checked directly, and it confirmed them and
+      added two. It also caught the harness: appending `.plzconfig` fragments repeated `GoTool`,
+      which a plugin section refuses, so the runner now merges key by key. The second run added
+      the last entry, a failure that is not Windows at all: the Go codelabs' `third_party/go/BUILD`
+      drops the `go_stdlib` that `plz init plugin go` generates
 - [ ] **What to do about the codelabs that cannot work as written.** Deliberately not decided
       here, and no codelab has been edited. `test/windows/codelab_known_failures.txt` is the
       record that decision should be taken from
