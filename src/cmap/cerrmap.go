@@ -2,6 +2,7 @@ package cmap
 
 import (
 	"context"
+	"fmt"
 )
 
 // A Limiter is the interface that we use to release/acquire workers while waiting.
@@ -61,6 +62,11 @@ func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 	if v.Err != nil {
 		return v.Val, v.Err
 	} else if first {
+		defer func() {
+			if r := recover(); r != nil {
+				m.m.Set(key, errV[V]{Err: fmt.Errorf("%s", r)})
+			}
+		}()
 		val, err := f()
 		m.m.Set(key, errV[V]{Val: val, Err: err})
 		return val, err
@@ -82,6 +88,11 @@ func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, erro
 	if v.Err != nil {
 		return v.Val, v.Err
 	} else if first {
+		defer func() {
+			if r := recover(); r != nil {
+				m.m.Set(key, errV[V]{Err: fmt.Errorf("%s", r)})
+			}
+		}()
 		val, err := f()
 		m.m.Set(key, errV[V]{Val: val, Err: err})
 		return val, err

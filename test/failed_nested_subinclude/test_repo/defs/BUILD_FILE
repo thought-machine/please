@@ -1,0 +1,13 @@
+# The sleep gives the second package time to start waiting on defs.build_defs before this fails.
+genrule(
+    name = "slow",
+    outs = ["slow.build_defs"],
+    cmd = "sleep 2; exit 1",
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "defs",
+    srcs = ["defs.build_defs"],
+    visibility = ["PUBLIC"],
+)
