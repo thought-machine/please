@@ -1,0 +1,34 @@
+# Codelab steps known to fail on Windows. One "codelab_id" or "codelab_id::step-key" per line,
+# with a comment above saying why. Step keys are printed by run_codelabs.ps1 and by
+# //test/windows:codelab_plan.
+#
+# A step listed here that starts passing fails the job too, so this list only ever shrinks. An
+# entry naming a step that no longer exists fails on Linux, in
+# //test/windows/codelab_script/script:script_test.
+#
+# This file records what the codelabs do on Windows. It is not a list of things to fix in them:
+# no codelab has been edited to make anything here pass.
+#
+# Only failures that rest on facts checked directly are listed ahead of the first native run.
+# Everything else a Windows runner turns up is added from that run's summary, with a reason, and
+# not guessed at here: a wrong guess fails the job exactly as a missing entry does.
+
+# plz init plugin go writes plugin_repo(owner = "please-build") (src/plzinit/plugins.go), and the
+# upstream go-rules releases publish please_go for darwin, freebsd and linux only, with no
+# windows_amd64 asset. This repo's own plugins/BUILD pins the PeterNeiss forks for exactly that
+# reason. Following the codelab as written, the first build of a Go target cannot succeed on
+# Windows, and everything after it in the codelab is blocked behind it.
+go_intro::hello-world/b3.1
+
+# The same for Python: plz init plugin python gets upstream python-rules, whose please_pex has no
+# windows_amd64 release. On top of that, the default [build] path on Windows is empty, and the
+# codelab's only advice for adding an interpreter to it is a colon-separated Unix template.
+python_intro::hello-world/b3.1
+
+# An inline environment prefix, GODEBUG="installgoroot=all" go install std, is bash syntax.
+# PowerShell reads the assignment as the name of a command. The codelab gives no Windows form.
+puku::initialising-your-project-and-running-puku-with-please/b12.1
+
+# plz puku runs //third_party/binary:puku, a remote_file of puku-<version>-<os>_<arch>, and puku
+# publishes no windows_amd64 release. Every later step of the codelab depends on it.
+puku::adding-and-updating-modules/b3.1

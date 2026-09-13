@@ -42,6 +42,17 @@ jobs:
         # The same command CircleCI's build-windows job runs, so what the Windows job gets here
         # is what a user would get.
         run: plz-out/bin/src/please build -p -v2 --profile ci --arch windows_amd64 //package:release_files
+      - name: Extract the codelab plan
+        # Built here, on Linux, so the Windows job replays a plan that
+        # //test/windows/codelab_script/script:script_test has already checked against the same
+        # codelabs and the same sidecar. See test/windows/run_codelabs.ps1.
+        run: plz-out/bin/src/please build -p -v2 --profile ci //test/windows:codelab_plan
+      - name: Upload the codelab plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-codelab-plan
+          path: plz-out/gen/test/windows/codelab_plan.json
+          retention-days: 7
       - name: Upload the test bundle
         uses: actions/upload-artifact@v4
         with:
@@ -115,5 +126,58 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-test-logs
+          path: ${{ runner.temp }}\logs
+          retention-days: 7
+
+  codelabs:
+    name: codelabs
+    needs: cross-build
+    runs-on: windows-latest
+    # A job of its own rather than a step in test. It needs the release but not the bundle, it
+    # runs for far longer - eight codelabs, plugin downloads, a Go toolchain - and a hung codelab
+    # should not eat the unit tests' time or delay the signal people actually read.
+    timeout-minutes: 90
+    # Blocking from its first run, for the reason the test job gives. What the codelabs cannot do
+    # on Windows is expected, and the mechanism for expected already exists: every such step is
+    # in test/windows/codelab_known_failures.txt with a reason. There is no advisory mode to
+    # forget to take out.
+    steps:
+      - name: Keep Unix line endings
+        # The runner script and the failures list come from the checkout. Has to precede it.
+        run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: ${{ runner.temp }}\release
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-codelab-plan
+          path: ${{ runner.temp }}\plan
+      - name: Report the toolchains
+        # The codelabs assume Go, Python, git, Docker and kubectl, and which of those exist - and
+        # for Docker, which kind of containers it runs - decides what is skipped. Print it rather
+        # than inferring it from the results.
+        run: |
+          "pwsh = $($PSVersionTable.PSVersion)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          foreach ($t in 'go', 'python', 'git', 'docker', 'kubectl') {
+            $c = Get-Command $t -EA SilentlyContinue
+            "$t = $(if ($c) { $c.Source } else { 'not installed' })" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          }
+          if (Get-Command docker -EA SilentlyContinue) {
+            "docker OSType = $(docker info --format '{{.OSType}}' 2>$null)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          }
+      - name: Run the codelabs
+        run: |
+          ./test/windows/run_codelabs.ps1 `
+            -Plan "$env:RUNNER_TEMP\plan\codelab_plan.json" `
+            -Release "$env:RUNNER_TEMP\release" `
+            -Logs "$env:RUNNER_TEMP\logs" `
+            -KnownFailures test/windows/codelab_known_failures.txt
+      - name: Upload the logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-codelab-logs
           path: ${{ runner.temp }}\logs
           retention-days: 7
