@@ -394,7 +394,13 @@ func (r *runner) recursiveParse(ctx context.Context, label, dependent core.Build
 		})
 	}
 	if r.state.ParseMetadata {
-		if pkg := r.state.Graph.PackageByLabel(target.Label); pkg != nil && !pkg.Subrepo.IsExternal() {
+		// parseTarget can return as soon as the target itself turns up, before the rest of its package
+		// (and hence its metadata) has been parsed, so we have to make sure the whole package is done here.
+		pkg, err := r.Parse(ctx, target.Label, dependent)
+		if err != nil {
+			return err
+		}
+		if !pkg.Subrepo.IsExternal() {
 			related, err := pkg.Metadata.FindRelatedTargets(target.Label)
 			if err != nil {
 				return err
