@@ -165,15 +165,16 @@ func TestCommandsSplitChainsIntoChdir(t *testing.T) {
 	assert.True(t, steps[3].NonBlocking)
 }
 
-func TestTranscriptOutputIsAdvisory(t *testing.T) {
-	c := parseOne(t, "## S\n```\n$ plz build //:x\n$ cat plz-out/gen/x\nhello\n```\n")
+func TestTranscriptOutputBelongsToItsCommand(t *testing.T) {
+	c := parseOne(t, "## S\n```\n$ plz build //:x\nBuild finished\n\n$ cat plz-out/gen/x\nhello\n```\n")
 	plan, errs := BuildPlan([]Codelab{c}, mustSidecar(t, ""))
 	require.Empty(t, errs)
 	steps := plan.Codelabs[0].Steps
 	require.Len(t, steps, 2)
 	assert.Equal(t, "plz build //:x", steps[0].Command)
-	assert.Empty(t, steps[0].ExpectedOutput)
+	assert.Equal(t, []string{"Build finished"}, steps[0].ExpectedOutput)
 	assert.Equal(t, []string{"hello"}, steps[1].ExpectedOutput)
+	// Advisory: nothing promoted it to an assertion.
 	assert.Empty(t, steps[1].Assert)
 }
 

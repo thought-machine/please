@@ -125,7 +125,7 @@ function Invoke-Command-Step($Step, [string] $WorkDir, [string] $LogPath) {
     $timeout = if ($Step.PSObject.Properties['timeout'] -and $Step.timeout) { $Step.timeout } else { $TimeoutSeconds }
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Step.command))
     $proc = Start-Process -FilePath $script:Pwsh `
-        -ArgumentList @('-NoProfile', '-NonInteractive', '-EncodedCommand', $encoded) `
+        -ArgumentList @('-NoProfile', '-NonInteractive', '-OutputFormat', 'Text', '-EncodedCommand', $encoded) `
         -WorkingDirectory $WorkDir -NoNewWindow -PassThru `
         -RedirectStandardOutput "$LogPath.out" -RedirectStandardError "$LogPath.err" `
         -RedirectStandardInput $script:EmptyInput
@@ -148,6 +148,67 @@ function Invoke-Command-Step($Step, [string] $WorkDir, [string] $LogPath) {
         Timeout  = $timeout
         Output   = $output
     }
+}
+
+# Merges a .plzconfig fragment the way a reader following the codelab edits the file: a key the
+# section already has is replaced, a new key goes into its section, and a new section is appended.
+#
+# Appending the fragment verbatim was tried first, and it manufactured a failure on the first
+# native run: plz init plugin go already writes GoTool, the codelab's fragment sets it again, and a
+# plugin section refuses a repeated key where core config quietly takes the last one. A key repeated
+# on purpose to extend a list would be replaced here rather than added to; no codelab fragment has
+# one.
+function Merge-PlzConfig([string] $Existing, [string] $Fragment) {
+    $lines = [Collections.Generic.List[string]]::new()
+    if ($Existing) { $lines.AddRange([string[]]($Existing.TrimEnd("`r", "`n") -split "`r?`n")) }
+
+    # Section names are case-insensitive in this format; a subsection's quoted name is not.
+    function Get-SectionKey([string] $Header) {
+        if ($Header -notmatch '^\s*\[\s*([^\s"\]]+)\s*(?:"([^"]*)")?\s*\]') { return $null }
+        return "$($Matches[1].ToLowerInvariant())|$($Matches[2])"
+    }
+    # Where a section starts, and the index after its last non-blank line.
+    function Find-Section([string] $Key) {
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            # -cne: PowerShell compares case-insensitively by default, and the subsection half
+            # of the key must not be.
+            if ((Get-SectionKey $lines[$i]) -cne $Key) { continue }
+            $end = $i + 1
+            for ($j = $i + 1; $j -lt $lines.Count -and -not $lines[$j].TrimStart().StartsWith('['); $j++) {
+                if ($lines[$j].Trim()) { $end = $j + 1 }
+            }
+            return @($i, $end)
+        }
+        return $null
+    }
+
+    $section = $null
+    foreach ($raw in ($Fragment -split "`r?`n")) {
+        $line = $raw.Trim()
+        if (-not $line -or $line.StartsWith(';') -or $line.StartsWith('#')) { continue }
+        $key = Get-SectionKey $line
+        if ($key) {
+            $section = $key
+            if (-not (Find-Section $key)) {
+                if ($lines.Count -gt 0 -and $lines[$lines.Count - 1].Trim()) { $lines.Add('') }
+                $lines.Add($line)
+            }
+            continue
+        }
+        if (-not $section -or $line -notmatch '^([^=;#]+?)\s*=') { continue }
+        $name = $Matches[1].Trim()
+        $start, $end = Find-Section $section
+        $replaced = $false
+        for ($i = $start + 1; $i -lt $end; $i++) {
+            if ($lines[$i] -match '^\s*([^=;#]+?)\s*=' -and $Matches[1].Trim() -ieq $name) {
+                $lines[$i] = $line
+                $replaced = $true
+                break
+            }
+        }
+        if (-not $replaced) { $lines.Insert($end, $line) }
+    }
+    return ($lines -join "`n") + "`n"
 }
 
 # How much of what the codelab shows this command printing actually appeared. Advisory only.
@@ -288,7 +349,8 @@ foreach ($codelab in $planDoc.codelabs) {
                     # Not Set-Content: its encoding differs between PowerShell versions, and a
                     # .plzconfig carrying a byte-order mark does not parse.
                     if ($step.mode -eq 'merge') {
-                        [IO.File]::AppendAllText($path, "`n$($step.content)`n", $utf8)
+                        $existing = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllText($path) } else { '' }
+                        [IO.File]::WriteAllText($path, (Merge-PlzConfig $existing $step.content), $utf8)
                     } else {
                         [IO.File]::WriteAllText($path, "$($step.content)`n", $utf8)
                     }

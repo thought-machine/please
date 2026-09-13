@@ -170,11 +170,12 @@ var displayVerbs = map[string]bool{"tree": true, "cat": true, "which": true, "ls
 // one line of a block needs a decision the others do not: python_intro builds a pex and then runs
 // it in the same block, and only the second of those depends on a shebang.
 func commandSteps(c Codelab, b Block, key string, entry *Entry, side *Sidecar) ([]Step, []error) {
-	commands, expect := Commands(b)
+	commands, expects := Commands(b)
 	var steps []Step
 	var errs []error
 	n := 0
-	for _, command := range commands {
+	for i, command := range commands {
+		first := len(steps)
 		for _, part := range splitChain(command) {
 			n++
 			stepKey := fmt.Sprintf("%s.%d", key, n)
@@ -209,11 +210,11 @@ func commandSteps(c Codelab, b Block, key string, entry *Entry, side *Sidecar) (
 			}
 			steps = append(steps, step)
 		}
-	}
-	// The shown output belongs to the block, so it is attached to the last step of it: that is
-	// the one whose output the codelab is displaying.
-	if len(expect) > 0 && len(steps) > 0 {
-		steps[len(steps)-1].ExpectedOutput = expect
+		// Output shown after a command belongs to the last step that command produced: for
+		// "mkdir x && plz build", the build.
+		if len(expects[i]) > 0 && len(steps) > first {
+			steps[len(steps)-1].ExpectedOutput = expects[i]
+		}
 	}
 	return steps, errs
 }

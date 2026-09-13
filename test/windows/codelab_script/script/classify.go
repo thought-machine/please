@@ -163,8 +163,12 @@ func isCommandish(body []string) bool {
 	return false
 }
 
-// Commands splits a block into the commands to run and any output shown with them.
-func Commands(b Block) (commands, expect []string) {
+// Commands splits a block into the commands to run and, for each, the output shown after it.
+//
+// In a transcript the output belongs to the command above it, not to the block. genrule shows
+// `$ plz build` with its build summary and then `$ cat` with a word count; attaching both to the
+// last command made the first native run report that none of the cat's lines appeared.
+func Commands(b Block) (commands []string, expect [][]string) {
 	prompted := hasPrompt(b.Body)
 	for _, line := range b.Body {
 		if strings.TrimSpace(line) == "" {
@@ -172,12 +176,14 @@ func Commands(b Block) (commands, expect []string) {
 		}
 		if !prompted {
 			commands = append(commands, line)
+			expect = append(expect, nil)
 			continue
 		}
 		if m := promptRe.FindStringSubmatch(line); m != nil {
 			commands = append(commands, m[1])
-		} else {
-			expect = append(expect, line)
+			expect = append(expect, nil)
+		} else if len(expect) > 0 {
+			expect[len(expect)-1] = append(expect[len(expect)-1], line)
 		}
 	}
 	return commands, expect
