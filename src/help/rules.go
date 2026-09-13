@@ -54,7 +54,7 @@ func newState() *core.BuildState {
 // by the config (e.g. PreloadBuildDefs or BuildDefsDir).
 // You are guaranteed that every statement in the returned map is a FuncDef.
 func AllBuiltinFunctions(state *core.BuildState) map[string]*asp.Statement {
-	p := asp.NewParser(state)
+	p := asp.NewParser(state, nil)
 	m := map[string]*asp.Statement{}
 	dir, _ := rules.AllAssets()
 	sort.Strings(dir)
@@ -124,7 +124,7 @@ func getFunctionsFromState(state *core.BuildState) map[string]*asp.Statement {
 
 func getFunctionsFromFiles(files cli.StdinStrings) map[string]*asp.Statement {
 	state := newState()
-	p := asp.NewParser(state)
+	p := asp.NewParser(state, nil)
 	return parseFilesForFunctions(p, files)
 }
 

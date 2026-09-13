@@ -107,3 +107,12 @@ maxdepth_test(
         "dep5",
     ],
 )
+
+# Regression test: a pre-build function calling get_labels() must see the target's whole transitive
+# dependency graph, including everything below its data deps. Those get built in parallel with the
+# target itself, so without care the walk hits a target whose own deps aren't parsed yet.
+please_repo_e2e_test(
+    name = "prebuild_data_deps_test",
+    plz_command = "plz build //:a",
+    repo = "test_repo",
+)

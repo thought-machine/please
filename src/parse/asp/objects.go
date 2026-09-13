@@ -694,16 +694,18 @@ func (f *pyFunc) String() string {
 func (f *pyFunc) Call(s *scope, c *Call) pyObject {
 	if f.nativeCode != nil {
 		if f.kwargs {
-			return f.callNative(s.NewScope("<builtin code>", 0), c)
+			return f.callNative(s.NewScope("<builtin code>"), c)
 		}
 		return f.callNative(s, c)
 	}
-
-	cs := f.scope.newScope(s.pkg, s.mode, f.scope.filename, len(f.args)+1)
+	// N.B. The scope hangs off the one the function was defined in, so it sees that file's globals, but
+	//      anything about what we are currently doing comes from the calling scope - including its context.
+	cs := f.scope.newScope(s.ctx, s.pkg, f.scope.filename, len(f.args)+1)
 	cs.config = s.config
 	cs.Set("CONFIG", s.config) // This needs to be copied across too :(
 	cs.Callback = s.Callback
 	cs.parsingFor = s.parsingFor
+
 	// Handle implicit 'self' parameter for bound functions.
 	args := c.Arguments
 	if f.self != nil {

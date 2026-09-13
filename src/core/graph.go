@@ -19,7 +19,7 @@ type BuildGraph struct {
 	// Map of all currently known targets by their label.
 	targets *cmap.Map[BuildLabel, *BuildTarget]
 	// Map of all currently known packages.
-	packages *cmap.Map[packageKey, *Package]
+	packages *cmap.ErrMap[packageKey, *Package]
 	// Registered subrepos, as a map of their name to their root.
 	subrepos *cmap.Map[string, *Subrepo]
 	// Subincludes that are subincluded by other subincludes
@@ -49,6 +49,13 @@ func (graph *BuildGraph) Target(label BuildLabel) *BuildTarget {
 	return graph.targets.Get(label)
 }
 
+// TargetOrWait retrieves a target from the graph by label. If it doesn't exist yet, it returns a channel
+// that can be waited upon; it will be closed after AddTarget is called for the appropriate target.
+func (graph *BuildGraph) TargetOrWait(label BuildLabel) (*BuildTarget, <-chan struct{}) {
+	target, ch, _ := graph.targets.GetOrWait(label)
+	return target, ch
+}
+
 // TargetOrDie retrieves a target from the graph by label. Dies if the target doesn't exist.
 func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 	target := graph.Target(label)
@@ -56,28 +63,6 @@ func (graph *BuildGraph) TargetOrDie(label BuildLabel) *BuildTarget {
 		log.Fatalf("Target %s not found in build graph\n", label)
 	}
 	return target
-}
-
-// WaitForTarget returns the given target, waiting for it to be added if it isn't yet.
-// It returns nil if the target finally turns out not to exist.
-func (graph *BuildGraph) WaitForTarget(label BuildLabel) *BuildTarget {
-	t, tch, _ := graph.targets.GetOrWait(label)
-	if t != nil {
-		return t
-	}
-	p, pch, _ := graph.packages.GetOrWait(packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
-	if p != nil {
-		// Check target again to avoid race conditions
-		return graph.Target(label)
-	}
-	// Now we need to wait for either (hopefully) the target or its package to exist.
-	// Either the target will, which is fine, or if the package appears but the target doesn't
-	// we will conclude it doesn't exist.
-	select {
-	case <-tch:
-	case <-pch:
-	}
-	return graph.Target(label)
 }
 
 // PackageByLabel retrieves a package from the graph using the appropriate parts of the given label.
@@ -88,7 +73,25 @@ func (graph *BuildGraph) PackageByLabel(label BuildLabel) *Package {
 
 // Package retrieves a package from the graph by name & subrepo, or nil if it can't be found.
 func (graph *BuildGraph) Package(name, subrepo string) *Package {
-	return graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
+	pkg, _ := graph.packages.Get(packageKey{Name: name, Subrepo: subrepo})
+	return pkg
+}
+
+// PackageOrWait retrieves a package from the graph, or the error from parsing it if that failed.
+// If it hasn't been parsed yet, it returns a channel that is closed once it has been, plus whether this
+// caller is the first to ask for it.
+func (graph *BuildGraph) PackageOrWait(label BuildLabel) (*Package, <-chan struct{}, bool, error) {
+	return graph.packages.GetOrWait(packageKey{Name: label.PackageName, Subrepo: label.Subrepo})
+}
+
+// SetPackage records the result of parsing a package, releasing anything waiting on it.
+func (graph *BuildGraph) SetPackage(label BuildLabel, pkg *Package, err error) {
+	key := packageKey{Name: label.PackageName, Subrepo: label.Subrepo}
+	if err != nil {
+		graph.packages.SetError(key, err)
+		return
+	}
+	graph.packages.Set(key, pkg)
 }
 
 // PackageOrDie retrieves a package by label, and dies if it can't be found.
@@ -133,6 +136,13 @@ func (graph *BuildGraph) SubrepoOrDie(name string) *Subrepo {
 	return subrepo
 }
 
+// SubrepoOrWait retrieves a subrepo from the graph.
+// If it is not yet available, it returns a channel that can be waited upon.
+func (graph *BuildGraph) SubrepoOrWait(subrepo string) (*Subrepo, <-chan struct{}) {
+	s, wait, _ := graph.subrepos.GetOrWait(subrepo)
+	return s, wait
+}
+
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
 	targets := graph.targets.Values()
@@ -142,12 +152,13 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 	return targets
 }
 
-// PackageMap returns a copy of the graph's internal map of name to package.
+// PackageMap returns a map of name to package.
+// TODO(peterebden): Change this to an iterator.
 func (graph *BuildGraph) PackageMap() map[string]*Package {
 	packages := map[string]*Package{}
-	for _, pkg := range graph.packages.Values() {
-		packages[packageKey{Subrepo: pkg.SubrepoName, Name: pkg.Name}.String()] = pkg
-	}
+	graph.packages.Range(func(k packageKey, v *Package) {
+		packages[k.String()] = v
+	})
 	return packages
 }
 
@@ -155,7 +166,7 @@ func (graph *BuildGraph) PackageMap() map[string]*Package {
 func NewGraph() *BuildGraph {
 	g := &BuildGraph{
 		targets:               cmap.New[BuildLabel, *BuildTarget](cmap.DefaultShardCount, HashBuildLabel),
-		packages:              cmap.New[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey),
+		packages:              cmap.NewErrMap[packageKey, *Package](cmap.DefaultShardCount, hashPackageKey, nil),
 		subrepos:              cmap.New[string, *Subrepo](cmap.SmallShardCount, cmap.XXHash),
 		subincludeSubincludes: map[BuildLabel]labelSet{},
 	}

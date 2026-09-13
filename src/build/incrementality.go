@@ -81,7 +81,7 @@ func needsBuilding(state *core.BuildState, target *core.BuildTarget, postBuild b
 	// Check the outputs of this rule exist. This would only happen if the user had
 	// removed them but it's incredibly aggravating if you remove an output and the
 	// rule won't rebuild itself.
-	for _, output := range target.Outputs() {
+	for _, output := range target.Outputs(state.Graph) {
 		realOutput := filepath.Join(target.OutDir(), output)
 		if !core.PathExists(realOutput) {
 			log.Debug("Output %s doesn't exist for rule %s; will rebuild.", realOutput, target.Label)
@@ -150,7 +150,14 @@ func RuleHash(state *core.BuildState, target *core.BuildTarget, runtime, postBui
 func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []byte {
 	h := sha1.New()
 	h.Write([]byte(target.Label.String()))
-	for _, dep := range target.DeclaredDependencies() {
+	// Sort here so the hash is independent of the order deps were declared in the BUILD file;
+	// DeclaredDependencies yields them in declaration order.
+	var deps core.BuildLabels
+	for dep := range target.DeclaredDependencies() {
+		deps = append(deps, dep)
+	}
+	sort.Sort(deps)
+	for _, dep := range deps {
 		h.Write([]byte(dep.String()))
 	}
 	for _, vis := range target.Visibility {
@@ -293,7 +300,7 @@ type ruleHashes struct {
 // If postBuild is true then the rule hash will be the post-build one if present.
 func readRuleHashFromXattrs(state *core.BuildState, target *core.BuildTarget, postBuild bool) ruleHashes {
 	var h []byte
-	for _, output := range target.FullOutputs() {
+	for _, output := range target.FullOutputs(state.Graph) {
 		b := fs.ReadAttr(output, xattrName, state.XattrsSupported)
 		if b == nil {
 			return ruleHashes{}
@@ -348,7 +355,7 @@ func writeRuleHash(state *core.BuildState, target *core.BuildTarget) error {
 		return err
 	}
 	hash = append(hash, secretHash...)
-	outputs := target.FullOutputs()
+	outputs := target.FullOutputs(state.Graph)
 	if len(outputs) == 0 {
 		// Target has no outputs, have to use the fallback file.
 		return fs.RecordAttrFile(filepath.Join(target.OutDir(), target.Label.Name), hash)

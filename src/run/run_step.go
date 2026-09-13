@@ -105,8 +105,8 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 	if !target.IsBinary && overrideCmd == "" {
 		log.Fatalf("Target %s cannot be run; it's not marked as binary", label)
 	}
-	if label.Annotation == "" && len(target.Outputs()) != 1 {
-		log.Fatalf("Targets %s cannot be run as it has %d outputs.", label, len(target.Outputs()))
+	if label.Annotation == "" && len(target.Outputs(state.Graph)) != 1 {
+		log.Fatalf("Targets %s cannot be run as it has %d outputs.", label, len(target.Outputs(state.Graph)))
 	}
 	if remote {
 		// Send this off to be done remotely.
@@ -148,7 +148,7 @@ func run(ctx context.Context, state *core.BuildState, label core.AnnotatedOutput
 		// out_exe handles java binary stuff by invoking the .jar with java as necessary
 		var command string
 		if tmpDir {
-			command = filepath.Join(dir, target.Outputs()[0])
+			command = filepath.Join(dir, target.Outputs(state.Graph)[0])
 		} else {
 			command, _ = core.ReplaceSequences(state, target, fmt.Sprintf("$(out_exe %s)", target.Label))
 			command = strings.Trim(command, "\"")

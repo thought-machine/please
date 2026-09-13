@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -39,11 +38,6 @@ func TestGetLabels(t *testing.T) {
 	state.Graph.AddTarget(bottom)
 	state.Graph.AddTarget(middle)
 	state.Graph.AddTarget(top)
-
-	err := middle.ResolveDependencies(state.Graph)
-	require.NoError(t, err)
-	err = top.ResolveDependencies(state.Graph)
-	require.NoError(t, err)
 
 	s := &scope{state: state, pkg: core.NewPackage("pkg")}
 	ls := getLabels(s, []pyObject{pyString(":top"), pyString("target:"), False, True, pyInt(-1)}).(pyList) // transitive=True

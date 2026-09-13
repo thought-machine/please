@@ -172,7 +172,6 @@ func makeTarget4(graph *BuildGraph, label string, deps ...string) *BuildTarget {
 	for _, dep := range deps {
 		t := graph.TargetOrDie(ParseBuildLabel(dep, ""))
 		target.AddDependency(t.Label)
-		target.resolveDependency(target.Label, t)
 	}
 	target.Sources = append(target.Sources, FileLabel{
 		File:    target.Label.Name + ".go",

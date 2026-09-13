@@ -94,6 +94,11 @@ func (stack *errorStack) ShortError() string {
 	return stack.err.Error()
 }
 
+// Unwrap implements the errors interface so this can be unwrapped to get the contained error
+func (stack *errorStack) Unwrap() error {
+	return stack.err
+}
+
 // stackTrace returns the lines of stacktrace from the error.
 func (stack *errorStack) stackTrace() string {
 	ret := make([]string, len(stack.Stack))

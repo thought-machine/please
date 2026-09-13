@@ -61,7 +61,7 @@ subinclude("///{lang}//build_defs:{lang}")
 """
 
 GO_SRC_TEMPLATE = """
-package {dir}
+package {pkg}
 """
 
 LANGUAGE_SRC_TEMPLATES = {
@@ -102,10 +102,10 @@ def main(argv):
             ext = LANGUAGE_EXTENSIONS[lang]
             library_filename = os.path.join(dir, f'{basedir}.{ext}')
             with open(library_filename, 'w') as f:
-                f.write(src_template.format(dir = relative_dir))
+                f.write(src_template.format(dir = relative_dir, pkg = os.path.basename(relative_dir)))
             test_filename = os.path.join(dir, f'{basedir}_test.{ext}')
             with open(test_filename, 'w') as f:
-                f.write(src_template.format(dir = relative_dir))
+                f.write(src_template.format(dir = relative_dir, pkg = os.path.basename(relative_dir)))
         packages.append(dir)
         pkgset.add(dir)
         filenames.append(filename)
@@ -124,7 +124,6 @@ Target = //plugins:python
 
 [Plugin "cc"]
 Target = //plugins:cc
-TestMain = ///pleasings//cc:unittest_main
 
 [Plugin "go"]
 Target = //plugins:go
