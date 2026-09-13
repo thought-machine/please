@@ -25,6 +25,16 @@ cross-builds them on Linux and runs them on `windows-latest`, alongside probes t
 with the release zip, clean and rebuild it five times, and build at a long path. That job is the
 only thing anywhere that is not taking Wine's word for it.
 
+**The codelabs are now replayed there as well, and only one can be followed to its end.** Nothing
+had ever executed a codelab on any platform. `using_plugins` runs through; `genrule` gets as far
+as its custom tool, a `#!/bin/bash` script Windows cannot run; every codelab that builds Go or
+Python stops at its first build, and `github_actions` has nothing to run. The causes are upstream
+plugin tools and Puku with no Windows release, a Go 1.20 toolchain requested as a `.tar.gz` that
+Windows releases never are, Python absent from the empty default build path, and bash syntax. One
+cause is not Windows at all: the Go codelabs write a `third_party/go/BUILD` that drops the
+`go_stdlib` `plz init plugin go` now generates. Each is in `test/windows/codelab_known_failures.txt`
+with the log line behind it. See Loop D in `05-testing-strategy.md`.
+
 | # | Milestone | State |
 |---|---|---|
 | M0–M3, M6 | baseline, OS layer, paths, shell, Wine harness | done |
@@ -33,6 +43,7 @@ only thing anywhere that is not taking Wine's word for it.
 | M7 | sandboxing | decided against, documented |
 | M8 | plugins | go, cc, shell, python all done in local clones |
 | M9 | native Windows CI and GA | done — 18.0.0 |
+| M10 | The codelabs, replayed on Windows | done; findings recorded, docs decision open |
 
 ## The five repos
 
@@ -74,11 +85,16 @@ change, which is where they were always meant to run.
 
 In rough order of value.
 
-1. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
+1. **Decide what to do about the codelabs.** The codelabs job passes only because every failure is
+   listed in `test/windows/codelab_known_failures.txt` with its evidence, and that file is the input
+   to the decision. The largest fixes are not in the prose: `plz init plugin` pointing at plugin
+   releases that exist for Windows, and Go codelabs that do not delete the stdlib it generates. No
+   codelab has been edited.
+2. **`sh_test` cannot take an `sh_binary` as its `src` on Windows.** It copies whatever it is
    given to `<name>.sh` and hands that to a shell, and a `.cmd` is not a shell script. The
    plugin's own tests are written that way, so they are the thing to fix it against. The
    smallest real functional gap left.
-2. **Ctrl-Break is delivered but never verified.** `KillProcess` sends one, waits 30ms, then
+3. **Ctrl-Break is delivered but never verified.** `KillProcess` sends one, waits 30ms, then
    terminates the job object. `TestKillsProcessTree` passes natively, but it only asserts a
    grandchild died, which terminating the job achieves either way — so the graceful path could
    be dead code on Windows and no test would notice.
@@ -88,11 +104,11 @@ In rough order of value.
    shut down gracefully is racing that timer on a CI machine, and a flaky test in a blocking job
    is worse than no test. Either call `killProcessTree` directly and wait generously, which
    tests the delivery without the timer, or widen the window and say why.
-3. **`.pyd` extension modules in a pex.**
+4. **`.pyd` extension modules in a pex.**
    `SoImport` writes one to a `NamedTemporaryFile` and
    loads it while the handle is still open, which Windows does not allow. Only bites a pex
    containing native wheels.
-4. **`plz debug` and `plz cover` on a Windows target** are untested. `plz cover` has one
+5. **`plz debug` and `plz cover` on a Windows target** are untested. `plz cover` has one
    concrete suspicion against it: coverage paths come back from the Python side with
    backslashes in them. Both are unknowns rather than known defects, so the native job is
    likely to find them faster than guessing will.
@@ -163,3 +179,14 @@ Each of these has already cost time once.
 - **Python under Wine needs its output to be a pipe.** Wine's console emulation hands it handles
   it rejects at startup otherwise, and the error — `can't initialize sys standard streams` — reads
   like a problem with whatever you were testing. It is not.
+- **`plz init plugin <lang>` hands a Windows user plugins that cannot build there.** It writes
+  `owner = "please-build"`, and upstream `please_go`, `please_pex` and `please_cc` publish no
+  `windows_amd64` asset. This repo's `plugins/BUILD` uses the forks for exactly that reason, and
+  every codelab that installs a plugin inherits the problem. It is the single largest cause of
+  codelab failures and will be rediscovered by anyone who follows the docs.
+- **`plz init plugin` asks GitHub's API for the latest tag anonymously.** Shared CI addresses hit
+  the unauthenticated rate limit, and the failure reads as a plugin that cannot be found. A 403
+  from `api.github.com` in the codelabs job is that, not a regression.
+- **The Go codelabs predate `plz init plugin go` generating a toolchain and a stdlib.** Their
+  `third_party/go/BUILD` holds only a `go_toolchain`, so following them replaces the generated
+  `go_stdlib`, and every Go build then fails to find `//third_party/go:std`, on every platform.

@@ -26,6 +26,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⚠️ blocked
 | M7 | Sandboxing parity | 2w | 🟡 | — | — |
 | M8 | Remote execution and plugin parity | 3w | 🟡 | — | — |
 | M9 | Native Windows CI and GA | 2w | ⬜ | — | — |
+| M10 | The codelabs, replayed on Windows | — | 🟡 | — | — |
 
 Rough total: 14–15 weeks of focused work. M0–M6 (the C++ vertical slice) is 7–8 weeks.
 
@@ -721,6 +722,36 @@ the right shape.
 - [x] **`docs/milestones/18.0.0.html`**
 - [x] **`VERSION` 18.0.0 + `ChangeLog` entry**
 
+## M10 — The codelabs, replayed on Windows 🟡
+
+M9 showed that Please runs on Windows. It said nothing about whether the documentation does, and
+nothing had ever executed a line of the codelabs, on any platform.
+
+- [x] **An extractor that refuses to guess.** `//test/windows/codelab_script` reduces
+      `docs/codelabs/*.md` to a plan of files, commands and directory changes. A block no rule
+      can classify is an error, not a silently dropped block, and
+      `//test/windows/codelab_script/script:script_test` runs it against the real codelabs in
+      the default Linux pass. That is what stops the check drifting from the published pages
+- [x] **`test/windows/codelab_steps.conf`**, for what the Markdown cannot say: `.plzconfig`
+      fragments to merge rather than overwrite, output shown in a `bash` fence, steps that never
+      exit. Every stanza carries a reason and pins the text it was decided about. It is kept out
+      of `docs/` so the codelabs still read as documentation
+- [x] **`test/windows/run_codelabs.ps1`**, which hands each command to `pwsh` exactly as written,
+      with a home of its own per codelab. PASS, FAIL, KNOWN, SKIPPED and BLOCKED, and the same
+      shrink-only known-failures rule as the unit-test job. Its execution path was exercised on
+      Linux against a synthetic plan; its answers about the real codelabs come only from Windows
+- [x] **A blocking `codelabs` job** in `.github/workflows/windows.yml`, beside `test`, fed a plan
+      the Linux job built and checked
+- [x] **The first native runs, and the known-failures list they produced.** Four entries were
+      listed ahead of the first run from facts checked directly, and it confirmed them and
+      added two. It also caught the harness: appending `.plzconfig` fragments repeated `GoTool`,
+      which a plugin section refuses, so the runner now merges key by key. The second run added
+      the last entry, a failure that is not Windows at all: the Go codelabs' `third_party/go/BUILD`
+      drops the `go_stdlib` that `plz init plugin go` generates
+- [ ] **What to do about the codelabs that cannot work as written.** Deliberately not decided
+      here, and no codelab has been edited. `test/windows/codelab_known_failures.txt` is the
+      record that decision should be taken from
+
 ## Risk register
 
 | Risk | Impact | Mitigation |
@@ -738,3 +769,5 @@ the right shape.
 | Hash drift invalidates every user's cache | Silent, affects all platforms | `plz hash //...` diff on every M1–M3 PR |
 | `ERROR_SHARING_VIOLATION` on real Windows | Invisible until M9 | Listed explicitly in the M9 issue; design `RemoveAll` and the updater defensively now |
 | arcat platform gate forgotten | `plz.exe` cannot parse anything, discovered late | Called out as a hard gate in M4; it fails at runtime on Windows, not at build time on Linux |
+| `plz init plugin` points at upstream plugins with no Windows tools | Every codelab that installs a plugin fails at its first build | Recorded per step in `codelab_known_failures.txt`. The fix is Windows releases upstream, or `plz init plugin` using the forks; that is a docs and release decision, not taken in M10 |
+| The codelab replay interprets a block differently from its prose | The check passes or fails for its own reasons rather than the codelab's | Unclassified blocks are fatal; every stanza in `codelab_steps.conf` pins its text with `matches` and carries its reason |

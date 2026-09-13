@@ -5,13 +5,14 @@ Status: **Draft** · Milestone: M6 (with M9 as the follow-up) · Last updated: 2
 The programme constraint is that development and CI stay on Linux, with real Windows testing
 deferred. This document is how that is made to work rather than merely asserted.
 
-## Three test loops
+## Four test loops
 
 | Loop | Runs | Tests | Available from |
 |---|---|---|---|
 | **A — compile gate** | Linux, natively | Does `plz.exe` build for `GOOS=windows`? | M0 |
 | **B — C++ cross-build** | Linux, natively | Do the cc rules produce correct PE32+ artifacts? | M5 |
 | **C — Wine** | Linux, under Wine | Does `plz.exe` actually *run*? | M1 onwards |
+| **D — the documentation** | Windows, natively | Do the published codelabs work as written? | M10 |
 
 Loops A and B need no emulation at all. Loop C is where the leverage is, and it is why M6
 should start as soon as M1 produces a binary — the milestone number is a completion point,
@@ -149,6 +150,46 @@ thinking about Windows.
 
 Set `WINEDEBUG=-all` to suppress Wine's chatter, and `WINEPREFIX` to a job-local directory so
 the prefix is not shared between runs.
+
+## Loop D — the documentation
+
+The codelabs at https://please.build/codelabs.html are what a new user follows, and until this
+loop nothing had ever executed a line of them, on any platform. Loop D replays them on
+`windows-latest` with the release zip, the way a reader would.
+
+It is built in three parts, and only the last needs Windows:
+
+- `//test/windows/codelab_script` reduces `docs/codelabs/*.md` to a plan: the files each codelab
+  says to create and the commands it says to run, in order. It refuses to guess. A block no rule
+  can classify is an error, not a skipped block, so a codelab edit that introduces one fails
+  `//test/windows/codelab_script/script:script_test` on Linux, in the default test pass.
+- `test/windows/codelab_steps.conf` records what the Markdown cannot say, each stanza with its
+  reason above it: that a `.plzconfig` block is a fragment to merge rather than a whole file,
+  that a block is output rather than a command, that a step cannot run on a CI machine at all.
+  Each stanza pins the text it was decided about, so an edit to that block fails extraction
+  rather than moving the decision onto something else.
+- `test/windows/run_codelabs.ps1` replays the plan, handing each command to `pwsh` exactly as the
+  codelab writes it. Every step ends PASS, FAIL, KNOWN, SKIPPED or BLOCKED; a known failure that
+  starts passing fails the job, as in the unit-test job.
+
+**Wine contributes nothing here, and there is deliberately no Wine target for it.** What this
+loop exists to find is PowerShell rejecting bash syntax, Unix tools that are not there, plugin
+tools with no Windows release, and GitHub's API refusing anonymous callers. Wine emulates Win32
+and has no PowerShell; it can show none of those.
+
+What Linux can check before a push is everything except the execution, which covers all of the
+bookkeeping that decides whether the job goes red:
+
+```bash
+plz test //test/windows/codelab_script/...
+plz build //test/windows:codelab_plan
+pwsh ./test/windows/run_codelabs.ps1 -DryRun -Plan plz-out/gen/test/windows/codelab_plan.json \
+    -KnownFailures test/windows/codelab_known_failures.txt
+```
+
+The runner's execution path was exercised on Linux once, against a synthetic plan with a fake
+release, to cover every outcome and every rule that fails the job. Its answers about the real
+codelabs only come from `windows-latest`.
 
 ## What Wine does not cover
 

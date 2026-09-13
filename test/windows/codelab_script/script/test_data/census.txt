@@ -1,0 +1,167 @@
+genrule::genrule/b1                                      command       mkdir custom_rules && cd custom_rules
+genrule::genrule/b2                                      file          BUILD
+genrule::genrule/b3                                      command       echo "the quick brown fox jumped over the lazy dog" > file.t...
+genrule::genrule/b4                                      transcript    $ plz build //:word_count
+genrule::the-build-directory/b1                          illustration  $ plz build --shell :word_count
+genrule::the-build-directory/b2                          illustration  bash-4.4$ printenv
+genrule::build-definitions/b1                            file          build_defs/word_count.build_defs
+genrule::build-definitions/b2                            file          build_defs/BUILD
+genrule::build-definitions/b3                            file          BUILD
+genrule::build-definitions/b4                            command       plz build //:word_count
+genrule::build-definitions/b5                            illustration  Build finished; total time 30ms, incrementality 100.0%. Outp...
+genrule::managing-tools/b1                               file          build_defs/word_count.build_defs
+genrule::managing-tools/b2                               file          tools/wc.sh
+genrule::managing-tools/b3                               file          tools/BUILD
+genrule::managing-tools/b4                               transcript    $ plz run //tools:wc -- file.txt
+genrule::managing-tools/b5                               file          BUILD
+genrule::managing-tools/b6                               transcript    $ plz build //:lines_words_and_chars //:just_words
+genrule::configuration/b1                                file          .plzconfig
+genrule::configuration/b2                                file          build_defs/word_count.build_defs
+genrule::configuration/b3                                file          BUILD
+genrule::configuration/b4                                transcript    $ plz build //:lines_words_and_chars //:just_words
+github_actions::github-actions/b1                        illustration  name: CI
+github_actions::please-build/b1                          illustration  name: CI
+github_actions::setup-please-action/b1                   illustration  - name: Test
+github_actions::setup-please-action/b2                   illustration  - name: Checkout code
+github_actions::setup-please-action/b3                   illustration  name: CI
+go_intro::initialising-your-project/b1                   command       mkdir getting_started_go && cd getting_started_go
+go_intro::initialising-your-project/b2                   transcript    $ tree -a
+go_intro::initialising-your-project/b3                   illustration  [parse]
+go_intro::setting-up-our-import-path/b1                  file          .plzconfig
+go_intro::setting-up-your-toolchain/b1                   file          third_party/go/BUILD
+go_intro::setting-up-your-toolchain/b2                   file          .plzconfig
+go_intro::setting-up-your-toolchain/b3                   illustration  /usr/local/bin:/usr/bin:/bin
+go_intro::setting-up-your-toolchain/b4                   ignore        [Build]
+go_intro::setting-up-your-toolchain/b5                   command       GODEBUG="installgoroot=all" go install std
+go_intro::hello-world/b1                                 file          src/main.go
+go_intro::hello-world/b2                                 file          src/BUILD
+go_intro::hello-world/b3                                 command       plz run //src:main
+go_intro::hello-world/b4                                 illustration  Hello, world!
+go_intro::adding-packages/b1                             file          src/greetings/greetings.go
+go_intro::adding-packages/b2                             file          src/greetings/BUILD
+go_intro::adding-packages/b3                             command       plz build //src/greetings
+go_intro::adding-packages/b4                             illustration  Build finished; total time 290ms, incrementality 50.0%. Outp...
+go_intro::using-our-new-package/b1                       file          src/BUILD
+go_intro::using-our-new-package/b2                       file          src/main.go
+go_intro::using-our-new-package/b3                       transcript    $ plz run //src:main
+go_intro::testing-our-code/b1                            file          src/greetings/greetings_test.go
+go_intro::testing-our-code/b2                            file          src/greetings/BUILD
+go_intro::testing-our-code/b3                            transcript    $ plz test //src/...
+go_intro::testing-our-code/b4                            file          src/greetings/greetings_test.go
+go_intro::testing-our-code/b5                            file          src/greetings/BUILD
+go_intro::testing-our-code/b6                            transcript    $ plz test //src/...
+go_intro::third-party-dependencies/b1                    transcript    $ plz run ///go//tools:please_go -- get github.com/stretchr/...
+go_intro::third-party-dependencies/b2                    file          third_party/go/BUILD
+go_intro::third-party-dependencies/b3                    file          src/greetings/greetings_test.go
+go_intro::third-party-dependencies/b4                    file          src/greetings/BUILD
+go_intro::third-party-dependencies/b5                    transcript    $ plz test
+k8s::creating-a-service/b1                               command       plz init
+k8s::creating-a-service/b2                               file          third_party/go/BUILD
+k8s::creating-a-service/b3                               file          .plzconfig
+k8s::creating-a-service/b4                               file          hello_service/service.go
+k8s::creating-a-service/b5                               file          hello_service/BUILD
+k8s::creating-a-service/b6                               command       plz run //hello_service:hello_service && curl localhost:8000
+k8s::creating-a-service/b7                               illustration  [1] 28694
+k8s::building-a-docker-image/b1                          file          common/docker/Dockerfile-base
+k8s::building-a-docker-image/b2                          command       plz init plugin shell && plz init plugin docker
+k8s::building-a-docker-image/b3                          file          common/docker/BUILD
+k8s::building-a-docker-image/b4                          transcript    $ plz build //common/docker:base
+k8s::building-a-docker-image/b5                          transcript    $ cat plz-out/bin/common/docker/base.sh
+k8s::building-a-docker-image/b6                          command       plz run //common/docker:base
+k8s::using-our-base-image/b1                             file          hello_service/k8s/Dockerfile
+k8s::using-our-base-image/b2                             file          hello_service/k8s/BUILD
+k8s::using-our-base-image/b3                             transcript    $ plz build //hello_service/k8s:image
+k8s::creating-a-kubernetes-deployment/b1                 file          hello_service/k8s/deployment.yaml
+k8s::creating-a-kubernetes-deployment/b2                 file          hello_service/k8s/service.yaml
+k8s::creating-a-kubernetes-deployment/b3                 file          hello_service/k8s/BUILD
+k8s::creating-a-kubernetes-deployment/b4                 transcript    $ plz build //hello_service/k8s
+k8s::creating-a-kubernetes-deployment/b5                 transcript    $ plz build //hello_service/k8s:k8s_push
+k8s::local-testing-with-minikube/b1                      file          third_party/binary/BUILD
+k8s::local-testing-with-minikube/b2                      command       plz run //third_party/binary:minikube -- start
+k8s::local-testing-with-minikube/b3                      command       eval $(plz run //third_party/binary:minikube -- docker-env)
+k8s::local-testing-with-minikube/b4                      command       plz run //hello_service/k8s:image_load && plz run //hello_se...
+k8s::local-testing-with-minikube/b5                      transcript    $ kubectl port-forward service/hello-svc 8000:8000 && curl l...
+k8s::please-deploy/b1                                    command       plz run sequential --include docker-build --include k8s-push...
+k8s::please-deploy/b2                                    file          .plzconfig
+k8s::please-deploy/b3                                    command       plz deploy //hello_service/...
+k8s::docker-build-and-build-systems/b1                   illustration  docker_image(
+plz_query::setting-up/b1                                 command       git clone https://github.com/thought-machine/please-codelabs
+plz_query::setting-up/b2                                 illustration  Cloning into 'please-codelabs'...
+plz_query::setting-up/b3                                 command       cd please-codelabs/getting_started_go
+plz_query::finding-dependencies-of-a-target/b1           transcript    $ plz query deps //src/greetings:greetings_test
+plz_query::finding-dependencies-of-a-target/b2           command       plz query print ///third_party/go/github.com_stretchr_testif...
+plz_query::finding-dependencies-of-a-target/b3           transcript    $ cat plz-out/subrepos/third_party/go/github.com_stretchr_te...
+plz_query::finding-dependencies-of-a-target/b4           transcript    $ plz query deps //src/greetings:greetings --hidden
+plz_query::finding-dependencies-of-a-target/b5           transcript    $ plz query print //src/greetings:_greetings#srcs
+plz_query::reverse-dependencies/b1                       transcript    $ plz query revdeps ///third_party/go/github.com_stretchr_te...
+plz_query::reverse-dependencies/b2                       transcript    $ plz query revdeps ///third_party/go/github.com_stretchr_te...
+plz_query::composing-plz-commands/b1                     transcript    $ plz query revdeps ///third_party/go/github.com_stretchr_te...
+plz_query::including-and-excluding-targets/b1            transcript    $ plz query revdeps --exclude //src/greetings:greetings_test...
+plz_query::including-and-excluding-targets/b2            transcript    $ plz query revdeps --level=-1 ///third_party/go/github.com_...
+plz_query::including-and-excluding-targets/b3            command       plz build --include go --exclude //third_party/go/...
+plz_query::including-and-excluding-targets/b4            file          src/greetings/BUILD
+plz_query::including-and-excluding-targets/b5            transcript    $ plz query alltargets --include=my_label
+plz_query::including-and-excluding-targets/b6            command       plz test --exclude my_label
+puku::initialising-your-project-and-running-puku-with-please/b1 command       mkdir puku_sync && cd puku_sync
+puku::initialising-your-project-and-running-puku-with-please/b2 file          .plzconfig
+puku::initialising-your-project-and-running-puku-with-please/b3 ignore        [please]
+puku::initialising-your-project-and-running-puku-with-please/b4 file          .plzconfig
+puku::initialising-your-project-and-running-puku-with-please/b5 file          third_party/binary/BUILD
+puku::initialising-your-project-and-running-puku-with-please/b6 file          BUILD
+puku::initialising-your-project-and-running-puku-with-please/b7 file          .plzconfig
+puku::initialising-your-project-and-running-puku-with-please/b8 illustration  /usr/local/bin:/usr/bin:/bin
+puku::initialising-your-project-and-running-puku-with-please/b9 command       which go
+puku::initialising-your-project-and-running-puku-with-please/b10 ignore        [Build]
+puku::initialising-your-project-and-running-puku-with-please/b11 ignore        [Build]
+puku::initialising-your-project-and-running-puku-with-please/b12 command       GODEBUG="installgoroot=all" go install std
+puku::adding-and-updating-modules/b1                     file          src/hello/hello.go
+puku::adding-and-updating-modules/b2                     command       go get github.com/google/uuid
+puku::adding-and-updating-modules/b3                     command       plz puku sync -w
+puku::adding-and-updating-modules/b4                     file          src/hello/BUILD
+puku::adding-and-updating-modules/b5                     command       plz puku fmt //src/hello
+puku::adding-and-updating-modules/b6                     command       plz run //src/hello
+puku::adding-and-updating-modules/b7                     command       GOTOOLCHAIN=local go get github.com/google/uuid@v1.6.0
+puku::adding-and-updating-modules/b8                     command       GOTOOLCHAIN=local go get -u github.com/google/uuid
+puku::adding-and-updating-modules/b9                     command       go get <module-name>
+puku::adding-and-updating-modules/b10                    command       go get <module-name>
+puku::stop-a-module-from-updating/b1                     command       go mod edit -exclude github.com/example/module@v2.0.0
+puku::stop-a-module-from-updating/b2                     command       go mod edit -dropexclude github.com/example/module@v2.0.0
+puku::stop-a-module-from-updating/b3                     command       go mod edit -replace github.com/example/module=github.com/ex...
+puku::stop-a-module-from-updating/b4                     command       go mod edit -dropreplace github.com/example/module
+puku::stop-a-module-from-updating/b5                     command       go mod edit -replace github.com/google/uuid=github.com/googl...
+puku::removing-modules/b1                                command       plz query revdeps //third_party/go:module_name --level=-1 | ...
+puku::removing-modules/b2                                command       go mod edit -droprequire github.com/example/module
+puku::removing-modules/b3                                command       plz puku sync -w
+puku::using-new-modules/b1                               illustration  go_library(
+puku::using-new-modules/b2                               illustration  go_repo(
+puku::using-new-modules/b3                               illustration  go_library(
+puku::using-new-modules/b4                               command       plz puku watch //src/...
+python_intro::initialising-your-project/b1               command       mkdir getting_started_python && cd getting_started_python
+python_intro::initialising-your-project/b2               ignore        [build]
+python_intro::initialising-your-project/b3               transcript    $ tree -a
+python_intro::initialising-your-project/b4               illustration  [parse]
+python_intro::hello-world/b1                             file          src/main.py
+python_intro::hello-world/b2                             file          src/BUILD
+python_intro::hello-world/b3                             transcript    $ plz run //src:main
+python_intro::adding-modules/b1                          file          src/greetings/greetings.py
+python_intro::adding-modules/b2                          file          src/greetings/BUILD
+python_intro::adding-modules/b3                          transcript    $ plz build //src/greetings
+python_intro::adding-modules/b4                          transcript    $ plz build //src:main
+python_intro::using-our-new-module/b1                    file          src/BUILD
+python_intro::using-our-new-module/b2                    file          src/main.py
+python_intro::using-our-new-module/b3                    transcript    $ plz run //src:main
+python_intro::testing-our-code/b1                        file          src/greetings/greetings_test.py
+python_intro::testing-our-code/b2                        file          src/greetings/BUILD
+python_intro::testing-our-code/b3                        transcript    $ plz test //src/...
+python_intro::third-party-dependencies/b1                file          third_party/python/BUILD
+python_intro::third-party-dependencies/b2                file          .plzconfig
+python_intro::third-party-dependencies/b3                ignore        [plugin "python"]
+python_intro::third-party-dependencies/b4                file          src/greetings/greetings.py
+python_intro::third-party-dependencies/b5                file          src/greetings/BUILD
+python_intro::third-party-dependencies/b6                transcript    $ plz run //src:main
+using_plugins::initialising-your-please-repo/b1          command       plz init
+using_plugins::initialising-your-please-repo/b2          illustration  .
+using_plugins::how-to-install-a-plugin/b1                command       plz init plugin go
+using_plugins::how-to-install-a-plugin/b2                illustration  .
+using_plugins::how-to-install-a-plugin/b3                illustration  [parse]
+using_plugins::how-to-install-a-plugin/b4                illustration  plugin_repo(

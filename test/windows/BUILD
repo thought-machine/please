@@ -257,3 +257,28 @@ gentest(
         'diff -u "$TMP_DIR/want" "$TMP_DIR/got"',
     ]),
 )
+
+# The decisions about what the codelabs mean, and what is known to fail when they run on Windows.
+# Read by //test/windows/codelab_script's tests on Linux, and by run_codelabs.ps1 on Windows.
+filegroup(
+    name = "codelab_metadata",
+    srcs = [
+        "codelab_known_failures.txt",
+        "codelab_steps.conf",
+    ],
+    visibility = ["//test/windows/..."],
+)
+
+# The plan run_codelabs.ps1 replays. Built on Linux and handed to the Windows job as an artifact,
+# so the Windows machine consumes something these tests have already checked. Deliberately not
+# labelled wine: building it cross-compiles nothing.
+genrule(
+    name = "codelab_plan",
+    srcs = {
+        "CODELABS": ["//docs/codelabs:codelab_md"],
+        "SIDECAR": ["codelab_steps.conf"],
+    },
+    outs = ["codelab_plan.json"],
+    cmd = "$TOOLS --sidecar $SRCS_SIDECAR --out $OUT $SRCS_CODELABS",
+    tools = ["//test/windows/codelab_script"],
+)

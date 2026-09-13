@@ -31,3 +31,13 @@ genrule(
     tools = [":codelab_templator"],
     visibility = ["//docs/..."],
 )
+
+# The codelab sources, for //test/windows/codelab_script, which checks they run on Windows.
+filegroup(
+    name = "codelab_md",
+    srcs = glob(["*.md"]),
+    visibility = [
+        "//docs/...",
+        "//test/windows/...",
+    ],
+)
