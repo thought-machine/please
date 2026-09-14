@@ -57,7 +57,7 @@ func pluginConfigFieldDefaultValues(config *core.Configuration, pluginName strin
 	}
 
 	state := core.NewBuildState(config)
-	plz.Run([]core.BuildLabel{plugin.Target}, nil, state, state.Config, state.TargetArch)
+	plz.RunHost([]core.BuildLabel{plugin.Target}, state)
 	subrepo := state.Graph.SubrepoOrDie(pluginName)
 	subrepo.State.Initialise(subrepo)
 
