@@ -139,7 +139,7 @@ func getSubrepoOrDie(name string, target core.BuildLabel) *core.Subrepo {
 	// This is sufficient to get everything we need. The parsing of the build def files happens in getPluginBuildDefs.
 	state.ParsePackageOnly = true
 
-	plz.Run([]core.BuildLabel{target}, nil, state, state.Config, state.TargetArch)
+	plz.Run([]core.BuildLabel{target}, nil, state, &plz.Progress{}, state.TargetArch)
 	return state.Graph.SubrepoOrDie(name)
 }
 
@@ -251,7 +251,7 @@ func getPluginBuildDefs(subrepo *core.Subrepo) map[string]*asp.Statement {
 		dirs = append(dirs, "build_defs")
 	}
 
-	p := asp.NewParser(subrepo.State)
+	p := asp.NewParser(subrepo.State, nil)
 	ret := make(map[string]*asp.Statement)
 	for _, dir := range dirs {
 		fs := subrepo.FS()

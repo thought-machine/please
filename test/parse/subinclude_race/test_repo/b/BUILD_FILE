@@ -1,0 +1,19 @@
+export_file(
+    name = "dep",
+    src = "dep.build_defs",
+    visibility = ["//a/..."],
+)
+
+export_file(
+    name = "self",
+    src = "self.build_defs",
+    visibility = ["//a/..."],
+)
+
+subinclude("//b:self")
+
+genrule(
+    name = "y",
+    outs = ["y.txt"],
+    cmd = "echo hello > $OUT",
+)

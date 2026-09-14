@@ -1,0 +1,7 @@
+build_rule(
+    name = "c",
+    outs = ["c.txt"],
+    cmd = "echo c > $OUT",
+    labels = ["x:from_subrepo"],
+    visibility = ["PUBLIC"],
+)

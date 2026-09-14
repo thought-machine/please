@@ -134,7 +134,7 @@ func resolveCmd(state *core.BuildState, target *core.BuildTarget, overrideCmdArg
 		return core.ReplaceSequences(state, target, strings.Join(overrideCmdArgs, " "))
 	}
 
-	outs := target.Outputs()
+	outs := target.Outputs(state.Graph)
 	if len(outs) != 1 {
 		return "", fmt.Errorf("Target %s cannot be executed as it has %d outputs", target.Label, len(outs))
 	}

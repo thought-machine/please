@@ -1,0 +1,13 @@
+# Declared first, so the subrepo is registered long before anything could wait on it.
+subrepo(
+    name = "sub",
+    path = "sub",
+)
+
+subinclude("//rules:defs")
+
+genrule(
+    name = "z",
+    outs = ["z.txt"],
+    cmd = "echo hello > $OUT",
+)

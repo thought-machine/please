@@ -342,13 +342,13 @@ func (label BuildLabel) Less(other BuildLabel) bool {
 // Paths is an implementation of BuildInput interface; we use build labels directly as inputs.
 func (label BuildLabel) Paths(graph *BuildGraph) []string {
 	target := graph.TargetOrDie(label)
-	return addPathPrefix(target.Outputs(), target.PackageDir())
+	return addPathPrefix(target.Outputs(graph), target.PackageDir())
 }
 
 // FullPaths is an implementation of BuildInput interface.
 func (label BuildLabel) FullPaths(graph *BuildGraph) []string {
 	target := graph.TargetOrDie(label)
-	return addPathPrefix(target.Outputs(), target.OutDir())
+	return addPathPrefix(target.Outputs(graph), target.OutDir())
 }
 
 // addPathPrefix adds a prefix to all the entries in a slice.
@@ -362,7 +362,7 @@ func addPathPrefix(paths []string, prefix string) []string {
 
 // LocalPaths is an implementation of BuildInput interface.
 func (label BuildLabel) LocalPaths(graph *BuildGraph) []string {
-	return graph.TargetOrDie(label).Outputs()
+	return graph.TargetOrDie(label).Outputs(graph)
 }
 
 // Label is an implementation of BuildInput interface. It always returns this label.

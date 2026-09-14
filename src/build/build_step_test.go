@@ -8,6 +8,7 @@
 package build
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -114,7 +115,7 @@ func TestPostBuildFunction(t *testing.T) {
 	err := buildTarget(state, target, false)
 	assert.NoError(t, err)
 	assert.Equal(t, core.Built, target.State())
-	assert.Equal(t, []string{"file7"}, target.Outputs())
+	assert.Equal(t, []string{"file7"}, target.Outputs(state.Graph))
 }
 
 func TestOutputDir(t *testing.T) {
@@ -131,7 +132,7 @@ func TestOutputDir(t *testing.T) {
 
 	err := buildTarget(state, target, false)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"file7"}, target.Outputs())
+	assert.Equal(t, []string{"file7"}, target.Outputs(state.Graph))
 
 	md, err := loadTargetMetadata(target)
 	require.NoError(t, err)
@@ -143,7 +144,7 @@ func TestOutputDir(t *testing.T) {
 	state, target = newTarget()
 	err = buildTarget(state, target, false)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"file7"}, target.Outputs())
+	assert.Equal(t, []string{"file7"}, target.Outputs(state.Graph))
 	assert.Equal(t, core.Reused, target.State())
 }
 
@@ -166,7 +167,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 
 	err := buildTarget(state, target, false)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"foo"}, target.Outputs())
+	assert.Equal(t, []string{"foo"}, target.Outputs(state.Graph))
 
 	md, err := loadTargetMetadata(target)
 	require.NoError(t, err)
@@ -182,7 +183,7 @@ func TestOutputDirDoubleStar(t *testing.T) {
 
 	err = buildTarget(state, target, false)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"foo/file7"}, target.Outputs())
+	assert.Equal(t, []string{"foo/file7"}, target.Outputs(state.Graph))
 
 	info, err = os.Lstat(filepath.Join(target.OutDir(), "foo/file7"))
 	require.NoError(t, err)
@@ -609,12 +610,8 @@ func (*mockCache) Shutdown()                      {}
 type fakeParser struct {
 }
 
-func (fake *fakeParser) RegisterPreload(core.BuildLabel) error {
-	return nil
-}
-
 // ParseFile stub
-func (fake *fakeParser) ParseFile(pkg *core.Package, label, dependent *core.BuildLabel, mode core.ParseMode, fs iofs.FS, filename string) error {
+func (fake *fakeParser) ParseFile(_ context.Context, pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
 	return nil
 }
 
@@ -632,7 +629,7 @@ func (fake *fakeParser) NewParser(state *core.BuildState) {
 }
 
 // ParseReader stub
-func (fake *fakeParser) ParseReader(pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel, mode core.ParseMode) error {
+func (fake *fakeParser) ParseReader(_ context.Context, pkg *core.Package, r io.ReadSeeker, label, dependent *core.BuildLabel) error {
 	return nil
 }
 

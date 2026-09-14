@@ -12,7 +12,7 @@ import (
 func WhatOutputs(graph *core.BuildGraph, files []string, printFiles bool) {
 	targets := graph.AllTargets()
 	for _, f := range files {
-		if t := whatOutputs(targets, f); len(t) > 0 {
+		if t := whatOutputs(graph, targets, f); len(t) > 0 {
 			for _, l := range t {
 				if printFiles {
 					fmt.Printf("%s ", f)
@@ -29,10 +29,10 @@ func WhatOutputs(graph *core.BuildGraph, files []string, printFiles bool) {
 	}
 }
 
-func whatOutputs(targets []*core.BuildTarget, file string) []core.BuildLabel {
+func whatOutputs(graph *core.BuildGraph, targets []*core.BuildTarget, file string) []core.BuildLabel {
 	ret := []core.BuildLabel{}
 	for _, t := range targets {
-		for _, output := range t.FullOutputs() {
+		for _, output := range t.FullOutputs(graph) {
 			if output == file {
 				ret = append(ret, t.Label)
 			}

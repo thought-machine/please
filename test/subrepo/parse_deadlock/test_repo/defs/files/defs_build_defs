@@ -1,0 +1,6 @@
+def my_rule(name:str):
+    return genrule(
+        name = name,
+        outs = [name + ".txt"],
+        cmd = "echo hello > $OUTS",
+    )

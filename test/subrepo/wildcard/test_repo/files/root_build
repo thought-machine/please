@@ -1,0 +1,5 @@
+genrule(
+    name = "root",
+    outs = ["root"],
+    cmd = "echo root > $OUTS",
+)

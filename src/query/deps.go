@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/thought-machine/please/src/core"
@@ -31,7 +32,8 @@ func deps(out io.Writer, state *core.BuildState, target *core.BuildTarget, done 
 	if currentLevel == targetLevel {
 		return
 	}
-	for _, l := range target.DeclaredDependencies() {
+	// Sort so output is stable and readable; DeclaredDependencies yields in declaration order.
+	for _, l := range slices.SortedFunc(target.DeclaredDependencies(), core.BuildLabel.Compare) {
 		dep := state.Graph.TargetOrDie(l)
 		for _, l := range dep.ProvideFor(target) {
 			if !state.ShouldInclude(dep) || done[l] {

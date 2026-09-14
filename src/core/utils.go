@@ -7,6 +7,7 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/thought-machine/please/src/fs"
@@ -171,8 +172,20 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 
 			done[dependency.Label] = true
 			if target == dependency || (target.NeedsTransitiveDependencies && !dependency.OutputIsComplete) {
-				for _, dep := range dependency.BuildDependencies() {
-					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep.Label) {
+				// TODO(peterebden): We are maintaining a particular ordering here to avoid causing rebuilds.
+				// At some point when we are happy to do so, we should push this up to places that care
+				// (e.g. incrementality.go).
+				deps := slices.SortedFunc(func(yield func(BuildLabel) bool) {
+					for dep := range dependency.BuildDependencies() {
+						for _, provided := range graph.TargetOrDie(dep).ProvideFor(dependency) {
+							if !yield(provided) {
+								return
+							}
+						}
+					}
+				}, BuildLabel.Compare)
+				for _, dep := range deps {
+					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
 						if !done[dep2] && !dependency.IsTool(dep2) {
 							if !inner(graph.TargetOrDie(dep2)) {
 								return false
@@ -181,7 +194,7 @@ func IterInputs(state *BuildState, graph *BuildGraph, target *BuildTarget, inclu
 					}
 				}
 			} else {
-				for _, dep := range dependency.ExportedDependencies() {
+				for dep := range dependency.ExportedDependencies() {
 					for dep2 := range recursivelyProvideFor(graph, target, dependency, dep) {
 						if !done[dep2] {
 							if !inner(graph.TargetOrDie(dep2)) {
@@ -261,7 +274,7 @@ func IterRuntimeFiles(graph *BuildGraph, target *BuildTarget, absoluteOuts bool,
 		}
 
 		outDir := target.OutDir()
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(graph) {
 			if !pushOut(filepath.Join(outDir, out), out) {
 				return
 			}
@@ -430,9 +443,19 @@ func IterInputPaths(graph *BuildGraph, target *BuildTarget) iter.Seq[string] {
 					}
 				}
 
-				// Finally recurse for all the deps of this rule.
-				for _, dep := range target.Dependencies() {
-					for d := range recursivelyProvideFor(graph, target, dep, dep.Label) {
+				// Finally recurse for all the deps of this rule, again in a deterministic order.
+				deps := slices.SortedFunc(func(yield func(BuildLabel) bool) {
+					for dep := range target.DeclaredDependencies() {
+						for _, provided := range graph.TargetOrDie(dep).ProvideFor(target) {
+							if !yield(provided) {
+								return
+							}
+						}
+					}
+				}, BuildLabel.Compare)
+				for _, dep := range deps {
+					t := graph.TargetOrDie(dep)
+					for d := range recursivelyProvideFor(graph, target, t, t.Label) {
 						if !inner(graph.TargetOrDie(d)) {
 							return false
 						}

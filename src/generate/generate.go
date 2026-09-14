@@ -24,7 +24,7 @@ func UpdateGitignore(graph *core.BuildGraph, labels []core.BuildLabel, gitignore
 		if !t.HasLabel("codegen") {
 			continue
 		}
-		for _, out := range t.Outputs() {
+		for _, out := range t.Outputs(graph) {
 			relativePkg := t.Label.PackageName
 			if pkg != "." {
 				if !strings.HasPrefix(t.Label.PackageName, pkg) {
@@ -49,7 +49,7 @@ func allLabelGenOuts(graph *core.BuildGraph, labels []core.BuildLabel) []string 
 		if !t.HasLabel("codegen") {
 			continue
 		}
-		outs = append(outs, t.Outputs()...)
+		outs = append(outs, t.Outputs(graph)...)
 	}
 	return outs
 }
@@ -72,7 +72,7 @@ func LinkGeneratedSources(state *core.BuildState, labels []core.BuildLabel) {
 		if !target.HasLabel("codegen") {
 			continue
 		}
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(state.Graph) {
 			destDir := filepath.Join(core.RepoRoot, target.Label.PackageDir())
 			srcDir := filepath.Join(core.RepoRoot, target.OutDir())
 			fs.LinkDestination(filepath.Join(srcDir, out), filepath.Join(destDir, out), linker)

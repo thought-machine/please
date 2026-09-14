@@ -20,8 +20,6 @@ func TestReverseDeps(t *testing.T) {
 	graph.AddTarget(root)
 	graph.AddTarget(branch)
 	graph.AddTarget(leaf)
-	branch.ResolveDependencies(graph)
-	leaf.ResolveDependencies(graph)
 
 	pkg := core.NewPackage("package")
 	graph.AddPackage(pkg)

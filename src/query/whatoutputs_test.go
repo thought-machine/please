@@ -37,7 +37,7 @@ func makeTarget2(g *core.BuildGraph, label string, filegroup bool, outputs ...st
 func TestDetectsOutputs(t *testing.T) {
 	graph := core.NewGraph()
 	makeTarget2(graph, "//package1:target1", false, "out1", "out2")
-	targets := whatOutputs(graph.AllTargets(), "plz-out/gen/package1/out1")
+	targets := whatOutputs(graph, graph.AllTargets(), "plz-out/gen/package1/out1")
 	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}}, targets)
 }
 
@@ -47,11 +47,11 @@ func TestDetectOutputsFilegroup(t *testing.T) {
 	graph := core.NewGraph()
 	makeTarget2(graph, "//package1:target1", true, "out1", "out2")
 	makeTarget2(graph, "//package1:target2", true, "out1")
-	targets := whatOutputs(graph.AllTargets(), "plz-out/gen/package1/out1")
+	targets := whatOutputs(graph, graph.AllTargets(), "plz-out/gen/package1/out1")
 	assert.Equal(t, []core.BuildLabel{
 		{PackageName: "package1", Name: "target1"},
 		{PackageName: "package1", Name: "target2"},
 	}, targets)
-	targets = whatOutputs(graph.AllTargets(), "plz-out/gen/package1/out2")
+	targets = whatOutputs(graph, graph.AllTargets(), "plz-out/gen/package1/out2")
 	assert.Equal(t, []core.BuildLabel{{PackageName: "package1", Name: "target1"}}, targets)
 }

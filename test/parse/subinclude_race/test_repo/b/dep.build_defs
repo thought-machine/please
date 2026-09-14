@@ -1,0 +1,5 @@
+# Closes the cascade back into package a, at a different target (dep) than the one that started it
+# in a's own self-subinclude (self) - this is what made it invisible to a plain path-based subinclude
+# cycle check: a/self.build_defs -> b/self.build_defs -> b/dep.build_defs -> a/dep.build_defs never
+# revisits the same file.
+subinclude("//a:dep")

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/thought-machine/please/src/cli"
@@ -37,7 +38,7 @@ func Repo(state *core.BuildState, dir string, noTrim bool, targets []core.BuildL
 func Outputs(state *core.BuildState, dir string, targets []core.BuildLabel) {
 	for _, label := range targets {
 		target := state.Graph.TargetOrDie(label)
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(state.Graph) {
 			fullPath := filepath.Join(dir, out)
 			outDir := filepath.Dir(fullPath)
 			if err := os.MkdirAll(outDir, core.DirPermissions); err != nil {
@@ -193,7 +194,7 @@ func (be *baseExporter) exportTargets(labels core.BuildLabels) {
 // exportDependencies exports dependencies of a target.
 func (be *baseExporter) exportDependencies(target *core.BuildTarget) {
 	deps := target.DeclaredDependencies()
-	be.exportTargets(deps)
+	be.exportTargets(slices.Collect(deps))
 }
 
 // exportSources exports all files required by the target.

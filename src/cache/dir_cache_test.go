@@ -29,7 +29,7 @@ func cachePath(target *core.BuildTarget, compress bool) string {
 	if compress {
 		return filepath.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash+".tar.gz")
 	}
-	return filepath.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash, target.Outputs()[0])
+	return filepath.Join(".plz-cache-"+target.Label.PackageName, target.Label.PackageName, target.Label.Name, b64Hash, target.Outputs(nil)[0])
 }
 
 func inCache(target *core.BuildTarget) bool {
@@ -47,23 +47,23 @@ func inCompressedCache(target *core.BuildTarget) bool {
 func TestStoreAndRetrieve(t *testing.T) {
 	cache := makeCache(".plz-cache-test1", false)
 	target := makeTarget2("//test1:target1", 20)
-	cache.Store(target, hash, target.Outputs())
+	cache.Store(target, hash, target.Outputs(nil))
 	// Should now exist in cache at this path
 	assert.True(t, inCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs(nil)))
 	// Should be able to store it again without problems
-	cache.Store(target, hash, target.Outputs())
+	cache.Store(target, hash, target.Outputs(nil))
 	assert.True(t, inCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs(nil)))
 }
 
 func TestCleanNoop(t *testing.T) {
 	cache := makeCache(".plz-cache-test2", false)
 	target1 := makeTarget2("//test2:target1", 2000)
-	cache.Store(target1, hash, target1.Outputs())
+	cache.Store(target1, hash, target1.Outputs(nil))
 	assert.True(t, inCache(target1))
 	target2 := makeTarget2("//test2:target2", 2000)
-	cache.Store(target2, hash, target2.Outputs())
+	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCache(target2))
 	// Doesn't clean anything this time because the high water mark is sufficiently high
 	totalSize := cache.clean(20000, 1000)
@@ -75,10 +75,10 @@ func TestCleanNoop(t *testing.T) {
 func TestCleanNoop2(t *testing.T) {
 	cache := makeCache(".plz-cache-test3", false)
 	target1 := makeTarget2("//test3:target1", 2000)
-	cache.Store(target1, hash, target1.Outputs())
+	cache.Store(target1, hash, target1.Outputs(nil))
 	assert.True(t, inCache(target1))
 	target2 := makeTarget2("//test3:target2", 2000)
-	cache.Store(target2, hash, target2.Outputs())
+	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCache(target2))
 	// Doesn't clean anything this time, the high water mark is lower but both targets have
 	// just been built.
@@ -91,7 +91,7 @@ func TestCleanNoop2(t *testing.T) {
 func TestCleanForReal(t *testing.T) {
 	cache := makeCache(".plz-cache-test4", false)
 	target1 := makeTarget2("//test4:target1", 2000)
-	cache.Store(target1, hash, target1.Outputs())
+	cache.Store(target1, hash, target1.Outputs(nil))
 	assert.True(t, inCache(target1))
 	target2 := makeTarget2("//test4:target2", 2000)
 	writeFile(cachePath(target2, false), 2000)
@@ -109,7 +109,7 @@ func TestCleanForReal2(t *testing.T) {
 	writeFile(cachePath(target1, false), 2000)
 	assert.True(t, inCache(target1))
 	target2 := makeTarget2("//test5:target2", 2000)
-	cache.Store(target2, hash, target2.Outputs())
+	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCache(target2))
 	// This time it should clean target1, because target2 has just been stored
 	totalSize := cache.clean(10000, 1000)
@@ -121,14 +121,14 @@ func TestCleanForReal2(t *testing.T) {
 func TestStoreAndRetrieveCompressed(t *testing.T) {
 	cache := makeCache(".plz-cache-test6", true)
 	target := makeTarget2("//test6:target6", 20)
-	cache.Store(target, hash, target.Outputs())
+	cache.Store(target, hash, target.Outputs(nil))
 	// Should now exist in cache at this path
 	assert.True(t, inCompressedCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs(nil)))
 	// Should be able to store it again without problems
-	cache.Store(target, hash, target.Outputs())
+	cache.Store(target, hash, target.Outputs(nil))
 	assert.True(t, inCompressedCache(target))
-	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs()))
+	assert.NotNil(t, cache.Retrieve(target, hash, target.Outputs(nil)))
 }
 
 func TestCleanCompressed(t *testing.T) {
@@ -137,7 +137,7 @@ func TestCleanCompressed(t *testing.T) {
 	writeFile(cachePath(target1, true), 2000)
 	assert.True(t, inCompressedCache(target1))
 	target2 := makeTarget2("//test7:target2", 2000)
-	cache.Store(target2, hash, target2.Outputs())
+	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCompressedCache(target2))
 	// Don't want to assert the size here since it depends on how well gzip compresses.
 	// It's a bit hard to know exactly what the sizes here should be too but we'll guess

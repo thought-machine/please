@@ -50,7 +50,7 @@ func RewriteHashes(state *core.BuildState, labels []core.BuildLabel) {
 // rewriteHashes rewrites hashes in a single file.
 func rewriteHashes(state *core.BuildState, filename, platform string, hashes map[string]string) error {
 	log.Notice("Rewriting hashes in %s...", filename)
-	p := asp.NewParser(state)
+	p := asp.NewParser(state, nil)
 	stmts, err := p.ParseFileOnly(filename)
 	if err != nil {
 		return err

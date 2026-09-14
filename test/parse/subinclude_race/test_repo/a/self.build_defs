@@ -1,0 +1,3 @@
+# Cascades into package b's own self-subinclude chain, which loops back into //a:dep - mirrors the
+# real-world two-package deadlock this test guards against.
+subinclude("//b:self")

@@ -73,7 +73,7 @@ func TargetEnvironment(state *BuildState, target *BuildTarget) BuildEnv {
 func BuildEnvironment(state *BuildState, target *BuildTarget, tmpDir string) BuildEnv {
 	env := TargetEnvironment(state, target)
 	sources := target.AllSourcePaths(state.Graph)
-	outEnv := target.GetTmpOutputAll(target.Outputs())
+	outEnv := target.GetTmpOutputAll(target.Outputs(state.Graph))
 	abs := filepath.IsAbs(tmpDir)
 
 	env["TMP_DIR"] = tmpDir
@@ -174,8 +174,8 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run
 		env["COVERAGE"] = "true"
 		env["COVERAGE_FILE"] = filepath.Join(testDir, CoverageFile)
 	}
-	if len(target.Outputs()) > 0 {
-		env["TEST"] = resolveOut(target.Outputs()[0], testDir, target.Test.Sandbox)
+	if outputs := target.Outputs(state.Graph); len(outputs) > 0 {
+		env["TEST"] = resolveOut(outputs[0], testDir, target.Test.Sandbox)
 	}
 	// Bit of a hack for gcov which needs access to its .gcno files.
 	if target.HasLabel("cc") {
@@ -197,7 +197,7 @@ func TestEnvironment(state *BuildState, target *BuildTarget, testDir string, run
 func RunEnvironment(state *BuildState, target *BuildTarget, inTmpDir bool) BuildEnv {
 	env := RuntimeEnvironment(state, target, true, inTmpDir)
 
-	outEnv := target.Outputs()
+	outEnv := target.Outputs(state.Graph)
 	env["OUTS"] = strings.Join(outEnv, " ")
 	// The OUT variable is only available on rules that have a single output.
 	if len(outEnv) == 1 {
@@ -217,7 +217,7 @@ func ExecEnvironment(state *BuildState, target *BuildTarget, execDir string) Bui
 	// of input and output in the terminal where the program is run.
 	env["TERM"] = os.Getenv("TERM")
 
-	outEnv := target.Outputs()
+	outEnv := target.Outputs(state.Graph)
 	// OUTS/OUT environment variables being always set is for backwards-compatibility.
 	// Ideally, if the target is a test these variables shouldn't be set.
 	env["OUTS"] = strings.Join(outEnv, " ")
@@ -349,7 +349,7 @@ func toolPath(state *BuildState, tool BuildInput, abs bool) string {
 		if o, ok := tool.(AnnotatedOutputLabel); ok {
 			entryPoint = o.Annotation
 		}
-		path := state.Graph.TargetOrDie(label).toolPath(abs, entryPoint)
+		path := state.Graph.TargetOrDie(label).toolPath(state.Graph, abs, entryPoint)
 		if !strings.Contains(path, "/") {
 			path = "./" + path
 		}

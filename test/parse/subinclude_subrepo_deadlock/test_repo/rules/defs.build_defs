@@ -1,0 +1,5 @@
+# Reaching into the subrepo is what makes subinclude() wait for the whole package that defines it
+# (//third_party:all) rather than just the subrepo target it actually needs.
+subinclude("///third_party/sub//pkg:x")
+
+RULES = True

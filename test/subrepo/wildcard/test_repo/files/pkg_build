@@ -1,0 +1,5 @@
+genrule(
+    name = "nested",
+    outs = ["nested"],
+    cmd = "echo nested > $OUTS",
+)

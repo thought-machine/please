@@ -109,6 +109,8 @@ linters:
       - ^plz-out$
       - builtin$
       - examples$
+      - tree
+      - plz-out
 formatters:
   enable:
     - gci
@@ -128,3 +130,5 @@ formatters:
       - ^plz-out$
       - builtin$
       - examples$
+      - tree
+      - plz-out

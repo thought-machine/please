@@ -34,6 +34,7 @@ type buildingTargets struct {
 	plain           bool
 	anyRemote       bool
 	state           *core.BuildState
+	progress        Progress
 	targets         []buildingTarget
 	currentTargets  map[buildingTargetKey]int
 	localAvailable  map[int]struct{}
@@ -42,12 +43,13 @@ type buildingTargets struct {
 	FailedNonTests  []core.BuildLabel
 }
 
-func newBuildingTargets(state *core.BuildState, plainOutput bool) *buildingTargets {
+func newBuildingTargets(state *core.BuildState, progress Progress, plainOutput bool) *buildingTargets {
 	n := state.Config.Please.NumThreads + state.Config.NumRemoteExecutors()
 	return &buildingTargets{
 		plain:           plainOutput,
 		anyRemote:       state.Config.NumRemoteExecutors() > 0,
 		state:           state,
+		progress:        progress,
 		targets:         make([]buildingTarget, n),
 		currentTargets:  make(map[buildingTargetKey]int, n),
 		localAvailable:  makeAvailable(state.Config.Please.NumThreads, 0),
@@ -101,11 +103,6 @@ func (bt *buildingTargets) handleOutput(result *core.BuildResult) {
 		if result.Status != core.TargetTestFailed {
 			// Reset colour so the entire compiler error output doesn't appear red.
 			log.Errorf("%s failed:\x1b[0m\n%s", label, shortError(result.Err))
-			// TODO(rgodden): make sure we close off any pending targets when their package fails to parse e.g. because
-			// 	a subrepo failed to build.
-			if !bt.state.KeepGoing || result.Status == core.ParseFailed {
-				bt.state.Stop()
-			}
 		} else if msg := shortError(result.Err); msg != "" {
 			log.Errorf("%s failed: %s", result.Label, msg)
 		} else {
@@ -166,8 +163,8 @@ func (bt *buildingTargets) updateTarget(idx int, result *core.BuildResult, t *co
 
 	if bt.plain {
 		if !active {
-			active := pluralise(bt.state.NumActive(), "task", "tasks")
-			log.Info("[%d/%s] %s: %s [%3.1fs]", bt.state.NumDone(), active, result.Label, result.Description, time.Since(target.Started).Seconds())
+			active := pluralise(bt.progress.NumTotal(), "task", "tasks")
+			log.Info("[%d/%s] %s: %s [%3.1fs]", bt.progress.NumDone(), active, result.Label, result.Description, time.Since(target.Started).Seconds())
 		} else {
 			log.Info("%s: %s", result.Label, result.Description)
 		}

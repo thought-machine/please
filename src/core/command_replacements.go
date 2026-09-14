@@ -252,22 +252,24 @@ func replaceSequenceLabel(state *BuildState, target *BuildTarget, label BuildLab
 	}
 	// TODO(jpoole): This doesn't handle tools when cross compiling. ///freebsd_amd64//tools:tool
 	// will not match the tool //tools:tool
-	deps := target.DependenciesFor(label)
-	if len(deps) == 0 {
+	label, ok := target.ResolveDependencySubrepo(label)
+	if !ok {
 		panic(fmt.Sprintf("Rule %s can't use %s; doesn't depend on target %s", target.Label, in, label))
 	}
+	deps := state.Graph.TargetOrDie(label).ProvideFor(target)
 	// TODO(pebers): this does not correctly handle the case where there are multiple deps here
 	//               (but is better than the previous case where it never worked at all)
-	return checkAndReplaceSequence(state, target, deps[0], ep, in, runnable, multiple, dir, outPrefix, hash, test, allOutputs, target.IsTool(label))
+	dep := state.Graph.TargetOrDie(deps[0])
+	return checkAndReplaceSequence(state, target, dep, ep, in, runnable, multiple, dir, outPrefix, hash, test, allOutputs, target.IsTool(label))
 }
 
 func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, ep, in string, runnable, multiple, dir, outPrefix, hash, test, allOutputs, tool bool) string {
-	if allOutputs && !multiple && len(dep.Outputs()) > 1 && ep == "" {
+	if allOutputs && !multiple && len(dep.Outputs(state.Graph)) > 1 && ep == "" {
 		// Label must have only one output.
 		panic(fmt.Sprintf("Rule %s can't use %s; %s has multiple outputs.", target.Label, in, dep.Label))
 	} else if runnable && !dep.IsBinary {
 		panic(fmt.Sprintf("Rule %s can't $(exe %s), it's not executable", target.Label, dep.Label))
-	} else if runnable && len(dep.Outputs()) == 0 {
+	} else if runnable && len(dep.Outputs(state.Graph)) == 0 {
 		panic(fmt.Sprintf("Rule %s is tagged as binary but produces no output.", dep.Label))
 	} else if test && tool {
 		panic(fmt.Sprintf("Rule %s uses %s in its test command, but tools are not accessible at test time", target, dep))
@@ -281,7 +283,7 @@ func checkAndReplaceSequence(state *BuildState, target, dep *BuildTarget, ep, in
 	}
 	var outputBuilder strings.Builder
 	if ep == "" {
-		for _, out := range dep.Outputs() {
+		for _, out := range dep.Outputs(state.Graph) {
 			if allOutputs || out == in {
 				if tool && !state.WillRunRemotely(target) {
 					abs, err := filepath.Abs(handleDir(dep.OutDir(), out, dir))

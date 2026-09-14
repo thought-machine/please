@@ -25,9 +25,15 @@ import (
 const durationGranularity = 10 * time.Millisecond
 const testDurationGranularity = time.Millisecond
 
+type Progress interface {
+	NumDone() int
+	NumTotal() int
+	NumParsing() int
+}
+
 // MonitorState monitors the build while it's running and prints output until the results
 // channel of state has completed.
-func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
+func MonitorState(state *core.BuildState, progress Progress, results <-chan *core.BuildResult, plainOutput, detailedTests, streamTestResults, shell, shellRun bool, traceFile string) {
 	initPrintf(state.Config)
 
 	if len(state.Config.Please.Motd) != 0 {
@@ -41,11 +47,10 @@ func MonitorState(state *core.BuildState, plainOutput, detailedTests, streamTest
 		defer tw.Close()
 	}
 
-	displayer := setupDisplayer(state, plainOutput)
+	displayer := setupDisplayer(state, progress, plainOutput)
 	t := time.NewTicker(displayer.Frequency())
 	defer t.Stop()
-	results := state.Results()
-	bt := newBuildingTargets(state, plainOutput)
+	bt := newBuildingTargets(state, progress, plainOutput)
 	displayer.Update(bt.Targets())
 loop:
 	for {
@@ -72,19 +77,7 @@ loop:
 		printFailedBuildResults(bt.FailedNonTests, bt.FailedTargets, duration)
 		return
 	}
-	if state.NeedBuild {
-		// Check all the targets we wanted to build actually have been built.
-		for _, label := range state.ExpandOriginalLabels() {
-			if target := state.Graph.Target(label); target == nil {
-				log.Fatalf("Target %s doesn't exist in build graph", label)
-			} else if (state.NeedHashesOnly || state.PrepareOnly || shell) && target.State() == core.Stopped {
-				// Do nothing, we will output about this shortly.
-			} else if target.State() < core.Built && len(bt.FailedTargets) == 0 && !target.AddedPostBuild {
-				log.Fatalf("Target %s hasn't built but we have no pending tasks left.\n%s", label, unbuiltTargetsMessage(state.Graph))
-			}
-		}
-	}
-	if state.NeedBuild && len(bt.FailedNonTests) == 0 {
+	if state.NeedBuild { // N.B. We've returned above if anything failed in the build step.
 		if state.PrepareOnly || shell {
 			printTempDirs(state, duration, shell, shellRun)
 		} else if state.NeedTests { // Got to the test phase, report their results.
@@ -367,7 +360,7 @@ func testResultMessage(results *core.TestSuite, showDuration bool) string {
 
 func printUnformattedBuildResults(state *core.BuildState) {
 	for _, label := range state.ExpandVisibleOriginalTargets() {
-		for _, result := range buildResult(state.Graph.TargetOrDie(label)) {
+		for _, result := range buildResult(state, state.Graph.TargetOrDie(label)) {
 			fmt.Printf("%s\n", result)
 		}
 	}
@@ -398,7 +391,7 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 	for _, label := range state.ExpandVisibleOriginalTargets() {
 		target := state.Graph.TargetOrDie(label)
 		fmt.Printf("%s:\n", label)
-		for _, result := range buildResult(target) {
+		for _, result := range buildResult(state, target) {
 			fmt.Printf("  %s\n", result)
 		}
 	}
@@ -470,10 +463,10 @@ func printTempDirs(state *core.BuildState, duration time.Duration, shell, shellR
 	}
 }
 
-func buildResult(target *core.BuildTarget) []string {
+func buildResult(state *core.BuildState, target *core.BuildTarget) []string {
 	results := []string{}
 	if target != nil {
-		for _, out := range target.Outputs() {
+		for _, out := range target.Outputs(state.Graph) {
 			if core.StartedAtRepoRoot() {
 				results = append(results, filepath.Join(target.OutDir(), out))
 			} else {
@@ -636,22 +629,6 @@ func colouriseError(err error) error {
 
 // errorMessageRe is a regex to find lines that look like they're specifying a file.
 var errorMessageRe = deferredregex.DeferredRegex{Re: `^([^ ]+\.[^: /]+):([0-9]+):(?:([0-9]+):)? *(?:([a-z-_ ]+):)? (.*)$`}
-
-// unbuiltTargetsMessage returns a message for any targets that are supposed to build but haven't yet.
-func unbuiltTargetsMessage(graph *core.BuildGraph) string {
-	var msgBuilder strings.Builder
-	for _, target := range graph.AllTargets() {
-		if target.State() == core.Active {
-			_, _ = fmt.Fprintf(&msgBuilder, "  %s", target.Label)
-		} else if target.State() == core.Pending {
-			_, _ = fmt.Fprintf(&msgBuilder, "  %s (pending build)\n", target.Label)
-		}
-	}
-	if msgBuilder.Len() == 0 {
-		return "\nThe following targets have not yet built:\n" + msgBuilder.String()
-	}
-	return ""
-}
 
 // shortError returns the message for an error, shortening it if the error supports that.
 func shortError(err error) string {

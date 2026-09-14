@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	iofs "io/fs"
 	"os"
@@ -63,7 +64,7 @@ func parseFile(pkg *core.Package, p *asp.Parser, filename string) error {
 		}
 		return err
 	}
-	return p.ParseFile(pkg, nil, nil, 0, nil, filename)
+	return p.ParseFile(context.Background(), pkg, nil, nil, nil, filename)
 }
 
 type assignment struct {
@@ -232,7 +233,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(opts.NumThreads)
 	total := len(opts.Args.BuildFiles)
-	p := asp.NewParser(state)
+	p := asp.NewParser(state, nil)
 
 	log.Debug("Loading built-in build rules...")
 	dir, _ := rules.AllAssets()
