@@ -153,7 +153,7 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 	return targets
 }
 
-// AllPackages returns an iterator over all packages in the graph.
+// AllPackages returns an iterator over all packages in the graph. They are returned in no particular order.
 func (graph *BuildGraph) AllPackages() iter.Seq[*Package] {
 	return func(yield func(*Package) bool) {
 		for pkg, err := range graph.packages.Values() {

@@ -128,8 +128,10 @@ func (m *ErrMap[K, V]) GetOrWait(key K) (V, <-chan struct{}, bool, error) {
 func (m *ErrMap[K, V]) Items() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for k, v := range m.m.Items() {
-			if !yield(k, v.Val) {
-				return
+			if v.Err == nil {
+				if !yield(k, v.Val) {
+					return
+				}
 			}
 		}
 	}

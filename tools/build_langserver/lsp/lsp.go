@@ -290,13 +290,7 @@ func (h *Handler) loadBuiltins() error {
 // loadParserFunctions loads function definitions from the parser's ASTs.
 // This includes plugin-defined functions like go_library, python_library, etc.
 func (h *Handler) loadParserFunctions() {
-	funcsByFile := h.parser.AllFunctionsByFile()
-	if funcsByFile == nil {
-		return
-	}
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
-	for filename, stmts := range funcsByFile {
+	for filename, stmts := range h.parser.AllFunctionsByFile() {
 		// Read the file to create a File object for position conversion
 		data, err := os.ReadFile(filename)
 		if err != nil {
@@ -306,11 +300,13 @@ func (h *Handler) loadParserFunctions() {
 		file := asp.NewFile(filename, data)
 		for _, stmt := range stmts {
 			name := stmt.FuncDef.Name
+			h.mutex.Lock()
 			h.builtins[name] = append(h.builtins[name], builtin{
 				Stmt:   stmt,
 				Pos:    file.Pos(stmt.Pos),
 				EndPos: file.Pos(stmt.EndPos),
 			})
+			h.mutex.Unlock()
 		}
 	}
 }
