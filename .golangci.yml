@@ -34,6 +34,14 @@ linters:
         - shadow # Probably not useful enough to clean everything up
         - fieldalignment # TODO(peterebden): Should clean up these warnings and enable (although they are pretty finicky)
       enable-all: true
+      settings:
+        printf:
+          funcs:
+            # These panic with fmt.Errorf(msg, args...) under the hood, so treating them as
+            # printf wrappers lets vet check their format strings/args like any other Errorf call.
+            - (*github.com/thought-machine/please/src/parse/asp.scope).Error
+            - (*github.com/thought-machine/please/src/parse/asp.scope).Assert
+            - (*github.com/thought-machine/please/src/parse/asp.scope).NAssert
     perfsprint:
       errorf: false # Sometimes it's easier not to import another package
   exclusions:
@@ -105,7 +113,6 @@ linters:
     paths:
       - test_data
       - third_party$
-      - ^tree$
       - ^plz-out$
       - builtin$
       - examples$
