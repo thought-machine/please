@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/thought-machine/please/src/build"
@@ -95,14 +96,12 @@ func (graph *JSONGraph) Subrepo(name string) *JSONGraph {
 func makeAllPackages(state *core.BuildState) <-chan JSONPackage {
 	ch := make(chan JSONPackage, 100)
 	go func() {
-		packages := state.Graph.PackageMap()
+		packages := slices.Collect(state.Graph.AllPackages())
 		var wg sync.WaitGroup
-		wg.Add(len(packages))
 		for _, pkg := range packages {
-			go func(pkg *core.Package) {
+			wg.Go(func() {
 				ch <- makeJSONPackage(state, pkg)
-				wg.Done()
-			}(pkg)
+			})
 		}
 		wg.Wait()
 		close(ch)

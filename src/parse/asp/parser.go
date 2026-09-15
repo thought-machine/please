@@ -279,13 +279,13 @@ func (p *Parser) AllFunctionsByFile() map[string][]*Statement {
 		return nil
 	}
 	result := make(map[string][]*Statement)
-	p.interpreter.asts.Range(func(filename string, stmts []*Statement) {
+	for filename, stmts := range p.interpreter.asts.Items() {
 		for _, stmt := range stmts {
 			if stmt.FuncDef != nil {
 				result[filename] = append(result[filename], stmt)
 			}
 		}
-	})
+	}
 	return result
 }
 

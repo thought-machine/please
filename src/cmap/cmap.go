@@ -10,6 +10,7 @@ package cmap
 
 import (
 	"fmt"
+	"iter"
 	"sync"
 )
 
@@ -85,11 +86,24 @@ func (m *Map[K, V]) Values() []V {
 	return ret
 }
 
-// Range calls f for each key-value pair in the map.
-// No particular consistency guarantees are made during iteration.
-func (m *Map[K, V]) Range(f func(key K, val V)) {
-	for i := 0; i < len(m.shards); i++ {
-		m.shards[i].Range(f)
+// Items returns an iterator over each key-value pair in the map.
+// They are returned in no particular order.
+// You should not mutate the map while calling this as it may deadlock.
+func (m *Map[K, V]) Items() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for i := range len(m.shards) {
+			shard := &m.shards[i]
+			shard.l.RLock()
+			for k, v := range shard.m {
+				if v.Wait == nil { // Only yield completed values
+					if !yield(k, v.Val) {
+						shard.l.RUnlock()
+						return
+					}
+				}
+			}
+			shard.l.RUnlock()
+		}
 	}
 }
 
@@ -180,15 +194,4 @@ func (s *shard[K, V]) Contains(key K) bool {
 
 	_, ok := s.m[key]
 	return ok
-}
-
-// Range calls f for each key-value pair in this shard.
-func (s *shard[K, V]) Range(f func(key K, val V)) {
-	s.l.RLock()
-	defer s.l.RUnlock()
-	for k, v := range s.m {
-		if v.Wait == nil { // Only include completed values
-			f(k, v.Val)
-		}
-	}
 }
