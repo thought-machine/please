@@ -66,16 +66,16 @@ gentest(
 plz_e2e_test(
     name = "test_outputs_move_test",
     cmd = "plz test //test:test_outputs_move_test_case -- some_test_arg",
-    expect_output_contains = "4 passed.",
     expect_file_exists = "plz-out/bin/test/foo.txt",
+    expect_output_contains = "4 passed.",
 )
 
 gentest(
     name = "test_outputs_move_test_case",
     data = ["test_output_test_1.txt"],
     labels = ["manual"],
-    test_outputs = ["foo.txt"],
     test_cmd = "cp $(location test_output_test_1.txt) test.results && echo 'hello' > foo.txt #",
+    test_outputs = ["foo.txt"],
 )
 
 # Test that on re-running a test it is cached.
