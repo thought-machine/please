@@ -271,7 +271,7 @@ func (i *interpreter) Subinclude(pkgScope *scope, path string, label core.BuildL
 		}
 		return locals, nil
 	})
-	pkgScope.Assert(err == nil, "failed to subinclude %s: %s", label, err)
+	pkgScope.Assert(err == nil, "failed to subinclude %s: %w", label, err)
 	return globals
 }
 
