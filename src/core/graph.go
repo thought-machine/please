@@ -5,6 +5,7 @@
 package core
 
 import (
+	"iter"
 	"maps"
 	"slices"
 	"sort"
@@ -152,14 +153,17 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 	return targets
 }
 
-// PackageMap returns a map of name to package.
-// TODO(peterebden): Change this to an iterator.
-func (graph *BuildGraph) PackageMap() map[string]*Package {
-	packages := map[string]*Package{}
-	graph.packages.Range(func(k packageKey, v *Package) {
-		packages[k.String()] = v
-	})
-	return packages
+// AllPackages returns an iterator over all packages in the graph.
+func (graph *BuildGraph) AllPackages() iter.Seq[*Package] {
+	return func(yield func(*Package) bool) {
+		for pkg, err := range graph.packages.Values() {
+			if err == nil {
+				if !yield(pkg) {
+					break
+				}
+			}
+		}
+	}
 }
 
 // NewGraph constructs and returns a new BuildGraph.

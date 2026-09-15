@@ -3,6 +3,7 @@ package cmap
 import (
 	"context"
 	"fmt"
+	"iter"
 )
 
 // A Limiter is the interface that we use to release/acquire workers while waiting.
@@ -121,13 +122,20 @@ func (m *ErrMap[K, V]) GetOrWait(key K) (V, <-chan struct{}, bool, error) {
 	return v.Val, wait, first, v.Err
 }
 
-// Range calls f for each key-value pair in the map.
-// No particular consistency guarantees are made during iteration.
-func (m *ErrMap[K, V]) Range(f func(key K, val V)) {
-	m.m.Range(func(key K, val errV[V]) {
-		if val.Err != nil {
-			return // skip errors
+// Values returns an iterator over all value / error pairs in the map.
+// You should not mutate the map while calling this as it may deadlock.
+func (m *ErrMap[K, V]) Values() iter.Seq2[V, error] {
+	return func(yield func(V, error) bool) {
+		for i := range len(m.m.shards) {
+			shard := &m.m.shards[i]
+			shard.l.Lock()
+			for _, v := range shard.m {
+				if !yield(v.Val.Val, v.Val.Err) {
+					shard.l.Unlock()
+					return
+				}
+			}
+			shard.l.Unlock()
 		}
-		f(key, val.Val)
-	})
+	}
 }
