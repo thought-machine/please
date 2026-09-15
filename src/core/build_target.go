@@ -117,13 +117,6 @@ type BuildTarget struct {
 	dependencies []DeclaredDependency `name:"deps"`
 	// The run-time dependencies of this target.
 	runtimeDependencies []BuildLabel `name:"runtime_deps"`
-	// Whether to consider the run-time dependencies of this target's sources to be additional
-	// run-time dependencies of this target.
-	RuntimeDependenciesFromSources bool `name:"runtime_deps_from_srcs"`
-	// Whether to consider the run-time dependencies of this target's build-time dependencies
-	// (and exported dependencies of those targets) to be additional run-time dependencies of
-	// this target.
-	RuntimeDependenciesFromDependencies bool `name:"runtime_deps_from_deps"`
 	// List of build target patterns that can use this build target.
 	Visibility []BuildLabel
 	// Source files of this rule. Can refer to build rules themselves.
@@ -153,10 +146,6 @@ type BuildTarget struct {
 	Test *TestFields `name:"test"`
 	// Debug related fields.
 	Debug *DebugFields
-	// If ShowProgress is true, this is used to store the current progress of the target.
-	Progress atomicFloat32 `print:"false"`
-	// For remote_files, this is the total size of the download (if known)
-	FileSize uint64 `print:"false"`
 	// Description displayed while the command is building.
 	// Default is just "Building" but it can be customised.
 	BuildingDescription string `name:"building_description"`
@@ -209,8 +198,15 @@ type BuildTarget struct {
 	Env map[string]string `name:"env"`
 	// The content of text_file() rules
 	FileContent string `name:"content"`
+	// For remote_files, this is the total size of the download (if known)
+	FileSize uint64 `print:"false"`
 	// Represents the state of this build target (see below)
 	state atomic.Int32 `print:"false"`
+	// If ShowProgress is true, this is used to store the current progress of the target.
+	Progress atomicFloat32 `print:"false"`
+	// If true, the interactive progress display will try to infer the target's progress
+	// via some heuristics on its output.
+	showProgress atomic.Bool `name:"progress"`
 	// The number of completed runs
 	completedRuns uint16 `print:"false"`
 	// True if this target is a binary (ie. runnable, will appear in plz-out/bin)
@@ -258,9 +254,13 @@ type BuildTarget struct {
 	// newline separated. This can be used for targets which have too many sources to fit in an
 	// environment variable.
 	SrcListFiles bool `name:"src_list_files"`
-	// If true, the interactive progress display will try to infer the target's progress
-	// via some heuristics on its output.
-	showProgress atomic.Bool `name:"progress"`
+	// Whether to consider the run-time dependencies of this target's sources to be additional
+	// run-time dependencies of this target.
+	RuntimeDependenciesFromSources bool `name:"runtime_deps_from_srcs"`
+	// Whether to consider the run-time dependencies of this target's build-time dependencies
+	// (and exported dependencies of those targets) to be additional run-time dependencies of
+	// this target.
+	RuntimeDependenciesFromDependencies bool `name:"runtime_deps_from_deps"`
 }
 
 // ExpectedBuildMetadataVersionTag is the version tag that the current Please version expects. If this doesn't match
