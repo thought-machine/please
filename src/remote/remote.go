@@ -908,6 +908,9 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to download file: %s", err)
 	}
+	if resp.GetStatus().GetCode() != int32(codes.OK) {
+		return nil, nil, fmt.Errorf("Failed to download file: %s", resp.GetStatus().String())
+	}
 	c.state.LogBuildResult(target, core.TargetBuilding, "Downloaded.")
 	// If we get here, the blob exists in the CAS. Create an ActionResult corresponding to it.
 	outs := target.Outputs(c.state.Graph)
