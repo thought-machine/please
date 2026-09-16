@@ -313,7 +313,7 @@ func (s *scope) WaitForSubincludedTarget(ctx context.Context, l, dependent core.
 	return s.interpreter.callbacks.BuildAndDownload(ctx, l, dependent)
 }
 
-// WaitForSubrepo drops the interpreter lock and waits for the given package to be parsed. Like
+// WaitForSubrepo drops the interpreter lock and waits for the given subrepo to be defined. Like
 // WaitForSubincludedTarget this is essential rather than just polite: parsing that package can happen
 // inline on this very goroutine, and it will try to take a parser slot of its own when it does. Holding
 // ours while we wait would deadlock us against ourselves as soon as every slot is held by a thread here.

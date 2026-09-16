@@ -57,6 +57,7 @@ func (m *ErrMap[K, V]) Get(key K) (V, error) {
 
 // GetOrSet returns the value if set, or an error if one has been set.
 // If nothing has been set for the key, it runs the given function to generate the value and then sets it.
+// If the called function panics, the panic will be recovered and treated as though it returned an error.
 func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 	v, wait, first := m.m.GetOrWait(key)
 	if v.Err != nil {
@@ -83,6 +84,7 @@ func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 }
 
 // GetOrSetCtx is like GetOrSet but accepts a context that can be cancelled.
+// If the called function panics, the panic will be recovered and treated as though it returned an error.
 func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, error)) (V, error) {
 	v, wait, first := m.m.GetOrWait(key)
 	if v.Err != nil {
