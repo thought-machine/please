@@ -736,6 +736,10 @@
         <h3 class="mt1 f6 lh-title" id="build.linkgeneratedsources">LinkGeneratedSources</h3>
 
         <p>
+          <strong>DEPRECATED:</strong> Use <code class="code">LinkGeneratedSourcesOnBuild</code> and
+          <code class="code">GeneratedSourcesLinkType</code> instead.
+        </p>
+        <p>
           When set, Please will link generated sources back into the source tree. A <code>.gitignore</code> can be
           generated with <code>plz generate --update_gitignore .gitignore</code>. This can help with getting Please to
           work with IDEs and tooling. This can be set to <code class="code">hard</code> to generate hard links.
@@ -747,10 +751,35 @@
     </li>
     <li>
       <div>
+        <h3 class="mt1 f6 lh-title" id="build.linkgeneratedsourcesonbuild">LinkGeneratedSourcesOnBuild</h3>
+        <p>
+          If true, generated sources will be linked back into the source tree during builds. Defaults to false.
+          Use <code class="code">GeneratedSourcesLinkType</code> to control whether <code class="code">soft</code> or <code class="code">hard</code> links are created.
+          A <code>.gitignore</code> can be generated with <code>plz generate --update_gitignore .gitignore</code>.
+          This can help with getting Please to work with IDEs and tooling.
+        </p>
+        <p>
+          Generated sources are identified by rules with the <code class="code">codegen</code> label.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="build.generatedsourceslinktype">GeneratedSourcesLinkType</h3>
+        <p>
+          The type of link to create for generated sources. Options are <code class="code">soft</code> (symlinks, default)
+          and <code class="code">hard</code> (hardlinks). Hard links are useful on platforms where symlinks don't work
+          well, such as WSL.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
         <h3 class="mt1 f6 lh-title" id="build.updategitignore">UpdateGitignore</h3>
         <p>
           When set, Please will update the nearest <code class="code">.gitignore</code> with generated sources
-          automatically during builds. This must be used in conjunction with LinkGeneratedSources.
+          automatically during builds. This must be used in conjunction with <code class="code">LinkGeneratedSourcesOnBuild</code>
+          or <code class="code">LinkGeneratedSources</code>.
         </p>
       </div>
     </li>
