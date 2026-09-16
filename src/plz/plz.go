@@ -119,7 +119,7 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 }
 
 type runner struct {
-	tasks         *errgroup.Group
+	tasks *errgroup.Group
 	// We keep a top-level context here which we use to cancel certain calls which have a different (potentially longer)
 	// lifespan than the immediate context that we have (for example, we need a particular target to exist, and we need
 	// to parse its package for that to be the case; we return when the target is ready but the parse outlives that call).
