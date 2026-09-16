@@ -79,7 +79,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 		}
 	}
 	// Any registered subincludes also count.
-	for _, pkg := range graph.PackageMap() {
+	for pkg := range graph.AllPackages() {
 		for _, subinclude := range pkg.Subincludes {
 			log.Debug("GC root: %s", subinclude)
 			addTarget(graph, keepTargets, graph.TargetOrDie(subinclude))
@@ -89,7 +89,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 	for _, target := range targets {
 		if target.IsAllSubpackages() {
 			// For slightly awkward reasons these can't be handled outside :(
-			for _, pkg := range graph.PackageMap() {
+			for pkg := range graph.AllPackages() {
 				if pkg.IsIncludedIn(target) {
 					for _, target := range pkg.AllTargets() {
 						log.Debug("GC root: %s", target.Label)

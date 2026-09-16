@@ -593,8 +593,8 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel, justTests 
 			addPackage(pkg)
 		}
 	} else {
-		for name, pkg := range state.Graph.PackageMap() {
-			if label.Includes(BuildLabel{PackageName: name}) {
+		for pkg := range state.Graph.AllPackages() {
+			if label.Includes(BuildLabel{Subrepo: pkg.SubrepoName, PackageName: pkg.Name}) {
 				addPackage(pkg)
 			}
 		}

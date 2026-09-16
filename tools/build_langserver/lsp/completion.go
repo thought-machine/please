@@ -159,7 +159,7 @@ func completionItem(label, prefix string, line, col int) lsp.CompletionItem {
 func (h *Handler) buildPackageTree() {
 	root := &pkg{Subpackages: map[string]*pkg{}}
 	all := map[string]*pkg{"": root}
-	for _, p := range h.state.Graph.PackageMap() {
+	for p := range h.state.Graph.AllPackages() {
 		all[p.Name] = &pkg{Package: p}
 	}
 	root = all[""]

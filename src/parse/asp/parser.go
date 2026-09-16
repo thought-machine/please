@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	iofs "io/fs"
+	"iter"
 	"os"
 	"strings"
 
@@ -274,19 +275,23 @@ func (p *Parser) optimiseBuiltinCalls(stmts []*Statement) {
 // AllFunctionsByFile returns all function definitions grouped by filename.
 // This includes functions from builtins, plugins, and subincludes.
 // It iterates over the ASTs stored by the interpreter.
-func (p *Parser) AllFunctionsByFile() map[string][]*Statement {
-	if p.interpreter == nil || p.interpreter.asts == nil {
-		return nil
-	}
-	result := make(map[string][]*Statement)
-	p.interpreter.asts.Range(func(filename string, stmts []*Statement) {
-		for _, stmt := range stmts {
-			if stmt.FuncDef != nil {
-				result[filename] = append(result[filename], stmt)
+func (p *Parser) AllFunctionsByFile() iter.Seq2[string, []*Statement] {
+	return func(yield func(string, []*Statement) bool) {
+		if p.interpreter == nil || p.interpreter.asts == nil {
+			return
+		}
+		for filename, stmts := range p.interpreter.asts.Items() {
+			var defStmts []*Statement
+			for _, stmt := range stmts {
+				if stmt.FuncDef != nil {
+					defStmts = append(defStmts, stmt)
+				}
+			}
+			if !yield(filename, defStmts) {
+				return
 			}
 		}
-	})
-	return result
+	}
 }
 
 // whitelistedKwargs returns true if the given built-in function name is allowed to

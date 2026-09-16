@@ -2,6 +2,7 @@ package cmap
 
 import (
 	"fmt"
+	"iter"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,4 +32,23 @@ func TestErrWait(t *testing.T) {
 		return 0, fmt.Errorf("it broke")
 	})
 	assert.Error(t, err)
+}
+
+func TestValues(t *testing.T) {
+	m := NewErrMap[int, int](DefaultShardCount, hashInts, nil)
+	broke := fmt.Errorf("it broke")
+	m.Set(1, 2)
+	m.Set(3, 4)
+	m.SetError(5, broke)
+
+	next, stop := iter.Pull2(m.Values())
+	defer stop()
+	for range 3 {
+		v, err, _ := next()
+		if v == 0 {
+			assert.ErrorIs(t, err, broke)
+		} else {
+			assert.Contains(t, []int{2, 4}, v)
+		}
+	}
 }

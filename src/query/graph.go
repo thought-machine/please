@@ -95,14 +95,11 @@ func (graph *JSONGraph) Subrepo(name string) *JSONGraph {
 func makeAllPackages(state *core.BuildState) <-chan JSONPackage {
 	ch := make(chan JSONPackage, 100)
 	go func() {
-		packages := state.Graph.PackageMap()
 		var wg sync.WaitGroup
-		wg.Add(len(packages))
-		for _, pkg := range packages {
-			go func(pkg *core.Package) {
+		for pkg := range state.Graph.AllPackages() {
+			wg.Go(func() {
 				ch <- makeJSONPackage(state, pkg)
-				wg.Done()
-			}(pkg)
+			})
 		}
 		wg.Wait()
 		close(ch)
