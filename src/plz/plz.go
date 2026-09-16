@@ -120,6 +120,9 @@ func RunHost(targets []core.BuildLabel, state *core.BuildState) {
 
 type runner struct {
 	tasks         *errgroup.Group
+	// We keep a top-level context here which we use to cancel certain calls which have a different (potentially longer)
+	// lifespan than the immediate context that we have (for example, we need a particular target to exist, and we need
+	// to parse its package for that to be the case; we return when the target is ready but the parse outlives that call).
 	ctx           context.Context //nolint:containedctx
 	state         *core.BuildState
 	parser        *asp.Parser
@@ -139,6 +142,9 @@ func (r *runner) EnsureSubrepo(ctx context.Context, subrepo string, defining, de
 	if s != nil {
 		return nil
 	}
+	// We deliberately skip errors on missing build files here; this allows flexibility for subrepos not defined that way
+	// (notably architecture subrepos). This matches the check in ensureSubrepo below; if this really is a problem then
+	// the error will be surfaced elsewhere when we attempt to build the target.
 	if _, err := r.parse(ctx, defining, dependent, true, wait); err != nil && !errors.Is(err, parse.ErrMissingBuildFile) {
 		return err
 	}
