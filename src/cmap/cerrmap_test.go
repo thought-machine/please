@@ -36,17 +36,17 @@ func TestErrWait(t *testing.T) {
 
 func TestValues(t *testing.T) {
 	m := NewErrMap[int, int](DefaultShardCount, hashInts, nil)
-	err := fmt.Errorf("it broke")
+	broke := fmt.Errorf("it broke")
 	m.Set(1, 2)
 	m.Set(3, 4)
-	m.SetError(5, err)
+	m.SetError(5, broke)
 
 	next, stop := iter.Pull2(m.Values())
 	defer stop()
 	for range 3 {
 		v, err, _ := next()
 		if v == 0 {
-			assert.Error(t, err)
+			assert.ErrorIs(t, err, broke)
 		} else {
 			assert.Contains(t, []int{2, 4}, v)
 		}

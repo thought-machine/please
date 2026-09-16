@@ -86,7 +86,7 @@ func (m *Map[K, V]) Values() []V {
 	return ret
 }
 
-// Items returns an iterator over each key-value pair in the map.
+// Items returns an iterator over each key-value pair in the map, not including anything that is still waiting to be inserted.
 // They are returned in no particular order.
 // You should not mutate the map while calling this as it may deadlock.
 func (m *Map[K, V]) Items() iter.Seq2[K, V] {
@@ -95,7 +95,7 @@ func (m *Map[K, V]) Items() iter.Seq2[K, V] {
 			shard := &m.shards[i]
 			shard.l.RLock()
 			for k, v := range shard.m {
-				if v.Wait == nil { // Only yield completed values
+				if v.Wait == nil {
 					if !yield(k, v.Val) {
 						shard.l.RUnlock()
 						return
