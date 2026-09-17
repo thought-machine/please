@@ -1,3 +1,8 @@
+Version 17.34.0
+---------------
+    * Build parallelism changes (#3569)
+    * Check status field of fetch blob response (#3607)
+
 Version 17.33.0
 ---------------
     * Fix macOS tmpdir cleanup race caused by system daemons creating `~/Library` (#3515)
