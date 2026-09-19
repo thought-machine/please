@@ -9,6 +9,7 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -375,4 +376,113 @@ func TestBuildTestCommand(t *testing.T) {
 		strings.HasSuffix(cmd.Arguments[len(cmd.Arguments)-1], "$TEST --foo --bar 2>&1"),
 		`expected suffix "$TEST --foo --bar 2>&1" on %q`, cmd.Arguments[len(cmd.Arguments)-1],
 	)
+}
+
+func TestNegotiateAPIVersion(t *testing.T) {
+	v := func(major, minor int32) *semver.SemVer {
+		return &semver.SemVer{Major: major, Minor: minor}
+	}
+	tests := []struct {
+		name                    string
+		deprecated, low, high   *semver.SemVer
+		expected                *semver.SemVer
+		expectDeprecated, fails bool
+	}{
+		{name: "please-servers mettle", low: v(2, 0), high: v(2, 1), expected: v(2, 1)},
+		{name: "please-servers flair", low: v(2, 0), high: v(2, 3), expected: v(2, 3)},
+		{name: "Buildbarn", deprecated: v(2, 2), low: v(2, 3), high: v(2, 12), expected: v(2, 12)},
+		{name: "newer than us", low: v(2, 3), high: v(2, 20), expected: v(2, 12)},
+		{name: "only deprecated overlap", deprecated: v(2, 0), low: v(2, 13), high: v(2, 14), expected: v(2, 12), expectDeprecated: true},
+		{name: "too old", low: v(2, 0), high: v(2, 0), fails: true},
+		{name: "too new", deprecated: v(2, 13), low: v(2, 14), high: v(3, 0), fails: true},
+		{name: "unset", fails: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			version, deprecated, err := negotiateAPIVersion(&pb.ServerCapabilities{
+				DeprecatedApiVersion: test.deprecated,
+				LowApiVersion:        test.low,
+				HighApiVersion:       test.high,
+			})
+			if test.fails {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, printVer(test.expected), printVer(version))
+			assert.Equal(t, test.expectDeprecated, deprecated)
+		})
+	}
+}
+
+func TestOutputSymlinks(t *testing.T) {
+	link := &pb.OutputSymlink{Path: "link", Target: "file"}
+	dirLink := &pb.OutputSymlink{Path: "dirlink", Target: "dir"}
+	// A 2.1+ server only populates output_symlinks
+	assert.Equal(t, []*pb.OutputSymlink{link, dirLink}, outputSymlinks(&pb.ActionResult{
+		OutputSymlinks: []*pb.OutputSymlink{link, dirLink},
+	}))
+	// One compatible with 2.0 populates both, which shouldn't be duplicated
+	assert.Equal(t, []*pb.OutputSymlink{link, dirLink}, outputSymlinks(&pb.ActionResult{
+		OutputSymlinks:          []*pb.OutputSymlink{link, dirLink},
+		OutputFileSymlinks:      []*pb.OutputSymlink{link},
+		OutputDirectorySymlinks: []*pb.OutputSymlink{dirLink},
+	}))
+	// A 2.0 server only populates the deprecated fields
+	assert.Equal(t, []*pb.OutputSymlink{link, dirLink}, outputSymlinks(&pb.ActionResult{
+		OutputFileSymlinks:      []*pb.OutputSymlink{link},
+		OutputDirectorySymlinks: []*pb.OutputSymlink{dirLink},
+	}))
+}
+
+func TestSDKActionResult(t *testing.T) {
+	link := &pb.OutputSymlink{Path: "link", Target: "file"}
+	ar := &pb.ActionResult{OutputSymlinks: []*pb.OutputSymlink{link}}
+	sdkAR := sdkActionResult(ar)
+	assert.Equal(t, []*pb.OutputSymlink{link}, sdkAR.OutputFileSymlinks)                    //nolint:staticcheck
+	assert.Empty(t, ar.OutputFileSymlinks, "original action result should not be modified") //nolint:staticcheck
+	// If the deprecated fields are already populated, it should be left alone.
+	ar = &pb.ActionResult{OutputSymlinks: []*pb.OutputSymlink{link}, OutputFileSymlinks: []*pb.OutputSymlink{link}}
+	assert.Same(t, ar, sdkActionResult(ar))
+}
+
+// TestOutputSymlinksDownloaded builds a target against a server that only populates output_symlinks
+// (as Buildbarn does) and checks that we record and download the symlink.
+func TestOutputSymlinksDownloaded(t *testing.T) {
+	defer server.Reset()
+	c := newClientInstance("mock")
+
+	content := []byte("this is the content of the real file")
+	contentDigest := digest.NewFromBlob(content)
+	server.blobs[contentDigest.Hash] = content
+	server.mockActionResult = &pb.ActionResult{
+		OutputFiles:    []*pb.OutputFile{{Path: "real.txt", Digest: contentDigest.ToProto()}},
+		OutputSymlinks: []*pb.OutputSymlink{{Path: "link.txt", Target: "real.txt"}},
+		ExecutionMetadata: &pb.ExecutedActionMetadata{
+			Worker:                      "kev",
+			QueuedTimestamp:             timestamppb.Now(),
+			ExecutionStartTimestamp:     timestamppb.Now(),
+			ExecutionCompletedTimestamp: timestamppb.Now(),
+		},
+	}
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "symlink_target"})
+	target.AddOutput("real.txt")
+	target.AddOutput("link.txt")
+	target.Command = "echo hello > real.txt && ln -s real.txt link.txt"
+	c.state.AddOriginalTarget(target.Label)
+	c.state.OutputDownload = core.OriginalOutputDownload
+	c.state.Graph.AddTarget(target)
+	_, err := c.Build(target)
+	require.NoError(t, err)
+
+	outs := c.targetOutputs(target.Label)
+	require.NotNil(t, outs)
+	require.Len(t, outs.Symlinks, 1)
+	assert.Equal(t, "link.txt", outs.Symlinks[0].Name)
+	assert.Equal(t, "real.txt", outs.Symlinks[0].Target)
+
+	dest, err := os.Readlink(filepath.Join(target.OutDir(), "link.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "real.txt", dest)
 }

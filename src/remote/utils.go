@@ -11,6 +11,7 @@ import (
 	iofs "io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -142,7 +143,6 @@ func (c *Client) outputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.
 		Root: &pb.Directory{
 			Files:       make([]*pb.FileNode, len(ar.OutputFiles)),
 			Directories: make([]*pb.DirectoryNode, 0, len(ar.OutputDirectories)),
-			Symlinks:    make([]*pb.SymlinkNode, len(ar.OutputFileSymlinks)+len(ar.OutputDirectorySymlinks)), //nolint:staticcheck
 		},
 	}
 	// N.B. At this point the various things we stick into this Directory proto can be in
@@ -169,13 +169,39 @@ func (c *Client) outputTree(target *core.BuildTarget, ar *pb.ActionResult) (*pb.
 			Digest: c.digestMessage(tree.Root),
 		})
 	}
-	for i, s := range append(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks...) { //nolint:staticcheck
+	symlinks := outputSymlinks(ar)
+	o.Root.Symlinks = make([]*pb.SymlinkNode, len(symlinks))
+	for i, s := range symlinks {
 		o.Root.Symlinks[i] = &pb.SymlinkNode{
 			Name:   target.GetRealOutput(s.Path),
 			Target: s.Target,
 		}
 	}
 	return o, nil
+}
+
+// outputSymlinks returns all the output symlinks from an action result.
+// Since REAPI 2.1, servers populate output_symlinks when the Command uses output_paths (which we
+// always do). Servers that also want to be compatible with 2.0 populate the deprecated per-type
+// fields as well, and older servers only populate those.
+func outputSymlinks(ar *pb.ActionResult) []*pb.OutputSymlink {
+	if len(ar.OutputSymlinks) > 0 {
+		return ar.OutputSymlinks
+	}
+	return slices.Concat(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks) //nolint:staticcheck
+}
+
+// sdkActionResult returns a version of the given action result suitable for passing to the SDK.
+// The SDK only understands the deprecated symlink fields, so if the server populated only
+// output_symlinks we copy them over, otherwise the SDK silently ignores them.
+func sdkActionResult(ar *pb.ActionResult) *pb.ActionResult {
+	if len(ar.OutputSymlinks) == 0 || len(ar.OutputFileSymlinks) > 0 || len(ar.OutputDirectorySymlinks) > 0 { //nolint:staticcheck
+		return ar
+	}
+	ar = proto.Clone(ar).(*pb.ActionResult)
+	// The SDK treats both deprecated fields the same, so there's no need to separate them out.
+	ar.OutputFileSymlinks = ar.OutputSymlinks //nolint:staticcheck
+	return ar
 }
 
 // setOutputDirectoryOuts sets the output on the target based on the outputs in the action result
@@ -323,30 +349,61 @@ func mustMarshal(msg proto.Message) []byte {
 	return b
 }
 
+// negotiateAPIVersion picks the highest API version that both we and the server support.
+// If the server supports none of our versions, but does support one it considers deprecated, we
+// use that and return true for the second return value.
+// This follows the same logic as Bazel does.
+func negotiateAPIVersion(caps *pb.ServerCapabilities) (*semver.SemVer, bool, error) {
+	if v := highestCommonVersion(caps.LowApiVersion, caps.HighApiVersion); v != nil {
+		return v, false, nil
+	} else if caps.DeprecatedApiVersion != nil {
+		if v := highestCommonVersion(caps.DeprecatedApiVersion, caps.HighApiVersion); v != nil {
+			return v, true, nil
+		}
+	}
+	return nil, false, fmt.Errorf("Unsupported API version; we support %s - %s but server only supports %s - %s", printVer(&lowAPIVersion), printVer(&highAPIVersion), printVer(caps.LowApiVersion), printVer(caps.HighApiVersion))
+}
+
+// highestCommonVersion returns the highest version in the overlap between our supported
+// versions and the given range, or nil if they don't overlap.
+func highestCommonVersion(low, high *semver.SemVer) *semver.SemVer {
+	if lessThan(low, &lowAPIVersion) {
+		low = &lowAPIVersion
+	}
+	if lessThan(&highAPIVersion, high) {
+		high = &highAPIVersion
+	}
+	if lessThan(high, low) {
+		return nil
+	}
+	return high
+}
+
 // lessThan returns true if the given semver instance is less than another one.
+// Either may be nil, which is treated as 0.0.0.
 func lessThan(a, b *semver.SemVer) bool {
-	if a.Major < b.Major {
+	if a.GetMajor() < b.GetMajor() {
 		return true
-	} else if a.Major > b.Major {
+	} else if a.GetMajor() > b.GetMajor() {
 		return false
-	} else if a.Minor < b.Minor {
+	} else if a.GetMinor() < b.GetMinor() {
 		return true
-	} else if a.Minor > b.Minor {
+	} else if a.GetMinor() > b.GetMinor() {
 		return false
-	} else if a.Patch < b.Patch {
+	} else if a.GetPatch() < b.GetPatch() {
 		return true
-	} else if a.Patch > b.Patch {
+	} else if a.GetPatch() > b.GetPatch() {
 		return false
 	}
-	return a.Prerelease < b.Prerelease
+	return a.GetPrerelease() < b.GetPrerelease()
 }
 
 // printVer pretty-prints a semver message.
 // The default stringing of them is so bad as to be completely unreadable.
 func printVer(v *semver.SemVer) string {
-	msg := fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
-	if v.Prerelease != "" {
-		msg += "-" + v.Prerelease
+	msg := fmt.Sprintf("%d.%d.%d", v.GetMajor(), v.GetMinor(), v.GetPatch())
+	if v.GetPrerelease() != "" {
+		msg += "-" + v.GetPrerelease()
 	}
 	return msg
 }
@@ -630,7 +687,7 @@ func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 // The special-casing is important to make remote_file hash properly (also so you can
 // calculate it manually by sha256sum'ing the file).
 func (c *Client) outputHash(ar *pb.ActionResult) string {
-	if len(ar.OutputFiles) == 1 && len(ar.OutputDirectories) == 0 && len(ar.OutputFileSymlinks) == 0 && len(ar.OutputDirectorySymlinks) == 0 { //nolint:staticcheck
+	if len(ar.OutputFiles) == 1 && len(ar.OutputDirectories) == 0 && len(outputSymlinks(ar)) == 0 {
 		return ar.OutputFiles[0].Digest.Hash
 	}
 	return c.digestMessage(ar).Hash

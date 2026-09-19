@@ -51,14 +51,18 @@
 <ul class="bulleted-list">
   <li>
     <span>
-      Please requires version 2.1 of the Remote Execution API (for the
+      Please supports versions 2.1 to 2.12 of the Remote Execution API. It needs at
+      least 2.1 for the
       <a
         class="copy-link"
         href="https://github.com/bazelbuild/remote-apis/pull/96"
         >non-specific output path</a
       >
-      field). At the time of writing relatively few servers identify as this, but we
-      hope they'll upgrade soon.</span
+      field. If the server only supports one of these versions as deprecated, Please
+      will still use it but warn about it. If your server doesn't support any of them,
+      you can set <code class="code">suppressversioncheck</code> in the
+      <a class="copy-link" href="/config.html#remote">[remote]</a> section of your
+      config to try it anyway.</span
     >
   </li>
   <li>

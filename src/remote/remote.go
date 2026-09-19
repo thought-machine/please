@@ -44,8 +44,14 @@ import (
 
 var log = logging.Log
 
-// The API version we support.
-var apiVersion = semver.SemVer{Major: 2, Minor: 1}
+// The range of API versions we support (inclusive).
+// 2.1 is the minimum since we use Command.output_paths. Nothing after that up to 2.12 imposes
+// any new requirements on us as a client, since we only use SHA-1 / SHA-256 and don't opt into
+// any of the newer optional features.
+var (
+	lowAPIVersion  = semver.SemVer{Major: 2, Minor: 1}
+	highAPIVersion = semver.SemVer{Major: 2, Minor: 12}
+)
 
 var remoteCacheReadDuration = metrics.NewHistogramVec(
 	"remote",
@@ -240,12 +246,15 @@ func (c *Client) initExec() error {
 	if err != nil {
 		return err
 	}
-	if lessThan(&apiVersion, resp.LowApiVersion) || lessThan(resp.HighApiVersion, &apiVersion) {
-		err := fmt.Errorf("Unsupported API version; we require %s but server only supports %s - %s", printVer(&apiVersion), printVer(resp.LowApiVersion), printVer(resp.HighApiVersion))
+	if version, deprecated, err := negotiateAPIVersion(resp); err != nil {
 		if !c.state.Config.Remote.SuppressVersionCheck {
 			return err
 		}
 		log.Warning("%s", err)
+	} else if deprecated {
+		log.Warning("Using API version %s, which is deprecated by the server. It recommends %s - %s, but we only support %s - %s", printVer(version), printVer(resp.LowApiVersion), printVer(resp.HighApiVersion), printVer(&lowAPIVersion), printVer(&highAPIVersion))
+	} else {
+		log.Debug("Using API version %s", printVer(version))
 	}
 	caps := resp.CacheCapabilities
 	if caps == nil {
@@ -525,9 +534,10 @@ func (c *Client) downloadActionOutputs(ctx context.Context, ar *pb.ActionResult,
 	for _, d := range ar.OutputDirectories {
 		d.Path = target.GetRealOutput(d.Path)
 	}
-	for _, s := range ar.OutputSymlinks {
+	for _, s := range outputSymlinks(ar) {
 		s.Path = target.GetRealOutput(s.Path)
 	}
+	ar = sdkActionResult(ar)
 	// We can download straight into the out dir if there are no outdirs to worry about
 	if len(target.OutputDirectories) == 0 {
 		_, err := c.client.DownloadActionOutputs(ctx, ar, target.OutDir(), c.fileMetadataCache)
@@ -625,7 +635,7 @@ func (c *Client) Test(target *core.BuildTarget, run int) (metadata *core.BuildMe
 	metadata, ar, err := c.execute(target, command, digest, true, false, run)
 
 	if ar != nil {
-		_, dlErr := c.client.DownloadActionOutputs(context.Background(), ar, target.TestDir(run), c.fileMetadataCache)
+		_, dlErr := c.client.DownloadActionOutputs(context.Background(), sdkActionResult(ar), target.TestDir(run), c.fileMetadataCache)
 		if dlErr != nil {
 			log.Warningf("%v: failed to download test outputs: %v", target.Label, dlErr)
 		}

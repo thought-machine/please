@@ -10,7 +10,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/alessio/shellescape v1.4.2
 	github.com/bazelbuild/remote-apis v0.0.0-20260331222004-becdd8f9ff81
-	github.com/bazelbuild/remote-apis-sdks v0.0.0-20260610142741-7ffd493e6686
+	github.com/bazelbuild/remote-apis-sdks v0.0.0-20260903234436-d5824b1a2286
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/coreos/go-semver v0.3.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
