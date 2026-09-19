@@ -22,8 +22,8 @@ github.com/alessio/shellescape v1.4.2 h1:MHPfaU+ddJ0/bYWpgIeUnQUqKrlJ1S7BfEYPM4u
 github.com/alessio/shellescape v1.4.2/go.mod h1:PZAiSCk0LJaZkiCSkPv8qIobYglO3FPpyFjDCtHLS30=
 github.com/bazelbuild/remote-apis v0.0.0-20260331222004-becdd8f9ff81 h1:vAHLeMHi+CywqDw5V/s5mHj1ahkhYMRtRFqWe18F0kc=
 github.com/bazelbuild/remote-apis v0.0.0-20260331222004-becdd8f9ff81/go.mod h1:7Tyi5f5+hG+6LwC0X/G/EjCQS4ZYJUcpY0geSsU2NAw=
-github.com/bazelbuild/remote-apis-sdks v0.0.0-20260610142741-7ffd493e6686 h1:u0Z7+bxKIg71P2lDGhuCqIFqEjv73KwCbpPUyujHK1Y=
-github.com/bazelbuild/remote-apis-sdks v0.0.0-20260610142741-7ffd493e6686/go.mod h1:TJlbnIaiJQr3pgZ+EBscj/bpu9wBawCHcqd+YAgumOs=
+github.com/bazelbuild/remote-apis-sdks v0.0.0-20260903234436-d5824b1a2286 h1:nhGbYP7vcyj+S0cH7C0RbRg9KRWWn6mVeQvVCq9+SZk=
+github.com/bazelbuild/remote-apis-sdks v0.0.0-20260903234436-d5824b1a2286/go.mod h1:TJlbnIaiJQr3pgZ+EBscj/bpu9wBawCHcqd+YAgumOs=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=

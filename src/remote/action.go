@@ -437,15 +437,7 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 	for _, o := range ar.OutputDirectories {
 		ret[o.Path] = true
 	}
-	for _, o := range ar.OutputSymlinks {
-		ret[o.Path] = true
-	}
-
-	// TODO(jpoole): remove these two after REAPI 2.1
-	for _, o := range ar.OutputFileSymlinks { //nolint:staticcheck
-		ret[o.Path] = true
-	}
-	for _, o := range ar.OutputDirectorySymlinks { //nolint:staticcheck
+	for _, o := range outputSymlinks(ar) {
 		ret[o.Path] = true
 	}
 	return ret
@@ -479,7 +471,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 		}
 
 		if len(target.EntryPoints) > 0 {
-			flatOuts, err := c.client.FlattenActionOutputs(context.Background(), ar)
+			flatOuts, err := c.client.FlattenActionOutputs(context.Background(), sdkActionResult(ar))
 			if err != nil {
 				return fmt.Errorf("error checking for entry point in outputs: %w", err)
 			}
@@ -516,15 +508,15 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	}
 	start := time.Now()
 	// Do more in-depth validation that blobs exist remotely.
-	outputs, err := c.client.FlattenActionOutputs(context.Background(), ar)
+	outputs, err := c.client.FlattenActionOutputs(context.Background(), sdkActionResult(ar))
 	if err != nil {
 		return fmt.Errorf("Failed to verify action result: %s", err)
 	}
 	// At this point it's verified all the directories, but not the files themselves.
 	digests := make([]digest.Digest, 0, len(outputs))
 	for _, output := range outputs {
-		// FlattenTree doesn't populate the digest in for empty dirs... we don't need to check them anyway
-		if !output.IsEmptyDirectory {
+		// FlattenTree doesn't populate the digest in for empty dirs or symlinks... we don't need to check them anyway
+		if !output.IsEmptyDirectory && output.SymlinkTarget == "" {
 			digests = append(digests, output.Digest)
 		}
 	}
