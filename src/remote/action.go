@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -128,7 +127,7 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 	}
 	cmd, err := core.ReplaceSequences(state, target, cmd)
 	return &pb.Command{
-		Platform:             c.targetPlatformProperties(target), //nolint:staticcheck
+		Platform:             c.targetPlatformProperties(target),
 		Arguments:            process.BashCommand(c.shellPath, commandPrefixBuilder.String()+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(target, c.stampedBuildEnvironment(state, target, inputRoot, stamp, isTest || isRun), target.Sandbox),
 		OutputPaths:          outs,
@@ -161,14 +160,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 	}
 	cmd, err := core.TestCommand(state, target)
 	return &pb.Command{
-		Platform: &pb.Platform{ //nolint:staticcheck
-			Properties: []*pb.Platform_Property{
-				{
-					Name:  "OSFamily",
-					Value: translateOS(target.Subrepo),
-				},
-			},
-		},
+		Platform:             c.targetPlatformProperties(target),
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
 		OutputPaths:          paths,
@@ -182,7 +174,7 @@ func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarge
 		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
 	}
 	return &pb.Command{
-		Platform:             c.platform, //nolint:staticcheck
+		Platform:             c.targetPlatformProperties(target),
 		Arguments:            outs,
 		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(state), false),
 	}, nil
@@ -437,15 +429,7 @@ func outputsForActionResult(ar *pb.ActionResult) map[string]bool {
 	for _, o := range ar.OutputDirectories {
 		ret[o.Path] = true
 	}
-	for _, o := range ar.OutputSymlinks {
-		ret[o.Path] = true
-	}
-
-	// TODO(jpoole): remove these two after REAPI 2.1
-	for _, o := range ar.OutputFileSymlinks { //nolint:staticcheck
-		ret[o.Path] = true
-	}
-	for _, o := range ar.OutputDirectorySymlinks { //nolint:staticcheck
+	for _, o := range outputSymlinks(ar) {
 		ret[o.Path] = true
 	}
 	return ret
@@ -479,7 +463,7 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 		}
 
 		if len(target.EntryPoints) > 0 {
-			flatOuts, err := c.client.FlattenActionOutputs(context.Background(), ar)
+			flatOuts, err := c.client.FlattenActionOutputs(context.Background(), sdkActionResult(ar))
 			if err != nil {
 				return fmt.Errorf("error checking for entry point in outputs: %w", err)
 			}
@@ -516,15 +500,15 @@ func (c *Client) verifyActionResult(target *core.BuildTarget, command *pb.Comman
 	}
 	start := time.Now()
 	// Do more in-depth validation that blobs exist remotely.
-	outputs, err := c.client.FlattenActionOutputs(context.Background(), ar)
+	outputs, err := c.client.FlattenActionOutputs(context.Background(), sdkActionResult(ar))
 	if err != nil {
 		return fmt.Errorf("Failed to verify action result: %s", err)
 	}
 	// At this point it's verified all the directories, but not the files themselves.
 	digests := make([]digest.Digest, 0, len(outputs))
 	for _, output := range outputs {
-		// FlattenTree doesn't populate the digest in for empty dirs... we don't need to check them anyway
-		if !output.IsEmptyDirectory {
+		// FlattenTree doesn't populate the digest in for empty dirs or symlinks... we don't need to check them anyway
+		if !output.IsEmptyDirectory && output.SymlinkTarget == "" {
 			digests = append(digests, output.Digest)
 		}
 	}
@@ -555,23 +539,6 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 		return err
 	}
 	return c.setOutputs(target, outs)
-}
-
-// translateOS converts the OS name of a subrepo into a Bazel-style OS name.
-func translateOS(subrepo *core.Subrepo) string {
-	if subrepo == nil {
-		return reallyTranslateOS(runtime.GOOS)
-	}
-	return reallyTranslateOS(subrepo.Arch.OS)
-}
-
-func reallyTranslateOS(os string) string {
-	switch os {
-	case "darwin":
-		return "macos"
-	default:
-		return os
-	}
 }
 
 // buildEnv translates the set of environment variables for this target to a proto.
