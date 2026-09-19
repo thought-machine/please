@@ -45,7 +45,7 @@ import (
 var log = logging.Log
 
 // The API version we support.
-var apiVersion = semver.SemVer{Major: 2}
+var apiVersion = semver.SemVer{Major: 2, Minor: 1}
 
 var remoteCacheReadDuration = metrics.NewHistogramVec(
 	"remote",
@@ -241,7 +241,11 @@ func (c *Client) initExec() error {
 		return err
 	}
 	if lessThan(&apiVersion, resp.LowApiVersion) || lessThan(resp.HighApiVersion, &apiVersion) {
-		return fmt.Errorf("Unsupported API version; we require %s but server only supports %s - %s", printVer(&apiVersion), printVer(resp.LowApiVersion), printVer(resp.HighApiVersion))
+		err := fmt.Errorf("Unsupported API version; we require %s but server only supports %s - %s", printVer(&apiVersion), printVer(resp.LowApiVersion), printVer(resp.HighApiVersion))
+		if !c.state.Config.Remote.SuppressVersionCheck {
+			return err
+		}
+		log.Warning("%s", err)
 	}
 	caps := resp.CacheCapabilities
 	if caps == nil {
