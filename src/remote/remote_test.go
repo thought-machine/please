@@ -486,3 +486,34 @@ func TestOutputSymlinksDownloaded(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "real.txt", dest)
 }
+
+// TestCommandPlatformMatchesAction checks that every kind of Command we build requests the same
+// platform as its Action (which is what servers on REAPI 2.2+ actually use).
+func TestCommandPlatformMatchesAction(t *testing.T) {
+	c := newClientInstance("platform_match_test")
+	require.NoError(t, c.CheckInitialised())
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "platform_target"})
+	target.AddOutput("out")
+	target.Labels = []string{"remote-platform-property:size=chomky"}
+	target.Test = &core.TestFields{Timeout: time.Minute, Command: "$TEST"}
+	target.IsBinary = true
+	expected := &pb.Platform{
+		Properties: []*pb.Platform_Property{
+			{Name: "size", Value: "chomky"},
+			{Name: "OSFamily", Value: "linux"},
+		},
+	}
+	require.Equal(t, expected, c.targetPlatformProperties(target), "Action platform should include target and config properties")
+
+	buildCmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
+	require.NoError(t, err)
+	assert.Equal(t, expected, buildCmd.Platform) //nolint:staticcheck
+
+	testCmd, err := c.buildCommand(target, &pb.Directory{}, true, false, false, 1)
+	require.NoError(t, err)
+	assert.Equal(t, expected, testCmd.Platform) //nolint:staticcheck
+
+	runCmd, err := c.buildCommand(target, &pb.Directory{}, false, true, false, 0)
+	require.NoError(t, err)
+	assert.Equal(t, expected, runCmd.Platform) //nolint:staticcheck
+}
