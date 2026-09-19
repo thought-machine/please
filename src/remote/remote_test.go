@@ -328,7 +328,7 @@ func TestTargetPlatform(t *testing.T) {
 				Value: "linux",
 			},
 		},
-	}, cmd.Platform) //nolint:staticcheck
+	}, cmd.Platform)
 
 	target.Labels = []string{"remote-platform-property:size=chomky"}
 	cmd, err = c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
@@ -344,7 +344,7 @@ func TestTargetPlatform(t *testing.T) {
 				Value: "linux",
 			},
 		},
-	}, cmd.Platform) //nolint:staticcheck
+	}, cmd.Platform)
 }
 
 // Store is a small hack that stores a target's outputs for testing only.
@@ -439,8 +439,8 @@ func TestSDKActionResult(t *testing.T) {
 	link := &pb.OutputSymlink{Path: "link", Target: "file"}
 	ar := &pb.ActionResult{OutputSymlinks: []*pb.OutputSymlink{link}}
 	sdkAR := sdkActionResult(ar)
-	assert.Equal(t, []*pb.OutputSymlink{link}, sdkAR.OutputFileSymlinks)                    //nolint:staticcheck
-	assert.Empty(t, ar.OutputFileSymlinks, "original action result should not be modified") //nolint:staticcheck
+	assert.Equal(t, []*pb.OutputSymlink{link}, sdkAR.OutputFileSymlinks)
+	assert.Empty(t, ar.OutputFileSymlinks, "original action result should not be modified")
 	// If the deprecated fields are already populated, it should be left alone.
 	ar = &pb.ActionResult{OutputSymlinks: []*pb.OutputSymlink{link}, OutputFileSymlinks: []*pb.OutputSymlink{link}}
 	assert.Same(t, ar, sdkActionResult(ar))
@@ -507,13 +507,13 @@ func TestCommandPlatformMatchesAction(t *testing.T) {
 
 	buildCmd, err := c.buildCommand(target, &pb.Directory{}, false, false, false, 0)
 	require.NoError(t, err)
-	assert.Equal(t, expected, buildCmd.Platform) //nolint:staticcheck
+	assert.Equal(t, expected, buildCmd.Platform)
 
 	testCmd, err := c.buildCommand(target, &pb.Directory{}, true, false, false, 1)
 	require.NoError(t, err)
-	assert.Equal(t, expected, testCmd.Platform) //nolint:staticcheck
+	assert.Equal(t, expected, testCmd.Platform)
 
 	runCmd, err := c.buildCommand(target, &pb.Directory{}, false, true, false, 0)
 	require.NoError(t, err)
-	assert.Equal(t, expected, runCmd.Platform) //nolint:staticcheck
+	assert.Equal(t, expected, runCmd.Platform)
 }

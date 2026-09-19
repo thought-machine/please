@@ -188,19 +188,19 @@ func outputSymlinks(ar *pb.ActionResult) []*pb.OutputSymlink {
 	if len(ar.OutputSymlinks) > 0 {
 		return ar.OutputSymlinks
 	}
-	return slices.Concat(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks) //nolint:staticcheck
+	return slices.Concat(ar.OutputFileSymlinks, ar.OutputDirectorySymlinks)
 }
 
 // sdkActionResult returns a version of the given action result suitable for passing to the SDK.
 // The SDK only understands the deprecated symlink fields, so if the server populated only
 // output_symlinks we copy them over, otherwise the SDK silently ignores them.
 func sdkActionResult(ar *pb.ActionResult) *pb.ActionResult {
-	if len(ar.OutputSymlinks) == 0 || len(ar.OutputFileSymlinks) > 0 || len(ar.OutputDirectorySymlinks) > 0 { //nolint:staticcheck
+	if len(ar.OutputSymlinks) == 0 || len(ar.OutputFileSymlinks) > 0 || len(ar.OutputDirectorySymlinks) > 0 {
 		return ar
 	}
 	ar = proto.Clone(ar).(*pb.ActionResult)
 	// The SDK treats both deprecated fields the same, so there's no need to separate them out.
-	ar.OutputFileSymlinks = ar.OutputSymlinks //nolint:staticcheck
+	ar.OutputFileSymlinks = ar.OutputSymlinks
 	return ar
 }
 
