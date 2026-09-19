@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -161,14 +160,7 @@ func (c *Client) buildTestCommand(state *core.BuildState, target *core.BuildTarg
 	}
 	cmd, err := core.TestCommand(state, target)
 	return &pb.Command{
-		Platform: &pb.Platform{ //nolint:staticcheck
-			Properties: []*pb.Platform_Property{
-				{
-					Name:  "OSFamily",
-					Value: translateOS(target.Subrepo),
-				},
-			},
-		},
+		Platform:             c.targetPlatformProperties(target), //nolint:staticcheck
 		Arguments:            process.BashCommand(c.shellPath, commandPrefix+cmd, state.Config.Build.ExitOnError),
 		EnvironmentVariables: c.buildEnv(nil, core.TestEnvironment(state, target, ".", run), target.Test.Sandbox),
 		OutputPaths:          paths,
@@ -182,7 +174,7 @@ func (c *Client) buildRunCommand(state *core.BuildState, target *core.BuildTarge
 		return nil, fmt.Errorf("Target %s has no outputs, it can't be run with `plz run`", target)
 	}
 	return &pb.Command{
-		Platform:             c.platform, //nolint:staticcheck
+		Platform:             c.targetPlatformProperties(target), //nolint:staticcheck
 		Arguments:            outs,
 		EnvironmentVariables: c.buildEnv(target, core.GeneralBuildEnvironment(state), false),
 	}, nil
@@ -547,23 +539,6 @@ func (c *Client) uploadLocalTarget(target *core.BuildTarget) error {
 		return err
 	}
 	return c.setOutputs(target, outs)
-}
-
-// translateOS converts the OS name of a subrepo into a Bazel-style OS name.
-func translateOS(subrepo *core.Subrepo) string {
-	if subrepo == nil {
-		return reallyTranslateOS(runtime.GOOS)
-	}
-	return reallyTranslateOS(subrepo.Arch.OS)
-}
-
-func reallyTranslateOS(os string) string {
-	switch os {
-	case "darwin":
-		return "macos"
-	default:
-		return os
-	}
 }
 
 // buildEnv translates the set of environment variables for this target to a proto.
