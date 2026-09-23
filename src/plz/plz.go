@@ -325,6 +325,10 @@ func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildL
 	if r.state.Graph.Subrepo(label.Subrepo) != nil {
 		return nil // The parse above defined it, we're done.
 	}
+	if arch, ok := couldBeArch(label.Subrepo); ok {
+		r.state.Graph.MaybeAddSubrepo(core.SubrepoForArch(r.state, arch))
+		return nil
+	}
 	if sl.Subrepo != dependent.Subrepo {
 		nested := sl
 		nested.Subrepo = dependent.Subrepo
@@ -337,11 +341,7 @@ func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildL
 			}
 		}
 	}
-	// Nothing defines it, so the only remaining possibility is an architecture subrepo.
-	if arch, ok := couldBeArch(label.Subrepo); ok {
-		r.state.Graph.MaybeAddSubrepo(core.SubrepoForArch(r.state, arch))
-		return nil
-	} else if err != nil {
+	if err != nil {
 		// This returns the missing build file error that we got from tryParse above.
 		return err
 	}
