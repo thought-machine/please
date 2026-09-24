@@ -192,7 +192,7 @@ func printTestResults(state *core.BuildState, failedTargets map[core.BuildLabel]
 					}
 					if failure != nil {
 						if failure.Message != "" {
-							fmt.Println(failure.Message)
+							fmt.Fprintln(os.Stderr, failure.Message)
 						}
 						printf("%s\n", failure.Traceback)
 						if len(execution.Stdout) > 0 {
