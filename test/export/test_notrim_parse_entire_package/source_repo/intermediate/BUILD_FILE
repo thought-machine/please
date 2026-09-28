@@ -1,0 +1,17 @@
+genrule(
+    name = "lib",
+    srcs = ["lib.txt"],
+    outs = ["out_lib.txt"],
+    cmd = "cat $SRCS > $OUT",
+    visibility = ["PUBLIC"],
+)
+
+genrule(
+    name = "adjacent",
+    srcs = [
+        "adjacent.txt",
+        "//other_package:other_target",
+    ],
+    outs = ["out_adjacent.txt"],
+    cmd = "cat $SRCS > $OUT",
+)

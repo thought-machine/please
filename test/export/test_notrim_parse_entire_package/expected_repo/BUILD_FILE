@@ -1,0 +1,9 @@
+genrule(
+    name = "target1",
+    srcs = [
+        "file1.txt",
+        "//intermediate:lib",
+    ],
+    outs = ["out1.txt"],
+    cmd = "cat $SRCS > $OUT",
+)
