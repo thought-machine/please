@@ -83,7 +83,7 @@ statement details:
 To support package-level trimming, the exporter must have access to metadata for adjacent targets
 that normally (e.g., during a standard build operation) would not be parsed or resolved.
 
-For this purpose, Please utilizes an upfront-parsing model. When `ForceParseEntirePackage` is set to
+For this purpose, Please utilizes an upfront-parsing model. When `ParseMetadata` is set to
 `true` during the parse phase, the interpreter synchronously parses and resolves all targets in any
 visited package upfront. This guarantees that all package-level statement and target metadata is
 fully populated and available, eliminating the need for any dynamic or lazy parsing during the

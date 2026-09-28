@@ -217,11 +217,6 @@ type BuildState struct {
 	NeedDebugDeps bool
 	// ParseMetadata is true if we want to store BUILD file metadata
 	ParseMetadata bool
-	// ForceParseEntirePackage is true if we want to force parse and activate all targets in every visited
-	// package during the parse phase. This is used by the export operation to ensure that the entire
-	// dependency graph of visited packages is parsed upfront, including co-defined related targets
-	// and sibling targets.
-	ForceParseEntirePackage bool
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once

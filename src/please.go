@@ -784,7 +784,7 @@ var buildFunctions = map[string]func() int{
 		return 0
 	},
 	"export": func() int {
-		success, state := runBuild(opts.Export.Args.Targets, buildOpts{ParseMetadata: true, ForceParseEntirePackage: true})
+		success, state := runBuild(opts.Export.Args.Targets, buildOpts{ParseMetadata: true})
 
 		if success {
 			export.Repo(state, opts.Export.Output, opts.Export.NoTrim, state.ExpandOriginalLabels())
@@ -1201,7 +1201,6 @@ func Please(targets []core.BuildLabel, config *core.Configuration, buildOpts bui
 	state.NeedBuild = buildOpts.Build
 	state.NeedTests = buildOpts.Test
 	state.ParseMetadata = buildOpts.ParseMetadata
-	state.ForceParseEntirePackage = buildOpts.ForceParseEntirePackage
 	state.NeedDebugDeps = debug
 
 	// What outputs get downloaded in remote execution.
@@ -1363,10 +1362,6 @@ type buildOpts struct {
 	IsQuery bool
 	// ParseMetadata is true if we want to store BUILD file metadata during parsing.
 	ParseMetadata bool
-	// ForceParseEntirePackage is true if we want to force parse and activate all targets in every
-	// visited package. This is required to include adjacent targets in the build graph for operations
-	// like export.
-	ForceParseEntirePackage bool
 }
 
 // Runs the actual build

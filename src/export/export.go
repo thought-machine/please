@@ -241,7 +241,7 @@ func (be *baseExporter) exportFiles(paths []string) {
 }
 
 // getTarget attempts to lookup a target in the build graph.
-// This is a synchronous lookup and it assumes that [state.ForceParseEntirePackage]
+// This is a synchronous lookup and it assumes that [state.ParseMetadata]
 // was enabled during the parse phase to guarantee that all required targets are pre-parsed.
 func (be *baseExporter) getTarget(label core.BuildLabel) (*core.BuildTarget, error) {
 	target := be.state.Graph.Target(label)
@@ -252,7 +252,7 @@ func (be *baseExporter) getTarget(label core.BuildLabel) (*core.BuildTarget, err
 }
 
 // getPackage attempts to lookup a package in the build graph.
-// This is a synchronous lookup and it assumes that [state.ForceParseEntirePackage]
+// This is a synchronous lookup and it assumes that [state.ParseMetadata]
 // was enabled during the parse phase to guarantee that all required packages are pre-parsed.
 func (be *baseExporter) getPackage(label core.BuildLabel) (*core.Package, error) {
 	pkg := be.state.Graph.PackageByLabel(label)
