@@ -1596,18 +1596,29 @@ func (target *BuildTarget) getCommand(state *BuildState, commands map[string]str
 	return highestCommand
 }
 
-// AllBuildInputs returns all the inputs for this target.
-func (target *BuildTarget) AllBuildInputs() []BuildInput {
-	srcs := target.AllSources()
-	data := target.AllData()
-	tools := target.AllTools()
-
-	size := len(srcs) + len(data) + len(tools)
-	inputs := make([]BuildInput, 0, size)
-	inputs = append(inputs, srcs...)
-	inputs = append(inputs, data...)
-	inputs = append(inputs, tools...)
-	return inputs
+// AllBuildInputs returns yields over the inputs for this target.
+func (target *BuildTarget) AllBuildInputs() iter.Seq2[int, BuildInput] {
+	return func(yield func(int, BuildInput) bool) {
+		var idx int
+		for _, src := range target.AllSources() {
+			if !yield(idx, src) {
+				return
+			}
+			idx++
+		}
+		for _, data := range target.AllData() {
+			if !yield(idx, data) {
+				return
+			}
+			idx++
+		}
+		for _, tool := range target.AllTools() {
+			if !yield(idx, tool) {
+				return
+			}
+			idx++
+		}
+	}
 }
 
 // AllSources returns all the sources of this rule.
