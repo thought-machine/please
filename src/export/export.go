@@ -102,9 +102,8 @@ type baseExporter struct {
 
 // run specifies the main steps when running an export.
 func (be *baseExporter) run(targets core.BuildLabels) {
-	stop := make(chan struct{})
-	go be.startMonitor(stop)
-	defer close(stop)
+	stop := be.startMonitor()
+	defer stop()
 
 	be.exportRepoConfig()
 	be.strategy.exportPreloaded()
@@ -112,46 +111,61 @@ func (be *baseExporter) run(targets core.BuildLabels) {
 	be.strategy.writePackageFiles()
 }
 
-func (be *baseExporter) startMonitor(stop chan struct{}) {
-	// this total is meant to provide some general idea of the progress but in reality we might
-	// visit more than the targets currently in the build graph (those will have to be parsed
-	// adhoc).
-	total := len(be.state.Graph.AllTargets())
-	startTime := time.Now()
-	isTerminal := cli.StdErrIsATerminal
+func (be *baseExporter) startMonitor() func() {
+	stop, done := make(chan struct{}), make(chan struct{})
 
-	if isTerminal {
-		cli.CurrentBackend.SetPassthrough(false, 1, false)
-		defer cli.CurrentBackend.SetPassthrough(true, 1, false)
-	}
+	go func() {
+		defer close(done)
 
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
+		// this total is meant to provide some general idea of the progress but in reality we might
+		// visit more than the targets currently in the build graph (those will have to be parsed
+		// adhoc).
+		total := len(be.state.Graph.AllTargets())
+		startTime := time.Now()
+		isTerminal := cli.StdErrIsATerminal
 
-	for {
-		select {
-		case <-stop:
-			log.Infof("Exported %d targets (%.1fs)...", be.targetCounter, time.Since(startTime).Seconds())
-			return
-		case <-ticker.C:
-			done := be.targetCounter
-			elapsed := time.Since(startTime).Seconds()
-			stats := be.state.SystemStats()
+		if isTerminal {
+			cli.CurrentBackend.SetPassthrough(false, 1, false)
+			defer cli.CurrentBackend.SetPassthrough(true, 1, false)
+		}
 
-			if isTerminal {
-				logs := cli.CurrentBackend.FlushOutput()
-				if len(logs) > 0 {
-					// Remove footer line before writing logs.
-					cli.Fprintf(os.Stderr, "${RESETLN}")
-					for _, line := range logs {
-						fmt.Fprintln(os.Stderr, line)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-stop:
+				elapsed := time.Since(startTime).Seconds()
+				cli.Fprintf(os.Stderr, "${RESETLN}${BOLD_WHITE}Exported${RESET} ${BOLD_GREEN}%d${RESET} targets in ${BOLD_YELLOW}%.1fs${RESET}",
+					be.targetCounter, elapsed)
+				log.Infof("Exported %d targets (%.1fs)", be.targetCounter, time.Since(startTime).Seconds())
+				return
+			case <-ticker.C:
+				done := be.targetCounter
+				elapsed := time.Since(startTime).Seconds()
+				stats := be.state.SystemStats()
+
+				if isTerminal {
+					logs := cli.CurrentBackend.FlushOutput()
+					if len(logs) > 0 {
+						// Remove footer line before writing logs.
+						cli.Fprintf(os.Stderr, "${RESETLN}")
+						for _, line := range logs {
+							fmt.Fprintln(os.Stderr, line)
+						}
 					}
+					cli.Fprintf(os.Stderr, "${RESETLN}${BOLD_WHITE}Exporting${RESET} [${BOLD_GREEN}%d${RESET}/${BOLD_GREEN}%d${RESET}, ${BOLD_YELLOW}%.1fs${RESET}]:: CPU: %5.1f%%  Mem: %5.1f%%  IO: %5.1f%%${RESET}",
+						done, total, elapsed, stats.CPU.Used, stats.Memory.UsedPercent, stats.CPU.IOWait)
 				}
-				cli.Fprintf(os.Stderr, "${RESETLN}${BOLD_WHITE}Exporting${RESET} [${BOLD_GREEN}%d${RESET}/${BOLD_GREEN}%d${RESET}, ${BOLD_YELLOW}%.1fs${RESET}]:: CPU: %5.1f%%  Mem: %5.1f%%  IO: %5.1f%%${RESET}",
-					done, total, elapsed, stats.CPU.Used, stats.Memory.UsedPercent, stats.CPU.IOWait)
 			}
 		}
+	}()
+
+	return func() {
+		close(stop)
+		<-done // Blocks until the monitor finishes the post instructions.
 	}
+
 }
 
 // exportRepoConfig exports the repository's configuration files (e.g., .gitignore, .plzconfig and
