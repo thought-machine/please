@@ -993,7 +993,13 @@ var buildFunctions = map[string]func() int{
 		original := scm.CurrentRevIdentifier(false)
 		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
 		log.Debugf("Number of changed files: %d", len(files))
-		if err := scm.Checkout(opts.Query.Changes.Since); err != nil {
+		// The changed files are calculated relative to the merge base, so that's what we compare against.
+		base, err := scm.MergeBase(opts.Query.Changes.Since, "HEAD")
+		if err != nil {
+			log.Warning("Can't determine merge base, comparing against %s instead: %s", opts.Query.Changes.Since, err)
+			base = opts.Query.Changes.Since
+		}
+		if err := scm.Checkout(base); err != nil {
 			log.Fatalf("%s", err)
 		}
 		readConfig()

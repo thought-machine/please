@@ -34,6 +34,8 @@ type SCM interface {
 	ChangedLines() (map[string][]int, error)
 	// Checkout checks out the given revision.
 	Checkout(revision string) error
+	// MergeBase returns the full commit hash of the best common ancestor of the two given revisions.
+	MergeBase(a, b string) (string, error)
 	// CurrentRevDate returns the commit date of the current revision, formatted according to the given format string.
 	CurrentRevDate(format string) string
 	// AreIgnored returns whether the files are all ignored or not

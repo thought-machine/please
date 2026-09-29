@@ -40,6 +40,10 @@ func (s *stub) Checkout(revision string) error {
 	return fmt.Errorf("unknown SCM, can't checkout")
 }
 
+func (s *stub) MergeBase(a, b string) (string, error) {
+	return "", fmt.Errorf("unknown SCM, can't calculate merge base")
+}
+
 func (s *stub) CurrentRevDate(format string) string {
 	return "Unknown"
 }
