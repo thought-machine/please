@@ -197,7 +197,7 @@ func (be *baseExporter) exportTargets(labels core.BuildLabels) {
 		}
 		target, err := be.getTarget(l)
 		if err != nil {
-			log.Errorf("Unable to lookup target %s: %s", l, err)
+			log.Errorf("Unable to lookup target: %w", err)
 			continue
 		}
 		be.strategy.exportTarget(target)
