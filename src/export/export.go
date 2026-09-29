@@ -165,7 +165,6 @@ func (be *baseExporter) startMonitor() func() {
 		close(stop)
 		<-done // Blocks until the monitor finishes the post instructions.
 	}
-
 }
 
 // exportRepoConfig exports the repository's configuration files (e.g., .gitignore, .plzconfig and
