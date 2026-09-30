@@ -1597,26 +1597,22 @@ func (target *BuildTarget) getCommand(state *BuildState, commands map[string]str
 }
 
 // AllBuildInputs returns yields over the inputs for this target.
-func (target *BuildTarget) AllBuildInputs() iter.Seq2[int, BuildInput] {
-	return func(yield func(int, BuildInput) bool) {
-		var idx int
+func (target *BuildTarget) AllBuildInputs() iter.Seq[BuildInput] {
+	return func(yield func(BuildInput) bool) {
 		for _, src := range target.AllSources() {
-			if !yield(idx, src) {
+			if !yield(src) {
 				return
 			}
-			idx++
 		}
 		for _, data := range target.AllData() {
-			if !yield(idx, data) {
+			if !yield(data) {
 				return
 			}
-			idx++
 		}
 		for _, tool := range target.AllTools() {
-			if !yield(idx, tool) {
+			if !yield(tool) {
 				return
 			}
-			idx++
 		}
 	}
 }
