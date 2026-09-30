@@ -366,8 +366,10 @@ func inSamePackage(label, dependent core.BuildLabel) bool {
 // RecursiveParse is like Parse but recurses down into all dependencies of the target as well.
 func (r *runner) RecursiveParse(ctx context.Context, label, dependent core.BuildLabel) error {
 	if r.state.ParseMetadata && !r.isExternal(label) {
-		// If [state.ParseMetadata] is set, we need the entire package (and hence its metadata) to be
-		// parsed.
+		// If [state.ParseMetadata] is set, we need the entire package to be parsed and present in
+		// the graph so that all adjacent targets and their dependencies are available. Converting
+		// the label to its package pseudo-label (e.g. //pkg:target -> //pkg:all) routes execution
+		// to recursiveParsePackage below.
 		label = label.PackageLabel()
 	}
 	if !label.IsAllTargets() {
@@ -419,8 +421,13 @@ func (r *runner) recursiveParsePackage(ctx context.Context, label, dependent cor
 		})
 	}
 	if r.state.ParseMetadata && !pkg.Subrepo.IsExternal() {
-		// For storing parse metadata we have to make sure the whole package is done here - all targets
-		// but also the subincludes.
+		// When storing parse metadata we need to fully parse any packages of subincluded targets -
+		// including transitive subincludes - to have all their adjacent targets parsed as well.
+		// While `pkg`'s own parse already resolved the individual subinclude targets (e.g.
+		// //lib:a), adjacent targets in those packages (e.g. //lib:b) were not necessarily parsed.
+		// Passing each subinclude to RecursiveParse will expand it to its enclosing package label
+		// when ParseMetadata is set, ensuring those packages and their adjacent targets are fully
+		// parsed into the graph.
 		for _, subinc := range pkg.AllSubincludes(r.state.Graph) {
 			g.Go(func() error {
 				return r.RecursiveParse(gctx, subinc, label)
