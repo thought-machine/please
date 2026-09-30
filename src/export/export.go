@@ -212,7 +212,7 @@ func (be *baseExporter) exportDependencies(target *core.BuildTarget) {
 
 // exportSources exports all files required by the target.
 func (be *baseExporter) exportSources(target *core.BuildTarget) {
-	for _, src := range target.AllBuildInputs() {
+	for src := range target.AllBuildInputs() {
 		if _, ok := src.Label(); ok {
 			continue // These will be handled as dependencies later
 		}
