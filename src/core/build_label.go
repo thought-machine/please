@@ -478,6 +478,15 @@ func HashBuildLabel(l BuildLabel) uint64 {
 	return cmap.XXHashes(l.Subrepo, l.PackageName, l.Name)
 }
 
+// PackageLabel returns a build label representing the enclosing package (i.e. //pkg:all).
+func (label BuildLabel) PackageLabel() BuildLabel {
+	return BuildLabel{
+		Subrepo:     label.Subrepo,
+		PackageName: label.PackageName,
+		Name:        "all",
+	}
+}
+
 // packageKey returns a key for this build label that only uses the subrepo and package parts.
 func (label BuildLabel) packageKey() packageKey {
 	return packageKey{Name: label.PackageName, Subrepo: label.Subrepo}

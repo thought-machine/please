@@ -1,0 +1,7 @@
+genrule(
+    name = "other_target",
+    srcs = ["file3.txt"],
+    outs = ["out3.txt"],
+    cmd = "cat $SRCS > $OUT",
+    visibility = ["PUBLIC"],
+)

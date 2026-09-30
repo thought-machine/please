@@ -365,27 +365,29 @@ func inSamePackage(label, dependent core.BuildLabel) bool {
 
 // RecursiveParse is like Parse but recurses down into all dependencies of the target as well.
 func (r *runner) RecursiveParse(ctx context.Context, label, dependent core.BuildLabel) error {
+	if r.state.ParseMetadata && !r.isExternal(label) {
+		// If [state.ParseMetadata] is set, we need the entire package to be parsed and present in
+		// the graph so that all adjacent targets and their dependencies are available. Converting
+		// the label to its package pseudo-label (e.g. //pkg:target -> //pkg:all) routes execution
+		// to recursiveParsePackage below.
+		label = label.PackageLabel()
+	}
 	if !label.IsAllTargets() {
-		return r.recursiveParse(ctx, label, dependent)
+		return r.recursiveParseTarget(ctx, label, dependent)
 	}
-	pkg, err := r.Parse(ctx, label, dependent)
-	if err != nil {
-		return err
-	}
-	g, gctx := r.group(ctx)
-	for _, target := range pkg.AllTargets() {
-		for dep := range target.DeclaredDependencies() {
-			g.Go(func() error {
-				// N.B. No need to deduplicate these; recursiveParse does that for the whole walk.
-				return r.recursiveParse(gctx, dep, target.Label)
-			})
-		}
-	}
-	return g.Wait()
+	return r.recursiveParsePackage(ctx, label, dependent)
 }
 
-// recursiveParse parses a target and, transitively, everything it depends on.
-func (r *runner) recursiveParse(ctx context.Context, label, dependent core.BuildLabel) error {
+// isExternal reports whether the label represents a target from an external repo.
+func (r *runner) isExternal(label core.BuildLabel) bool {
+	if label.Subrepo == "" {
+		return false
+	}
+	return r.state.Graph.Subrepo(label.Subrepo).IsExternal()
+}
+
+// recursiveParseTarget parses a target and, transitively, everything it depends on.
+func (r *runner) recursiveParseTarget(ctx context.Context, label, dependent core.BuildLabel) error {
 	if !r.parseOnce.Add(label, struct{}{}) {
 		return nil // Someone else has this one; they're in the same errgroup so we needn't wait for them.
 	}
@@ -396,26 +398,40 @@ func (r *runner) recursiveParse(ctx context.Context, label, dependent core.Build
 	g, gctx := r.group(ctx)
 	for dep := range target.DeclaredDependencies() {
 		g.Go(func() error {
-			return r.recursiveParse(gctx, dep, target.Label)
+			return r.RecursiveParse(gctx, dep, target.Label)
 		})
 	}
-	if r.state.ParseMetadata {
-		// parseTarget can return as soon as the target itself turns up, before the rest of its package
-		// (and hence its metadata) has been parsed, so we have to make sure the whole package is done here.
-		pkg, err := r.Parse(ctx, target.Label, dependent)
-		if err != nil {
-			return err
-		}
-		if !pkg.Subrepo.IsExternal() {
-			related, err := pkg.Metadata.FindRelatedTargets(target.Label)
-			if err != nil {
-				return err
-			}
-			for _, rel := range related {
-				g.Go(func() error {
-					return r.recursiveParse(gctx, rel, target.Label)
-				})
-			}
+	return g.Wait()
+}
+
+// recursiveParsePackage parses all targets in a package.
+func (r *runner) recursiveParsePackage(ctx context.Context, label, dependent core.BuildLabel) error {
+	if !r.parseOnce.Add(label, struct{}{}) {
+		return nil // Someone else has this one; they're in the same errgroup so we needn't wait for them.
+	}
+	pkg, err := r.Parse(ctx, label, dependent)
+	if err != nil {
+		return err
+	}
+	g, gctx := r.group(ctx)
+	for _, target := range pkg.AllTargets() {
+		g.Go(func() error {
+			// N.B. No need to deduplicate these; recursiveParse does that for the whole walk.
+			return r.recursiveParseTarget(gctx, target.Label, label)
+		})
+	}
+	if r.state.ParseMetadata && !pkg.Subrepo.IsExternal() {
+		// When storing parse metadata we need to fully parse any packages of subincluded targets -
+		// including transitive subincludes - to have all their adjacent targets parsed as well.
+		// While `pkg`'s own parse already resolved the individual subinclude targets (e.g.
+		// //lib:a), adjacent targets in those packages (e.g. //lib:b) were not necessarily parsed.
+		// Passing each subinclude to RecursiveParse will expand it to its enclosing package label
+		// when ParseMetadata is set, ensuring those packages and their adjacent targets are fully
+		// parsed into the graph.
+		for _, subinc := range pkg.AllSubincludes(r.state.Graph) {
+			g.Go(func() error {
+				return r.RecursiveParse(gctx, subinc, label)
+			})
 		}
 	}
 	return g.Wait()
