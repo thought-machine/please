@@ -265,7 +265,7 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 	c.state.Graph.AddTarget(outDirTarget)
 	_, err := c.Build(outDirTarget)
 	require.NoError(t, err)
-	// Build no longer downloads anything itself; src/build does that once any post-build
+	// Build does not download anything itself; src/build does that once any post-build
 	// function has had its chance to alter the outputs.
 	require.NoError(t, c.Download(outDirTarget))
 
