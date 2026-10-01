@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"runtime/debug"
 )
 
 // A Limiter is the interface that we use to release/acquire workers while waiting.
@@ -59,17 +60,18 @@ func (m *ErrMap[K, V]) Get(key K) (V, error) {
 // GetOrSet returns the value if set, or an error if one has been set.
 // If nothing has been set for the key, it runs the given function to generate the value and then sets it.
 // If the called function panics, the panic will be recovered and treated as though it returned an error.
-func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
+func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (val V, err error) {
 	v, wait, first := m.m.GetOrWait(key)
 	if v.Err != nil {
 		return v.Val, v.Err
 	} else if first {
 		defer func() {
 			if r := recover(); r != nil {
-				m.m.Set(key, errV[V]{Err: fmt.Errorf("%s", r)})
+				err = panicToErr(r)
+				m.m.Set(key, errV[V]{Err: err})
 			}
 		}()
-		val, err := f()
+		val, err = f()
 		m.m.Set(key, errV[V]{Val: val, Err: err})
 		return val, err
 	} else if wait != nil {
@@ -84,19 +86,29 @@ func (m *ErrMap[K, V]) GetOrSet(key K, f func() (V, error)) (V, error) {
 	return v.Val, v.Err
 }
 
+// panicToErr converts a recovered panic value into an error, retaining its type if it already is an error.
+func panicToErr(r any) error {
+	if e, ok := r.(error); ok {
+		return e
+	}
+	// Maintain the stack; if something panicked that wasn't an error we will probably want it for debugging.
+	return fmt.Errorf("%v\n%s", r, debug.Stack())
+}
+
 // GetOrSetCtx is like GetOrSet but accepts a context that can be cancelled.
 // If the called function panics, the panic will be recovered and treated as though it returned an error.
-func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, error)) (V, error) {
+func (m *ErrMap[K, V]) GetOrSetCtx(ctx context.Context, key K, f func() (V, error)) (val V, err error) {
 	v, wait, first := m.m.GetOrWait(key)
 	if v.Err != nil {
 		return v.Val, v.Err
 	} else if first {
 		defer func() {
 			if r := recover(); r != nil {
-				m.m.Set(key, errV[V]{Err: fmt.Errorf("%s", r)})
+				err = panicToErr(r)
+				m.m.Set(key, errV[V]{Err: err})
 			}
 		}()
-		val, err := f()
+		val, err = f()
 		m.m.Set(key, errV[V]{Val: val, Err: err})
 		return val, err
 	} else if wait != nil {

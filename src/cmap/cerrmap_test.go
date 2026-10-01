@@ -34,6 +34,16 @@ func TestErrWait(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestErrMapGetOrSetPanicReturnsErrorToFirstCaller(t *testing.T) {
+	m := NewErrMap[int, int](DefaultShardCount, hashInts, nil)
+	v, err := m.GetOrSet(9, func() (int, error) {
+		panic(fmt.Errorf("it broke"))
+	})
+	assert.Zero(t, v)
+	assert.Error(t, err)
+	assert.Equal(t, "it broke", err.Error())
+}
+
 func TestValues(t *testing.T) {
 	m := NewErrMap[int, int](DefaultShardCount, hashInts, nil)
 	broke := fmt.Errorf("it broke")

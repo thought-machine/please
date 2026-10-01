@@ -252,7 +252,7 @@ func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
 			state.RepoConfig = &Configuration{}
-			if err := readSubrepoConfig(state.RepoConfig, subrepo); err != nil {
+			if err = readSubrepoConfig(state.RepoConfig, subrepo); err != nil {
 				return
 			}
 			if err = validateSubrepoNameAndPluginConfig(state.Config, state.RepoConfig, subrepo); err != nil {
@@ -751,9 +751,15 @@ func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
 	done := map[BuildLabel]struct{}{}
 	includes := make([]BuildLabel, 0, len(state.Config.Parse.PreloadSubincludes)+len(state.RepoConfig.Parse.PreloadSubincludes))
 
-	is := append(state.Config.Parse.PreloadSubincludes, state.RepoConfig.Parse.PreloadSubincludes...)
+	for _, i := range state.Config.Parse.PreloadSubincludes {
+		if _, ok := done[i]; ok {
+			continue
+		}
 
-	for _, i := range is {
+		includes = append(includes, i)
+		done[i] = struct{}{}
+	}
+	for _, i := range state.RepoConfig.Parse.PreloadSubincludes {
 		if _, ok := done[i]; ok {
 			continue
 		}
@@ -767,7 +773,6 @@ func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
 func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime bool) error {
 	if state.RemoteClient != nil {
-		state.LogBuildResult(target, TargetBuilding, "Downloading inputs...")
 		for input := range state.IterInputs(target, runtime) {
 			if l, ok := input.Label(); ok {
 				dep := state.Graph.TargetOrDie(l)

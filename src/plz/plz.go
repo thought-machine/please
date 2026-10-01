@@ -179,6 +179,9 @@ func (r *runner) parse(ctx context.Context, label, dependent core.BuildLabel, qu
 		return nil, err
 	}
 	if err := r.ensurePreloads(ctx, state); err != nil {
+		if !quiet {
+			r.state.LogBuildError(label, core.ParseFailed, err, "Failed to resolve preloaded subincludes")
+		}
 		return nil, err
 	}
 	pkg, wait, first, err := r.state.Graph.PackageOrWait(label)
@@ -288,7 +291,7 @@ func (r *runner) registerPreloads(ctx context.Context, state *core.BuildState) e
 		}
 		// Queue them up asynchronously to feed the queues as quickly as possible
 		g.Go(func() error {
-			if _, err := r.Build(gctx, inc, core.OriginalTarget); err != nil {
+			if _, err := r.BuildAndDownload(gctx, inc, core.OriginalTarget); err != nil {
 				return err
 			}
 			return r.parser.PreloadSubinclude(gctx, inc)
@@ -322,6 +325,10 @@ func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildL
 	if r.state.Graph.Subrepo(label.Subrepo) != nil {
 		return nil // The parse above defined it, we're done.
 	}
+	if arch, ok := couldBeArch(label.Subrepo); ok {
+		r.state.Graph.MaybeAddSubrepo(core.SubrepoForArch(r.state, arch))
+		return nil
+	}
 	if sl.Subrepo != dependent.Subrepo {
 		nested := sl
 		nested.Subrepo = dependent.Subrepo
@@ -334,11 +341,7 @@ func (r *runner) ensureSubrepo(ctx context.Context, label, dependent core.BuildL
 			}
 		}
 	}
-	// Nothing defines it, so the only remaining possibility is an architecture subrepo.
-	if arch, ok := couldBeArch(label.Subrepo); ok {
-		r.state.Graph.MaybeAddSubrepo(core.SubrepoForArch(r.state, arch))
-		return nil
-	} else if err != nil {
+	if err != nil {
 		// This returns the missing build file error that we got from tryParse above.
 		return err
 	}
@@ -493,8 +496,35 @@ func (r *runner) buildDep(ctx context.Context, dep core.BuildLabel, target *core
 	return nil
 }
 
-// buildOne builds a single target (which cannot be a pseudo-label like :all)
+// buildOne builds a single target (which cannot be a pseudo-label like :all) and downloads
+// anything needed to run it, if we're building remotely and it's a target we're downloading.
 func (r *runner) buildOne(ctx context.Context, target *core.BuildTarget) error {
+	if err := r.buildTargetAndDeps(ctx, target); err != nil {
+		return err
+	}
+	return r.downloadRuntimeFiles(target)
+}
+
+// downloadRuntimeFiles downloads the files needed to run a target (i.e. itself and its run-time & data dependencies).
+func (r *runner) downloadRuntimeFiles(target *core.BuildTarget) error {
+	state := r.state.ForTarget(target)
+	if state.RemoteClient == nil || !state.ShouldDownload(target) {
+		return nil
+	}
+	limiter := r.limiter(r.anyRemote)
+	limiter.Acquire()
+	defer limiter.Release()
+
+	log.Debug("Downloading runtime files for %s", target)
+	if err := state.DownloadInputsIfNeeded(target, true); err != nil {
+		state.LogBuildError(target.Label, core.TargetBuildFailed, err, "Failed to download runtime files for %s: %s", target.Label, err)
+		return err
+	}
+	return nil
+}
+
+// buildTargetAndDeps builds a single target and all of its dependencies.
+func (r *runner) buildTargetAndDeps(ctx context.Context, target *core.BuildTarget) error {
 	g, gctx := r.group(ctx)
 	for dep := range target.BuildDependencyLabels() {
 		g.Go(func() error {

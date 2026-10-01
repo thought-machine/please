@@ -265,6 +265,9 @@ func TestOutDirsSetOutsOnTarget(t *testing.T) {
 	c.state.Graph.AddTarget(outDirTarget)
 	_, err := c.Build(outDirTarget)
 	require.NoError(t, err)
+	// Build does not download anything itself; src/build does that once any post-build
+	// function has had its chance to alter the outputs.
+	require.NoError(t, c.Download(outDirTarget))
 
 	assert.Len(t, outDirTarget.Outputs(c.state.Graph), 2)
 	assert.ElementsMatch(t, []string{"foo.txt", "bar.txt"}, outDirTarget.Outputs(c.state.Graph))

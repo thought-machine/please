@@ -216,6 +216,9 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 		state.LogBuildResult(target, core.TargetBuilding, "Preparing...")
 
 		// Ensure we have downloaded any previous dependencies if that's relevant.
+		if state.RemoteClient != nil {
+			state.LogBuildResult(target, core.TargetBuilding, "Downloading inputs...")
+		}
 		if err := state.DownloadInputsIfNeeded(target, false); err != nil {
 			return err
 		}

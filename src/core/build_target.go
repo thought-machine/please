@@ -1422,6 +1422,9 @@ func (target *BuildTarget) AddDebugTool(tool BuildInput) {
 
 // AllTestTools returns all the test tool paths for this rule.
 func (target *BuildTarget) AllTestTools() []BuildInput {
+	if target.Test == nil {
+		return nil
+	}
 	if target.Test.namedTools == nil {
 		return target.Test.tools
 	}

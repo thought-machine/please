@@ -349,54 +349,7 @@ func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	}
 
 	c.setOutputsFromMetadata(target, metadata)
-
-	if c.state.ShouldDownload(target) {
-		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading")
-		if err := c.Download(target); err != nil {
-			return metadata, err
-		}
-		// TODO(peterebden): Should these not just be part of Download()?
-		if err := c.downloadData(target); err != nil {
-			return metadata, err
-		}
-		if err := c.downloadRuntimeDependencies(target); err != nil {
-			return metadata, err
-		}
-	}
 	return metadata, nil
-}
-
-// downloadData downloads all the runtime data for a target, recursively.
-func (c *Client) downloadData(target *core.BuildTarget) error {
-	var g errgroup.Group
-	for _, datum := range target.AllData() {
-		if l, ok := datum.Label(); ok {
-			t := c.state.Graph.TargetOrDie(l)
-			g.Go(func() error {
-				if err := c.Download(t); err != nil {
-					return err
-				}
-				return c.downloadData(t)
-			})
-		}
-	}
-	return g.Wait()
-}
-
-// downloadRuntimeDependencies downloads all the runtime dependencies for a target.
-func (c *Client) downloadRuntimeDependencies(target *core.BuildTarget) error {
-	var g errgroup.Group
-	for runDep := range target.IterAllRuntimeDependencies(c.state.Graph) {
-		l, _ := runDep.Label()
-		t := c.state.Graph.TargetOrDie(l)
-		g.Go(func() error {
-			if err := c.Download(t); err != nil {
-				return err
-			}
-			return nil
-		})
-	}
-	return g.Wait()
 }
 
 // Run runs a target on the remote executors.

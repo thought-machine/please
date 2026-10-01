@@ -584,6 +584,9 @@ func runtimeHash(state *core.BuildState, target *core.BuildTarget, runRemotely b
 	}
 	if target.Local {
 		// If the test is marked to run locally, download the inputs as we need these to calculate the runtime hash.
+		if state.RemoteClient != nil {
+			state.LogTestRunning(target, run, core.TargetTesting, "Downloading inputs...")
+		}
 		if err := state.DownloadInputsIfNeeded(target, true); err != nil {
 			return nil, err
 		}
