@@ -444,13 +444,10 @@ func subincludeTarget(s *scope, l core.BuildLabel) *core.BuildTarget {
 	if t == nil && isLocal {
 		s.Error("Target :%s is not defined in this package; it has to be defined before the subinclude() call", l.Name)
 	}
+	s.recordSubinclude(l)
 	t, err := s.WaitForSubincludedTarget(ctx, l, pkgLabel)
 	if err != nil {
 		s.Error("Failed to build subincluded target: %w", err)
-	} else if s.pkg != nil {
-		s.pkg.RegisterSubinclude(l)
-	} else if s.subincludeLabel != nil { // If this is nil, that indicates a preloadedSubinclude
-		s.state.Graph.RegisterTransitiveSubinclude(*s.subincludeLabel, l)
 	}
 	return t
 }

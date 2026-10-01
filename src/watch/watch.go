@@ -113,7 +113,7 @@ func startWatching(watcher *fsnotify.Watcher, state *core.BuildState, labels []c
 			log.Notice("Adding watch on %s", pkg.Filename)
 			files.Store(pkg.Filename, struct{}{})
 		}
-		for _, subinclude := range pkg.Subincludes {
+		for subinclude := range state.Graph.AllSubincludes(pkg.Label()) {
 			startWatch(state.Graph.TargetOrDie(subinclude))
 		}
 	}

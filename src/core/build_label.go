@@ -632,15 +632,3 @@ func (slice BuildLabels) String() string {
 	}
 	return strings.Join(s, ", ")
 }
-
-// labelSet defines a set of labels implemented using a map.
-type labelSet map[BuildLabel]struct{}
-
-func (ls labelSet) Add(l BuildLabel) {
-	ls[l] = struct{}{}
-}
-
-func (ls labelSet) Contains(l BuildLabel) bool {
-	_, ok := ls[l]
-	return ok
-}

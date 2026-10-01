@@ -1,0 +1,4 @@
+subinclude("//test/revdeps/subincludes:inner")
+
+def outer_rule(name:str):
+    inner_rule(name)

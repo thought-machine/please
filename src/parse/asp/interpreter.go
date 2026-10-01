@@ -167,7 +167,7 @@ func (i *interpreter) preloadSubinclude(s *scope, label core.BuildLabel) (err er
 		subrepo := s.state.Graph.SubrepoOrDie(t.Label.Subrepo)
 		includeState = subrepo.State
 	}
-
+	s.recordSubinclude(label)
 	s.interpreter.loadPluginConfig(s, includeState)
 	for _, out := range t.FullOutputs(s.state.Graph) {
 		globals := s.interpreter.Subinclude(s, out, t.Label, true)
@@ -336,6 +336,15 @@ type scope struct {
 	metadata scopeMetadata
 	// True if this scope is from a preloaded subinclude
 	Preload bool
+}
+
+// recordSubinclude records a subinclude onto the build graph
+func (s *scope) recordSubinclude(subinclude core.BuildLabel) {
+	if s.pkg != nil {
+		s.state.Graph.AddSubinclude(s.pkg.Label(), subinclude)
+	} else if s.subincludeLabel != nil {
+		s.state.Graph.AddSubinclude(*s.subincludeLabel, subinclude)
+	}
 }
 
 // parseAnnotatedLabelInPackage similarly to parseLabelInPackage, parses the label contextualising it to the provided

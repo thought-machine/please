@@ -59,3 +59,11 @@ plz_e2e_test(
     cmd = "plz query revdeps --level=2 //test/revdeps:target4",
     expected_output = "query_revdeps_multiple_paths_test.txt",
 )
+
+# //test/revdeps/subincludes/user only subincludes :outer, which itself subincludes :inner.
+# Subincludes have to be followed transitively for it to show up as a revdep of :inner.
+plz_e2e_test(
+    name = "query_revdeps_nested_subinclude_test",
+    cmd = "plz query revdeps --level=-1 //test/revdeps/subincludes:inner",
+    expected_output = "query_revdeps_nested_subinclude_test.txt",
+)

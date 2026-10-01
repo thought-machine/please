@@ -1,0 +1,2 @@
+def inner_rule(name:str):
+    filegroup(name = name)

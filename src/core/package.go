@@ -2,9 +2,7 @@ package core
 
 import (
 	"fmt"
-	"maps"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -26,8 +24,6 @@ type Package struct {
 	SubrepoName string
 	// Filename of the build file that defined this package
 	Filename string
-	// Subincluded build defs files that this package imported
-	Subincludes []BuildLabel
 	// If the package is in a subrepo, this is the subrepo it belongs to. It's nil if not.
 	Subrepo *Subrepo
 	// Targets contained within the package
@@ -117,38 +113,6 @@ func (pkg *Package) NumTargets() int {
 	pkg.mutex.Lock()
 	defer pkg.mutex.Unlock()
 	return len(pkg.targets)
-}
-
-// RegisterSubinclude adds a new subinclude to this package, guaranteeing uniqueness.
-func (pkg *Package) RegisterSubinclude(label BuildLabel) {
-	if !pkg.HasSubinclude(label) {
-		pkg.Subincludes = append(pkg.Subincludes, label)
-	}
-}
-
-// AllSubincludes returns the full set of subincludes needed for this package, including transitive subincludes
-func (pkg *Package) AllSubincludes(graph *BuildGraph) []BuildLabel {
-	includes := make(labelSet, len(pkg.Subincludes))
-
-	for _, s := range pkg.Subincludes {
-		for _, inc := range append(graph.TransitiveSubincludes(s), s) {
-			includes.Add(inc)
-		}
-	}
-
-	ret := slices.Collect(maps.Keys(includes))
-	sort.Sort(BuildLabels(ret))
-	return ret
-}
-
-// HasSubinclude returns true if the package has subincluded the given label.
-func (pkg *Package) HasSubinclude(label BuildLabel) bool {
-	for _, l := range pkg.Subincludes {
-		if l == label {
-			return true
-		}
-	}
-	return false
 }
 
 // SubrepoArchName returns a subrepo name, modified for the architecture of this package if it's not the host.

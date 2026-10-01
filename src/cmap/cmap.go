@@ -69,6 +69,13 @@ func (m *Map[K, V]) Contains(key K) bool {
 	return m.shards[m.hasher(key)&m.mask].Contains(key)
 }
 
+// Update performs an update on the given item in-place.
+// The given function is given the old value (which will be the zero value if it isn't present) and should return the new value.
+// The function should not attempt to modify the map further.
+func (m *Map[K, V]) Update(key K, update func(V) V) V {
+	return m.shards[m.hasher(key)&m.mask].Update(key, update)
+}
+
 // GetOrWait returns the value corresponding to this key. If it is not present, a channel is returned that can
 // be waited upon for the item to exist.
 // The final return value indicates whether this is the first request for this item.
@@ -173,6 +180,20 @@ func (s *shard[K, V]) GetOrWait(key K) (val V, wait <-chan struct{}, first bool)
 	wait = ch
 	first = true
 	return
+}
+
+// Update updates a value in the map. The function is given the existing value and computes the new value.
+// This counts as a 'set' in terms of anything awaiting it from GetOrWait.
+func (s *shard[K, V]) Update(key K, update func(V) V) V {
+	s.l.Lock()
+	defer s.l.Unlock()
+	v, present := s.m[key]
+	newv := update(v.Val)
+	s.m[key] = awaitableValue[V]{Val: newv}
+	if present && v.Wait != nil {
+		close(v.Wait)
+	}
+	return newv
 }
 
 // Values returns a copy of all the targets currently in the map.

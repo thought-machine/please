@@ -87,7 +87,7 @@ func newRevdeps(graph *core.BuildGraph, hidden, followSubincludes, includeSubrep
 	subincludes := make(map[core.BuildLabel][]*core.Package)
 	if followSubincludes {
 		for pkg := range graph.AllPackages() {
-			for _, inc := range pkg.Subincludes {
+			for inc := range graph.AllSubincludes(pkg.Label()) {
 				subincludes[inc] = append(subincludes[inc], pkg)
 			}
 		}

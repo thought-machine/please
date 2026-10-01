@@ -6,16 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRegisterSubinclude(t *testing.T) {
-	pkg := NewPackage("src/core")
-	label1 := ParseBuildLabel("//build_defs:js", "")
-	label2 := ParseBuildLabel("//build_defs:go", "")
-	pkg.RegisterSubinclude(label1)
-	pkg.RegisterSubinclude(label2)
-	pkg.RegisterSubinclude(label1)
-	assert.Equal(t, []BuildLabel{label1, label2}, pkg.Subincludes)
-}
-
 func TestRegisterOutput(t *testing.T) {
 	state := NewDefaultBuildState()
 	target1 := NewBuildTarget(ParseBuildLabel("//src/core:target1", ""))

@@ -2,6 +2,7 @@ package export
 
 import (
 	"path/filepath"
+	"slices"
 
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/fs"
@@ -33,7 +34,7 @@ func (nte *noTrimExporter) exportPreloaded() {
 	}
 
 	for _, target := range nte.state.Config.Parse.PreloadSubincludes {
-		targets := append(nte.state.Graph.TransitiveSubincludes(target), target)
+		targets := append(slices.Collect(nte.state.Graph.AllSubincludes(target)), target)
 		nte.exportTargets(targets)
 	}
 }
@@ -104,6 +105,5 @@ func (nte *noTrimExporter) exportPackage(pkg *core.Package) {
 
 // exportSubincludes exports the subincluded targets.
 func (nte *noTrimExporter) exportSubincludes(pkg *core.Package) {
-	subincludes := pkg.AllSubincludes(nte.state.Graph)
-	nte.exportTargets(subincludes)
+	nte.exportTargets(slices.Collect(nte.state.Graph.AllSubincludes(pkg.Label())))
 }

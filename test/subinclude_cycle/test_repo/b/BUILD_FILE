@@ -1,0 +1,7 @@
+subinclude("//a:defs")
+
+filegroup(
+    name = "defs",
+    srcs = ["b.build_defs"],
+    visibility = ["PUBLIC"],
+)

@@ -67,6 +67,16 @@ func TestShardCount(t *testing.T) {
 	})
 }
 
+func TestUpdate(t *testing.T) {
+	m := New[int, int](DefaultShardCount, hashInts)
+	m.Add(1, 2)
+	v := m.Update(1, func(x int) int {
+		return x + 1
+	})
+	assert.Equal(t, 3, v)
+	assert.Equal(t, 3, m.Get(1))
+}
+
 func BenchmarkMapInserts(b *testing.B) {
 	m := New[int, int](DefaultShardCount, hashInts)
 	for i := 0; i < b.N; i++ {
