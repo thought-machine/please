@@ -431,7 +431,7 @@ func (r *runner) recursiveParsePackage(ctx context.Context, label, dependent cor
 		// Passing each subinclude to RecursiveParse will expand it to its enclosing package label
 		// when ParseMetadata is set, ensuring those packages and their adjacent targets are fully
 		// parsed into the graph.
-		for _, subinc := range pkg.AllSubincludes(r.state.Graph) {
+		for subinc := range r.state.Graph.AllSubincludes(pkg.Label()) {
 			g.Go(func() error {
 				return r.RecursiveParse(gctx, subinc, label)
 			})
