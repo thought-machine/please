@@ -14,8 +14,8 @@ package(
 python_wheel(
     name = "six",
     outs = ["six.py"],
-    hashes = ["8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"],
-    version = "1.16.0",
+    hashes = ["4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"],
+    version = "1.17.0",
 )
 
 python_wheel(
@@ -34,8 +34,8 @@ python_wheel(
 
 python_wheel(
     name = "certifi",
-    hashes = ["017c25db2a153ce562900032d5bc68e9f191e44e9a0f762f373977de9df1fbb3"],
-    version = "2019.11.28",
+    hashes = ["62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"],
+    version = "2026.7.22",
 )
 
 python_wheel(
@@ -52,8 +52,9 @@ python_wheel(
 
 python_wheel(
     name = "urllib3",
-    hashes = ["a448b2f64d686155468037e1ace9f2d2199776e17f0a46610480d311f73e3472"],
-    version = "2.2.2",
+    hashes = ["bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4"],
+    version = "2.6.3",
+    licences = ["MIT"],
 )
 
 python_wheel(
@@ -65,12 +66,14 @@ python_wheel(
 python_wheel(
     name = "absl",
     package_name = "absl_py",
-    hashes = ["c106f6ef0ae86c1273b0858b40ee15b99fad1c223838387b9d11446a033bbcb1"],
-    version = "0.9.0",
+    hashes = ["526a04eadab8b4ee719ce68f204172ead1027549089702d99b9059f129ff1308"],
+    version = "2.1.0",
     deps = [":six"],
 )
 
-pip_library(
+python_wheel(
     name = "progress",
-    version = "1.5",
+    version = "1.6.1",
+    licences = ["ISC"],
+    hashes = ["5239f22f305c12fdc8ce6e0e47f70f21622a935e16eafc4535617112e7c7ea0b"],
 )
