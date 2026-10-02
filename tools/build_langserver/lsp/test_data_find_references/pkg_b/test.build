@@ -1,0 +1,6 @@
+subinclude("//shared_defs:alias2")
+
+my_shared_func(
+    name = "target_b",
+    srcs = ["b.txt"],
+)

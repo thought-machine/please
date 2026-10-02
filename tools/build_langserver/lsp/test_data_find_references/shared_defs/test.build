@@ -1,0 +1,12 @@
+# Two filegroups exposing the same file under different labels
+filegroup(
+    name = "alias1",
+    srcs = ["my_func.build_defs"],
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "alias2",
+    srcs = ["my_func.build_defs"],
+    visibility = ["PUBLIC"],
+)
