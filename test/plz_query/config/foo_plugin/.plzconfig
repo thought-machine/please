@@ -1,0 +1,10 @@
+[PluginDefinition]
+name = foo
+
+[PluginConfig "fooc_tool"]
+DefaultValue = fooc
+
+[PluginConfig "bar_tools"]
+Repeatable = true
+DefaultValue = //tools/bar
+DefaultValue = ///baz//tools/bar
