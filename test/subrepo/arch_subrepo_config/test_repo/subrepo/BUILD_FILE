@@ -1,0 +1,16 @@
+
+subinclude("///plugin//:plugin")
+
+build_rule(
+    name="subrepoFile",
+    cmd="echo " + CONFIG.PLUGIN.TESTSTRING + " > subrepoFile",
+    outs=["subrepoFile"],
+    visibility=["PUBLIC"]
+)
+
+# Fail if the plugin config value is unexpected.
+if(
+    (CONFIG.OS == "test" and CONFIG.PLUGIN.TESTSTRING != "RootArchString") or
+    (CONFIG.OS == CONFIG.HOSTOS and CONFIG.PLUGIN.TESTSTRING != "RootString")
+    ):
+    log.fatal("Wrong subrepo option set: " + CONFIG.PLUGIN.TESTSTRING + " (in " + CONFIG.OS + ") with the host arch: " + CONFIG.HOSTARCH + "_" + CONFIG.HOSTOS)
