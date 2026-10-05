@@ -1,0 +1,11 @@
+filegroup(
+    name = "fg",
+    srcs = ["//b:x"],
+)
+
+genrule(
+    name = "gen",
+    outs = ["gen.txt"],
+    cmd = "echo $(location :fg) > $OUT",
+    data = [":fg"],
+)

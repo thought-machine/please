@@ -55,6 +55,20 @@ func TestCycleDetector(t *testing.T) {
 			core.ParseBuildLabel("//src:f", ""),
 		}, cerr.Cycle)
 	})
+
+	t.Run("ProvidesIsNotACycle", func(t *testing.T) {
+		// :sidecar declares a dependency on :k8s, which in turn depends on :sidecar. But :k8s
+		// provides :svc to :sidecar, so the real dependency is only on :svc and there is no cycle.
+		state := core.NewDefaultBuildState()
+		k8s := newTarget(state, "//src:k8s", "//src:svc", "//src:sidecar")
+		k8s.AddProvide("k8s_svc", []core.BuildLabel{core.ParseBuildLabel("//src:svc", "")})
+		sidecar := newTarget(state, "//src:sidecar", "//src:k8s")
+		sidecar.AddRequire("k8s_svc")
+		newTarget(state, "//src:svc")
+
+		detector := cycleDetector{graph: state.Graph}
+		assert.Nil(t, detector.Check())
+	})
 }
 
 func TestCycleDetectorSubincludes(t *testing.T) {

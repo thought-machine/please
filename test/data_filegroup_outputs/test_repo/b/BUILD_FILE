@@ -1,0 +1,14 @@
+genrule(
+    name = "slow_defs",
+    outs = ["slow.build_defs"],
+    cmd = "sleep 3; echo 'X = 1' > $OUT",
+)
+
+subinclude(":slow_defs")
+
+genrule(
+    name = "x",
+    outs = ["x.txt"],
+    cmd = "echo x > $OUT",
+    visibility = ["PUBLIC"],
+)

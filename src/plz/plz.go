@@ -558,11 +558,10 @@ func (r *runner) buildTargetAndDeps(ctx context.Context, target *core.BuildTarge
 	// The target's own build command can refer to its run-time & data dependencies via shell replacements, so we must at
 	// least have them resolved here (they don't have to be built yet though)
 	deps := slices.Collect(target.RuntimeAndDataDependencies())
+	seen := map[core.BuildLabel]struct{}{}
 	for _, dep := range deps {
-		for _, err := range r.resolveTarget(ctx, dep, target) {
-			if err != nil {
-				return err
-			}
+		if err := r.resolveForOutputs(ctx, dep, target, seen); err != nil {
+			return err
 		}
 	}
 
@@ -615,6 +614,31 @@ func (r *runner) buildTargetAndDeps(ctx context.Context, target *core.BuildTarge
 		})
 	}
 	return g.Wait()
+}
+
+// resolveForOutputs resolves a dependency such that its outputs can be calculated. For most targets that's just
+// the target itself, but filegroups re-output their sources so those must be resolved as well (recursively,
+// since they can be filegroups themselves).
+func (r *runner) resolveForOutputs(ctx context.Context, dep core.BuildLabel, dependent *core.BuildTarget, seen map[core.BuildLabel]struct{}) error {
+	for t, err := range r.resolveTarget(ctx, dep, dependent) {
+		if err != nil {
+			return err
+		} else if _, present := seen[t.Label]; present {
+			continue
+		}
+		seen[t.Label] = struct{}{}
+		if !t.IsFilegroup {
+			continue
+		}
+		for _, src := range t.AllSources() {
+			if l, ok := src.Label(); ok {
+				if err := r.resolveForOutputs(ctx, l, t, seen); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // runBuildAction calls the build for a single target.
