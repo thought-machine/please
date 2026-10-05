@@ -363,16 +363,20 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 	if runRemotely {
 		if metadata.Cached {
 			target.SetState(core.ReusedRemotely)
-			state.LogBuildResult(target, core.TargetBuilt, "Reused existing action")
 		} else {
 			target.SetState(core.BuiltRemotely)
-			state.LogBuildResult(target, core.TargetBuilt, "Built remotely")
 		}
+		// Download before reporting the target as built, so it's still shown as active while that happens.
 		if state.ShouldDownload(target) {
 			if err := state.EnsureDownloaded(target); err != nil {
 				return err
 			}
 			buildLinks(state, target)
+		}
+		if metadata.Cached {
+			state.LogBuildResult(target, core.TargetBuilt, "Reused existing action")
+		} else {
+			state.LogBuildResult(target, core.TargetBuilt, "Built remotely")
 		}
 		return nil
 	} else if err := StoreTargetMetadata(target, metadata); err != nil {

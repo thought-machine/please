@@ -439,11 +439,19 @@ func (c *Client) Download(target *core.BuildTarget) error {
 			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
 			return nil
 		}
+		// Show the target as active while it downloads; otherwise nothing appears to be happening during a long
+		// download (which also looks like a stall to cycle detection). Failures aren't logged here since all
+		// callers report them already.
+		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading...")
 		_, ar := c.retrieveResults(target, nil, buildAction, false, false, 0)
 		if ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
 		}
-		return c.reallyDownload(target, buildAction, ar)
+		if err := c.reallyDownload(target, buildAction, ar); err != nil {
+			return err
+		}
+		c.state.LogBuildResult(target, core.TargetBuilt, "Downloaded")
+		return nil
 	})
 }
 
