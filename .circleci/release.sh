@@ -9,7 +9,7 @@ release_folder() {
   local folder=$1
   local path=$2
 
-  gsutil rsync -r $folder gs://get.please.build/$path
+  gcloud storage rsync --recursive $folder gs://get.please.build/$path
 }
 
 # Copies a file to the bucket, optionally setting the content type
@@ -19,9 +19,9 @@ release_file() {
   local content_type=$3
 
   if [ -z "$content_type" ]; then
-    gsutil cp $file gs://get.please.build/$path
+    gcloud storage cp $file gs://get.please.build/$path
   else
-    gsutil -h "Content-Type:$content_type" cp $file gs://get.please.build/$path
+    gcloud storage cp --content-type="$content_type" $file gs://get.please.build/$path
   fi
 }
 
@@ -31,10 +31,10 @@ echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
 
 echo "Releasing docs website"
 tar -xzf /tmp/workspace/deep-docs.tar.gz -C /tmp/workspace && \
-  gsutil rsync -r /tmp/workspace/docs gs://please.build
+  gcloud storage rsync --recursive /tmp/workspace/docs gs://please.build
 
 
-if gsutil ls gs://get.please.build/linux_arm64/$VERSION/; then
+if gcloud storage ls gs://get.please.build/linux_arm64/$VERSION/; then
   echo "Please $VERSION has already been released, nothing to do."
   exit 0
 fi

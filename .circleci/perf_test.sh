@@ -24,14 +24,14 @@ echo "Uploading results..."
 echo $GCLOUD_SERVICE_KEY > $GOOGLE_APPLICATION_CREDENTIALS
 echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
 
-gsutil cp plz.prof "${BUCKET}/${CIRCLE_SHA1}.prof"
-gsutil cp results.json "${BUCKET}/${CIRCLE_SHA1}.json"
-if gsutil ls "${BUCKET}/all_results.jsonl"; then
-    gsutil cp "${BUCKET}/all_results.jsonl" all_results.jsonl
+gcloud storage cp plz.prof "${BUCKET}/${CIRCLE_SHA1}.prof"
+gcloud storage cp results.json "${BUCKET}/${CIRCLE_SHA1}.json"
+if gcloud storage ls "${BUCKET}/all_results.jsonl"; then
+    gcloud storage cp "${BUCKET}/all_results.jsonl" all_results.jsonl
     cat all_results.jsonl results.json | tail -n 100 > updated_results.jsonl
-    gsutil cp updated_results.jsonl "${BUCKET}/all_results.jsonl"
+    gcloud storage cp updated_results.jsonl "${BUCKET}/all_results.jsonl"
 else
-    gsutil cp results.json "${BUCKET}/all_results.jsonl"
+    gcloud storage cp results.json "${BUCKET}/all_results.jsonl"
 fi
 
 rm -rf tree
@@ -45,15 +45,15 @@ for RESULT in plz-out/benchmarks/*.json; do
 
   echo "Uploading ${BENCHMARK_NAME} results..."
 
-  gsutil cp "$RESULT" "${BUCKET}/${BENCHMARK_NAME}_${CIRCLE_SHA1}.json"
+  gcloud storage cp "$RESULT" "${BUCKET}/${BENCHMARK_NAME}_${CIRCLE_SHA1}.json"
 
   ALL_RESULTS="${BENCHMARK_NAME}_all_results.jsonl"
-  if gsutil ls "${BUCKET}/${ALL_RESULTS}"; then
-      gsutil cp "${BUCKET}/${ALL_RESULTS}" "${ALL_RESULTS}"
+  if gcloud storage ls "${BUCKET}/${ALL_RESULTS}"; then
+      gcloud storage cp "${BUCKET}/${ALL_RESULTS}" "${ALL_RESULTS}"
       cat "${ALL_RESULTS}" "${RESULT}" | tail -n 100 > "updated_${ALL_RESULTS}"
-      gsutil cp "updated_${ALL_RESULTS}" "${BUCKET}/${ALL_RESULTS}"
+      gcloud storage cp "updated_${ALL_RESULTS}" "${BUCKET}/${ALL_RESULTS}"
   else
-      gsutil cp "${RESULT}" "${BUCKET}/${ALL_RESULTS}"
+      gcloud storage cp "${RESULT}" "${BUCKET}/${ALL_RESULTS}"
   fi
 done
 
