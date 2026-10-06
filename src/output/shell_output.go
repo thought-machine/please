@@ -51,7 +51,9 @@ func MonitorState(state *core.BuildState, progress Progress, results <-chan *cor
 	t := time.NewTicker(displayer.Frequency())
 	defer t.Stop()
 	bt := newBuildingTargets(state, progress, plainOutput)
-	displayer.Update(bt.Targets())
+	if displayer.ShowInitialUpdate() {
+		displayer.Update(bt.Targets())
+	}
 loop:
 	for {
 		select {

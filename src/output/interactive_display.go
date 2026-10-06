@@ -24,6 +24,7 @@ type displayer interface {
 	Update(targets []buildingTarget)
 	Close()
 	Frequency() time.Duration
+	ShowInitialUpdate() bool
 }
 
 func setupDisplayer(state *core.BuildState, progress Progress, plain bool) displayer {
@@ -81,6 +82,10 @@ func (d *plainDisplay) Frequency() time.Duration {
 
 func (d *plainDisplay) Close() {}
 
+func (d *plainDisplay) ShowInitialUpdate() bool {
+	return false
+}
+
 type interactiveDisplay struct {
 	state                                               *core.BuildState
 	progress                                            Progress
@@ -100,6 +105,10 @@ func (d *interactiveDisplay) Close() {
 
 func (d *interactiveDisplay) Frequency() time.Duration {
 	return 50 * time.Millisecond
+}
+
+func (d *interactiveDisplay) ShowInitialUpdate() bool {
+	return true
 }
 
 func (d *interactiveDisplay) Update(targets []buildingTarget) {
