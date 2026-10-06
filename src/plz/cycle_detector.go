@@ -103,8 +103,12 @@ func (c *cycleDetector) deps(label core.BuildLabel) iter.Seq[core.BuildLabel] {
 			Name:        "all",
 		}})
 	}
-	// Snapshot the dependencies rather than holding the target's lock for the whole recursive walk.
-	deps := slices.Collect(target.DeclaredDependencies())
+	resolved, unresolved := target.Dependencies(c.graph)
+	deps := make([]core.BuildLabel, 0, len(resolved)+len(unresolved))
+	for _, dep := range resolved {
+		deps = append(deps, dep.Label)
+	}
+	deps = append(deps, unresolved...)
 	return slices.Values(append(deps, slices.Collect(c.graph.Subincludes(label))...))
 }
 

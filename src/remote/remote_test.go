@@ -60,6 +60,46 @@ func TestExecuteBuild(t *testing.T) {
 	assert.Equal(t, []byte("hello\n"), metadata.Stdout)
 }
 
+func TestDownloadLogsProgress(t *testing.T) {
+	c := newClientInstance("mock")
+	defer server.Reset()
+
+	content := []byte("this is the content of the output")
+	contentDigest := digest.NewFromBlob(content)
+	server.blobs[contentDigest.Hash] = content
+	server.mockActionResult = &pb.ActionResult{
+		OutputFiles: []*pb.OutputFile{{Path: "out.txt", Digest: contentDigest.ToProto()}},
+		ExitCode:    0,
+		ExecutionMetadata: &pb.ExecutedActionMetadata{
+			Worker:                      "kev",
+			QueuedTimestamp:             timestamppb.Now(),
+			ExecutionStartTimestamp:     timestamppb.Now(),
+			ExecutionCompletedTimestamp: timestamppb.Now(),
+		},
+	}
+
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "download_progress"})
+	target.AddOutput("out.txt")
+	target.Command = "echo hello > $OUT"
+	c.state.Graph.AddTarget(target)
+	_, err := c.Build(target)
+	require.NoError(t, err)
+
+	results := c.state.Results()
+	require.NoError(t, c.Download(target))
+	// A second download is a no-op so shouldn't report anything else.
+	require.NoError(t, c.Download(target))
+	c.state.CloseResults()
+
+	var statuses []core.BuildResultStatus
+	for result := range results {
+		assert.Equal(t, target.Label, result.Label)
+		statuses = append(statuses, result.Status)
+	}
+	assert.Equal(t, []core.BuildResultStatus{core.TargetBuilding, core.TargetBuilt}, statuses)
+	assert.True(t, fs.FileExists(filepath.Join(target.OutDir(), "out.txt")))
+}
+
 type postBuildFunction func(*core.BuildTarget, string) error //nolint:unused
 
 //nolint:unused
