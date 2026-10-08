@@ -47,3 +47,7 @@ if [ ! -f plz-out/gen/test/remote_data/slow_data.txt ]; then
     echo "Runtime data for //test/remote_data:needs_data wasn't downloaded"
     exit 1
 fi
+if [ ! -f plz-out/gen/test/remote_data/nested_data.txt ]; then
+    echo "Transitive runtime data for //test/remote_data:needs_data wasn't downloaded"
+    exit 1
+fi

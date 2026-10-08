@@ -13,10 +13,29 @@ genrule(
     labels = ["manual"],
 )
 
+# Data of data must be downloaded too (e.g. an sh_cmd whose data is another sh_cmd).
+genrule(
+    name = "nested_data",
+    outs = ["nested_data.txt"],
+    cmd = "echo hello > $OUT",
+    labels = ["manual"],
+)
+
+genrule(
+    name = "middle_data",
+    outs = ["middle_data.txt"],
+    cmd = "echo hello > $OUT",
+    data = [":nested_data"],
+    labels = ["manual"],
+)
+
 genrule(
     name = "needs_data",
     outs = ["needs_data.txt"],
     cmd = "echo hello > $OUT",
-    data = [":slow_data"],
+    data = [
+        ":middle_data",
+        ":slow_data",
+    ],
     labels = ["manual"],
 )
