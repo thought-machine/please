@@ -772,15 +772,32 @@ func (state *BuildState) GetPreloadedSubincludes() []BuildLabel {
 
 // DownloadInputsIfNeeded downloads all the inputs (or runtime files) for a target if we are building remotely.
 func (state *BuildState) DownloadInputsIfNeeded(target *BuildTarget, runtime bool) error {
-	if state.RemoteClient != nil {
-		for input := range state.IterInputs(target, runtime) {
-			if l, ok := input.Label(); ok {
-				dep := state.Graph.TargetOrDie(l)
-				if s := dep.State(); s == BuiltRemotely || s == ReusedRemotely {
-					if err := state.RemoteClient.Download(dep); err != nil {
-						return err
-					}
-				}
+	if state.RemoteClient == nil {
+		return nil
+	}
+	return state.downloadInputs(target, runtime, map[BuildLabel]struct{}{})
+}
+
+// downloadInputs implements DownloadInputsIfNeeded. At runtime it recurses into each dependency, since
+// data can have data of its own (e.g. an sh_cmd whose data is another sh_cmd) which is needed to run it.
+func (state *BuildState) downloadInputs(target *BuildTarget, runtime bool, seen map[BuildLabel]struct{}) error {
+	for input := range state.IterInputs(target, runtime) {
+		l, ok := input.Label()
+		if !ok {
+			continue
+		} else if _, present := seen[l]; present {
+			continue
+		}
+		seen[l] = struct{}{}
+		dep := state.Graph.TargetOrDie(l)
+		if s := dep.State(); s == BuiltRemotely || s == ReusedRemotely {
+			if err := state.RemoteClient.Download(dep); err != nil {
+				return err
+			}
+		}
+		if runtime && dep != target {
+			if err := state.downloadInputs(dep, runtime, seen); err != nil {
+				return err
 			}
 		}
 	}
