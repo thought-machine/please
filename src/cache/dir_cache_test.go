@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -60,11 +61,9 @@ func TestStoreAndRetrieve(t *testing.T) {
 func TestCleanNoop(t *testing.T) {
 	cache := makeCache(".plz-cache-test2", false)
 	target1 := makeTarget2("//test2:target1", 2000)
-	cache.Store(target1, hash, target1.Outputs(nil))
-	assert.True(t, inCache(target1))
+	writeFile(cachePath(target1, false), 2000)
 	target2 := makeTarget2("//test2:target2", 2000)
-	cache.Store(target2, hash, target2.Outputs(nil))
-	assert.True(t, inCache(target2))
+	writeFile(cachePath(target2, false), 2000)
 	// Doesn't clean anything this time because the high water mark is sufficiently high
 	totalSize := cache.clean(20000, 1000)
 	assert.EqualValues(t, 12000, totalSize)
@@ -80,10 +79,10 @@ func TestCleanNoop2(t *testing.T) {
 	target2 := makeTarget2("//test3:target2", 2000)
 	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCache(target2))
-	// Doesn't clean anything this time, the high water mark is lower but both targets have
-	// just been built.
-	totalSize := cache.clean(10000, 1000)
-	assert.EqualValues(t, 12000, totalSize)
+	// Doesn't clean anything this time; both targets have just been built, and are hard linked
+	// into plz-out so they don't count towards the size anyway.
+	totalSize := cache.clean(1, 0)
+	assert.EqualValues(t, 0, totalSize)
 	assert.True(t, inCache(target1))
 	assert.True(t, inCache(target2))
 }
@@ -97,8 +96,8 @@ func TestCleanForReal(t *testing.T) {
 	writeFile(cachePath(target2, false), 2000)
 	assert.True(t, inCache(target2))
 	// This time it should clean target2, because target1 has just been stored
-	totalSize := cache.clean(10000, 1000)
-	assert.EqualValues(t, 6000, totalSize)
+	totalSize := cache.clean(5000, 1000)
+	assert.EqualValues(t, 0, totalSize)
 	assert.True(t, inCache(target1))
 	assert.False(t, inCache(target2))
 }
@@ -112,10 +111,76 @@ func TestCleanForReal2(t *testing.T) {
 	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCache(target2))
 	// This time it should clean target1, because target2 has just been stored
-	totalSize := cache.clean(10000, 1000)
-	assert.EqualValues(t, 6000, totalSize)
+	totalSize := cache.clean(5000, 1000)
+	assert.EqualValues(t, 0, totalSize)
 	assert.False(t, inCache(target1))
 	assert.True(t, inCache(target2))
+}
+
+func TestCleanSkipsLinkedEntries(t *testing.T) {
+	makeCache(".plz-cache-test8", false).Store(makeTarget2("//test8:target1", 2000), hash, []string{"test.go"})
+	target1 := makeTarget2("//test8:target1", 2000)
+	cache := makeCache(".plz-cache-test8", false) // A new instance doesn't know what the previous one stored.
+	// Hardlink the file in again, as a second build would do on retrieving it.
+	out := filepath.Join("plz-out/gen", target1.Label.PackageName, "test.go")
+	assert.NoError(t, os.Remove(out))
+	assert.NoError(t, os.Link(cachePath(target1, false), out))
+	// The entry is still linked into plz-out so cleaning it won't save anything.
+	assert.EqualValues(t, 0, cache.clean(1, 0))
+	assert.True(t, inCache(target1))
+	// Once that link is gone (e.g. the repo is deleted), it does count and can be cleaned.
+	assert.NoError(t, os.Remove(out))
+	assert.EqualValues(t, 0, cache.clean(1000, 0))
+	assert.False(t, inCache(target1))
+}
+
+func TestCleanSharedWithinCache(t *testing.T) {
+	cache := makeCache(".plz-cache-test9", false)
+	target1 := makeTarget2("//test9:target1", 2000)
+	writeFile(cachePath(target1, false), 2000)
+	target2 := makeTarget2("//test9:target2", 2000)
+	assert.NoError(t, os.MkdirAll(filepath.Dir(cachePath(target2, false)), core.DirPermissions))
+	assert.NoError(t, os.Link(cachePath(target1, false), cachePath(target2, false)))
+	setMtime(t, cachePath(target1, false), 2*time.Hour)
+	// The file is only linked within the cache, so it counts but only once.
+	assert.EqualValues(t, 6000, cache.clean(10000, 0))
+	// Removing the first entry doesn't free anything, so it has to remove the second too.
+	assert.EqualValues(t, 0, cache.clean(5000, 1000))
+	assert.False(t, inCache(target1))
+	assert.False(t, inCache(target2))
+}
+
+func TestCleanLeastRecentlyUsed(t *testing.T) {
+	cache := makeCache(".plz-cache-test10", false)
+	target1 := makeTarget2("//test10:target1", 2000)
+	writeFile(cachePath(target1, false), 2000)
+	setMtime(t, cachePath(target1, false), time.Hour)
+	target2 := makeTarget2("//test10:target2", 2000)
+	writeFile(cachePath(target2, false), 2000)
+	setMtime(t, cachePath(target2, false), 3*time.Hour)
+	target3 := makeTarget2("//test10:target3", 2000)
+	writeFile(cachePath(target3, false), 2000)
+	setMtime(t, cachePath(target3, false), 2*time.Hour)
+	// Should remove the least recently used entry first, which is target2.
+	assert.EqualValues(t, 12000, cache.clean(15000, 13000))
+	assert.True(t, inCache(target1))
+	assert.False(t, inCache(target2))
+	assert.True(t, inCache(target3))
+}
+
+func TestRetrieveUpdatesMtime(t *testing.T) {
+	cache := makeCache(".plz-cache-test11", false)
+	target := makeTarget2("//test11:target1", 20)
+	cache.Store(target, hash, target.Outputs(nil))
+	entry := filepath.Dir(cachePath(target, false))
+	// Not updated if it was recently modified
+	setMtime(t, cachePath(target, false), 30*time.Minute)
+	assert.True(t, cache.Retrieve(target, hash, target.Outputs(nil)))
+	assert.True(t, time.Since(getMtime(t, entry)) > 20*time.Minute)
+	// But it is updated if it's older
+	setMtime(t, cachePath(target, false), 2*time.Hour)
+	assert.True(t, cache.Retrieve(target, hash, target.Outputs(nil)))
+	assert.True(t, time.Since(getMtime(t, entry)) < time.Minute)
 }
 
 func TestStoreAndRetrieveCompressed(t *testing.T) {
@@ -145,6 +210,20 @@ func TestCleanCompressed(t *testing.T) {
 	cache.clean(3000, 1000)
 	assert.False(t, inCompressedCache(target1))
 	assert.True(t, inCompressedCache(target2))
+}
+
+// setMtime sets the modification time of the cache entry containing the given file to the given time ago.
+func setMtime(t *testing.T, filename string, ago time.Duration) {
+	t.Helper()
+	then := time.Now().Add(-ago)
+	assert.NoError(t, os.Chtimes(filepath.Dir(filename), then, then))
+}
+
+func getMtime(t *testing.T, filename string) time.Time {
+	t.Helper()
+	info, err := os.Stat(filename)
+	assert.NoError(t, err)
+	return info.ModTime()
 }
 
 func makeCache(dir string, compress bool) *dirCache {
