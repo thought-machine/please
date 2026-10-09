@@ -401,7 +401,19 @@ func (r *runner) recursiveParseTarget(ctx context.Context, label, dependent core
 	g, gctx := r.group(ctx)
 	for dep := range target.DeclaredDependencies() {
 		g.Go(func() error {
-			return r.RecursiveParse(gctx, dep, target.Label)
+			if dep.IsAllTargets() {
+				return r.RecursiveParse(gctx, dep, target.Label)
+			}
+			// Resolve require/provide first, so we only descend into whatever is actually provided to this
+			// target (otherwise e.g. a proto_library would drag in the dependencies of every language it supports).
+			for t, err := range r.resolveTarget(gctx, dep, target) {
+				if err != nil {
+					return err
+				} else if err := r.RecursiveParse(gctx, t.Label, target.Label); err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 	}
 	return g.Wait()
@@ -418,6 +430,11 @@ func (r *runner) recursiveParsePackage(ctx context.Context, label, dependent cor
 	}
 	g, gctx := r.group(ctx)
 	for _, target := range pkg.AllTargets() {
+		// Only descend into targets the user asked for; e.g. with --include we shouldn't parse the
+		// dependencies of everything else in the package (which can be arbitrarily expensive).
+		if dependent == core.OriginalTarget && !r.state.ShouldInclude(target) {
+			continue
+		}
 		g.Go(func() error {
 			// N.B. No need to deduplicate these; recursiveParse does that for the whole walk.
 			return r.recursiveParseTarget(gctx, target.Label, label)
@@ -779,9 +796,16 @@ func (r *runner) limiter(remote bool) limiter {
 
 func (r *runner) QueueOriginalTaskSet(ctx context.Context, targets []core.BuildLabel, needTest, needBuild bool) {
 	for _, target := range ReadStdinLabels(targets) {
-		r.tasks.Go(func() error {
-			return r.queueOriginalTask(ctx, target, needTest, needBuild)
-		})
+		// Queue these synchronously where we can so the original targets are registered in the order given;
+		// various commands print results in that order. Subrepo labels with ... have to build the subrepo
+		// before they can be expanded though, so they go async.
+		if target.IsAllSubpackages() && target.Subrepo != "" {
+			r.tasks.Go(func() error {
+				return r.queueOriginalTask(ctx, target, needTest, needBuild)
+			})
+		} else if err := r.queueOriginalTask(ctx, target, needTest, needBuild); err != nil {
+			r.tasks.Go(func() error { return err })
+		}
 	}
 }
 
