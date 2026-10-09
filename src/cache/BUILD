@@ -7,7 +7,6 @@ go_library(
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
-        "///third_party/go/github.com_djherbis_atime//:atime",
         "///third_party/go/github.com_dustin_go-humanize//:go-humanize",
         "///third_party/go/github.com_hashicorp_go-retryablehttp//:go-retryablehttp",
         "//src/clean",
