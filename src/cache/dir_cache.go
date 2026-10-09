@@ -14,9 +14,9 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
-	"github.com/djherbis/atime"
 	"github.com/dustin/go-humanize"
 
 	"github.com/thought-machine/please/src/clean"
@@ -181,8 +181,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 	}
 	// TODO(peterebden): This is a little inefficient, it would be better to track the size in
 	//                   RecursiveCopy rather than walking again.
-	size, _ := findSize(cachedFile)
-	return size
+	return unsharedSize(cachedFile)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
@@ -209,11 +208,15 @@ func (cache *dirCache) retrieve(target *core.BuildTarget, key []byte, suffix str
 }
 
 func (cache *dirCache) retrieveFiles(target *core.BuildTarget, cacheDir string, outs []string) (bool, error) {
-	if !core.PathExists(cacheDir) {
+	info, err := os.Stat(cacheDir)
+	if os.IsNotExist(err) {
 		log.Debug("%s: %s doesn't exist in dir cache", target.Label, cacheDir)
 		return false, nil
+	} else if err != nil {
+		return false, err
 	}
 	cache.markDir(cacheDir, 0)
+	cache.touch(cacheDir, info)
 	if len(outs) == 0 {
 		return true, nil
 	}
@@ -378,96 +381,174 @@ func newDirCache(config *core.Configuration) *dirCache {
 	return cache
 }
 
-// Period of time in seconds between which two artifacts are considered to have the same atime.
+// Period of time in seconds between which two artifacts are considered to have been used at the same time.
 const accessTimeGracePeriod = 600 // Ten minutes
 
-// A cacheEntry represents a single file entry in the cache.
+// touchInterval is the minimum time between updates of an entry's modification time when it's retrieved.
+// Updating it on every retrieval would cause a lot of unnecessary writes.
+const touchInterval = time.Hour
+
+// A cacheEntry represents a single entry in the cache (i.e. one stored target).
 type cacheEntry struct {
 	Path  string
-	Size  uint64
-	Atime int64
+	Size  uint64 // Total size of the files in this entry that are not linked from outside the cache
+	Mtime int64
+	Files []fileID
 }
 
-func findSize(path string) (uint64, error) {
-	var totalSize uint64
+// A fileID identifies a file on disk independently of the path(s) it's linked at.
+type fileID struct {
+	Dev, Ino uint64
+}
+
+// A cacheFile is a single file in the cache, which may be linked into multiple entries
+// and also from outside the cache (typically into plz-out, when it's stored or retrieved).
+type cacheFile struct {
+	Size     uint64
+	Links    uint64 // Total number of hard links to this file
+	Refs     uint64 // Number of those links that are inside the cache
+	Unshared bool   // True if this file is only linked from inside the cache.
+}
+
+// fileInfo returns the identifier and number of hard links for a file.
+func fileInfo(info os.FileInfo) (fileID, uint64) {
+	st := info.Sys().(*syscall.Stat_t)
+	// The types of these fields vary between platforms, so the conversions are needed on some of them.
+	return fileID{Dev: uint64(st.Dev), Ino: uint64(st.Ino)}, uint64(st.Nlink) //nolint:unconvert
+}
+
+// unsharedSize returns the total size of the files under the given path that are not hard linked from anywhere else.
+func unsharedSize(path string) uint64 {
+	var size uint64
+	filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err == nil && !info.IsDir() {
+			if _, links := fileInfo(info); links <= 1 {
+				size += uint64(info.Size())
+			}
+		}
+		return nil
+	})
+	return size
+}
+
+// readEntry reads a single entry in the cache, recording all the files in it.
+func readEntry(path string, files map[fileID]*cacheFile) (*cacheEntry, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	entry := &cacheEntry{Path: path, Mtime: info.ModTime().Unix()}
 	if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		} else if info.IsDir() {
+			return nil
 		}
-		totalSize += uint64(info.Size())
+		id, links := fileInfo(info)
+		if _, present := files[id]; !present {
+			files[id] = &cacheFile{Size: uint64(info.Size()), Links: links}
+		}
+		files[id].Refs++
+		entry.Files = append(entry.Files, id)
 		return nil
 	}); err != nil {
-		return 0, err
+		return nil, err
 	}
-	return totalSize, nil
+	return entry, nil
 }
 
 // clean runs background cleaning of this cache until the process exits.
 // Returns the total size of the cache after it's finished.
+// Sizes only count files that are not hard linked from outside the cache; those are typically also in someone's
+// plz-out, and so removing them would not free any space (and would make it less likely for that file to be shared
+// with the next repo that builds it).
 func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
-	entries := []cacheEntry{}
+	entries := []*cacheEntry{}
+	files := map[fileID]*cacheFile{}
 	var totalSize uint64
 	if err := fs.Walk(cache.Dir, func(path string, isDir bool) error {
-		name := filepath.Base(path)
-		if cache.shouldClean(name, isDir) {
-			if size, marked := cache.isMarked(path); marked {
-				totalSize += size
-				if !cache.Compress {
-					return filepath.SkipDir // Already handled
-				}
-				return nil // Need to keep walking if we are dealing with compressed files
-			}
-			size, err := findSize(path)
-			if err != nil {
-				return err
-			}
-			info, err := os.Stat(path)
-			if err != nil {
-				return err
-			}
-			entries = append(entries, cacheEntry{
-				Path:  path,
-				Size:  size,
-				Atime: atime.Get(info).Unix(),
-			})
-			totalSize += size
-			if !cache.Compress {
-				return filepath.SkipDir
-			}
+		if !cache.shouldClean(filepath.Base(path), isDir) {
+			return nil // nothing particularly to do for other entries
 		}
-		return nil // nothing particularly to do for other entries
+		if size, marked := cache.isMarked(path); marked {
+			totalSize += size
+		} else if entry, err := readEntry(path, files); err != nil {
+			// This can happen if another process is cleaning concurrently; it's not fatal to us.
+			log.Warning("Failed to read cache entry %s: %s", path, err)
+		} else {
+			entries = append(entries, entry)
+		}
+		if !cache.Compress {
+			return filepath.SkipDir // Already handled
+		}
+		return nil // Need to keep walking if we are dealing with compressed files
 	}); err != nil {
 		log.Error("error walking cache directory: %s\n", err)
 		return totalSize
+	}
+	for _, f := range files {
+		if f.Unshared = f.Links <= f.Refs; f.Unshared {
+			totalSize += f.Size
+		}
+	}
+	// Entries with no unshared files would free nothing if removed, so are never candidates for cleaning.
+	candidates := entries[:0]
+	for _, entry := range entries {
+		for _, id := range entry.Files {
+			if f := files[id]; f.Unshared {
+				entry.Size += f.Size
+			}
+		}
+		if entry.Size > 0 {
+			candidates = append(candidates, entry)
+		}
 	}
 	log.Info("Total cache size: %s", humanize.Bytes(totalSize))
 	if totalSize < highWaterMark {
 		return totalSize // Nothing to do, cache is small enough.
 	}
 	// OK, we need to slim it down a bit. We implement a simple LRU algorithm.
-	sort.Slice(entries, func(i, j int) bool {
-		diff := entries[i].Atime - entries[j].Atime
+	sort.Slice(candidates, func(i, j int) bool {
+		diff := candidates[i].Mtime - candidates[j].Mtime
 		if diff > -accessTimeGracePeriod && diff < accessTimeGracePeriod {
-			return entries[i].Size > entries[j].Size
+			return candidates[i].Size > candidates[j].Size
 		}
-		return entries[i].Atime < entries[j].Atime
+		return candidates[i].Mtime < candidates[j].Mtime
 	})
-	for _, entry := range entries {
+	for _, entry := range candidates {
 		if _, marked := cache.isMarked(entry.Path); marked {
 			continue
 		}
 
-		log.Debug("Cleaning %s, accessed %s, saves %s", entry.Path, humanize.Time(time.Unix(entry.Atime, 0)), humanize.Bytes(entry.Size))
+		log.Debug("Cleaning %s, used %s, saves up to %s", entry.Path, humanize.Time(time.Unix(entry.Mtime, 0)), humanize.Bytes(entry.Size))
 		if err := cache.cleanPath(entry.Path); err != nil {
 			log.Warning("Error while cleaning cache: %s", err)
 			continue
 		}
-		totalSize -= entry.Size
+		// A file is only freed once the last entry referring to it is removed.
+		for _, id := range entry.Files {
+			f := files[id]
+			f.Refs--
+			if f.Refs == 0 && f.Unshared {
+				totalSize -= f.Size
+			}
+		}
 		if totalSize < lowWaterMark {
 			break
 		}
 	}
 	return totalSize
+}
+
+// touch updates the modification time of a cache entry to mark it as recently used.
+func (cache *dirCache) touch(path string, info os.FileInfo) {
+	if time.Since(info.ModTime()) < touchInterval {
+		return // Updated recently enough already
+	}
+	now := time.Now()
+	if err := os.Chtimes(path, now, now); err != nil {
+		log.Debug("Failed to update modification time of %s: %s", path, err)
+	}
 }
 
 func (cache *dirCache) cleanPath(path string) error {

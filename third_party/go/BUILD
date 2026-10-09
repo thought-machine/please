@@ -165,11 +165,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/djherbis/atime",
-    version = "v1.1.0",
-)
-
-go_repo(
     module = "github.com/hashicorp/go-retryablehttp",
     version = "v0.7.8",
 )

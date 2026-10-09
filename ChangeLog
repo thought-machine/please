@@ -4,6 +4,9 @@ Version 17.34.0
     * Check status field of fetch blob response (#3607)
     * Subinclude cycle detection (#3615)
     * Fix for `plz export --notrim` in some cases (#3621)
+    * Dir cache cleaning no longer counts or removes entries that are hard linked into a plz-out,
+      since removing them frees no space. The watermarks now apply only to unshared files, and
+      entries are aged by when they were last used rather than their access time.
 
 Version 17.33.0
 ---------------
