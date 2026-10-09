@@ -1,0 +1,14 @@
+genrule(
+    name = "wanted",
+    outs = ["wanted.txt"],
+    cmd = "touch $OUT",
+    labels = ["wanted"],
+)
+
+# This depends on a package that doesn't exist; it's fine as long as nothing tries to parse its dependencies.
+genrule(
+    name = "unwanted",
+    outs = ["unwanted.txt"],
+    cmd = "touch $OUT",
+    deps = ["//does_not_exist:target"],
+)
