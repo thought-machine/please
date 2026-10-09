@@ -28,14 +28,3 @@ sh_binary(
     name = "lint",
     main = "lint.sh",
 )
-
-python_binary(
-    name = "plz_out_usage",
-    main = "plz_out_usage.py",
-)
-
-python_test(
-    name = "plz_out_usage_test",
-    srcs = ["plz_out_usage_test.py"],
-    deps = [":plz_out_usage"],
-)
