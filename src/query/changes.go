@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"path/filepath"
+	"runtime"
 	"sort"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
@@ -33,11 +36,24 @@ func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
 	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
 	log.Debugf("Has config changed between before and after build states: %v", configChanged)
 
+	ch := make(chan *core.BuildTarget, 1000)
+	var g errgroup.Group
+	g.SetLimit(runtime.NumCPU())
+	for afterTarget := range after.Graph.IterTargets() {
+		g.Go(func() error {
+			if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
+				ch <- afterTarget
+			}
+			return nil
+		})
+	}
+	go func() {
+		g.Wait()
+		close(ch)
+	}()
 	changed := map[*core.BuildTarget]struct{}{}
-	for _, afterTarget := range after.Graph.AllTargets() {
-		if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
-			changed[afterTarget] = struct{}{}
-		}
+	for t := range ch {
+		changed[t] = struct{}{}
 	}
 	return changed
 }

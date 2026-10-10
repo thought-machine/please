@@ -153,6 +153,18 @@ func (graph *BuildGraph) AllTargets() BuildTargets {
 	return targets
 }
 
+// IterTargets returns a sequence of all targets in the graph.
+// TODO(peterebden): Make this AllTargets() (for consistency) and bin the other version (being careful about shell_output.go and xml_results.go which might care about order)
+func (graph *BuildGraph) IterTargets() iter.Seq[*BuildTarget] {
+	return func(yield func(*BuildTarget) bool) {
+		for _, v := range graph.targets.Items() {
+			if !yield(v) {
+				break
+			}
+		}
+	}
+}
+
 // AllPackages returns an iterator over all packages in the graph. They are returned in no particular order.
 func (graph *BuildGraph) AllPackages() iter.Seq[*Package] {
 	return func(yield func(*Package) bool) {

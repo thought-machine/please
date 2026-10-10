@@ -11,6 +11,7 @@ go_library(
     deps = [
         "///third_party/go/github.com_please-build_gcfg//:gcfg",
         "///third_party/go/golang.org_x_exp//maps",
+        "///third_party/go/golang.org_x_sync//errgroup",
         "//src/build",
         "//src/cli",
         "//src/cli/logging",
