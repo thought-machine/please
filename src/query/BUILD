@@ -1,3 +1,5 @@
+subinclude("//build_defs:benchmark")
+
 go_library(
     name = "query",
     srcs = glob(
@@ -20,7 +22,10 @@ go_library(
 
 go_test(
     name = "query_test",
-    srcs = glob(["*_test.go"]),
+    srcs = glob(
+        ["*_test.go"],
+        exclude = ["*_benchmark_test.go"],
+    ),
     data = ["completions_test_repo"],
     deps = [
         ":query",
@@ -29,5 +34,15 @@ go_test(
         "//src/cli",
         "//src/core",
         "//src/parse",
+    ],
+)
+
+benchmark(
+    name = "changes_benchmark",
+    srcs = ["changes_benchmark_test.go"],
+    deps = [
+        ":query",
+        "///third_party/go/gopkg.in_op_go-logging.v1//:go-logging.v1",
+        "//src/core",
     ],
 )
