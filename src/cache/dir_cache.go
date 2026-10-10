@@ -5,13 +5,14 @@ package cache
 import (
 	"archive/tar"
 	"bufio"
+	"cmp"
 	"compress/gzip"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -445,12 +446,12 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		return totalSize // Nothing to do, cache is small enough.
 	}
 	// OK, we need to slim it down a bit. We implement a simple LRU algorithm.
-	sort.Slice(entries, func(i, j int) bool {
-		diff := entries[i].Atime - entries[j].Atime
+	slices.SortFunc(entries, func(a, b cacheEntry) int {
+		diff := a.Atime - b.Atime
 		if diff > -accessTimeGracePeriod && diff < accessTimeGracePeriod {
-			return entries[i].Size > entries[j].Size
+			return cmp.Compare(b.Size, a.Size)
 		}
-		return entries[i].Atime < entries[j].Atime
+		return cmp.Compare(a.Atime, b.Atime)
 	})
 	for _, entry := range entries {
 		if _, marked := cache.isMarked(entry.Path); marked {

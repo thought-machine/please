@@ -143,8 +143,8 @@ func (graph *BuildGraph) SubrepoOrWait(subrepo string) (*Subrepo, <-chan struct{
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
 func (graph *BuildGraph) AllTargets() BuildTargets {
 	targets := graph.targets.Values()
-	sort.Slice(targets, func(i, j int) bool {
-		return targets[i].Label.Less(targets[j].Label)
+	slices.SortFunc(targets, func(a, b *BuildTarget) int {
+		return a.Label.Compare(b.Label)
 	})
 	return targets
 }

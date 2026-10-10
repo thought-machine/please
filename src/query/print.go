@@ -423,7 +423,7 @@ func (p *printer) printSlice(v reflect.Value) string {
 // printMap prints the representation of a map field.
 func (p *printer) printMap(v reflect.Value) string {
 	keys := v.MapKeys()
-	sort.Slice(keys, func(i, j int) bool { return keys[i].String() < keys[j].String() })
+	slices.SortFunc(keys, func(a, b reflect.Value) int { return strings.Compare(a.String(), b.String()) })
 	s := make([]string, len(keys))
 	indent := strings.Repeat(" ", p.indent+4)
 	for i, key := range keys {
