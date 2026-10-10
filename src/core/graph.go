@@ -7,7 +7,6 @@ package core
 import (
 	"iter"
 	"slices"
-	"sort"
 
 	"github.com/thought-machine/please/src/cmap"
 )
@@ -141,11 +140,9 @@ func (graph *BuildGraph) SubrepoOrWait(subrepo string) (*Subrepo, <-chan struct{
 }
 
 // AllTargets returns a consistently ordered slice of all the targets in the graph.
-func (graph *BuildGraph) AllTargets() BuildTargets {
+func (graph *BuildGraph) AllTargets() []*BuildTarget {
 	targets := graph.targets.Values()
-	sort.Slice(targets, func(i, j int) bool {
-		return targets[i].Label.Less(targets[j].Label)
-	})
+	slices.SortFunc(targets, compareTargets)
 	return targets
 }
 

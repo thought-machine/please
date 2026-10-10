@@ -9,7 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -153,7 +153,7 @@ func printTestResults(state *core.BuildState, failedTargets map[core.BuildLabel]
 		for t := range failedTargets {
 			targets = append(targets, t)
 		}
-		sort.Sort(targets)
+		slices.SortFunc(targets, core.BuildLabel.Compare)
 		for _, failed := range targets {
 			target := state.Graph.TargetOrDie(failed)
 			if target.Test.Results.Failures() == 0 && target.Test.Results.Errors() == 0 {

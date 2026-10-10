@@ -1,23 +1,24 @@
 package fs
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"strings"
 )
 
 // SortPaths sorts a list of filepaths in lexicographic order by component
 // (i.e. so all files in a directory sort after all subdirectories).
 func SortPaths(files []string) []string {
-	sort.Slice(files, func(i, j int) bool {
-		si, sj := commonPrefix(strings.Split(files[i], "/"), strings.Split(files[j], "/"))
+	slices.SortFunc(files, func(a, b string) int {
+		si, sj := commonPrefix(strings.Split(a, "/"), strings.Split(b, "/"))
 		if len(si) == 1 && len(sj) > 1 {
-			return false // si is a leaf and sj is not
+			return 1 // si is a leaf and sj is not
 		} else if len(sj) == 1 && len(si) > 1 {
-			return true // sj is a leaf and si is not
+			return -1 // sj is a leaf and si is not
 		} else if len(si) == 0 || len(sj) == 0 {
-			return len(si) < len(sj) // one or the other is empty.
+			return cmp.Compare(len(si), len(sj)) // one or the other is empty.
 		}
-		return si[0] < sj[0]
+		return strings.Compare(si[0], sj[0])
 	})
 	return files
 }
