@@ -1,13 +1,13 @@
 package query
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"reflect"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -212,8 +212,8 @@ func (p *printer) printf(msg string, args ...interface{}) {
 	fmt.Fprintf(p.w, msg, args...)
 }
 
-func fields(structValue reflect.Value, fieldOrder map[string]int) orderedFields {
-	ret := make(orderedFields, structValue.NumField())
+func fields(structValue reflect.Value, fieldOrder map[string]int) []orderedField {
+	ret := make([]orderedField, structValue.NumField())
 
 	structType := structValue.Type()
 
@@ -245,7 +245,7 @@ func (p *printer) PrintTarget() {
 		fs = append(fs, fields(reflect.ValueOf(p.target.Test).Elem(), p.fieldOrder)...)
 	}
 
-	sort.Sort(fs)
+	slices.SortFunc(fs, func(a, b orderedField) int { return cmp.Compare(a.order, b.order) })
 	for _, orderedField := range fs {
 		p.printField(orderedField.field, orderedField.value)
 	}
@@ -457,9 +457,3 @@ type orderedField struct {
 	field reflect.StructField
 	value reflect.Value
 }
-
-type orderedFields []orderedField
-
-func (f orderedFields) Len() int           { return len(f) }
-func (f orderedFields) Swap(a, b int)      { f[a], f[b] = f[b], f[a] }
-func (f orderedFields) Less(a, b int) bool { return f[a].order < f[b].order }

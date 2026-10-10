@@ -579,7 +579,7 @@ func (target *BuildTarget) Dependencies(graph *BuildGraph) ([]*BuildTarget, []Bu
 		labels[i] = dep.Label
 	}
 	target.mutex.RUnlock()
-	ret := make(BuildTargets, 0, len(labels))
+	ret := make([]*BuildTarget, 0, len(labels))
 	var unresolved []BuildLabel
 	for _, l := range labels {
 		depTarget := graph.Target(l)
@@ -595,7 +595,7 @@ func (target *BuildTarget) Dependencies(graph *BuildGraph) ([]*BuildTarget, []Bu
 			}
 		}
 	}
-	sort.Sort(ret)
+	slices.SortFunc(ret, compareTargets)
 	return ret, unresolved
 }
 
@@ -612,7 +612,7 @@ func (target *BuildTarget) ExternalDependencies(graph *BuildGraph) ([]*BuildTarg
 		labels[i] = dep.Label
 	}
 	target.mutex.RUnlock()
-	ret := make(BuildTargets, 0, len(labels))
+	ret := make([]*BuildTarget, 0, len(labels))
 	var unresolved []BuildLabel
 	for _, l := range labels {
 		depTarget := graph.Target(l)
@@ -633,7 +633,7 @@ func (target *BuildTarget) ExternalDependencies(graph *BuildGraph) ([]*BuildTarg
 			}
 		}
 	}
-	sort.Sort(ret)
+	slices.SortFunc(ret, compareTargets)
 	return ret, unresolved
 }
 
@@ -2064,17 +2064,9 @@ func (target *BuildTarget) CheckLicences(config *Configuration) (string, error) 
 	return "", nil
 }
 
-// BuildTargets makes a slice of build targets sortable by their labels.
-type BuildTargets []*BuildTarget
-
-func (slice BuildTargets) Len() int {
-	return len(slice)
-}
-func (slice BuildTargets) Less(i, j int) bool {
-	return slice[i].Label.Less(slice[j].Label)
-}
-func (slice BuildTargets) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
+// compareTargets compares two build targets by their labels (suitable for using with slices.SortFunc)
+func compareTargets(a, b *BuildTarget) int {
+	return a.Label.Compare(b.Label)
 }
 
 const sourceListFileDir = "_plz"
