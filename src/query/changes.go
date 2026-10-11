@@ -5,7 +5,9 @@ import (
 	"crypto/sha1"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
+	"sync"
 
 	"golang.org/x/sync/errgroup"
 
@@ -48,7 +50,7 @@ func diffGraphs(before *GraphSummary, after *core.BuildState) map[*core.BuildTar
 	g.SetLimit(runtime.NumCPU())
 	for afterTarget := range after.Graph.IterTargets() {
 		g.Go(func() error {
-			if beforeHash, present := before.targets[afterTarget.Label]; !present || beforeHash != targetHash(after, afterTarget) {
+			if _, present := before.targets[targetHash(after, afterTarget)]; !present {
 				ch <- afterTarget
 			}
 			return nil
@@ -127,10 +129,25 @@ func targetHash(state *core.BuildState, target *core.BuildTarget) (ret [sha1.Siz
 
 // Summarise calculates a summary of a build state that is sufficient for change calculation, allowing the caller to free the 'before' state.
 func Summarise(state *core.BuildState) *GraphSummary {
-	m := map[core.BuildLabel][sha1.Size]byte{}
-	// TODO(peterebden): Would we benefit from a graph member to tell us how big this is?
-	for t := range state.Graph.IterTargets() {
-		m[t.Label] = targetHash(state, t)
+	targets := slices.Collect(state.Graph.IterTargets())
+	chunks := slices.Collect(slices.Chunk(targets, len(targets)/runtime.NumCPU()))
+	hashes := make([][][sha1.Size]byte, len(chunks))
+	var wg sync.WaitGroup
+	for i, chunk := range chunks {
+		wg.Go(func() {
+			chunkHashes := make([][sha1.Size]byte, len(chunk))
+			for j, t := range chunk {
+				chunkHashes[j] = targetHash(state, t)
+			}
+			hashes[i] = chunkHashes
+		})
+	}
+	wg.Wait()
+	m := map[[sha1.Size]byte]struct{}{}
+	for _, chunk := range hashes {
+		for _, h := range chunk {
+			m[h] = struct{}{}
+		}
 	}
 	return &GraphSummary{
 		configHash: state.Hashes.Config,
@@ -141,5 +158,5 @@ func Summarise(state *core.BuildState) *GraphSummary {
 // A GraphSummary holds a summary of a build graph that is sufficient for change calculation
 type GraphSummary struct {
 	configHash []byte
-	targets    map[core.BuildLabel][sha1.Size]byte
+	targets    map[[sha1.Size]byte]struct{}
 }

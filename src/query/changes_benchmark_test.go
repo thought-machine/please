@@ -10,9 +10,6 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
-// Use this to prevent compiler optimisations from removing anything.
-var diffResult map[*core.BuildTarget]struct{}
-
 func BenchmarkDiffGraphs(b *testing.B) {
 	logging.SetLevel(logging.WARNING, "")
 	for _, numPackages := range []int{1000, 10000} {
@@ -23,8 +20,8 @@ func BenchmarkDiffGraphs(b *testing.B) {
 
 		b.Run(fmt.Sprintf("Identical/%d", numTargets), func(b *testing.B) {
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				diffResult = diffGraphs(summary, after)
+			for b.Loop() {
+				diffGraphs(summary, after)
 			}
 		})
 
@@ -37,8 +34,22 @@ func BenchmarkDiffGraphs(b *testing.B) {
 		}
 		b.Run(fmt.Sprintf("SomeChanged/%d", numTargets), func(b *testing.B) {
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				diffResult = diffGraphs(summary, changed)
+			for b.Loop() {
+				diffGraphs(summary, changed)
+			}
+		})
+	}
+}
+
+func BenchmarkSummarise(b *testing.B) {
+	logging.SetLevel(logging.WARNING, "")
+	for _, numPackages := range []int{1000, 10000, 100000} {
+		b.Run(fmt.Sprintf("Size/%d", numPackages), func(b *testing.B) {
+			graph := createSyntheticGraph(numPackages)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				Summarise(graph)
 			}
 		})
 	}
