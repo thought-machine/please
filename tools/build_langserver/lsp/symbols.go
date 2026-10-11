@@ -1,7 +1,8 @@
 package lsp
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -46,7 +47,7 @@ func (h *Handler) symbols(params *lsp.DocumentSymbolParams) ([]*lsp.SymbolInform
 		}
 		return true
 	})
-	sort.Slice(syms, func(i, j int) bool { return compareRanges(syms[i].Location.Range, syms[j].Location.Range) })
+	slices.SortFunc(syms, func(a, b *lsp.SymbolInformation) int { return compareRanges(a.Location.Range, b.Location.Range) })
 	return syms, nil
 }
 
@@ -119,19 +120,20 @@ func rng(start, end asp.FilePosition) lsp.Range {
 	return lsp.Range{Start: pos(start), End: pos(end)}
 }
 
-// compareRanges compares two lsp.Ranges and returns true if the first starts before
-// the second in a document. If equal the end positions are considered.
-func compareRanges(a, b lsp.Range) bool {
-	if comparePositions(a.Start, b.Start) {
-		return true
-	} else if comparePositions(b.Start, a.Start) {
-		return false
+// compareRanges compares two lsp.Ranges by where they start in a document, returning -1, 0 or +1
+// in the same manner as cmp.Compare. If equal the end positions are considered.
+func compareRanges(a, b lsp.Range) int {
+	if c := comparePositions(a.Start, b.Start); c != 0 {
+		return c
 	}
 	return comparePositions(a.End, b.End)
 }
 
-// comparePositions compares two lsp.Positions and returns true if the first
-// is before the second in a document.
-func comparePositions(a, b lsp.Position) bool {
-	return a.Line < b.Line || (a.Line == b.Line && a.Character < b.Character)
+// comparePositions compares two lsp.Positions by their location in a document, returning -1, 0 or +1
+// in the same manner as cmp.Compare.
+func comparePositions(a, b lsp.Position) int {
+	if c := cmp.Compare(a.Line, b.Line); c != 0 {
+		return c
+	}
+	return cmp.Compare(a.Character, b.Character)
 }

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
@@ -83,7 +83,7 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 			ls = append(ls, l)
 		}
 	}
-	sort.Sort(ls)
+	slices.SortFunc(ls, core.BuildLabel.Compare)
 	return ls
 }
 

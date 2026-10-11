@@ -310,23 +310,12 @@ func (label BuildLabel) Includes(that BuildLabel) bool {
 
 // Compare compares this build label to another one (suitable for using with slices.SortFunc)
 func (label BuildLabel) Compare(other BuildLabel) int {
-	if label.Subrepo != other.Subrepo {
-		if label.Subrepo < other.Subrepo {
-			return -1
-		}
-		return 1
-	} else if label.PackageName != other.PackageName {
-		if label.PackageName < other.PackageName {
-			return -1
-		}
-		return 1
-	} else if label.Name != other.Name {
-		if label.Name < other.Name {
-			return -1
-		}
-		return 1
+	if c := strings.Compare(label.Subrepo, other.Subrepo); c != 0 {
+		return c
+	} else if c := strings.Compare(label.PackageName, other.PackageName); c != 0 {
+		return c
 	}
-	return 0
+	return strings.Compare(label.Name, other.Name)
 }
 
 // Less returns true if this build label would sort less than another one.
@@ -613,18 +602,9 @@ func LooksLikeABuildLabel(str string) bool {
 	return strings.HasPrefix(str, "//") || strings.HasPrefix(str, ":") || (strings.HasPrefix(str, "@") && (strings.ContainsRune(str, ':') || strings.Contains(str, "//")))
 }
 
-// BuildLabels makes slices of build labels sortable.
+// BuildLabels is a slice of build labels.
 type BuildLabels []BuildLabel
 
-func (slice BuildLabels) Len() int {
-	return len(slice)
-}
-func (slice BuildLabels) Less(i, j int) bool {
-	return slice[i].Less(slice[j])
-}
-func (slice BuildLabels) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
-}
 func (slice BuildLabels) String() string {
 	s := make([]string, len(slice))
 	for i, l := range slice {

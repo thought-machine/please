@@ -13,7 +13,7 @@ import (
 	iofs "io/fs"
 	"iter"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -594,7 +594,7 @@ func (state *BuildState) expandOriginalPseudoTarget(label BuildLabel, justTests 
 			}
 		}
 	}
-	sort.Sort(ret)
+	slices.SortFunc(ret, BuildLabel.Compare)
 	return ret
 }
 

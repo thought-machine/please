@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -165,14 +165,14 @@ func (pkg *Package) MustRegisterOutput(state *BuildState, fileName string, targe
 // AllChildren returns all child targets of the given one.
 // The given target is included as well.
 func (pkg *Package) AllChildren(target *BuildTarget) []*BuildTarget {
-	ret := BuildTargets{}
+	ret := []*BuildTarget{}
 	parent := target.Label.Parent()
 	for _, t := range pkg.targets {
 		if t.Label.Parent() == parent {
 			ret = append(ret, t)
 		}
 	}
-	sort.Sort(ret)
+	slices.SortFunc(ret, compareTargets)
 	return ret
 }
 

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	iofs "io/fs"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -158,8 +160,8 @@ func checkAST(stmts []*asp.Statement, parentScopes ...map[string]assignment) (er
 			errs = append(errs, assign)
 		}
 	}
-	sort.Slice(errs, func(i, j int) bool {
-		return errs[i].Pos < errs[j].Pos
+	slices.SortFunc(errs, func(a, b assignment) int {
+		return cmp.Compare(a.Pos, b.Pos)
 	})
 	return errs
 }

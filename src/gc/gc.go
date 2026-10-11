@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -140,7 +141,7 @@ func targetsToRemove(graph *core.BuildGraph, filter, targets, targetsToKeep []co
 			}
 		}
 	}
-	sort.Sort(ret)
+	slices.SortFunc(ret, core.BuildLabel.Compare)
 	sort.Strings(retSrcs)
 	log.Notice("%d targets to remove", len(ret))
 	log.Notice("%d sources to remove", len(retSrcs))

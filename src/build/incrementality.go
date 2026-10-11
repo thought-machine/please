@@ -21,6 +21,7 @@ import (
 	"hash"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"github.com/thought-machine/please/src/core"
@@ -156,7 +157,7 @@ func ruleHash(state *core.BuildState, target *core.BuildTarget, runtime bool) []
 	for dep := range target.DeclaredDependencies() {
 		deps = append(deps, dep)
 	}
-	sort.Sort(deps)
+	slices.SortFunc(deps, core.BuildLabel.Compare)
 	for _, dep := range deps {
 		h.Write([]byte(dep.String()))
 	}

@@ -11,7 +11,7 @@ import (
 	iofs "io/fs"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -508,9 +508,9 @@ func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) *pb.Digest {
 	files := dir.Files
 	dirs := dir.Directories
 	syms := dir.Symlinks
-	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
-	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })
-	sort.Slice(syms, func(i, j int) bool { return syms[i].Name < syms[j].Name })
+	slices.SortFunc(files, func(a, b *pb.FileNode) int { return strings.Compare(a.Name, b.Name) })
+	slices.SortFunc(dirs, func(a, b *pb.DirectoryNode) int { return strings.Compare(a.Name, b.Name) })
+	slices.SortFunc(syms, func(a, b *pb.SymlinkNode) int { return strings.Compare(a.Name, b.Name) })
 
 	// Ensure there are not duplicates in these slices.
 	last := ""

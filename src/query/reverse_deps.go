@@ -3,7 +3,7 @@ package query
 import (
 	"container/list"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/thought-machine/please/src/core"
 )
@@ -18,7 +18,7 @@ func ReverseDeps(state *core.BuildState, labels []core.BuildLabel, level int, hi
 			ls = append(ls, target.Label)
 		}
 	}
-	sort.Sort(ls)
+	slices.SortFunc(ls, core.BuildLabel.Compare)
 
 	for _, l := range ls {
 		fmt.Println(l.String())

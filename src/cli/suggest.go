@@ -1,7 +1,8 @@
 package cli
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/texttheater/golang-levenshtein/levenshtein"
@@ -17,7 +18,7 @@ func Suggest(needle string, haystack []string, maxSuggestionDistance int) []stri
 			options = append(options, suggestion{s: straw, dist: distance})
 		}
 	}
-	sort.Slice(options, func(i, j int) bool { return options[i].dist < options[j].dist })
+	slices.SortFunc(options, func(a, b suggestion) int { return cmp.Compare(a.dist, b.dist) })
 	ret := make([]string, len(options))
 	for i, o := range options {
 		ret[i] = o.s

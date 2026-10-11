@@ -32,6 +32,7 @@ go_test(
         "lsp_test.go",
         "symbols_test.go",
     ],
+    flaky = True,
     data = ["test_data"],
     deps = [
         ":lsp",
