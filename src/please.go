@@ -998,6 +998,13 @@ var buildFunctions = map[string]func() int{
 		}
 		readConfig()
 		_, before := runBuild(core.WholeGraph, buildOpts{})
+		var summary *query.GraphSummary
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			summary = query.Summarise(before)
+			before = nil
+			go runtime.GC()
+		})
 		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
 		//      assume that anything we don't know about has changed.
 		if err := scm.Checkout(original); err != nil {
@@ -1008,7 +1015,8 @@ var buildFunctions = map[string]func() int{
 		if !success {
 			return 1
 		}
-		for _, target := range query.DiffGraphs(before, after, files, level, includeSubrepos) {
+		wg.Wait()
+		for _, target := range query.DiffGraphs(summary, after, files, level, includeSubrepos) {
 			fmt.Println(target.String())
 		}
 		return 0
