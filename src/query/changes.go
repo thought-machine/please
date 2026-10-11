@@ -16,7 +16,7 @@ import (
 // DiffGraphs calculates the difference between two build graphs.
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
-func DiffGraphs(before, after *core.BuildState, files []string, level int, includeSubrepos bool) core.BuildLabels {
+func DiffGraphs(before *GraphSummary, after *core.BuildState, files []string, level int, includeSubrepos bool) core.BuildLabels {
 	log.Notice("Calculating difference...")
 	changed := diffGraphs(before, after)
 	log.Debugf("Number of changed targets on a non-recursive diff between before and after build graphs: %d", len(changed))
@@ -32,16 +32,23 @@ func Changes(state *core.BuildState, files []string, level int, includeSubrepos 
 }
 
 // diffGraphs performs a non-recursive diff of two build graphs.
-func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
-	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
-	log.Debugf("Has config changed between before and after build states: %v", configChanged)
+func diffGraphs(before *GraphSummary, after *core.BuildState) map[*core.BuildTarget]struct{} {
+	changed := map[*core.BuildTarget]struct{}{}
+	// Shortcut everything if these aren't the same
+	if !bytes.Equal(before.configHash, after.Hashes.Config) {
+		log.Debug("Config has changed, emitting every target")
+		for t := range after.Graph.IterTargets() {
+			changed[t] = struct{}{}
+		}
+		return changed
+	}
 
 	ch := make(chan *core.BuildTarget, 1000)
 	var g errgroup.Group
 	g.SetLimit(runtime.NumCPU())
 	for afterTarget := range after.Graph.IterTargets() {
 		g.Go(func() error {
-			if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
+			if beforeHash, present := before.targets[afterTarget.Label]; !present || beforeHash != targetHash(after, afterTarget) {
 				ch <- afterTarget
 			}
 			return nil
@@ -51,7 +58,6 @@ func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
 		g.Wait()
 		close(ch)
 	}()
-	changed := map[*core.BuildTarget]struct{}{}
 	for t := range ch {
 		changed[t] = struct{}{}
 	}
@@ -103,37 +109,37 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 	return ls
 }
 
-// targetChanged returns true if the given two targets are not equivalent.
-func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
-	h1 := build.RuleHash(s1, t1, true, false)
-	h2 := build.RuleHash(s2, t2, true, false)
-	if !bytes.Equal(h1, h2) {
-		return true
-	}
-	h1, err1 := sourceHash(s1, t1)
-	h2, err2 := sourceHash(s2, t2)
-	return !bytes.Equal(h1, h2) || err1 != nil || err2 != nil
-}
-
-// sourceHash performs a partial source hash on a target to determine if it's changed.
-// This is a bit different to the one in the build package since we can't assume everything is
-// necessarily present (and for performance reasons don't want to hash *everything*).
-func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	var hash []byte
-	for _, tool := range target.AllTools() {
-		if _, ok := tool.Label(); ok {
-			continue // Skip in-repo tools, that will be handled via revdeps.
-		}
-		// Tools outside the repo shouldn't change, so hashing the resolved tool path is enough.
-		hash = append(hash, toolPathHash(state, tool)...)
-	}
-	return hash, nil
-}
-
-func toolPathHash(state *core.BuildState, tool core.BuildInput) (hash []byte) {
+// targetHash returns a combined hash of the target which we use to check if they have changed.
+func targetHash(state *core.BuildState, target *core.BuildTarget) (ret [sha1.Size]byte) {
 	h := sha1.New()
-	for _, path := range tool.LocalPaths(state.Graph) {
-		h.Write([]byte(path))
+	// TODO(peterebden): We could slightly improve this by having an interface to pass our own hasher in instead of hashing this twice.
+	h.Write(build.RuleHash(state, target, true, false))
+	// The only thing we need to check source-wise is how tool paths resolve outside the repo.
+	// Changes to any tools within the repo are caught here anyway.
+	for _, tool := range target.AllTools() {
+		if _, ok := tool.Label(); !ok {
+			h.Write([]byte(tool.String()))
+		}
 	}
-	return h.Sum(nil)
+	h.Sum(ret[:0])
+	return ret
+}
+
+// Summarise calculates a summary of a build state that is sufficient for change calculation, allowing the caller to free the 'before' state.
+func Summarise(state *core.BuildState) *GraphSummary {
+	m := map[core.BuildLabel][sha1.Size]byte{}
+	// TODO(peterebden): Would we benefit from a graph member to tell us how big this is?
+	for t := range state.Graph.IterTargets() {
+		m[t.Label] = targetHash(state, t)
+	}
+	return &GraphSummary{
+		configHash: state.Hashes.Config,
+		targets:    m,
+	}
+}
+
+// A GraphSummary holds a summary of a build graph that is sufficient for change calculation
+type GraphSummary struct {
+	configHash []byte
+	targets    map[core.BuildLabel][sha1.Size]byte
 }

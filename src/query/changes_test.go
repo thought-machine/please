@@ -17,15 +17,15 @@ func TestDiffGraphs(t *testing.T) {
 	t2 := addTarget(s2, "//src/query:changes", nil, "src/query/changes.go")
 	addTarget(s1, "//src/query:changes_test", t1, "src/query/changes_test.go")
 	t4 := addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
-	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(s1, s2, nil, -1, false))
+	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(Summarise(s1), s2, nil, -1, false))
 
 	t2.Command = "nope nope nope"
-	assert.EqualValues(t, []core.BuildLabel{t2.Label, t4.Label}, DiffGraphs(s1, s2, nil, -1, false))
+	assert.EqualValues(t, []core.BuildLabel{t2.Label, t4.Label}, DiffGraphs(Summarise(s1), s2, nil, -1, false))
 
 	t2.AddLabel("nope")
 	t4.AddLabel("test")
 	s2.SetIncludeAndExclude(nil, []string{"nope", "test"})
-	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(s1, s2, nil, -1, false))
+	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(Summarise(s1), s2, nil, -1, false))
 }
 
 func TestDiffGraphsIncludeNothing(t *testing.T) {
@@ -37,7 +37,7 @@ func TestDiffGraphsIncludeNothing(t *testing.T) {
 	t1 = addTarget(s2, "//src/core:core", nil, "src/core/core_changed.go")
 	t2 = addTarget(s2, "//src/query:changes", t1, "src/query/changes.go")
 	addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
-	assert.EqualValues(t, []core.BuildLabel{t1.Label}, DiffGraphs(s1, s2, nil, 0, false))
+	assert.EqualValues(t, []core.BuildLabel{t1.Label}, DiffGraphs(Summarise(s1), s2, nil, 0, false))
 }
 
 func TestDiffGraphsIncludeDirect(t *testing.T) {
@@ -49,7 +49,7 @@ func TestDiffGraphsIncludeDirect(t *testing.T) {
 	t1 = addTarget(s2, "//src/core:core", nil, "src/core/core_changed.go")
 	t2 = addTarget(s2, "//src/query:changes", t1, "src/query/changes.go")
 	addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
-	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label}, DiffGraphs(s1, s2, nil, 1, false))
+	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label}, DiffGraphs(Summarise(s1), s2, nil, 1, false))
 }
 
 func TestDiffGraphsLevel(t *testing.T) {
@@ -63,7 +63,7 @@ func TestDiffGraphsLevel(t *testing.T) {
 	t2 = addTarget(s2, "//src/query:changes", t1, "src/query/changes.go")
 	t3 = addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
 	addTarget(s2, "//src/query:changes_test2", t3, "src/query/changes_test2.go")
-	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, nil, 2, false))
+	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label, t3.Label}, DiffGraphs(Summarise(s1), s2, nil, 2, false))
 }
 
 func TestDiffGraphsIncludeTransitive(t *testing.T) {
@@ -75,7 +75,7 @@ func TestDiffGraphsIncludeTransitive(t *testing.T) {
 	t1 = addTarget(s2, "//src/core:core", nil, "src/core/core_changed.go")
 	t2 = addTarget(s2, "//src/query:changes", t1, "src/query/changes.go")
 	t3 := addTarget(s2, "//src/query:changes_test", t2, "src/query/changes_test.go")
-	assert.EqualValues(t, core.BuildLabels{t1.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, nil, -1, false))
+	assert.EqualValues(t, core.BuildLabels{t1.Label, t2.Label, t3.Label}, DiffGraphs(Summarise(s1), s2, nil, -1, false))
 }
 
 func TestDiffGraphsStopsAtSubrepos(t *testing.T) {
@@ -94,7 +94,7 @@ func TestDiffGraphsStopsAtSubrepos(t *testing.T) {
 	addTarget(s2, "//src/core:core", t3)
 
 	// t3 should not be changed here - its subrepo has but we should see that the targets generated in it are still identical
-	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, false))
+	assert.EqualValues(t, []core.BuildLabel{t1.Label, t2.Label}, DiffGraphs(Summarise(s1), s2, []string{"go.mod"}, -1, false))
 }
 
 func TestDiffGraphsStillChecksTargetsInSubrepos(t *testing.T) {
@@ -113,9 +113,9 @@ func TestDiffGraphsStillChecksTargetsInSubrepos(t *testing.T) {
 	t4 := addTarget(s2, "//src/core:core", t3)
 
 	// t3 should now count as changed - it has a different source file - and that should propagate to t4
-	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label, t3.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, true))
+	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label, t3.Label}, DiffGraphs(Summarise(s1), s2, []string{"go.mod"}, -1, true))
 	// If includeSubrepos=false, t4 should still count as changed, although we won't see t3.
-	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label}, DiffGraphs(s1, s2, []string{"go.mod"}, -1, false))
+	assert.EqualValues(t, []core.BuildLabel{t1.Label, t4.Label, t2.Label}, DiffGraphs(Summarise(s1), s2, []string{"go.mod"}, -1, false))
 }
 
 func TestChangesIncludesDataDirs(t *testing.T) {
@@ -134,7 +134,7 @@ func TestSameToolHashNoChange(t *testing.T) {
 	target.AddTool(core.SystemPathLabel{Name: "non-existent", Path: s1.Config.Path()})
 	target = addTarget(s2, "//src/core:core", nil, "src/core/core.go")
 	target.AddTool(core.SystemPathLabel{Name: "non-existent", Path: s2.Config.Path()})
-	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(s1, s2, nil, -1, false))
+	assert.EqualValues(t, []core.BuildLabel{}, DiffGraphs(Summarise(s1), s2, nil, -1, false))
 }
 
 func TestChangesIncludesRootTarget(t *testing.T) {

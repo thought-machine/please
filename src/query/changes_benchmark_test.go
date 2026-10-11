@@ -17,13 +17,14 @@ func BenchmarkDiffGraphs(b *testing.B) {
 	logging.SetLevel(logging.WARNING, "")
 	for _, numPackages := range []int{1000, 10000} {
 		before := createSyntheticGraph(numPackages)
+		summary := Summarise(before)
 		after := createSyntheticGraph(numPackages)
 		numTargets := len(after.Graph.AllTargets())
 
 		b.Run(fmt.Sprintf("Identical/%d", numTargets), func(b *testing.B) {
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				diffResult = diffGraphs(before, after)
+				diffResult = diffGraphs(summary, after)
 			}
 		})
 
@@ -37,7 +38,7 @@ func BenchmarkDiffGraphs(b *testing.B) {
 		b.Run(fmt.Sprintf("SomeChanged/%d", numTargets), func(b *testing.B) {
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				diffResult = diffGraphs(before, changed)
+				diffResult = diffGraphs(summary, changed)
 			}
 		})
 	}
