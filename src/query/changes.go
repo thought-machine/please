@@ -9,8 +9,6 @@ import (
 	"sort"
 	"sync"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 )
@@ -45,23 +43,26 @@ func diffGraphs(before *GraphSummary, after *core.BuildState) map[*core.BuildTar
 		return changed
 	}
 
-	ch := make(chan *core.BuildTarget, 1000)
-	var g errgroup.Group
-	g.SetLimit(runtime.NumCPU())
-	for afterTarget := range after.Graph.IterTargets() {
-		g.Go(func() error {
-			if _, present := before.targets[targetHash(after, afterTarget)]; !present {
-				ch <- afterTarget
+	targets := slices.Collect(after.Graph.IterTargets())
+	chunks := slices.Collect(slices.Chunk(targets, max(len(targets)/runtime.NumCPU(), 100)))
+	changes := make([][]*core.BuildTarget, len(chunks))
+	var wg sync.WaitGroup
+	for i, chunk := range chunks {
+		wg.Go(func() {
+			chunkChanges := make([]*core.BuildTarget, 0, len(chunk))
+			for _, t := range chunk {
+				if _, present := before.targets[targetHash(after, t)]; !present {
+					chunkChanges = append(chunkChanges, t)
+				}
 			}
-			return nil
+			changes[i] = chunkChanges
 		})
 	}
-	go func() {
-		g.Wait()
-		close(ch)
-	}()
-	for t := range ch {
-		changed[t] = struct{}{}
+	wg.Wait()
+	for _, chunk := range changes {
+		for _, t := range chunk {
+			changed[t] = struct{}{}
+		}
 	}
 	return changed
 }
@@ -130,7 +131,7 @@ func targetHash(state *core.BuildState, target *core.BuildTarget) (ret [sha1.Siz
 // Summarise calculates a summary of a build state that is sufficient for change calculation, allowing the caller to free the 'before' state.
 func Summarise(state *core.BuildState) *GraphSummary {
 	targets := slices.Collect(state.Graph.IterTargets())
-	chunks := slices.Collect(slices.Chunk(targets, len(targets)/runtime.NumCPU()))
+	chunks := slices.Collect(slices.Chunk(targets, max(len(targets)/runtime.NumCPU(), 100)))
 	hashes := make([][][sha1.Size]byte, len(chunks))
 	var wg sync.WaitGroup
 	for i, chunk := range chunks {
