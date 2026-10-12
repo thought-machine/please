@@ -1,0 +1,12 @@
+genrule(
+    name = "dir",
+    cmd = "sleep 3 && mkdir _out && echo x > _out/x.txt",
+    output_dirs = ["_out"],
+)
+
+genrule(
+    name = "gen",
+    outs = ["gen.txt"],
+    cmd = "echo $(location :dir) > $OUT",
+    data = [":dir"],
+)
