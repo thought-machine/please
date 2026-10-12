@@ -451,6 +451,22 @@ func TestBuildDependencies(t *testing.T) {
 	assert.Empty(t, slices.Collect(target5.BuildDependencies()))
 }
 
+func TestBuildDependenciesDataAndDep(t *testing.T) {
+	// Something that's both a dependency and data should remain a build dependency, whichever order they're added in.
+	target1 := makeTarget1("//src/core:target1", "")
+	target2 := makeTarget1("//src/core:target2", "", target1)
+	target2.AddDatum(target1.Label)
+	target2.AddNamedDatum("data", target1.Label)
+	target3 := makeTarget1("//src/core:target3", "")
+	target3.AddDatum(target1.Label)
+	target3.AddDependency(target1.Label)
+	target4 := makeTarget1("//src/core:target4", "")
+	target4.AddDatum(target1.Label)
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target2.BuildDependencies()))
+	assert.Equal(t, []BuildLabel{target1.Label}, slices.Collect(target3.BuildDependencies()))
+	assert.Empty(t, slices.Collect(target4.BuildDependencies()))
+}
+
 func TestDeclaredDependenciesStrict(t *testing.T) {
 	target1 := makeTarget1("//src/core:target1", "")
 	target2 := makeTarget1("//src/core:target2", "", target1)

@@ -573,7 +573,7 @@ func (r *runner) buildTargetAndDeps(ctx context.Context, target *core.BuildTarge
 	}
 
 	// The target's own build command can refer to its run-time & data dependencies via shell replacements, so we must at
-	// least have them resolved here (they don't have to be built yet though)
+	// least have them resolved here (they don't generally have to be built yet though)
 	deps := slices.Collect(target.RuntimeAndDataDependencies())
 	seen := map[core.BuildLabel]struct{}{}
 	for _, dep := range deps {
@@ -635,7 +635,8 @@ func (r *runner) buildTargetAndDeps(ctx context.Context, target *core.BuildTarge
 
 // resolveForOutputs resolves a dependency such that its outputs can be calculated. For most targets that's just
 // the target itself, but filegroups re-output their sources so those must be resolved as well (recursively,
-// since they can be filegroups themselves).
+// since they can be filegroups themselves). Targets whose outputs aren't known until they're built (e.g. ones with
+// output directories) have to be built.
 func (r *runner) resolveForOutputs(ctx context.Context, dep core.BuildLabel, dependent *core.BuildTarget, seen map[core.BuildLabel]struct{}) error {
 	for t, err := range r.resolveTarget(ctx, dep, dependent) {
 		if err != nil {
@@ -644,6 +645,11 @@ func (r *runner) resolveForOutputs(ctx context.Context, dep core.BuildLabel, dep
 			continue
 		}
 		seen[t.Label] = struct{}{}
+		if t.BuildCouldModifyTarget() {
+			if _, err := r.Build(ctx, t.Label, dependent.Label); err != nil {
+				return err
+			}
+		}
 		if !t.IsFilegroup {
 			continue
 		}

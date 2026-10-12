@@ -1451,8 +1451,7 @@ func (target *BuildTarget) AllDebugTools() []BuildInput {
 func (target *BuildTarget) AddDatum(datum BuildInput) {
 	target.Data = append(target.Data, datum)
 	if label, ok := datum.Label(); ok {
-		target.AddDependency(label)
-		target.dependencyInfo(label).Data = true
+		target.addDataDependency(label)
 	}
 }
 
@@ -1463,8 +1462,7 @@ func (target *BuildTarget) AddNamedDatum(name string, datum BuildInput) {
 	}
 	target.NamedData[name] = append(target.NamedData[name], datum)
 	if label, ok := datum.Label(); ok {
-		target.AddDependency(label)
-		target.dependencyInfo(label).Data = true
+		target.addDataDependency(label)
 	}
 }
 
@@ -1475,8 +1473,7 @@ func (target *BuildTarget) AddDebugDatum(datum BuildInput) {
 	}
 	target.Debug.data = append(target.Debug.data, datum)
 	if label, ok := datum.Label(); ok {
-		target.AddDependency(label)
-		target.dependencyInfo(label).Data = true
+		target.addDataDependency(label)
 	}
 }
 
@@ -1490,6 +1487,14 @@ func (target *BuildTarget) AddDebugNamedDatum(name string, datum BuildInput) {
 	}
 	target.Debug.namedData[name] = append(target.Debug.namedData[name], datum)
 	if label, ok := datum.Label(); ok {
+		target.addDataDependency(label)
+	}
+}
+
+// addDataDependency adds a dependency for a data label. It's only marked as data if the target doesn't
+// already depend on it in some other way, otherwise it'd stop being a build-time dependency.
+func (target *BuildTarget) addDataDependency(label BuildLabel) {
+	if target.dependencyInfo(label) == nil {
 		target.AddDependency(label)
 		target.dependencyInfo(label).Data = true
 	}
