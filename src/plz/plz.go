@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"iter"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -572,51 +571,21 @@ func (r *runner) buildTargetAndDeps(ctx context.Context, target *core.BuildTarge
 		}
 	}
 
-	// The target's own build command can refer to its run-time & data dependencies via shell replacements, so we must at
-	// least have them resolved here (they don't have to be built yet though)
-	deps := slices.Collect(target.RuntimeAndDataDependencies())
-	seen := map[core.BuildLabel]struct{}{}
-	for _, dep := range deps {
-		if err := r.resolveForOutputs(ctx, dep, target, seen); err != nil {
-			return err
-		}
-	}
-
-	// Okay, now the runtime dependencies can happen in parallel with the target itself.
-	// N.B. Even when there are none we can't just build the target and return; its own callbacks
-	//      can add some, which we won't know about until it's built.
-	if len(deps) == 0 {
-		if err := r.runBuildAction(ctx, target); err != nil {
-			return err
-		}
-	} else if target.PreBuildFunction != nil {
-		// Pre-build functions can walk the build graph to arbitrary depth (e.g. get_labels()), so
-		// we have to make sure all targets are available first.
-		g, gctx = r.group(ctx)
-		for _, dep := range deps {
-			g.Go(func() error {
-				return r.buildDep(gctx, dep, target)
-			})
-		}
-		if err := g.Wait(); err != nil {
-			return err
-		}
-		if err := r.runBuildAction(ctx, target); err != nil {
-			return err
-		}
-	} else {
-		g, gctx = r.group(ctx)
+	// The target's own build command can refer to its run-time & data dependencies via shell replacements, which need
+	// their outputs to be known (and potentially their contents, e.g. $(hash ...)), so they have to be built first.
+	g, gctx = r.group(ctx)
+	for dep := range target.RuntimeAndDataDependencies() {
 		g.Go(func() error {
-			return r.runBuildAction(gctx, target)
+			return r.buildDep(gctx, dep, target)
 		})
-		for _, dep := range deps {
-			g.Go(func() error {
-				return r.buildDep(gctx, dep, target)
-			})
-		}
-		if err := g.Wait(); err != nil {
-			return err
-		}
+	}
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	// N.B. Even when there are no runtime dependencies we can't just build the target and return; its own callbacks
+	//      can add some, which we won't know about until it's built.
+	if err := r.runBuildAction(ctx, target); err != nil {
+		return err
 	}
 
 	if !target.ModifiedByCallback {
@@ -631,31 +600,6 @@ func (r *runner) buildTargetAndDeps(ctx context.Context, target *core.BuildTarge
 		})
 	}
 	return g.Wait()
-}
-
-// resolveForOutputs resolves a dependency such that its outputs can be calculated. For most targets that's just
-// the target itself, but filegroups re-output their sources so those must be resolved as well (recursively,
-// since they can be filegroups themselves).
-func (r *runner) resolveForOutputs(ctx context.Context, dep core.BuildLabel, dependent *core.BuildTarget, seen map[core.BuildLabel]struct{}) error {
-	for t, err := range r.resolveTarget(ctx, dep, dependent) {
-		if err != nil {
-			return err
-		} else if _, present := seen[t.Label]; present {
-			continue
-		}
-		seen[t.Label] = struct{}{}
-		if !t.IsFilegroup {
-			continue
-		}
-		for _, src := range t.AllSources() {
-			if l, ok := src.Label(); ok {
-				if err := r.resolveForOutputs(ctx, l, t, seen); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
 
 // runBuildAction calls the build for a single target.
