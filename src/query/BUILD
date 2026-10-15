@@ -26,6 +26,7 @@ go_test(
         ":query",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",
+        "//src/build",
         "//src/cli",
         "//src/core",
         "//src/parse",

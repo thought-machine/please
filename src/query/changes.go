@@ -2,7 +2,6 @@ package query
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"path/filepath"
 	"slices"
 
@@ -14,8 +13,13 @@ import (
 // Note that this is not symmetric; targets that have been removed from 'before' do not appear
 // (because this is designed to be fed into 'plz test' and we can't test targets that no longer exist).
 func DiffGraphs(before, after *core.BuildState, files []string, level int, includeSubrepos bool) core.BuildLabels {
+	return DiffSnapshot(NewSnapshot(before), after, files, level, includeSubrepos)
+}
+
+// DiffSnapshot is like DiffGraphs but compares against a snapshot of the "before" graph.
+func DiffSnapshot(before *GraphSnapshot, after *core.BuildState, files []string, level int, includeSubrepos bool) core.BuildLabels {
 	log.Notice("Calculating difference...")
-	changed := diffGraphs(before, after)
+	changed := diffSnapshot(before, after)
 	log.Debugf("Number of changed targets on a non-recursive diff between before and after build graphs: %d", len(changed))
 
 	log.Info("Including changed files...")
@@ -28,15 +32,17 @@ func Changes(state *core.BuildState, files []string, level int, includeSubrepos 
 	return changedTargets(state, files, map[*core.BuildTarget]struct{}{}, level, includeSubrepos)
 }
 
-// diffGraphs performs a non-recursive diff of two build graphs.
-func diffGraphs(before, after *core.BuildState) map[*core.BuildTarget]struct{} {
-	configChanged := !bytes.Equal(before.Hashes.Config, after.Hashes.Config)
+// diffSnapshot performs a non-recursive diff of a build graph against a snapshot of a previous one.
+func diffSnapshot(before *GraphSnapshot, after *core.BuildState) map[*core.BuildTarget]struct{} {
+	configChanged := !bytes.Equal(before.Header.ConfigHash, after.Hashes.Config)
 	log.Debugf("Has config changed between before and after build states: %v", configChanged)
 
 	changed := map[*core.BuildTarget]struct{}{}
-	for _, afterTarget := range after.Graph.AllTargets() {
-		if beforeTarget := before.Graph.Target(afterTarget.Label); beforeTarget == nil || targetChanged(before, after, beforeTarget, afterTarget) || configChanged {
-			changed[afterTarget] = struct{}{}
+	for _, t := range after.Graph.AllTargets() {
+		if b, present := before.Targets[t.Label.String()]; !present || configChanged ||
+			!bytes.Equal(b.Rule, build.RuleHash(after, t, true, false)) ||
+			!bytes.Equal(b.Tools, toolsHash(after, t)) {
+			changed[t] = struct{}{}
 		}
 	}
 	return changed
@@ -85,39 +91,4 @@ func changedTargets(state *core.BuildState, files []string, changed map[*core.Bu
 	}
 	slices.SortFunc(ls, core.BuildLabel.Compare)
 	return ls
-}
-
-// targetChanged returns true if the given two targets are not equivalent.
-func targetChanged(s1, s2 *core.BuildState, t1, t2 *core.BuildTarget) bool {
-	h1 := build.RuleHash(s1, t1, true, false)
-	h2 := build.RuleHash(s2, t2, true, false)
-	if !bytes.Equal(h1, h2) {
-		return true
-	}
-	h1, err1 := sourceHash(s1, t1)
-	h2, err2 := sourceHash(s2, t2)
-	return !bytes.Equal(h1, h2) || err1 != nil || err2 != nil
-}
-
-// sourceHash performs a partial source hash on a target to determine if it's changed.
-// This is a bit different to the one in the build package since we can't assume everything is
-// necessarily present (and for performance reasons don't want to hash *everything*).
-func sourceHash(state *core.BuildState, target *core.BuildTarget) ([]byte, error) {
-	var hash []byte
-	for _, tool := range target.AllTools() {
-		if _, ok := tool.Label(); ok {
-			continue // Skip in-repo tools, that will be handled via revdeps.
-		}
-		// Tools outside the repo shouldn't change, so hashing the resolved tool path is enough.
-		hash = append(hash, toolPathHash(state, tool)...)
-	}
-	return hash, nil
-}
-
-func toolPathHash(state *core.BuildState, tool core.BuildInput) (hash []byte) {
-	h := sha1.New()
-	for _, path := range tool.LocalPaths(state.Graph) {
-		h.Write([]byte(path))
-	}
-	return h.Sum(nil)
 }

@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -444,10 +446,19 @@ var opts struct {
 			Level            int    `long:"level" default:"-2" description:"Levels of the dependencies of changed targets (-1 for unlimited)." default-mask:"0"`
 			Inexact          bool   `long:"inexact" description:"Calculate changes more quickly and without doing any SCM checkouts, but may miss some targets."`
 			In               string `long:"in" description:"Calculate changes contained within given scm spec (commit range/sha/ref/etc). Implies --inexact."`
+			BeforeHashes     string `long:"before_hashes" description:"Snapshot of the merge base of --since and HEAD, as written by plz query hashes. Avoids checking out and parsing the base revision."`
+			WriteAfterHashes string `long:"write_after_hashes" description:"Also write a snapshot of the current revision to this file, for later use with --before_hashes."`
+			ForceBefore      bool   `long:"force_before_hashes" description:"Use the --before_hashes snapshot even if it wasn't generated at the merge base."`
+			StrictHashes     bool   `long:"strict_hashes" description:"Fail instead of falling back to parsing the base revision if the --before_hashes snapshot can't be used."`
 			Args             struct {
 				Files cli.StdinStrings `positional-arg-name:"files" description:"Files to calculate changes for. Overrides flags relating to SCM operations."`
 			} `positional-args:"true"`
 		} `command:"changes" description:"Calculates the set of changed targets in regard to a set of modified files or SCM commits."`
+		Hashes struct {
+			OutputFile       string `long:"output_file" description:"File to write the snapshot to (default stdout). It is gzipped if the name ends in .gz."`
+			JSON             bool   `long:"json" description:"Write the snapshot as JSON, for debugging. JSON snapshots can't be used with --before_hashes."`
+			PrintFingerprint bool   `long:"print_fingerprint" description:"Print the snapshot compatibility fingerprint and exit, without parsing."`
+		} `command:"hashes" description:"Writes a snapshot of the hashes of every target in the graph, for use with plz query changes --before_hashes."`
 		Filter struct {
 			Hidden bool `long:"hidden" description:"Show hidden targets as well"`
 			Args   struct {
@@ -990,8 +1001,7 @@ var buildFunctions = map[string]func() int{
 		} else if opts.Query.Changes.Inexact {
 			return runInexact(scm.ChangedFiles(opts.Query.Changes.Since, true, ""))
 		}
-		original := scm.CurrentRevIdentifier(false)
-		files := scm.ChangedFiles(opts.Query.Changes.Since, true, "")
+		files := withoutSnapshotFiles(scm.ChangedFiles(opts.Query.Changes.Since, true, ""))
 		log.Debugf("Number of changed files: %d", len(files))
 		// The changed files are calculated relative to the merge base, so that's what we compare against.
 		base, err := scm.MergeBase(opts.Query.Changes.Since, "HEAD")
@@ -999,25 +1009,53 @@ var buildFunctions = map[string]func() int{
 			log.Warning("Can't determine merge base, comparing against %s instead: %s", opts.Query.Changes.Since, err)
 			base = opts.Query.Changes.Since
 		}
-		if err := scm.Checkout(base); err != nil {
-			log.Fatalf("%s", err)
+		rejectSnapshot := func(err error) {
+			if opts.Query.Changes.StrictHashes {
+				log.Fatalf("Can't use --before_hashes snapshot: %s", err)
+			}
+			log.Warning("Can't use --before_hashes snapshot, falling back to parsing %s: %s", base, err)
 		}
-		readConfig()
-		_, before := runBuild(core.WholeGraph, buildOpts{})
-		// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
-		//      assume that anything we don't know about has changed.
-		if err := scm.Checkout(original); err != nil {
-			log.Fatalf("%s", err)
+		var before *query.GraphSnapshot
+		if opts.Query.Changes.BeforeHashes != "" {
+			if before, err = readBeforeSnapshot(snapshotPath(opts.Query.Changes.BeforeHashes), base); err != nil {
+				rejectSnapshot(err)
+				before = nil
+			}
 		}
-		readConfig()
+		fromFile := before != nil
+		if !fromFile {
+			before = snapshotAtRevision(scm, base)
+		}
 		success, after := runBuild(core.WholeGraph, buildOpts{})
 		if !success {
 			return 1
 		}
-		for _, target := range query.DiffGraphs(before, after, files, level, includeSubrepos) {
+		if fromFile {
+			if err := before.CheckPassEnv(after); err != nil {
+				rejectSnapshot(err)
+				before = snapshotAtRevision(scm, base)
+			}
+		}
+		if opts.Query.Changes.WriteAfterHashes != "" {
+			if err := newSnapshot(after, scm).WriteSnapshotFile(snapshotPath(opts.Query.Changes.WriteAfterHashes), false); err != nil {
+				log.Fatalf("Failed to write snapshot: %s", err)
+			}
+		}
+		for _, target := range query.DiffSnapshot(before, after, files, level, includeSubrepos) {
 			fmt.Println(target.String())
 		}
 		return 0
+	},
+	"query.hashes": func() int {
+		if opts.Query.Hashes.PrintFingerprint {
+			fmt.Println(query.Fingerprint(snapshotFingerprintComponents()))
+			return 0
+		}
+		return runQuery(true, core.WholeGraph, func(state *core.BuildState) {
+			if err := newSnapshot(state, scm.NewFallback(core.RepoRoot)).WriteSnapshotFile(snapshotPath(opts.Query.Hashes.OutputFile), opts.Query.Hashes.JSON); err != nil {
+				log.Fatalf("Failed to write snapshot: %s", err)
+			}
+		})
 	},
 	"query.filter": func() int {
 		return runQuery(false, opts.Query.Filter.Args.Targets, func(state *core.BuildState) {
@@ -1146,6 +1184,117 @@ func runQuery(needFullParse bool, labels []core.BuildLabel, onSuccess func(state
 		return 0
 	}
 	return 1
+}
+
+// snapshotFingerprintComponents returns the things that must match for a graph snapshot to be
+// comparable with the current one. The config hash isn't included because a config change is a
+// legitimate change (it marks everything as changed).
+func snapshotFingerprintComponents() map[string]string {
+	overrides := make([]string, 0, len(opts.BuildFlags.Option))
+	for k, v := range opts.BuildFlags.Option {
+		overrides = append(overrides, k+"="+v)
+	}
+	sort.Strings(overrides)
+	profiles := make([]string, len(opts.BuildFlags.Profile))
+	for i, p := range opts.BuildFlags.Profile {
+		profiles[i] = string(p)
+	}
+	targetArch := core.OsArch
+	if opts.BuildFlags.Arch.OS != "" {
+		targetArch = opts.BuildFlags.Arch.String()
+	}
+	return map[string]string{
+		"format_version": strconv.Itoa(query.SnapshotFormatVersion),
+		"plz_version":    version.PleaseVersion,
+		"host_arch":      core.OsArch,
+		"target_arch":    targetArch,
+		"profiles":       strings.Join(profiles, ","),
+		"overrides":      strings.Join(overrides, ","),
+	}
+}
+
+// newSnapshot creates a snapshot of the given state for the current revision, ready to be written out.
+func newSnapshot(state *core.BuildState, scm scm.SCM) *query.GraphSnapshot {
+	snapshot := query.NewSnapshot(state)
+	components := snapshotFingerprintComponents()
+	snapshot.Header.Revision = scm.CurrentRevIdentifier(true)
+	snapshot.Header.Dirty = isDirty(scm)
+	snapshot.Header.PlzVersion = version.PleaseVersion
+	snapshot.Header.Fingerprint = query.Fingerprint(components)
+	snapshot.Header.FingerprintComponents = components
+	return snapshot
+}
+
+// snapshotPath resolves a snapshot filename given on the command line relative to the original working directory.
+func snapshotPath(filename string) string {
+	if filename == "" || filename == "-" {
+		return filename
+	}
+	return getAbsolutePath(filename, originalWorkingDirectory)
+}
+
+// withoutSnapshotFiles returns the given changed files (relative to the repo root) minus any snapshot
+// files named on the command line, which CI may well have downloaded into the repo.
+func withoutSnapshotFiles(files []string) []string {
+	ignore := map[string]bool{}
+	for _, f := range []string{opts.Query.Changes.BeforeHashes, opts.Query.Changes.WriteAfterHashes, opts.Query.Hashes.OutputFile} {
+		ignore[snapshotPath(f)] = true
+	}
+	ret := make([]string, 0, len(files))
+	for _, f := range files {
+		if !ignore[filepath.Join(core.RepoRoot, f)] {
+			ret = append(ret, f)
+		}
+	}
+	return ret
+}
+
+// isDirty returns true if the working tree has any modified or untracked files, other than any
+// snapshot files named on the command line.
+func isDirty(scm scm.SCM) bool {
+	for _, f := range withoutSnapshotFiles(scm.ChangedFiles("", true, "")) {
+		if f != "" && f != "." {
+			log.Debug("Working tree is dirty: %s", f)
+			return true
+		}
+	}
+	return false
+}
+
+// readBeforeSnapshot reads a snapshot from a file and checks that it's usable as the "before"
+// side of plz query changes, when comparing against the given base revision.
+func readBeforeSnapshot(filename, base string) (*query.GraphSnapshot, error) {
+	snapshot, err := query.ReadSnapshotFile(filename)
+	if err != nil {
+		return nil, err
+	} else if err := snapshot.CheckHeader(snapshotFingerprintComponents()); err != nil {
+		return nil, err
+	} else if snapshot.Header.Dirty {
+		return nil, fmt.Errorf("snapshot was generated from a dirty working tree")
+	} else if snapshot.Header.Revision != base && !opts.Query.Changes.ForceBefore {
+		return nil, fmt.Errorf("snapshot was generated at %s, but the merge base is %s (pass --force_before_hashes to use it anyway)", snapshot.Header.Revision, base)
+	}
+	return snapshot, nil
+}
+
+// snapshotAtRevision checks out the given revision, parses the whole graph and returns a snapshot of it,
+// then checks out the original revision again.
+// Only the snapshot is retained, so the parsed graph can be freed before anything else is parsed.
+func snapshotAtRevision(scm scm.SCM, revision string) *query.GraphSnapshot {
+	original := scm.CurrentRevIdentifier(false)
+	if err := scm.Checkout(revision); err != nil {
+		log.Fatalf("%s", err)
+	}
+	readConfig()
+	// N.B. Ignore failure here; if we can't parse the graph before then it will suffice to
+	//      assume that anything we don't know about has changed.
+	_, state := runBuild(core.WholeGraph, buildOpts{})
+	snapshot := query.NewSnapshot(state)
+	if err := scm.Checkout(original); err != nil {
+		log.Fatalf("%s", err)
+	}
+	readConfig()
+	return snapshot
 }
 
 func doTest(targets []core.BuildLabel, args []string, surefireDir cli.Filepath, resultsFile cli.Filepath) (bool, *core.BuildState) {
