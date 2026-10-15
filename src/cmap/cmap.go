@@ -94,22 +94,17 @@ func (m *Map[K, V]) Values() []V {
 }
 
 // Items returns an iterator over each key-value pair in the map, not including anything that is still waiting to be inserted.
-// They are returned in no particular order.
-// You should not mutate the map while calling this as it may deadlock.
+// They are returned in no particular order. No particular consistency guarantees are made.
+// The caller is allowed to modify the map during iteration, although no guarantee is made about whether those
+// modifications will become visible during this iteration.
 func (m *Map[K, V]) Items() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for i := range len(m.shards) {
-			shard := &m.shards[i]
-			shard.l.RLock()
-			for k, v := range shard.m {
-				if v.Wait == nil {
-					if !yield(k, v.Val) {
-						shard.l.RUnlock()
-						return
-					}
+			for _, item := range m.shards[i].Items() {
+				if !yield(item.Key, item.Val) {
+					return
 				}
 			}
-			shard.l.RUnlock()
 		}
 	}
 }
@@ -194,6 +189,24 @@ func (s *shard[K, V]) Update(key K, update func(V) V) V {
 		close(v.Wait)
 	}
 	return newv
+}
+
+type item[K comparable, V any] struct {
+	Key K
+	Val V
+}
+
+// Items returns a copy of all the items currently in the shard (not including those that are not complete yet).
+func (s *shard[K, V]) Items() []item[K, V] {
+	s.l.RLock()
+	defer s.l.RUnlock()
+	ret := make([]item[K, V], 0, len(s.m))
+	for k, v := range s.m {
+		if v.Wait == nil {
+			ret = append(ret, item[K, V]{Key: k, Val: v.Val})
+		}
+	}
+	return ret
 }
 
 // Values returns a copy of all the targets currently in the map.

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
@@ -75,6 +76,32 @@ func TestUpdate(t *testing.T) {
 	})
 	assert.Equal(t, 3, v)
 	assert.Equal(t, 3, m.Get(1))
+}
+
+// TestItemsAccessDuringIteration checks that reading the map while iterating it doesn't deadlock against a concurrent writer.
+func TestItemsAccessDuringIteration(t *testing.T) {
+	m := New[int, int](1, hashInts) // Single shard so everything collides
+	m.Add(1, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for k := range m.Items() {
+			updated := make(chan struct{})
+			go func() {
+				m.Update(2, func(int) int { return 2 })
+				close(updated)
+			}()
+			time.Sleep(50 * time.Millisecond) // Give the writer time to queue up on the shard's lock
+			m.Get(k)
+			<-updated
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("deadlocked accessing map during iteration")
+	}
+	assert.Equal(t, 2, m.Get(2))
 }
 
 func BenchmarkMapInserts(b *testing.B) {

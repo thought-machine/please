@@ -138,7 +138,8 @@ func (m *ErrMap[K, V]) GetOrWait(key K) (V, <-chan struct{}, bool, error) {
 
 // Items returns an iterator over all key / value pairs in the map, which have not errored.
 // They are returned in no particular order.
-// You should not mutate the map while calling this as it may deadlock.
+// The caller is allowed to modify the map during iteration, although no guarantee is made about whether those
+// modifications will become visible during this iteration.
 func (m *ErrMap[K, V]) Items() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for k, v := range m.m.Items() {
@@ -153,7 +154,8 @@ func (m *ErrMap[K, V]) Items() iter.Seq2[K, V] {
 
 // Values returns an iterator over all value / error pairs in the map.
 // They are returned in no particular order.
-// You should not mutate the map while calling this as it may deadlock.
+// The caller is allowed to modify the map during iteration, although no guarantee is made about whether those
+// modifications will become visible during this iteration.
 func (m *ErrMap[K, V]) Values() iter.Seq2[V, error] {
 	return func(yield func(V, error) bool) {
 		for _, v := range m.m.Items() {

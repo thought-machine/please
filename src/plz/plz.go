@@ -41,6 +41,7 @@ func Run(targets, preTargets []core.BuildLabel, state *core.BuildState, progress
 	if state.Config.Display.SystemStats {
 		go state.UpdateResources()
 	}
+	log.Debug("Beginning build, local executors: %d remote executors: %d", state.Config.Please.NumThreads, state.Config.NumRemoteExecutors())
 
 	// This must happen however we exit; anything reading state.Results() (e.g. the display)
 	// waits for that channel to be closed, so it would hang forever if we returned an error first.
