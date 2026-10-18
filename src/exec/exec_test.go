@@ -1,7 +1,6 @@
 package exec
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 	"time"
@@ -35,7 +34,7 @@ func TestPrepareRuntimeDir(t *testing.T) {
 	if err := build.StoreTargetMetadata(target, &core.BuildMetadata{}); err != nil {
 		panic(err)
 	}
-	build.Build(context.Background(), state, target, false)
+	build.Build(t.Context(), state, target, false)
 
 	err := core.PrepareRuntimeDir(state, target, "plz-out/exec/pkg")
 	assert.Nil(t, err)
