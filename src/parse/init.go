@@ -97,7 +97,6 @@ func (p *aspParser) runBuildFunction(ctx context.Context, state *core.BuildState
 	// one is still in flight. Targets are added to the graph as each rule is created, so a target can
 	// be picked up and built before the file that defines it has been fully interpreted - but the
 	// callback both reads the package out of the graph and mutates it, so it can't run until then.
-	// This uses the build's context so a build done while resolving preloads doesn't wait on them.
 	if _, err := p.callbacks.Parse(ctx, target.Label, target.Label); err != nil {
 		return err
 	}
