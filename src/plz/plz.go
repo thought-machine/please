@@ -612,7 +612,7 @@ func (r *runner) runBuildAction(ctx context.Context, target *core.BuildTarget) e
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return build.Build(r.state, target, remote)
+	return build.Build(ctx, r.state, target, remote)
 }
 
 // buildAll builds all the targets specified by the given label (which can be :all, but can't be ...).

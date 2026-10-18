@@ -3,6 +3,7 @@ package build
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -59,11 +60,11 @@ var successfulLocalTargetBuildDuration = metrics.NewHistogramVec(
 )
 
 // Build implements the core logic for building a single target.
-func Build(state *core.BuildState, target *core.BuildTarget, remote bool) error {
+func Build(ctx context.Context, state *core.BuildState, target *core.BuildTarget, remote bool) error {
 	state = state.ForTarget(target)
 	target.SetState(core.Building)
 	start := time.Now()
-	if err := buildTarget(state, target, remote); err != nil {
+	if err := buildTarget(ctx, state, target, remote); err != nil {
 		if errors.Is(err, errStop) {
 			target.SetState(core.Stopped)
 			state.LogBuildResult(target, core.TargetBuildStopped, "Build stopped")
@@ -159,7 +160,7 @@ func prepareOnly(state *core.BuildState, target *core.BuildTarget) error {
 //     b) attempt to fetch the outputs from the cache based on the output hash
 //  3. Actually build the rule
 //  4. Store result in the cache
-func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
+func buildTarget(ctx context.Context, state *core.BuildState, target *core.BuildTarget, runRemotely bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -180,7 +181,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 	// This must run before we can leave this function successfully by any path.
 	if target.PreBuildFunction != nil {
 		log.Debug("Running pre-build function for %s", target.Label)
-		if err := state.Parser.RunPreBuildFunction(state, target); err != nil {
+		if err := state.Parser.RunPreBuildFunction(ctx, state, target); err != nil {
 			return err
 		}
 		log.Debug("Finished pre-build function for %s", target.Label)
@@ -242,7 +243,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 				addOutDirOutsFromMetadata(target, metadata)
 
 				if target.PostBuildFunction != nil {
-					if err := runPostBuildFunction(state, target, string(metadata.Stdout), ""); err != nil {
+					if err := runPostBuildFunction(ctx, state, target, string(metadata.Stdout), ""); err != nil {
 						log.Warning("Error from post-build function for %s: %s; will rebuild", target.Label, err)
 					}
 				}
@@ -302,7 +303,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 					addOutDirOutsFromMetadata(target, metadata)
 					if target.PostBuildFunction != nil && !haveRunPostBuildFunction {
 						postBuildOutput = string(metadata.Stdout)
-						if err := runPostBuildFunction(state, target, postBuildOutput, ""); err != nil {
+						if err := runPostBuildFunction(ctx, state, target, postBuildOutput, ""); err != nil {
 							return err
 						}
 					}
@@ -344,7 +345,7 @@ func buildTarget(state *core.BuildState, target *core.BuildTarget, runRemotely b
 
 	if target.PostBuildFunction != nil {
 		outs := target.Outputs(state.Graph)
-		if err := runPostBuildFunction(state, target, string(metadata.Stdout), postBuildOutput); err != nil {
+		if err := runPostBuildFunction(ctx, state, target, string(metadata.Stdout), postBuildOutput); err != nil {
 			return err
 		}
 
@@ -996,7 +997,7 @@ func checkRuleHashesOfType(target *core.BuildTarget, hashes, outputs []string, h
 // In some cases it may have already run; if so we compare the previous output and warn
 // if the two differ (they must be deterministic to ensure it's a pure function, since there
 // are a few different paths through here and we guarantee to only run them once).
-func runPostBuildFunction(state *core.BuildState, target *core.BuildTarget, output, prevOutput string) error {
+func runPostBuildFunction(ctx context.Context, state *core.BuildState, target *core.BuildTarget, output, prevOutput string) error {
 	if prevOutput != "" {
 		if output != prevOutput {
 			log.Warning("The build output for %s differs from what we got back from the cache earlier.\n"+
@@ -1007,7 +1008,7 @@ func runPostBuildFunction(state *core.BuildState, target *core.BuildTarget, outp
 		}
 		return nil
 	}
-	return state.Parser.RunPostBuildFunction(state, target, output)
+	return state.Parser.RunPostBuildFunction(ctx, state, target, output)
 }
 
 // checkLicences checks the licences for the target match what we've accepted / rejected in the config
