@@ -1,0 +1,3 @@
+[parse]
+BuildFileName = BUILD
+PreloadSubincludes = //build_defs:defs
