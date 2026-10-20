@@ -94,6 +94,18 @@ plugin_e2e_test(
     plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; plz init plugin go && plz query config plugin.go.gotool > go.conf && plz query config plugin.go.stdlib >> go.conf",
 )
 
+# If the repo has a go.mod, init should export it and point the plugin at it, so that puku
+# has something to sync the third party build file against.
+plugin_e2e_test(
+    name = "init_go_modfile_test",
+    expect_output_contains = {
+        "go.conf": "//:gomod",
+        "BUILD": "filegroup*gomod*go.mod*PUBLIC",
+    },
+    # Need to break hard link here so init_plugin_test's actual .plzconfig doesn't get updated.
+    plz_command = "cp .plzconfig .foo; mv .foo .plzconfig; echo 'module example_module' > go.mod; plz init plugin go && plz query config plugin.go.modfile > go.conf",
+)
+
 # Test that the target is created in plugins/BUILD
 plugin_e2e_test(
     name = "init_create_target_test",

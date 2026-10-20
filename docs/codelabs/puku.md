@@ -54,21 +54,14 @@ Define a valid Puku version number as a build configuration string in `.plzconfi
 
 ```
 [BuildConfig]
-puku-version = "1.17.0"
+puku-version = "1.17.1"
 ```
 
-Uncomment and edit the following lines in your `.plzconfig` to set up `please` version:
-
-```
-[please]
-version = 17.22.0
-```
-
-Configure a Please alias for Puku (optional but convenient):
+Configure a Please alias for Puku:
 
 ```
 [Alias "puku"]
-Cmd = run //third_party/binary:puku --
+Cmd = run --wd=. //third_party/binary:puku --
 PositionalLabels = true
 Desc = A tool to update BUILD files in Go packages
 ```
@@ -85,9 +78,10 @@ remote_file(
 )
 ```
 
-Configure the Go plugin to point at your go.mod (recommended). Create a repo-root `BUILD` with a filegroup for go.mod:
+Because you ran `plz init plugin go` in a directory that already had a `go.mod`, the Go plugin
+has been pointed at it for you. `plz init` will have written a filegroup exporting `go.mod` into
+your repo-root `BUILD` file:
 
-1) Add a filegroup for go.mod at `BUILD` in repo root:
 ```python
 filegroup(
     name = "gomod",
@@ -96,14 +90,16 @@ filegroup(
 )
 ```
 
-2) Update your `.plzconfig`:
+along with the corresponding `ModFile` setting in your `.plzconfig`:
+
 ```
 [Plugin "go"]
-Target = //plugins:go
 ModFile = //:gomod
 ```
 
 This lets Puku use standard `go get` to resolve modules, then sync them into `third_party/go/BUILD`.
+If you're adding Please to a repo that didn't have a `go.mod` at the time you ran `plz init plugin go`,
+you'll need to add those two pieces yourself.
 
 ### Configuring the PATH for Go
 
@@ -135,14 +131,6 @@ Path = /usr/local/go/bin:/usr/local/bin:/usr/bin:/bin
 
 **Note:** On Windows, use `where.exe go` to find the Go installation path.
 
-### Installing the Go standard library (Go 1.20+)
-
-From Go version 1.20 onwards, the standard library is no longer included by default with the Go distribution. You must install it manually:
-
-```bash
-GODEBUG="installgoroot=all" go install std
-```
-
 ## Adding and updating modules
 Duration: 5
 
@@ -171,14 +159,6 @@ Now add the dependency with `go get`:
 ```bash
 go get github.com/google/uuid
 ```
-
-Sync the changes to `third_party/go/BUILD`:
-
-```bash
-plz puku sync -w
-```
-
-This creates a `go_repo()` rule in `third_party/go/BUILD` for the `uuid` module. You may need to create the `third_party/go/BUILD` file if it doesn't exist.
 
 ### Creating the BUILD file
 
@@ -210,14 +190,14 @@ plz run //src/hello
 To update a module to a specific version:
 
 ```bash
-GOTOOLCHAIN=local go get github.com/google/uuid@v1.6.0
+go get github.com/google/uuid@v1.5.0
 plz puku sync -w
 ```
 
 To update to the latest version:
 
 ```bash
-GOTOOLCHAIN=local go get -u github.com/google/uuid
+go get -u github.com/google/uuid
 plz puku sync -w
 ```
 
