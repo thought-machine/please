@@ -220,6 +220,8 @@ type BuildState struct {
 
 	// initOnce is used to control loading the subrepo .plzconfig
 	initOnce *sync.Once
+	// initErr is the result of loading the subrepo .plzconfig, returned from every call to Initialise.
+	initErr error
 }
 
 type isPreloadingKey struct{}
@@ -241,26 +243,27 @@ func (state *BuildState) Copy() *BuildState {
 	*ret = *state
 
 	ret.initOnce = new(sync.Once)
+	ret.initErr = nil
 	return ret
 }
 
 // Initialise will load the .plzconfig from the subrepo. We can only do this once the subrepo is built hence why
 // it's not done up front. Once we have done that, we can initialise the parser for the subrepo.
-func (state *BuildState) Initialise(subrepo *Subrepo) (err error) {
+// The result is remembered, so if loading the config fails every caller gets the error, not just the first one.
+func (state *BuildState) Initialise(subrepo *Subrepo) error {
 	state.initOnce.Do(func() {
 		// If we are the root repo, or a cross-compilation of that, we don't want to re-load the config files. That's
 		// handled for us already in plz.go
 		if state.CurrentSubrepo != "" {
 			state.RepoConfig = &Configuration{}
-			if err = readSubrepoConfig(state.RepoConfig, subrepo); err != nil {
+			if err := readSubrepoConfig(state.RepoConfig, subrepo); err != nil {
+				state.initErr = err
 				return
 			}
-			if err = validateSubrepoNameAndPluginConfig(state.Config, state.RepoConfig, subrepo); err != nil {
-				return
-			}
+			state.initErr = validateSubrepoNameAndPluginConfig(state.Config, state.RepoConfig, subrepo)
 		}
 	})
-	return
+	return state.initErr
 }
 
 // A stateProgress records various points of progress for a State.
