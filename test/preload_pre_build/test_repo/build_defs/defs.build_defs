@@ -1,0 +1,8 @@
+subinclude("//build_defs:gen")
+
+def defs(name):
+    gen()
+    return filegroup(
+        name = name,
+        srcs = [name + ".txt"],
+    )

@@ -72,9 +72,9 @@ type Parser interface {
 	// ParseReader parses a single BUILD file into the given package.
 	ParseReader(ctx context.Context, pkg *Package, reader io.ReadSeeker, forLabel, dependent *BuildLabel) error
 	// RunPreBuildFunction runs a pre-build function for a target.
-	RunPreBuildFunction(state *BuildState, target *BuildTarget) error
+	RunPreBuildFunction(ctx context.Context, state *BuildState, target *BuildTarget) error
 	// RunPostBuildFunction runs a post-build function for a target.
-	RunPostBuildFunction(state *BuildState, target *BuildTarget, output string) error
+	RunPostBuildFunction(ctx context.Context, state *BuildState, target *BuildTarget, output string) error
 }
 
 // A RemoteClient is the interface to a remote execution service.

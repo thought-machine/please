@@ -77,28 +77,27 @@ func (p *aspParser) ParseReader(ctx context.Context, pkg *core.Package, reader i
 	return err
 }
 
-func (p *aspParser) RunPreBuildFunction(state *core.BuildState, target *core.BuildTarget) error {
-	return p.runBuildFunction(state, target, "pre", func() error {
+func (p *aspParser) RunPreBuildFunction(ctx context.Context, state *core.BuildState, target *core.BuildTarget) error {
+	return p.runBuildFunction(ctx, state, target, "pre", func() error {
 		return target.PreBuildFunction.Call(target)
 	})
 }
 
-func (p *aspParser) RunPostBuildFunction(state *core.BuildState, target *core.BuildTarget, output string) error {
-	return p.runBuildFunction(state, target, "post", func() error {
+func (p *aspParser) RunPostBuildFunction(ctx context.Context, state *core.BuildState, target *core.BuildTarget, output string) error {
+	return p.runBuildFunction(ctx, state, target, "post", func() error {
 		log.Debug("Running post-build function for %s. Build output:\n%s", target.Label, output)
 		return target.PostBuildFunction.Call(target, output)
 	})
 }
 
 // runBuildFunction runs either the pre- or post-build function.
-func (p *aspParser) runBuildFunction(state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
+func (p *aspParser) runBuildFunction(ctx context.Context, state *core.BuildState, target *core.BuildTarget, callbackType string, f func() error) error {
 	state.LogBuildResult(target, core.PackageParsing, fmt.Sprintf("Running %s-build function for %s", callbackType, target.Label))
 	// This doesn't re-parse anything; it waits for the parse of this target's package to complete if
 	// one is still in flight. Targets are added to the graph as each rule is created, so a target can
 	// be picked up and built before the file that defines it has been fully interpreted - but the
 	// callback both reads the package out of the graph and mutates it, so it can't run until then.
-	// There's no parse in flight for us to inherit a context from, hence Background.
-	if _, err := p.callbacks.Parse(context.Background(), target.Label, target.Label); err != nil {
+	if _, err := p.callbacks.Parse(ctx, target.Label, target.Label); err != nil {
 		return err
 	}
 	if err := f(); err != nil {

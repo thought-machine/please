@@ -1,0 +1,16 @@
+def _pre_build(name):
+    pass
+
+genrule(
+    name = "gen",
+    outs = ["gen.build_defs"],
+    cmd = "echo 'def gen():\n    pass' > $OUT",
+    pre_build = _pre_build,
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "defs",
+    srcs = ["defs.build_defs"],
+    visibility = ["PUBLIC"],
+)

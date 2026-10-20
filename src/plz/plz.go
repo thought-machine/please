@@ -460,6 +460,9 @@ func (r *runner) recursiveParsePackage(ctx context.Context, label, dependent cor
 func (r *runner) parseTarget(ctx context.Context, label, dependent core.BuildLabel) (*core.BuildTarget, error) {
 	target, wait := r.state.Graph.TargetOrWait(label)
 	if target != nil {
+		if err := r.ensurePreloads(ctx, r.state.ForTarget(target)); err != nil {
+			return nil, err
+		}
 		return target, nil
 	}
 	pkg, err := r.parse(ctx, label, dependent, false, wait)
@@ -612,7 +615,7 @@ func (r *runner) runBuildAction(ctx context.Context, target *core.BuildTarget) e
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return build.Build(r.state, target, remote)
+	return build.Build(ctx, r.state, target, remote)
 }
 
 // buildAll builds all the targets specified by the given label (which can be :all, but can't be ...).
