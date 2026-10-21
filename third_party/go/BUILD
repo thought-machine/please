@@ -5,11 +5,11 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "b6f8e931e4ab497fcde6da8ae4499a58f9d258e55c8a80824a516eae5950a750",  # go1.27.0.darwin-amd64.tar.gz
-        "dd3908cf20959d798c1e06ebe5b72213f0505ce01373b40ce3110975a6cd99c2",  # go1.27.0.darwin-arm64.tar.gz
-        "c15c88d07d6b2d2db5df7b65d9b9c73d631ac4e787da04e2bef2a5b6952c2cbb",  # go1.27.0.freebsd-amd64.tar.gz
-        "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40",  # go1.27.0.linux-amd64.tar.gz
-        "a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49",  # go1.27.0.linux-arm64.tar.gz
+        "b6f8e931e4ab497fcde6da8ae4499a58f9d258e55c8a80824a516eae5950a750",  # go1.27.3.darwin-amd64.tar.gz
+        "dd3908cf20959d798c1e06ebe5b72213f0505ce01373b40ce3110975a6cd99c2",  # go1.27.3.darwin-arm64.tar.gz
+        "c15c88d07d6b2d2db5df7b65d9b9c73d631ac4e787da04e2bef2a5b6952c2cbb",  # go1.27.3.freebsd-amd64.tar.gz
+        "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40",  # go1.27.3.linux-amd64.tar.gz
+        "a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49",  # go1.27.3.linux-arm64.tar.gz
     ],
     install_std = False,
     version = "1.27.3",
