@@ -3,7 +3,7 @@ jobs:
    build-alpine:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_alpine:20260820
+       - image: ghcr.io/thought-machine/please_alpine:20261021
      resource_class: large
      environment:
        PLZ_ARGS: "--profile ci --profile alpine --exclude no-musl"
@@ -51,7 +51,7 @@ jobs:
    build-linux:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260820
+       - image: ghcr.io/thought-machine/please_ubuntu:20261021
      resource_class: large
      environment:
        PLZ_ARGS: "--profile ci"
@@ -107,7 +107,7 @@ jobs:
    build-linux-alt:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu_alt:20260820
+       - image: ghcr.io/thought-machine/please_ubuntu_alt:202608201021
      resource_class: large
      environment:
        PLZ_ARGS: "-c cover --profile ci-alt"
@@ -204,7 +204,7 @@ jobs:
    build-linux-arm64:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20261021
      resource_class: large
      steps:
        - checkout
@@ -291,7 +291,7 @@ jobs:
    test-rex:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20261021
      resource_class: xlarge
      steps:
        - checkout
@@ -308,7 +308,7 @@ jobs:
    test-http-cache:
      working_directory: ~/please
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20261021
      resource_class: large
      steps:
        - checkout
@@ -324,7 +324,7 @@ jobs:
    # Releases to github and homebrew
    release:
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20261021
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
@@ -339,7 +339,7 @@ jobs:
    # Releases the docs and the binaries to gs for please.build and get.please.build
    release-gs:
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20261021
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      steps:
@@ -389,7 +389,7 @@ jobs:
                --cap-add SETUID --cap-add SETGID --cap-add SETFCAP \
                -v "$PWD:/please" -w /please \
                -e PLZ_ARGS="--profile ci" \
-               ghcr.io/thought-machine/please_ubuntu:20260318 \
+               ghcr.io/thought-machine/please_ubuntu:20261021 \
                sh -ec '
                  # Mirrors the tools/images Dockerfile changes; drop once new
                  # image tags containing them are published and referenced.
@@ -430,7 +430,7 @@ jobs:
                --cap-add SETUID --cap-add SETGID --cap-add SETFCAP \
                -v "$PWD:/please" -w /please \
                -e PLZ_ARGS="--profile ci-alt" \
-               ghcr.io/thought-machine/please_ubuntu_alt:20260318 \
+               ghcr.io/thought-machine/please_ubuntu_alt:20261021 \
                sh -ec '
                  # Mirrors the tools/images Dockerfile changes; drop once new
                  # image tags containing them are published and referenced.
@@ -488,7 +488,7 @@ jobs:
    # Runs a benchmarking test and records some performance results.
    perf-test:
      docker:
-       - image: ghcr.io/thought-machine/please_ubuntu:20260318
+       - image: ghcr.io/thought-machine/please_ubuntu:20261021
      environment:
        GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
