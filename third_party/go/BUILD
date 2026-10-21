@@ -5,14 +5,14 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "d3314e25496e4381d71a5c51d2907e7af655d199f6780b549f015bd85fef4986",  # go1.27.0.darwin-amd64.tar.gz
-        "90493b3bbd5e10f91d12153198bf1994fd756399b4fec93b49b0c6e2acdeeb3e",  # go1.27.0.darwin-arm64.tar.gz
-        "2c24ddcca6dbd5e0be775a48cec4171e9ca616e654b63b02c9cbc515238dae31",  # go1.27.0.freebsd-amd64.tar.gz
-        "675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685",  # go1.27.0.linux-amd64.tar.gz
-        "51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda",  # go1.27.0.linux-arm64.tar.gz
+        "b6f8e931e4ab497fcde6da8ae4499a58f9d258e55c8a80824a516eae5950a750",  # go1.27.0.darwin-amd64.tar.gz
+        "dd3908cf20959d798c1e06ebe5b72213f0505ce01373b40ce3110975a6cd99c2",  # go1.27.0.darwin-arm64.tar.gz
+        "c15c88d07d6b2d2db5df7b65d9b9c73d631ac4e787da04e2bef2a5b6952c2cbb",  # go1.27.0.freebsd-amd64.tar.gz
+        "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40",  # go1.27.0.linux-amd64.tar.gz
+        "a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49",  # go1.27.0.linux-arm64.tar.gz
     ],
     install_std = False,
-    version = "1.27.0",
+    version = "1.27.3",
 )
 
 go_stdlib(
@@ -35,12 +35,12 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/text",
-    version = "v0.41.0",
+    version = "v0.43.0",
 )
 
 go_repo(
     module = "golang.org/x/tools",
-    version = "v0.48.0",
+    version = "v0.51.0",
 )
 
 go_repo(
@@ -116,7 +116,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/net",
-    version = "v0.58.0",
+    version = "v0.61.0",
 )
 
 go_repo(
@@ -211,7 +211,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/term",
-    version = "v0.45.0",
+    version = "v0.47.0",
 )
 
 go_repo(
@@ -271,7 +271,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sync",
-    version = "v0.22.0",
+    version = "v0.24.0",
 )
 
 go_repo(
@@ -331,7 +331,7 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/sys",
-    version = "v0.47.0",
+    version = "v0.49.0",
 )
 
 go_repo(
@@ -351,7 +351,7 @@ go_repo(
 
 go_repo(
     module = "google.golang.org/grpc",
-    version = "v1.83.2",
+    version = "v1.84.0",
 )
 
 go_repo(
@@ -401,12 +401,12 @@ go_repo(
 
 go_repo(
     module = "golang.org/x/crypto",
-    version = "v0.55.0",
+    version = "v0.58.0",
 )
 
 go_repo(
     module = "google.golang.org/protobuf",
-    version = "v1.36.11",
+    version = "v1.36.12",
 )
 
 go_repo(
@@ -550,7 +550,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "google.golang.org/genproto/googleapis/rpc",
-    version = "v0.0.0-20260706201446-f0a921348800",
+    version = "v0.0.0-20261019180522-ce908d29299b",
 )
 
 go_repo(
