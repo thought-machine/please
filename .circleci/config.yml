@@ -390,14 +390,7 @@ jobs:
                -v "$PWD:/please" -w /please \
                -e PLZ_ARGS="--profile ci" \
                ghcr.io/thought-machine/please_ubuntu:20261021 \
-               sh -ec '
-                 # Mirrors the tools/images Dockerfile changes; drop once new
-                 # image tags containing them are published and referenced.
-                 apt-get update && apt-get install -y uidmap
-                 printf "root:0:65536\n" >> /etc/subuid
-                 printf "root:0:65536\n" >> /etc/subgid
-                 ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
-               '
+               ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
@@ -431,14 +424,7 @@ jobs:
                -v "$PWD:/please" -w /please \
                -e PLZ_ARGS="--profile ci-alt" \
                ghcr.io/thought-machine/please_ubuntu_alt:20261021 \
-               sh -ec '
-                 # Mirrors the tools/images Dockerfile changes; drop once new
-                 # image tags containing them are published and referenced.
-                 apt-get update && apt-get install -y uidmap
-                 printf "root:0:65536\n" >> /etc/subuid
-                 printf "root:0:65536\n" >> /etc/subgid
-                 ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
-               '
+               ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
@@ -471,15 +457,8 @@ jobs:
                --cap-add SETUID --cap-add SETGID --cap-add SETFCAP \
                -v "$PWD:/please" -w /please \
                -e PLZ_ARGS="--profile ci --profile alpine --exclude no-musl" \
-               ghcr.io/thought-machine/please_alpine:20260318 \
-               sh -ec '
-                 # Mirrors the tools/images Dockerfile changes; drop once new
-                 # image tags containing them are published and referenced.
-                 apk add --no-cache shadow-uidmap curl
-                 printf "root:0:65536\n" >> /etc/subuid
-                 printf "root:0:65536\n" >> /etc/subgid
-                 ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
-               '
+               ghcr.io/thought-machine/please_alpine:20261021 \
+               ./pleasew -p -v2 test --rerun --test_results_file plz-out/results/sandbox/test_results.xml --log_file plz-out/log/sandbox_test.log //tools/sandbox/test:sandbox_test
        - store_test_results:
            path: plz-out/results
        - store_artifacts:
