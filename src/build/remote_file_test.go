@@ -108,8 +108,10 @@ func TestAdditionalCACerts(t *testing.T) {
 		writer.Write([]byte("wibble"))
 	}))
 	defer s.Close()
-	certFile := filepath.Join(t.TempDir(), "ca.pem")
-	err := os.WriteFile(certFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: s.Certificate().Raw}), 0644)
+	// t.TempDir() is relative when run remotely (TMPDIR is .), and relative paths are resolved against RepoRoot.
+	certFile, err := filepath.Abs(filepath.Join(t.TempDir(), "ca.pem"))
+	require.NoError(t, err)
+	err = os.WriteFile(certFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: s.Certificate().Raw}), 0644)
 	require.NoError(t, err)
 
 	// The client is only configured once, so reset it to pick up config changes.
