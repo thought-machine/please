@@ -4,6 +4,8 @@ package core
 
 import (
 	"crypto/sha1"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	iofs "io/fs"
@@ -520,6 +522,7 @@ type Configuration struct {
 		PassEnv              []string     `help:"A list of environment variables to pass from the current environment to build rules. For example\n\nPassEnv = HTTP_PROXY\n\nwould copy your HTTP_PROXY environment variable to the build env for any rules."`
 		PassUnsafeEnv        []string     `help:"Similar to PassEnv, a list of environment variables to pass from the current environment to build rules. Unlike PassEnv, the environment variable values are not used when calculating build target hashes."`
 		HTTPProxy            cli.URL      `help:"A URL to use as a proxy server for downloads. Only applies to internal ones - e.g. self-updates or remote_file rules."`
+		AdditionalCACerts    []string     `help:"A list of paths to PEM-encoded CA certificates to trust in addition to the system trust store when making HTTPS connections, including to HTTPProxy. Only applies to internal downloads - e.g. self-updates or remote_file rules. Relative paths are resolved against the repo root."`
 		HashCheckers         []string     `help:"Set of hash algos supported by the 'hashes' argument on build rules. Defaults to: sha1,sha256,blake3." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		HashFunction         string       `help:"The hash function to use internally for build actions." options:"sha1,sha256,blake3,xxhash,crc32,crc64"`
 		ExitOnError          bool         `help:"True to have build actions automatically fail on error (essentially passing -e to the shell they run in)." var:"EXIT_ON_ERROR"`
@@ -803,6 +806,32 @@ func (config *Configuration) EnsurePleaseLocation() {
 			config.Please.Location = filepath.Join(RepoRoot, config.Please.Location)
 		}
 	}
+}
+
+// TLSConfig returns the TLS config to use for internal HTTPS downloads. It trusts the system cert
+// pool plus any certificates in Build.AdditionalCACerts, or is nil if there are none of the latter.
+func (config *Configuration) TLSConfig() (*tls.Config, error) {
+	if len(config.Build.AdditionalCACerts) == 0 {
+		return nil, nil
+	}
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load system cert pool: %w", err)
+	}
+	for _, path := range config.Build.AdditionalCACerts {
+		path = fs.ExpandHomePath(path)
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(RepoRoot, path)
+		}
+		pem, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+		}
+		if !pool.AppendCertsFromPEM(pem) {
+			return nil, fmt.Errorf("no valid PEM-encoded certificates found in %s", path)
+		}
+	}
+	return &tls.Config{RootCAs: pool}, nil
 }
 
 // Path returns the slice of strings corresponding to the PATH env var.
