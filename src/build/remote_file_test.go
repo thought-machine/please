@@ -1,8 +1,13 @@
 package build
 
 import (
+	"encoding/pem"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -96,4 +101,38 @@ func TestBasicAuth(t *testing.T) {
 
 	err = fetchRemoteFile(state, target)
 	require.NoError(t, err)
+}
+
+func TestAdditionalCACerts(t *testing.T) {
+	s := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("wibble"))
+	}))
+	defer s.Close()
+	certFile := filepath.Join(t.TempDir(), "ca.pem")
+	err := os.WriteFile(certFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: s.Certificate().Raw}), 0644)
+	require.NoError(t, err)
+
+	// The client is only configured once, so reset it to pick up config changes.
+	resetHTTPClient := func() {
+		httpClientOnce = sync.Once{}
+		httpClientErr = nil
+	}
+	resetHTTPClient()
+	t.Cleanup(resetHTTPClient)
+
+	state, target := newState("//pkg:additional_ca_certs_test")
+	target.IsRemoteFile = true
+	target.Sources = []core.BuildInput{core.URLLabel(s.URL + "/file")}
+	target.AddOutput("file")
+
+	err = fetchRemoteFile(state, target)
+	assert.ErrorContains(t, err, "certificate")
+
+	resetHTTPClient()
+	state.Config.Build.AdditionalCACerts = []string{certFile}
+	err = fetchRemoteFile(state, target)
+	require.NoError(t, err)
+	contents, err := os.ReadFile(filepath.Join(target.TmpDir(), "file"))
+	require.NoError(t, err)
+	assert.Equal(t, "wibble", string(contents))
 }
