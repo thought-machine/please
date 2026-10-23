@@ -5,6 +5,7 @@ Version 17.34.0
     * Subinclude cycle detection (#3615)
     * Fix for `plz export --notrim` in some cases (#3621)
     * `plz init plugin go` now writes a filegroup for `go.mod` and sets `modfile` (#3587)
+	* Return the subrepo config error from every Initialise call (#3637)
 
 Version 17.33.0
 ---------------
