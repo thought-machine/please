@@ -1,3 +1,11 @@
+Version 17.35.0
+---------------
+    * The directory cache now only counts files that aren't linked into plz-out towards its size,
+      and evicts by last use rather than access time (#3630)
+    * The dir cache evicts entries unused for longer than `DirCacheMaxAge` (default one week),
+      `DirCacheHighWaterMark` now defaults to 10% of the disk, and `DirCacheMinFreeSpace`
+      evicts entries when the disk is nearly full
+
 Version 17.34.0
 ---------------
     * Build parallelism changes (#3569)

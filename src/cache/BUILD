@@ -23,6 +23,7 @@ go_test(
     data = ["test_data"],
     deps = [
         ":cache",
+        "///third_party/go/github.com_dustin_go-humanize//:go-humanize",
         "///third_party/go/github.com_stretchr_testify//assert",
         "//src/core",
     ],

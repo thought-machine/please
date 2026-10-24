@@ -364,8 +364,8 @@ func printMessage(msg string) {
 			return "${BOLD_CYAN}" + strings.ReplaceAll(s, "`", "") + "${RESET}"
 		})
 	}
-	// Replace % to %% when not followed by anything so it doesn't become a replacement.
-	cli.Fprintf(os.Stdout, strings.ReplaceAll(msg, "% ", "%% ")+"\n")
+	// Escape any % so they don't become replacements; the message has no arguments.
+	cli.Fprintf(os.Stdout, strings.ReplaceAll(msg, "%", "%%")+"\n")
 }
 
 const docstringTemplate = `${BLUE}{{ .Name }}${RESET} is

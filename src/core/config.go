@@ -4,6 +4,7 @@ package core
 
 import (
 	"crypto/sha1"
+	"encoding"
 	"fmt"
 	"io"
 	iofs "io/fs"
@@ -398,8 +399,8 @@ func DefaultConfiguration() *Configuration {
 	if dir, err := os.UserCacheDir(); err == nil {
 		config.Cache.Dir = filepath.Join(dir, "please")
 	}
-	config.Cache.DirCacheHighWaterMark = 10 * cli.GiByte
-	config.Cache.DirCacheLowWaterMark = 8 * cli.GiByte
+	config.Cache.DirCacheHighWaterMark = cli.Percentage(10)
+	config.Cache.DirCacheMaxAge = cli.Duration(7 * 24 * time.Hour)
 	config.Cache.DirClean = true
 	config.Cache.Workers = runtime.NumCPU() + 2 // Mirrors the number of workers in please.go.
 	config.Test.Timeout = cli.Duration(10 * time.Minute)
@@ -532,19 +533,21 @@ type Configuration struct {
 	BuildConfig map[string]string `help:"A section of arbitrary key-value properties that are made available in the BUILD language. These are often useful for writing custom rules that need some configurable property.\n\n[buildconfig]\nandroid-tools-version = 23.0.2\n\nFor example, the above can be accessed as CONFIG.ANDROID_TOOLS_VERSION."`
 	BuildEnv    map[string]string `help:"A set of extra environment variables to define for build rules. For example:\n\n[buildenv]\nsecret-passphrase = 12345\n\nThis would become SECRET_PASSPHRASE for any rules. These can be useful for passing secrets into custom rules; any variables containing SECRET or PASSWORD won't be logged.\n\nIt's also useful if you'd like internal tools to honour some external variable."`
 	Cache       struct {
-		Workers                    int          `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
-		Dir                        string       `help:"Sets the directory to use for the dir cache.\nThe default is 'please' under the user's cache dir (i.e. ~/.cache/please, ~/Library/Caches/please, etc), if set to the empty string the dir cache will be disabled." example:".plz-cache"`
-		DirCacheHighWaterMark      cli.ByteSize `help:"Starts cleaning the directory cache when it is over this number of bytes.\nCan also be given with human-readable suffixes like 10G, 200MB etc."`
-		DirCacheLowWaterMark       cli.ByteSize `help:"When cleaning the directory cache, it's reduced to at most this size."`
-		DirClean                   bool         `help:"Controls whether entries in the dir cache are cleaned or not. If disabled the cache will only grow."`
-		DirCompress                bool         `help:"Compresses stored artifacts in the dir cache. They are slower to store & retrieve but more compact."`
-		HTTPURL                    cli.URL      `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
-		HTTPWriteable              bool         `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
-		HTTPTimeout                cli.Duration `help:"Timeout for operations contacting the HTTP cache, in seconds."`
-		HTTPConcurrentRequestLimit int          `help:"The maximum amount of concurrent requests that can be open. Default 20."`
-		HTTPRetry                  int          `help:"The maximum number of retries before a request will give up, if a request is retryable"`
-		StoreCommand               string       `help:"Use a custom command to store cache entries."`
-		RetrieveCommand            string       `help:"Use a custom command to retrieve cache entries."`
+		Workers                    int                      `help:"Number of workers for uploading artifacts to remote caches, which is done asynchronously."`
+		Dir                        string                   `help:"Sets the directory to use for the dir cache.\nThe default is 'please' under the user's cache dir (i.e. ~/.cache/please, ~/Library/Caches/please, etc), if set to the empty string the dir cache will be disabled." example:".plz-cache"`
+		DirCacheHighWaterMark      cli.ByteSizeOrPercentage `help:"Starts cleaning the directory cache when it is over this size.\nCan be given with human-readable suffixes like 10G, 200MB etc, or as a percentage of the size of the filesystem it's on, like 10%. Defaults to 10%.\nOnly files that aren't linked from elsewhere (e.g. into plz-out) count towards this, since removing them from the cache wouldn't free any space."`
+		DirCacheLowWaterMark       cli.ByteSize             `help:"When cleaning the directory cache, it's reduced to at most this size. Defaults to 80% of DirCacheHighWaterMark."`
+		DirCacheMaxAge             cli.Duration             `help:"Entries in the directory cache that haven't been used for longer than this are removed, regardless of its total size. Defaults to a week (168h)."`
+		DirCacheMinFreeSpace       cli.ByteSizeOrPercentage `help:"If free space on the filesystem holding the directory cache drops below this, entries are removed, least recently used first, until it's back above it. Can be given as a size or as a percentage of the size of the filesystem. Defaults to the larger of 5% and 5GB."`
+		DirClean                   bool                     `help:"Controls whether entries in the dir cache are cleaned or not. If disabled the cache will only grow."`
+		DirCompress                bool                     `help:"Compresses stored artifacts in the dir cache. They are slower to store & retrieve but more compact."`
+		HTTPURL                    cli.URL                  `help:"Base URL of the HTTP cache.\nNot set to anything by default which means the cache will be disabled."`
+		HTTPWriteable              bool                     `help:"If True this plz instance will write content back to the HTTP cache.\nBy default it runs in read-only mode."`
+		HTTPTimeout                cli.Duration             `help:"Timeout for operations contacting the HTTP cache, in seconds."`
+		HTTPConcurrentRequestLimit int                      `help:"The maximum amount of concurrent requests that can be open. Default 20."`
+		HTTPRetry                  int                      `help:"The maximum number of retries before a request will give up, if a request is retryable"`
+		StoreCommand               string                   `help:"Use a custom command to store cache entries."`
+		RetrieveCommand            string                   `help:"Use a custom command to retrieve cache entries."`
 	} `help:"Please has several built-in caches that can be configured in its config file.\n\nThe simplest one is the directory cache which by default is written into the .plz-cache directory. This allows for fast retrieval of code that has been built before (for example, when swapping Git branches).\n\nThere is also a remote RPC cache which allows using a centralised server to store artifacts. A typical pattern here is to have your CI system write artifacts into it and give developers read-only access so they can reuse its work.\n\nFinally there's a HTTP cache which is very similar, but a little obsolete now since the RPC cache outperforms it and has some extra features. Otherwise the two have similar semantics and share quite a bit of implementation.\n\nPlease has server implementations for both the RPC and HTTP caches."`
 	Test struct {
 		Timeout                  cli.Duration `help:"Default timeout applied to all tests. Can be overridden on a per-rule basis."`
@@ -936,6 +939,9 @@ func applyOverrideOnSectionField(field reflect.Value, tag reflect.StructTag, val
 			field.Set(reflect.ValueOf(parts))
 		}
 	default:
+		if u, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
+			return u.UnmarshalText([]byte(value))
+		}
 		return fmt.Errorf("can't override config field of type %v", field.Kind())
 	}
 	return nil

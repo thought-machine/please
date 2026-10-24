@@ -1079,15 +1079,9 @@
     <li>
       <div>
         <h3 class="mt1 f6 lh-title" id="cache.dircachehighwatermark">
-          DirCacheHighWaterMark <span class="normal">(size)</span>
+          DirCacheHighWaterMark <span class="normal">(size or percentage)</span>
         </h3>
-
-        <p>
-          Starts cleaning the directory cache when it is over this number of
-          bytes.<br />
-          Can also be given with human-readable suffixes like 10G, 200MB etc.
-          Defaults to <code class="code">10GiB</code>.
-        </p>
+        <p>{{ index .ConfigHelpText "cache.dircachehighwatermark" }}</p>
       </div>
     </li>
     <li>
@@ -1095,11 +1089,23 @@
         <h3 class="mt1 f6 lh-title" id="cache.dircachelowwatermark">
           DirCacheLowWaterMark <span class="normal">(size)</span>
         </h3>
-
-        <p>
-          When cleaning the directory cache, it's reduced to at most this size.
-          Defaults to <code class="code">8GiB</code>.
-        </p>
+        <p>{{ index .ConfigHelpText "cache.dircachelowwatermark" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cache.dircachemaxage">
+          DirCacheMaxAge <span class="normal">(duration)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "cache.dircachemaxage" }}</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3 class="mt1 f6 lh-title" id="cache.dircacheminfreespace">
+          DirCacheMinFreeSpace <span class="normal">(size or percentage)</span>
+        </h3>
+        <p>{{ index .ConfigHelpText "cache.dircacheminfreespace" }}</p>
       </div>
     </li>
     <li>
