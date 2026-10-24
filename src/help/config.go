@@ -44,6 +44,8 @@ func ExampleValue(f reflect.Value, name string, t reflect.Type, example, options
 		return "42"
 	} else if t.Name() == "ByteSize" {
 		return "5K | 10MB | 20GiB"
+	} else if t.Name() == "ByteSizeOrPercentage" {
+		return "5K | 10MB | 20GiB | 10%"
 	} else if t.Kind() == reflect.Uint64 {
 		return strconv.FormatUint(f.Uint(), 10)
 	} else if t.Name() == "BuildLabel" {

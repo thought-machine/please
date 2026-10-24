@@ -1,2 +1,3 @@
 [cache]
 dircachehighwatermark = 500MB
+dircacheminfreespace = 5%

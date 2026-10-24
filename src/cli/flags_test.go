@@ -17,6 +17,24 @@ func TestByteSize(t *testing.T) {
 	assert.EqualValues(t, 15000000, opts.Size)
 }
 
+func TestByteSizeOrPercentage(t *testing.T) {
+	var b ByteSizeOrPercentage
+	assert.NoError(t, b.UnmarshalFlag("15M"))
+	assert.True(t, b.IsSet)
+	assert.False(t, b.IsPercent)
+	assert.EqualValues(t, 15000000, b.Of(1000))
+	assert.NoError(t, b.UnmarshalFlag("10%"))
+	assert.True(t, b.IsSet)
+	assert.True(t, b.IsPercent)
+	assert.EqualValues(t, 100, b.Of(1000))
+	assert.Equal(t, "10%", b.String())
+	assert.NoError(t, b.UnmarshalFlag("2.5 %"))
+	assert.EqualValues(t, 25, b.Of(1000))
+	assert.Error(t, b.UnmarshalFlag("150%"))
+	assert.Error(t, b.UnmarshalFlag("lots%"))
+	assert.Error(t, b.UnmarshalFlag("lots"))
+}
+
 func TestURL(t *testing.T) {
 	opts := struct {
 		U URL `short:"u"`
