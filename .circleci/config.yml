@@ -243,7 +243,7 @@ jobs:
        - restore_cache:
            key: go-darwin-arm64-go123-v1-{{ checksum "third_party/go/BUILD" }}
        - restore_cache:
-           key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-arm64-v4-{{ checksum "third_party/python/BUILD" }}
        - restore_cache:
            key: e2e-darwin-arm64-v1-{{ checksum "/tmp/e2e-cache-key" }}
        - run:
@@ -282,7 +282,7 @@ jobs:
            key: go-darwin-arm64-go123-v1-{{ checksum "third_party/go/BUILD" }}
            paths: [ ".plz-cache/third_party/go" ]
        - save_cache:
-           key: python-darwin-arm64-v3-{{ checksum "third_party/python/BUILD" }}
+           key: python-darwin-arm64-v4-{{ checksum "third_party/python/BUILD" }}
            paths: [ ".plz-cache/third_party/python" ]
        - save_cache:
            key: e2e-darwin-arm64-v1-{{ checksum "/tmp/e2e-cache-key" }}
