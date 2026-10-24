@@ -509,11 +509,11 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		return totalSize // Nothing to do, cache is small enough.
 	}
 	// OK, we need to slim it down a bit. We implement a simple LRU algorithm.
-	slices.SortFunc(entries, func(a, b cacheEntry) int {
+	slices.SortFunc(candidates, func(a, b *cacheEntry) int {
 		if diff := a.Mtime - b.Mtime; diff > -accessTimeGracePeriod && diff < accessTimeGracePeriod {
-			return a.Size > b.Size
+			return cmp.Compare(b.Size, a.Size)
 		}
-		return a.Mtime < b.Mtime
+		return cmp.Compare(a.Mtime, b.Mtime)
 	})
 	for _, entry := range candidates {
 		if _, marked := cache.isMarked(entry.Path); marked {
