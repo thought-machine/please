@@ -110,6 +110,12 @@ linters:
           - staticcheck
         path: (.+)\.go$
         text: ST1005
+      # REAPI marks fields deprecated as it evolves, but we still need them to stay compatible with
+      # servers speaking older versions.
+      - linters:
+          - staticcheck
+        path: (.+)\.go$
+        text: 'SA1019: .*github\.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2\.'
     paths:
       - test_data
       - third_party$
