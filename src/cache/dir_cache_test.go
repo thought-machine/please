@@ -95,7 +95,7 @@ func TestCleanForReal(t *testing.T) {
 	target2 := makeTarget2("//test4:target2", 2000)
 	writeFile(cachePath(target2, false), 2000)
 	assert.True(t, inCache(target2))
-	// This time it should clean target2, because target1 has just been stored
+	// This time it should clean target2, because target1 is hard linked into plz-out so removing it wouldn't free anything
 	totalSize := cache.clean(5000, 1000)
 	assert.EqualValues(t, 0, totalSize)
 	assert.True(t, inCache(target1))
@@ -110,7 +110,7 @@ func TestCleanForReal2(t *testing.T) {
 	target2 := makeTarget2("//test5:target2", 2000)
 	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCache(target2))
-	// This time it should clean target1, because target2 has just been stored
+	// This time it should clean target1, because target2 is hard linked into plz-out so removing it wouldn't free anything
 	totalSize := cache.clean(5000, 1000)
 	assert.EqualValues(t, 0, totalSize)
 	assert.False(t, inCache(target1))
@@ -163,6 +163,24 @@ func TestCleanLeastRecentlyUsed(t *testing.T) {
 	setMtime(t, cachePath(target3, false), 2*time.Hour)
 	// Should remove the least recently used entry first, which is target2.
 	assert.EqualValues(t, 12000, cache.clean(15000, 13000))
+	assert.True(t, inCache(target1))
+	assert.False(t, inCache(target2))
+	assert.True(t, inCache(target3))
+}
+
+func TestCleanLargestFirstWithinGracePeriod(t *testing.T) {
+	cache := makeCache(".plz-cache-test12", false)
+	target1 := makeTarget2("//test12:target1", 1000)
+	writeFile(cachePath(target1, false), 1000)
+	setMtime(t, cachePath(target1, false), 5*time.Minute)
+	target2 := makeTarget2("//test12:target2", 3000)
+	writeFile(cachePath(target2, false), 3000)
+	target3 := makeTarget2("//test12:target3", 2000)
+	writeFile(cachePath(target3, false), 2000)
+	setMtime(t, cachePath(target3, false), 4*time.Minute)
+	// These were all used within the grace period of each other, so it should remove the largest
+	// entry first (target2), even though it's the most recently used.
+	assert.EqualValues(t, 9000, cache.clean(15000, 13000))
 	assert.True(t, inCache(target1))
 	assert.False(t, inCache(target2))
 	assert.True(t, inCache(target3))
