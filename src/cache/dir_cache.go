@@ -381,6 +381,7 @@ func newDirCache(config *core.Configuration) *dirCache {
 			total, free, err := diskSpace(cache.Dir)
 			if err != nil {
 				log.Warning("Failed to determine free space for dir cache: %s", err)
+				// Safe to carry on, we handle this in the policy below (although it is also very unlikely to happen)
 			}
 			cache.clean(newCleanPolicy(config, total, err == nil), free)
 		}()
