@@ -101,6 +101,18 @@ func TestConfigOverrideBool(t *testing.T) {
 	assert.True(t, config.Cache.DirCompress)
 }
 
+func TestConfigOverrideTextUnmarshaler(t *testing.T) {
+	config := DefaultConfiguration()
+	err := config.ApplyOverrides(map[string]string{
+		"cache.dircachelowwatermark": "1G",
+		"cache.dircacheminfreespace": "20%",
+	})
+	assert.NoError(t, err)
+	assert.EqualValues(t, 1000*1000*1000, config.Cache.DirCacheLowWaterMark)
+	assert.EqualValues(t, 20, config.Cache.DirCacheMinFreeSpace.Of(100))
+	assert.Error(t, config.ApplyOverrides(map[string]string{"cache.dircacheminfreespace": "lots"}))
+}
+
 func TestConfigOverrideSlice(t *testing.T) {
 	config := DefaultConfiguration()
 	err := config.ApplyOverrides(map[string]string{"build.path": "/mnt/bin,/mnt/sbin"})
@@ -198,7 +210,9 @@ func TestReadDurations(t *testing.T) {
 func TestReadByteSizes(t *testing.T) {
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/bytesize_good.plzconfig"}, nil)
 	assert.NoError(t, err)
-	assert.EqualValues(t, 500*1000*1000, config.Cache.DirCacheHighWaterMark)
+	assert.EqualValues(t, 500*1000*1000, config.Cache.DirCacheHighWaterMark.Of(0))
+	assert.True(t, config.Cache.DirCacheMinFreeSpace.IsPercent)
+	assert.EqualValues(t, 500, config.Cache.DirCacheMinFreeSpace.Of(10000))
 	_, err = ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/bytesize_bad.plzconfig"}, nil)
 	assert.Error(t, err)
 }

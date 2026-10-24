@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
@@ -76,6 +77,65 @@ func (b *ByteSize) UnmarshalFlag(in string) error {
 // UnmarshalText implements the encoding.TextUnmarshaler interface
 func (b *ByteSize) UnmarshalText(text []byte) error {
 	return b.UnmarshalFlag(string(text))
+}
+
+// A ByteSizeOrPercentage is a quantity of bytes that can be given either absolutely, in the same
+// way as a ByteSize (eg. "10G"), or as a percentage of some total that's only known later (eg. "10%").
+type ByteSizeOrPercentage struct {
+	Bytes     uint64
+	Percent   float64
+	IsPercent bool
+	IsSet     bool
+}
+
+// Percentage returns a ByteSizeOrPercentage representing the given percentage.
+func Percentage(percent float64) ByteSizeOrPercentage {
+	return ByteSizeOrPercentage{Percent: percent, IsPercent: true, IsSet: true}
+}
+
+// UnmarshalFlag implements the flags.Unmarshaler interface.
+func (b *ByteSizeOrPercentage) UnmarshalFlag(in string) error {
+	if percent, ok := strings.CutSuffix(strings.TrimSpace(in), "%"); ok {
+		p, err := strconv.ParseFloat(strings.TrimSpace(percent), 64)
+		if err != nil {
+			return flagsError(err)
+		} else if p < 0 || p > 100 {
+			return flagsError(fmt.Errorf("percentage must be between 0 and 100, was %s", in))
+		}
+		*b = Percentage(p)
+		return nil
+	}
+	b2, err := humanize.ParseBytes(in)
+	*b = ByteSizeOrPercentage{Bytes: b2, IsSet: true}
+	return flagsError(err)
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface
+func (b *ByteSizeOrPercentage) UnmarshalText(text []byte) error {
+	return b.UnmarshalFlag(string(text))
+}
+
+// MarshalText implements the encoding.TextMarshaler interface.
+func (b ByteSizeOrPercentage) MarshalText() ([]byte, error) {
+	return []byte(b.String()), nil
+}
+
+// String implements the fmt.Stringer interface
+func (b ByteSizeOrPercentage) String() string {
+	if !b.IsSet {
+		return ""
+	} else if b.IsPercent {
+		return strconv.FormatFloat(b.Percent, 'f', -1, 64) + "%"
+	}
+	return humanize.Bytes(b.Bytes)
+}
+
+// Of returns the number of bytes this represents, where any percentage is of the given total.
+func (b ByteSizeOrPercentage) Of(total uint64) uint64 {
+	if b.IsPercent {
+		return uint64(float64(total) * b.Percent / 100)
+	}
+	return b.Bytes
 }
 
 // A Duration is used for flags that represent a time duration; it's just a wrapper
