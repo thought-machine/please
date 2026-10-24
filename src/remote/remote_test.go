@@ -518,6 +518,7 @@ func TestOutputSymlinksDownloaded(t *testing.T) {
 	c.state.Graph.AddTarget(target)
 	_, err := c.Build(target)
 	require.NoError(t, err)
+	require.NoError(t, c.Download(target))
 
 	outs := c.targetOutputs(target.Label)
 	require.NotNil(t, outs)
