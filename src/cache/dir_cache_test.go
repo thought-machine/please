@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -261,6 +262,75 @@ func TestNewCleanPolicy(t *testing.T) {
 		LowWaterMark:  humanize.GByte,
 		MinFreeSpace:  100 * humanize.GByte,
 	}, newCleanPolicy(config, humanize.TByte, true))
+}
+
+func TestCleanRemovesLockFiles(t *testing.T) {
+	cache := makeCache(".plz-cache-test16", false)
+	target1 := makeTarget2("//test16:target1", 2000)
+	writeFile(cachePath(target1, false), 2000)
+	entry1 := filepath.Dir(cachePath(target1, false))
+	writeFile(entry1+".lock", 0)
+	target2 := makeTarget2("//test16:target2", 2000)
+	cache.Store(target2, hash, target2.Outputs(nil))
+	entry2 := filepath.Dir(cachePath(target2, false))
+	// This one is left over from an entry that no longer exists
+	orphan := filepath.Join(filepath.Dir(entry2), base64.URLEncoding.EncodeToString([]byte("09876543210987654321"))) + ".lock"
+	writeFile(orphan, 0)
+	// And this one is too, but someone's currently using it.
+	inUse := filepath.Join(filepath.Dir(entry2), base64.URLEncoding.EncodeToString([]byte("abcdefghijabcdefghij"))) + ".lock"
+	lockFile, err := core.AcquireSharedFileLock(inUse)
+	assert.NoError(t, err)
+	defer core.ReleaseFileLock(lockFile)
+
+	cache.clean(sizePolicy(1, 0), 0)
+	assert.False(t, inCache(target1))
+	assert.False(t, core.PathExists(entry1+".lock"), "Lock file should be removed with its entry")
+	assert.True(t, inCache(target2))
+	assert.True(t, core.PathExists(entry2+".lock"), "Lock file of an existing entry should be kept")
+	assert.False(t, core.PathExists(orphan), "Orphaned lock file should be removed")
+	assert.True(t, core.PathExists(inUse), "Lock file that's in use should be kept")
+}
+
+func TestLockEntryRetriesAfterRemoval(t *testing.T) {
+	path := ".plz-cache-test17/entry"
+	assert.NoError(t, os.MkdirAll(filepath.Dir(path), core.DirPermissions))
+	lockFile, err := lockEntry(path, syscall.LOCK_EX)
+	assert.NoError(t, err)
+	ch := make(chan *os.File)
+	go func() {
+		lockFile2, err := lockEntry(path, syscall.LOCK_EX)
+		assert.NoError(t, err)
+		ch <- lockFile2
+	}()
+	time.Sleep(50 * time.Millisecond) // Give it a chance to start waiting for the lock
+	// Remove the lock file while holding it, as cleaning does.
+	assert.NoError(t, os.Remove(path+".lock"))
+	core.ReleaseFileLock(lockFile)
+	lockFile2 := <-ch
+	defer core.ReleaseFileLock(lockFile2)
+	// It should have ended up with a new lock file rather than the one we removed.
+	assert.True(t, isLockFile(lockFile2, path+".lock"))
+}
+
+func TestCleanIfNeeded(t *testing.T) {
+	cache := makeCache(".plz-cache-test18", false)
+	policy := cleanPolicy{HighWaterMark: 100000, MinFreeSpace: 1000}
+	// Never been cleaned before, so it should clean.
+	assert.True(t, cache.cleanIfNeeded(policy, 2000))
+	// Not again straight away though.
+	assert.False(t, cache.cleanIfNeeded(policy, 2000))
+	// Unless the disk is too full.
+	assert.True(t, cache.cleanIfNeeded(policy, 500))
+	// Or once enough time has passed.
+	then := time.Now().Add(-2 * cleanInterval)
+	assert.NoError(t, os.Chtimes(filepath.Join(cache.Dir, cleanTimestampFile), then, then))
+	assert.True(t, cache.cleanIfNeeded(policy, 2000))
+	// But never if someone else is cleaning.
+	assert.NoError(t, os.Chtimes(filepath.Join(cache.Dir, cleanTimestampFile), then, then))
+	lockFile, err := core.AcquireExclusiveFileLock(filepath.Join(cache.Dir, cleanLockFile))
+	assert.NoError(t, err)
+	defer core.ReleaseFileLock(lockFile)
+	assert.False(t, cache.cleanIfNeeded(policy, 500))
 }
 
 func TestRetrieveUpdatesMtime(t *testing.T) {
