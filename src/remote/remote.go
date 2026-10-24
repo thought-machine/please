@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/balancer"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
@@ -207,13 +208,11 @@ func (c *Client) initExec() error {
 	if err != nil {
 		return err
 	}
-	client, err := client.NewClient(context.Background(), c.instance, client.DialParams{
-		Service:            c.state.Config.Remote.URL,
-		CASService:         c.state.Config.Remote.CASURL,
-		NoSecurity:         !c.state.Config.Remote.Secure,
-		TransportCredsOnly: c.state.Config.Remote.Secure,
-		DialOpts:           dialOpts,
-	}, client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(map[string]time.Duration{
+	execConn, casConn, err := c.dialConnections(dialOpts)
+	if err != nil {
+		return err
+	}
+	client, err := client.NewClientFromConnection(context.Background(), c.instance, execConn, casConn, client.UseBatchOps(true), &client.TreeSymlinkOpts{Preserved: true}, client.RetryTransient(), client.RPCTimeouts(map[string]time.Duration{
 		"default":          time.Duration(c.state.Config.Remote.Timeout),
 		"GetCapabilities":  5 * time.Second,
 		"BatchUpdateBlobs": time.Minute,
@@ -282,6 +281,52 @@ func (c *Client) initExec() error {
 		c.fetchClient = fpb.NewFetchClient(client.Connection())
 	}
 	return nil
+}
+
+// dialConnections opens the connections to the execution and CAS servers.
+// The two have quite different traffic so we size them separately; execution is a relatively
+// small number of long-lived but mostly idle streams, whereas CAS has many short-lived
+// RPCs which can benefit from multiple connections.
+func (c *Client) dialConnections(dialOpts []grpc.DialOption) (execConn, casConn client.GrpcClientConn, err error) {
+	ctx := context.Background()
+	opts, _, err := client.OptsFromParams(ctx, client.DialParams{
+		NoSecurity:         !c.state.Config.Remote.Secure,
+		TransportCredsOnly: c.state.Config.Remote.Secure,
+		DialOpts:           dialOpts,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to prepare gRPC dial options: %w", err)
+	}
+	dial := func(url string, n int) (client.GrpcClientConn, error) {
+		pool, err := balancer.NewRRConnPool(ctx, n, func(ctx context.Context) (*grpc.ClientConn, error) {
+			return grpc.NewClient(url, opts...)
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to %s: %w", url, err)
+		}
+		return pool, nil
+	}
+	// gRPC won't open more than one HTTP/2 connection per ClientConn, so if the server (or some
+	// proxy in front of it) limits concurrent streams per connection, further Execute calls block
+	// until one finishes. Common limits are 100-128; 64 per connection gives some headroom since
+	// round-robin doesn't balance long-lived streams perfectly.
+	numExecConns := max((c.state.Config.NumRemoteExecutors()+63)/64, 1)
+	numCASConns := max(c.state.Config.Remote.CASConnections, 1)
+	url := c.state.Config.Remote.URL
+	casURL := c.state.Config.Remote.CASURL
+	if casURL == "" || casURL == url {
+		// Both kinds of traffic share these connections, so we need the capacity of both.
+		conn, err := dial(url, numExecConns+numCASConns)
+		return conn, conn, err
+	}
+	if execConn, err = dial(url, numExecConns); err != nil {
+		return nil, nil, err
+	}
+	if casConn, err = dial(casURL, numCASConns); err != nil {
+		execConn.Close()
+		return nil, nil, err
+	}
+	return execConn, casConn, nil
 }
 
 // initFetch initialises the remote fetch server.
