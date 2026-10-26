@@ -453,7 +453,7 @@ func TestTLSConfig(t *testing.T) {
 	_, err = config.TLSConfig()
 	assert.Error(t, err)
 
-	// t.TempDir() is relative when run remotely (TMPDIR is .), and relative paths are resolved against RepoRoot.
+	// t.TempDir() is relative when run on CI (TMPDIR is .), and relative paths are resolved against RepoRoot.
 	notPEM, err := filepath.Abs(filepath.Join(t.TempDir(), "not.pem"))
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(notPEM, []byte("wibble"), 0644))
