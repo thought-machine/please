@@ -469,7 +469,8 @@ jobs:
      docker:
        - image: ghcr.io/thought-machine/please_ubuntu:20261021
      environment:
-       GOOGLE_APPLICATION_CREDENTIALS=/tmp/service_account.json
+       GOOGLE_APPLICATION_CREDENTIALS: /tmp/service_account.json
+       GOMEMLIMIT: 15872MiB  # 15.5GiB. The xlarge class has 16GiB; keep the Go heap below that so we don't get OOM killed.
      resource_class: xlarge  # Want to run these tests with a significant amount of parallelism
      steps:
        - checkout
