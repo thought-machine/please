@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -440,4 +441,23 @@ func TestPluginConfig(t *testing.T) {
 	config, err := ReadConfigFiles(fs.HostFS, []string{"src/core/test_data/plugin.plzconfig"}, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"fooc"}, config.Plugin["foo"].ExtraValues["fooctool"])
+}
+
+func TestTLSConfig(t *testing.T) {
+	config := DefaultConfiguration()
+	tlsConfig, err := config.TLSConfig()
+	assert.NoError(t, err)
+	assert.Nil(t, tlsConfig)
+
+	config.Build.AdditionalCACerts = []string{"/does/not/exist.pem"}
+	_, err = config.TLSConfig()
+	assert.Error(t, err)
+
+	// t.TempDir() is relative when run on CI (TMPDIR is .), and relative paths are resolved against RepoRoot.
+	notPEM, err := filepath.Abs(filepath.Join(t.TempDir(), "not.pem"))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(notPEM, []byte("wibble"), 0644))
+	config.Build.AdditionalCACerts = []string{notPEM}
+	_, err = config.TLSConfig()
+	assert.ErrorContains(t, err, "no valid PEM-encoded certificates")
 }

@@ -41,6 +41,7 @@ var errStop = fmt.Errorf("stopping build")
 // httpClient is the shared http client that we use for fetching remote files.
 var httpClient *retryablehttp.Client
 var httpClientOnce sync.Once
+var httpClientErr error
 var httpClientLimiter chan struct{}
 
 var successfulRemoteTargetBuildDuration = metrics.NewHistogramVec(
@@ -1058,15 +1059,18 @@ func fetchRemoteFile(state *core.BuildState, target *core.BuildTarget) error {
 		httpClient = retryablehttp.NewClient()
 		httpClient.Logger = &cli.HTTPLogWrapper{Log: log}
 
+		transport := httpClient.HTTPClient.Transport.(*http.Transport)
 		if state.Config.Build.HTTPProxy != "" {
-			httpClient.HTTPClient.Transport = &http.Transport{
-				Proxy: http.ProxyURL(state.Config.Build.HTTPProxy.AsURL()),
-			}
+			transport.Proxy = http.ProxyURL(state.Config.Build.HTTPProxy.AsURL())
 		}
+		transport.TLSClientConfig, httpClientErr = state.Config.TLSConfig()
 
 		httpClient.HTTPClient.Timeout = time.Duration(state.Config.Build.Timeout)
 		httpClientLimiter = make(chan struct{}, state.Config.Build.ParallelDownloads)
 	})
+	if httpClientErr != nil {
+		return httpClientErr
+	}
 
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return err

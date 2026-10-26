@@ -57,6 +57,11 @@ func pleaseVersion() semver.Version {
 func CheckAndUpdate(config *core.Configuration, updatesEnabled, updateCommand, forceUpdate, verify, progress, prerelease bool) {
 	httpClient = retryablehttp.NewClient()
 	httpClient.Logger = &cli.HTTPLogWrapper{Log: log}
+	tlsConfig, err := config.TLSConfig()
+	if err != nil {
+		log.Fatalf("Failed to load additional CA certificates: %s", err)
+	}
+	httpClient.HTTPClient.Transport.(*http.Transport).TLSClientConfig = tlsConfig
 
 	if !shouldUpdate(config, updatesEnabled, updateCommand, prerelease) && !forceUpdate {
 		clean(config, updateCommand)
