@@ -409,6 +409,7 @@ func DefaultConfiguration() *Configuration {
 	config.Display.MaxWorkers = 40
 	config.Display.ColourScheme = "dark"
 	config.Remote.NumExecutors = 20 // kind of arbitrary
+	config.Remote.CASConnections = 4
 	config.Remote.Secure = true
 	config.Remote.VerifyOutputs = true
 	config.Remote.UploadDirs = true
@@ -569,6 +570,7 @@ type Configuration struct {
 		CASURL                  string       `help:"URL for the CAS service, if it is different to the main one."`
 		AssetURL                string       `help:"URL for the remote asset server, if it is different to the main one."`
 		NumExecutors            int          `help:"Maximum number of remote executors to use simultaneously."`
+		CASConnections          int          `help:"Number of connections to open to the CAS server. More connections can improve throughput for large transfers, at the cost of more load on the server."`
 		Instance                string       `help:"Remote instance name to request; depending on the server this may be required."`
 		Name                    string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
 		DisplayURL              string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
