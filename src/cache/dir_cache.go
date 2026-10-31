@@ -8,8 +8,10 @@ import (
 	"cmp"
 	"compress/gzip"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -50,7 +52,7 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []strin
 		return
 	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
-	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
+	if err := os.Rename(tmpDir, cacheDir); err != nil && !errors.Is(err, iofs.ErrExist) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
 }
@@ -414,7 +416,7 @@ func (cache *dirCache) cleanIfNeeded(policy cleanPolicy, freeSpace uint64) bool 
 	}
 	cache.clean(policy, freeSpace)
 	now := time.Now()
-	if err := os.WriteFile(timestampFile, nil, 0644); err != nil {
+	if err := os.WriteFile(timestampFile, []byte(now.Format(time.StampMicro)), 0644); err != nil {
 		log.Warning("Failed to record when the dir cache was cleaned: %s", err)
 	} else if err := os.Chtimes(timestampFile, now, now); err != nil {
 		log.Warning("Failed to record when the dir cache was cleaned: %s", err)
