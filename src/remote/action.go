@@ -136,9 +136,6 @@ func (c *Client) buildCommand(target *core.BuildTarget, inputRoot *pb.Directory,
 
 // stampedBuildEnvironment returns a build environment, optionally with a stamp if stamp is true.
 func (c *Client) stampedBuildEnvironment(state *core.BuildState, target *core.BuildTarget, inputRoot *pb.Directory, stamp, isRuntime bool) core.BuildEnv {
-	if target.IsFilegroup {
-		return core.GeneralBuildEnvironment(state) // filegroups don't need a full build environment
-	}
 	// We generate the stamp ourselves from the input root.
 	// TODO(peterebden): it should include the target properties too...
 	hash := c.sum(append(mustMarshal(inputRoot), build.RuleHash(state, target, isRuntime, false)...))
@@ -198,23 +195,12 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 	b := newDirBuilder(c)
 	for input := range c.state.IterInputs(target, isTest) {
 		if l, ok := input.Label(); ok {
-			o := c.targetOutputs(l)
-			if o == nil {
-				if dep := c.state.Graph.TargetOrDie(l); dep.Local {
-					// We have built this locally, need to upload its outputs
-					if err := c.uploadLocalTarget(dep); err != nil {
-						return nil, err
-					}
-					o = c.targetOutputs(l)
-				} else {
-					// Classic "we shouldn't get here" stuff
-					return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", l)
-				}
+			o, err := c.dependencyOutputs(l)
+			if err != nil {
+				return nil, err
 			}
 			pkgName := c.state.Graph.TargetOrDie(l).PackageDir()
-			if target.IsFilegroup {
-				pkgName = target.PackageDir()
-			} else if isTest && l == target.Label {
+			if isTest && l == target.Label {
 				// At test time the target itself is put at the root rather than in the normal dir.
 				// This is just How Things Are, so mimic it here.
 				pkgName = "."
@@ -235,11 +221,6 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 					Name:   filepath.Base(d.Name),
 					Digest: d.Digest,
 				})
-				if target.IsFilegroup {
-					if err := c.addChildDirs(b, filepath.Join(pkgName, d.Name), d.Digest); err != nil {
-						return b, err
-					}
-				}
 			}
 			for _, s := range o.Symlinks {
 				d := b.Dir(filepath.Join(pkgName, filepath.Dir(s.Name)))
@@ -250,31 +231,7 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 			}
 			continue
 		}
-		if i, ok := input.(core.SubrepoFileLabel); ok && target.Subrepo.IsRemoteSubrepo() {
-			for _, p := range i.Paths(c.state.Graph) {
-				subrepoPath, err := filepath.Rel(target.Subrepo.PackageRoot, p)
-				if err != nil {
-					return nil, fmt.Errorf("%v: source file not in subrepo package root (%v): %v", target.Label, p, err)
-				}
-				fileNode, dirNode, symlinkNode, err := remotefs.FindNode(target.Subrepo.FS(), subrepoPath)
-				if err != nil {
-					return nil, fmt.Errorf("%v: failed to find file in subrepo output: %v", target.Label, err)
-				}
-
-				dir := b.Dir(filepath.Dir(p))
-				if fileNode != nil {
-					dir.Files = append(dir.Files, fileNode)
-				}
-				if dirNode != nil {
-					dir.Directories = append(dir.Directories, dirNode)
-				}
-				if symlinkNode != nil {
-					dir.Symlinks = append(dir.Symlinks, symlinkNode)
-				}
-			}
-			continue
-		}
-		if err := c.uploadInput(b, ch, input); err != nil {
+		if err := c.addSourceInput(b, ch, target, input); err != nil {
 			return nil, err
 		}
 	}
@@ -306,20 +263,46 @@ func (c *Client) uploadInputDir(ch chan<- *uploadinfo.Entry, target *core.BuildT
 	return b, nil
 }
 
-// addChildDirs adds a set of child directories to a builder.
-func (c *Client) addChildDirs(b *dirBuilder, name string, dg *pb.Digest) error {
-	dir, err := c.readDirectory(dg)
-	if err != nil {
-		return err
+// dependencyOutputs returns the outputs of a dependency, which must have already been built.
+// If it was built locally, its outputs are uploaded first.
+func (c *Client) dependencyOutputs(label core.BuildLabel) (*pb.Directory, error) {
+	if o := c.targetOutputs(label); o != nil {
+		return o, nil
+	} else if dep := c.state.Graph.TargetOrDie(label); !dep.Local {
+		// Classic "we shouldn't get here" stuff
+		return nil, fmt.Errorf("Outputs not known for %s (should be built by now)", label)
+	} else if err := c.uploadLocalTarget(dep); err != nil {
+		return nil, err
 	}
-	d := b.Dir(name)
-	d.Directories = append(d.Directories, dir.Directories...)
-	d.Files = append(d.Files, dir.Files...)
-	d.Symlinks = append(d.Symlinks, dir.Symlinks...)
-	d.NodeProperties = dir.NodeProperties
-	for _, subdir := range dir.Directories {
-		if err := c.addChildDirs(b, filepath.Join(name, subdir.Name), subdir.Digest); err != nil {
-			return err
+	return c.targetOutputs(label), nil
+}
+
+// addSourceInput adds a single source input (i.e. not the output of another target) to a builder, uploading
+// it if needed.
+func (c *Client) addSourceInput(b *dirBuilder, ch chan<- *uploadinfo.Entry, target *core.BuildTarget, input core.BuildInput) error {
+	i, ok := input.(core.SubrepoFileLabel)
+	if !ok || !target.Subrepo.IsRemoteSubrepo() {
+		return c.uploadInput(b, ch, input)
+	}
+	for _, p := range i.Paths(c.state.Graph) {
+		subrepoPath, err := filepath.Rel(target.Subrepo.PackageRoot, p)
+		if err != nil {
+			return fmt.Errorf("%v: source file not in subrepo package root (%v): %v", target.Label, p, err)
+		}
+		fileNode, dirNode, symlinkNode, err := remotefs.FindNode(target.Subrepo.FS(), subrepoPath)
+		if err != nil {
+			return fmt.Errorf("%v: failed to find file in subrepo output: %v", target.Label, err)
+		}
+
+		dir := b.Dir(filepath.Dir(p))
+		if fileNode != nil {
+			dir.Files = append(dir.Files, fileNode)
+		}
+		if dirNode != nil {
+			dir.Directories = append(dir.Directories, dirNode)
+		}
+		if symlinkNode != nil {
+			dir.Symlinks = append(dir.Symlinks, symlinkNode)
 		}
 	}
 	return nil

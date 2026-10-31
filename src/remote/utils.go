@@ -41,22 +41,11 @@ var downloadErrors = metrics.NewCounterVec(
 	[]string{"ci"},
 )
 
-var directoriesRetrieved = metrics.NewCounterVec(
-	"remote",
-	"dirs_retrieved_total",
-	"Number of directories retrieved from cache",
-	[]string{"ci"},
-)
-
-var directoriesDownloaded = metrics.NewCounterVec(
-	"remote",
-	"dirs_downloaded_total",
-	"Number of directories downloaded from remote",
-	[]string{"ci"},
-)
-
 // xattrName is the name we use to record attributes on files.
 const xattrName = "user.plz_hash_remote"
+
+// nodeXattrName is the name we use to record the digests of individual outputs of filegroups that we download.
+const nodeXattrName = "user.plz_hash_remote_node"
 
 // sum calculates a checksum for a byte slice.
 func (c *Client) sum(b []byte) []byte {
@@ -226,18 +215,6 @@ func (c *Client) setOutputDirectoryOuts(target *core.BuildTarget, actionResultFS
 	return nil
 }
 
-// readDirectory reads a Directory proto, possibly using a local cache, otherwise going to the remote
-func (c *Client) readDirectory(dg *pb.Digest) (*pb.Directory, error) {
-	if dir, present := c.directories.Load(dg.Hash); present {
-		directoriesRetrieved.WithLabelValues(metrics.CILabel).Inc()
-		return dir.(*pb.Directory), nil
-	}
-	dir := &pb.Directory{}
-	_, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir)
-	directoriesDownloaded.WithLabelValues(metrics.CILabel).Inc()
-	return dir, err
-}
-
 // maybeGetOutDir will get the output directory based on the directory provided. If there's no matching directory, this
 // will return an empty string indicating that that action output was not an output directory.
 func maybeGetOutDir(dir string, outDirs []core.OutputDirectory) core.OutputDirectory {
@@ -296,9 +273,7 @@ func (c *Client) retrieveLocalResults(target *core.BuildTarget, digest *pb.Diges
 		if err != nil {
 			log.Warningf("Failed to retrieve stored metadata for target %s, %v", target.Label, err)
 		}
-		// Empty filegroups have empty action results
-		isEmptyFilegroup := target.IsFilegroup && len(target.AllSources()) == 0
-		if metadata != nil && (len(metadata.RemoteAction) > 0 || isEmptyFilegroup) {
+		if metadata != nil && len(metadata.RemoteAction) > 0 {
 			ar := &pb.ActionResult{}
 			outputs := &pb.Tree{}
 			if err := proto.Unmarshal(metadata.RemoteAction, ar); err != nil {
@@ -516,38 +491,9 @@ func (b *dirBuilder) Build(ch chan<- *uploadinfo.Entry) *pb.Directory {
 	return b.root
 }
 
-// Node returns either the file or directory corresponding to the given path (or nil for both if not found)
-func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode) {
-	dir := b.Dir(filepath.Dir(name))
-	base := filepath.Base(name)
-	for _, d := range dir.Directories {
-		if d.Name == base {
-			return d, nil
-		}
-	}
-	for _, f := range dir.Files {
-		if f.Name == base {
-			return nil, f
-		}
-	}
-	return nil, nil
-}
-
-// Tree returns the tree rooted at a given directory name.
-// It does not calculate digests or upload, so call Build beforehand if that is needed.
-func (b *dirBuilder) Tree(root string) *pb.Tree {
-	d := b.dir(root, "")
-	tree := &pb.Tree{Root: d}
-	b.tree(tree, root, d)
-	return tree
-}
-
-func (b *dirBuilder) tree(tree *pb.Tree, root string, dir *pb.Directory) {
-	tree.Children = append(tree.Children, dir)
-	for _, d := range dir.Directories {
-		name := filepath.Join(root, d.Name)
-		b.tree(tree, name, b.dirs[name])
-	}
+// Node returns the file, directory or symlink corresponding to the given path (or nil for all if not found)
+func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode, *pb.SymlinkNode) {
+	return findNode(b.Dir(filepath.Dir(name)), filepath.Base(name))
 }
 
 // Walk walks the directory tree calculating the digest. If ch is non-nil, it will also upload the direcory protos.

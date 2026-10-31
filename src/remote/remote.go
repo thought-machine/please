@@ -93,11 +93,6 @@ type Client struct {
 	// This map is of effective type `map[*core.BuildTarget]*pendingDownload`
 	downloads sync.Map
 
-	// Used to store directories output from actions.
-	//
-	// This map is of effective type `map[string]*pb.Directory`
-	directories sync.Map
-
 	// Server-sent cache properties
 	maxBlobBatchSize int64
 
@@ -347,6 +342,8 @@ func (c *Client) SubrepoFS(target *core.BuildTarget, root string) iofs.FS {
 func (c *Client) Build(target *core.BuildTarget) (*core.BuildMetadata, error) {
 	if err := c.CheckInitialised(); err != nil {
 		return nil, err
+	} else if target.IsFilegroup {
+		return c.buildFilegroup(target)
 	}
 	metadata, ar, _, err := c.build(target)
 	if err != nil {
@@ -420,29 +417,15 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		return nil // No download needed since this target was built locally
 	}
 	return c.download(target, func() error {
+		if target.IsFilegroup {
+			return c.downloadFilegroup(target)
+		}
 		buildAction := c.unstampedBuildActionDigests.Get(target.Label)
 		file, err := core.AcquireExclusiveFileLock(target.BuildLockFile())
 		if err != nil {
 			return err
 		}
 		defer core.ReleaseFileLock(file)
-
-		// This is a bit of a grungy hack to avoid clobbering outputs.
-		// See https://github.com/thought-machine/please/issues/2886
-		if target.IsFilegroup {
-			for _, t := range target.AllSources() {
-				if l, ok := t.Label(); ok {
-					if l.PackageName == target.Label.PackageName && l.Subrepo == target.Label.Subrepo {
-						t := c.state.Graph.TargetOrDie(l)
-						file, err := core.AcquireExclusiveFileLock(t.BuildLockFile())
-						if err != nil {
-							return err
-						}
-						defer core.ReleaseFileLock(file)
-					}
-				}
-			}
-		}
 
 		if c.outputsExist(target, buildAction) {
 			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
@@ -663,11 +646,8 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
-	// Remote actions & filegroups get special treatment at this point.
-	if target.IsFilegroup {
-		// Filegroups get special-cased since they are just a movement of files.
-		return c.buildFilegroup(target, command, digest)
-	} else if target.IsRemoteFile {
+	// Remote files & text files get special treatment at this point.
+	if target.IsRemoteFile {
 		return c.fetchRemoteFile(target, digest)
 	} else if target.IsTextFile {
 		return c.buildTextFile(c.state, target, command, digest)
@@ -848,6 +828,12 @@ func logResponseTimings(target *core.BuildTarget, ar *pb.ActionResult) {
 
 // PrintHashes prints the action hashes for a target.
 func (c *Client) PrintHashes(target *core.BuildTarget, isTest bool) {
+	if target.IsFilegroup {
+		// Filegroups don't have an action, but their outputs are the important part anyway.
+		dg := c.digestMessage(c.targetOutputs(target.Label))
+		fmt.Printf("Outputs: %7d bytes: %s\n", dg.SizeBytes, dg.Hash)
+		return
+	}
 	actionDigest := c.unstampedBuildActionDigests.Get(target.Label)
 	fmt.Printf(" Action: %7d bytes: %s\n", actionDigest.SizeBytes, actionDigest.Hash)
 	if c.state.Config.Remote.DisplayURL != "" {
@@ -905,54 +891,6 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 	}
 	md, err := c.buildMetadata(target, ar, false, false)
 	return md, ar, err
-}
-
-// buildFilegroup "builds" a single filegroup target.
-func (c *Client) buildFilegroup(target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	inputDir, err := c.uploadInputDir(nil, target, false) // We don't need to actually upload the inputs here, that is already done.
-	if err != nil {
-		return nil, nil, err
-	}
-	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
-		defer close(ch)
-		inputDir.Build(ch)
-		for _, out := range command.OutputPaths {
-			if d, f := inputDir.Node(filepath.Join(target.PackageDir(), out)); d != nil {
-				entry, digest := c.protoEntry(inputDir.Tree(filepath.Join(target.PackageDir(), out)))
-				ch <- entry
-				ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
-					Path:       out,
-					TreeDigest: digest,
-				})
-			} else if f != nil {
-				ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-					Path:         out,
-					Digest:       f.Digest,
-					IsExecutable: f.IsExecutable,
-				})
-			} else {
-				// Of course, we should not get here (classic developer things...)
-				return fmt.Errorf("Missing output from filegroup: %s", out)
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, nil, err
-	}
-	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: actionDigest,
-		ActionResult: ar,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
-	}
-	md, err := c.buildMetadata(target, ar, false, false)
-	if err != nil {
-		return nil, nil, err
-	}
-	c.locallyCacheResults(target, actionDigest, md)
-	return md, ar, nil
 }
 
 // buildTextFile "builds" uploads a text file to the CAS

@@ -516,6 +516,16 @@ func (target *BuildTarget) AllSourceLocalPaths(graph *BuildGraph) []string {
 	return target.allSourcePaths(graph, BuildInput.LocalPaths)
 }
 
+// SourceFullPaths is like AllSourceFullPaths but for a single source of this target.
+func (target *BuildTarget) SourceFullPaths(graph *BuildGraph, source BuildInput) []string {
+	return target.sourcePaths(graph, source, BuildInput.FullPaths)
+}
+
+// SourceLocalPaths is like AllSourceLocalPaths but for a single source of this target.
+func (target *BuildTarget) SourceLocalPaths(graph *BuildGraph, source BuildInput) []string {
+	return target.sourcePaths(graph, source, BuildInput.LocalPaths)
+}
+
 type buildPathsFunc func(BuildInput, *BuildGraph) []string
 
 func (target *BuildTarget) allSourcePaths(graph *BuildGraph, full buildPathsFunc) []string {
