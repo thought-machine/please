@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/thought-machine/please/src/core"
@@ -65,7 +66,7 @@ func TestCleanNoop(t *testing.T) {
 	target2 := makeTarget2("//test2:target2", 2000)
 	writeFile(cachePath(target2, false), 2000)
 	// Doesn't clean anything this time because the high water mark is sufficiently high
-	totalSize := cache.clean(20000, 1000)
+	totalSize := cache.clean(sizePolicy(20000, 1000), 0)
 	assert.EqualValues(t, 12000, totalSize)
 	assert.True(t, inCache(target1))
 	assert.True(t, inCache(target2))
@@ -81,7 +82,7 @@ func TestCleanNoop2(t *testing.T) {
 	assert.True(t, inCache(target2))
 	// Doesn't clean anything this time; both targets have just been built, and are hard linked
 	// into plz-out so they don't count towards the size anyway.
-	totalSize := cache.clean(1, 0)
+	totalSize := cache.clean(sizePolicy(1, 0), 0)
 	assert.EqualValues(t, 0, totalSize)
 	assert.True(t, inCache(target1))
 	assert.True(t, inCache(target2))
@@ -96,7 +97,7 @@ func TestCleanForReal(t *testing.T) {
 	writeFile(cachePath(target2, false), 2000)
 	assert.True(t, inCache(target2))
 	// This time it should clean target2, because target1 is hard linked into plz-out so removing it wouldn't free anything
-	totalSize := cache.clean(5000, 1000)
+	totalSize := cache.clean(sizePolicy(5000, 1000), 0)
 	assert.EqualValues(t, 0, totalSize)
 	assert.True(t, inCache(target1))
 	assert.False(t, inCache(target2))
@@ -111,7 +112,7 @@ func TestCleanForReal2(t *testing.T) {
 	cache.Store(target2, hash, target2.Outputs(nil))
 	assert.True(t, inCache(target2))
 	// This time it should clean target1, because target2 is hard linked into plz-out so removing it wouldn't free anything
-	totalSize := cache.clean(5000, 1000)
+	totalSize := cache.clean(sizePolicy(5000, 1000), 0)
 	assert.EqualValues(t, 0, totalSize)
 	assert.False(t, inCache(target1))
 	assert.True(t, inCache(target2))
@@ -126,11 +127,11 @@ func TestCleanSkipsLinkedEntries(t *testing.T) {
 	assert.NoError(t, os.Remove(out))
 	assert.NoError(t, os.Link(cachePath(target1, false), out))
 	// The entry is still linked into plz-out so cleaning it won't save anything.
-	assert.EqualValues(t, 0, cache.clean(1, 0))
+	assert.EqualValues(t, 0, cache.clean(sizePolicy(1, 0), 0))
 	assert.True(t, inCache(target1))
 	// Once that link is gone (e.g. the repo is deleted), it does count and can be cleaned.
 	assert.NoError(t, os.Remove(out))
-	assert.EqualValues(t, 0, cache.clean(1000, 0))
+	assert.EqualValues(t, 0, cache.clean(sizePolicy(1000, 0), 0))
 	assert.False(t, inCache(target1))
 }
 
@@ -143,9 +144,9 @@ func TestCleanSharedWithinCache(t *testing.T) {
 	assert.NoError(t, os.Link(cachePath(target1, false), cachePath(target2, false)))
 	setMtime(t, cachePath(target1, false), 2*time.Hour)
 	// The file is only linked within the cache, so it counts but only once.
-	assert.EqualValues(t, 6000, cache.clean(10000, 0))
+	assert.EqualValues(t, 6000, cache.clean(sizePolicy(10000, 0), 0))
 	// Removing the first entry doesn't free anything, so it has to remove the second too.
-	assert.EqualValues(t, 0, cache.clean(5000, 1000))
+	assert.EqualValues(t, 0, cache.clean(sizePolicy(5000, 1000), 0))
 	assert.False(t, inCache(target1))
 	assert.False(t, inCache(target2))
 }
@@ -162,7 +163,7 @@ func TestCleanLeastRecentlyUsed(t *testing.T) {
 	writeFile(cachePath(target3, false), 2000)
 	setMtime(t, cachePath(target3, false), 2*time.Hour)
 	// Should remove the least recently used entry first, which is target2.
-	assert.EqualValues(t, 12000, cache.clean(15000, 13000))
+	assert.EqualValues(t, 12000, cache.clean(sizePolicy(15000, 13000), 0))
 	assert.True(t, inCache(target1))
 	assert.False(t, inCache(target2))
 	assert.True(t, inCache(target3))
@@ -180,10 +181,86 @@ func TestCleanLargestFirstWithinGracePeriod(t *testing.T) {
 	setMtime(t, cachePath(target3, false), 4*time.Minute)
 	// These were all used within the grace period of each other, so it should remove the largest
 	// entry first (target2), even though it's the most recently used.
-	assert.EqualValues(t, 9000, cache.clean(15000, 13000))
+	assert.EqualValues(t, 9000, cache.clean(sizePolicy(15000, 13000), 0))
 	assert.True(t, inCache(target1))
 	assert.False(t, inCache(target2))
 	assert.True(t, inCache(target3))
+}
+
+func TestCleanMaxAge(t *testing.T) {
+	cache := makeCache(".plz-cache-test13", false)
+	target1 := makeTarget2("//test13:target1", 2000)
+	writeFile(cachePath(target1, false), 2000)
+	setMtime(t, cachePath(target1, false), 8*24*time.Hour)
+	target2 := makeTarget2("//test13:target2", 2000)
+	writeFile(cachePath(target2, false), 2000)
+	setMtime(t, cachePath(target2, false), 24*time.Hour)
+	makeCache(".plz-cache-test13", false).Store(makeTarget2("//test13:target3", 2000), hash, []string{"test.go"})
+	target3 := makeTarget2("//test13:target3", 2000)
+	setMtime(t, cachePath(target3, false), 8*24*time.Hour)
+	// Should remove target1 since it's too old, even though the cache is well under the high water mark.
+	// target3 is just as old but is still linked into plz-out so it isn't removed.
+	assert.EqualValues(t, 6000, cache.clean(cleanPolicy{MaxAge: 7 * 24 * time.Hour, HighWaterMark: 100000}, 0))
+	assert.False(t, inCache(target1))
+	assert.True(t, inCache(target2))
+	assert.True(t, inCache(target3))
+}
+
+func TestCleanMinFreeSpace(t *testing.T) {
+	cache := makeCache(".plz-cache-test14", false)
+	target1 := makeTarget2("//test14:target1", 2000)
+	writeFile(cachePath(target1, false), 2000)
+	setMtime(t, cachePath(target1, false), 3*time.Hour)
+	target2 := makeTarget2("//test14:target2", 2000)
+	writeFile(cachePath(target2, false), 2000)
+	setMtime(t, cachePath(target2, false), 2*time.Hour)
+	target3 := makeTarget2("//test14:target3", 2000)
+	writeFile(cachePath(target3, false), 2000)
+	setMtime(t, cachePath(target3, false), time.Hour)
+	// The cache is under the high water mark, but the disk is too full, so it should remove
+	// the least recently used entries until there's enough free space.
+	assert.EqualValues(t, 6000, cache.clean(cleanPolicy{HighWaterMark: 100000, MinFreeSpace: 8000}, 1000))
+	assert.False(t, inCache(target1))
+	assert.False(t, inCache(target2))
+	assert.True(t, inCache(target3))
+}
+
+func TestCleanMinFreeSpaceNothingToRemove(t *testing.T) {
+	cache := makeCache(".plz-cache-test15", false)
+	target1 := makeTarget2("//test15:target1", 2000)
+	cache.Store(target1, hash, target1.Outputs(nil))
+	// The disk is too full, but the only entry is linked into plz-out so removing it wouldn't help.
+	assert.EqualValues(t, 0, cache.clean(cleanPolicy{HighWaterMark: 100000, MinFreeSpace: 8000}, 1000))
+	assert.True(t, inCache(target1))
+}
+
+func TestNewCleanPolicy(t *testing.T) {
+	config := core.DefaultConfiguration()
+	// Defaults on a 1TB disk
+	assert.Equal(t, cleanPolicy{
+		MaxAge:        7 * 24 * time.Hour,
+		HighWaterMark: 100 * humanize.GByte,
+		LowWaterMark:  80 * humanize.GByte,
+		MinFreeSpace:  50 * humanize.GByte,
+	}, newCleanPolicy(config, humanize.TByte, true))
+	// On a small disk, the minimum free space is an absolute amount.
+	assert.EqualValues(t, 5*humanize.GByte, newCleanPolicy(config, 20*humanize.GByte, true).MinFreeSpace)
+	// If we can't tell how big the disk is, we fall back to a fixed size and don't check free space.
+	assert.Equal(t, cleanPolicy{
+		MaxAge:        7 * 24 * time.Hour,
+		HighWaterMark: 10 * humanize.GiByte,
+		LowWaterMark:  8 * humanize.GiByte,
+	}, newCleanPolicy(config, 0, false))
+	// Explicitly configured values are honoured.
+	assert.NoError(t, config.Cache.DirCacheHighWaterMark.UnmarshalFlag("2G"))
+	assert.NoError(t, config.Cache.DirCacheLowWaterMark.UnmarshalFlag("1G"))
+	assert.NoError(t, config.Cache.DirCacheMinFreeSpace.UnmarshalFlag("10%"))
+	assert.Equal(t, cleanPolicy{
+		MaxAge:        7 * 24 * time.Hour,
+		HighWaterMark: 2 * humanize.GByte,
+		LowWaterMark:  humanize.GByte,
+		MinFreeSpace:  100 * humanize.GByte,
+	}, newCleanPolicy(config, humanize.TByte, true))
 }
 
 func TestRetrieveUpdatesMtime(t *testing.T) {
@@ -225,7 +302,7 @@ func TestCleanCompressed(t *testing.T) {
 	// Don't want to assert the size here since it depends on how well gzip compresses.
 	// It's a bit hard to know exactly what the sizes here should be too but we'll guess
 	// and assume it won't change dramatically.
-	cache.clean(3000, 1000)
+	cache.clean(sizePolicy(3000, 1000), 0)
 	assert.False(t, inCompressedCache(target1))
 	assert.True(t, inCompressedCache(target2))
 }
@@ -235,6 +312,11 @@ func setMtime(t *testing.T, filename string, ago time.Duration) {
 	t.Helper()
 	then := time.Now().Add(-ago)
 	assert.NoError(t, os.Chtimes(filepath.Dir(filename), then, then))
+}
+
+// sizePolicy returns a cleanPolicy that only applies the given high and low water marks.
+func sizePolicy(high, low uint64) cleanPolicy {
+	return cleanPolicy{HighWaterMark: high, LowWaterMark: low}
 }
 
 func getMtime(t *testing.T, filename string) time.Time {

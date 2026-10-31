@@ -377,9 +377,66 @@ func newDirCache(config *core.Configuration) *dirCache {
 	}
 	// Start the cache-cleaning goroutine.
 	if config.Cache.DirClean {
-		go cache.clean(uint64(config.Cache.DirCacheHighWaterMark), uint64(config.Cache.DirCacheLowWaterMark))
+		go func() {
+			total, free, err := diskSpace(cache.Dir)
+			if err != nil {
+				log.Warning("Failed to determine free space for dir cache: %s", err)
+				// Safe to carry on, we handle this in the policy below (although it is also very unlikely to happen)
+			}
+			cache.clean(newCleanPolicy(config, total, err == nil), free)
+		}()
 	}
 	return cache
+}
+
+// A cleanPolicy describes which entries get evicted when cleaning the cache.
+type cleanPolicy struct {
+	MaxAge        time.Duration // Entries unused for longer than this are always evicted.
+	HighWaterMark uint64        // Entries are evicted when their total size is over this...
+	LowWaterMark  uint64        // ...until it is under this.
+	MinFreeSpace  uint64        // Entries are evicted while the free space on the filesystem is under this.
+}
+
+// defaultHighWaterMark is used when the high water mark is a percentage but we can't tell how big the filesystem is.
+const defaultHighWaterMark = 10 * humanize.GiByte
+
+// defaultMinFreeSpace is the minimum free space to maintain if it isn't explicitly configured.
+// The default is the larger of this and defaultMinFreeSpacePercent of the filesystem.
+const defaultMinFreeSpace = 5 * humanize.GByte
+const defaultMinFreeSpacePercent = 5
+
+// newCleanPolicy returns the cleaning policy from the given config, for a filesystem of the given total size.
+// If haveTotal is false, the size of the filesystem is unknown.
+func newCleanPolicy(config *core.Configuration, total uint64, haveTotal bool) cleanPolicy {
+	policy := cleanPolicy{
+		MaxAge:        time.Duration(config.Cache.DirCacheMaxAge),
+		HighWaterMark: config.Cache.DirCacheHighWaterMark.Of(total),
+		LowWaterMark:  uint64(config.Cache.DirCacheLowWaterMark),
+	}
+	if !haveTotal {
+		if config.Cache.DirCacheHighWaterMark.IsPercent {
+			policy.HighWaterMark = defaultHighWaterMark
+		}
+		// We can't check free space either, so there's no point setting a minimum for it.
+	} else if config.Cache.DirCacheMinFreeSpace.IsSet {
+		policy.MinFreeSpace = config.Cache.DirCacheMinFreeSpace.Of(total)
+	} else {
+		policy.MinFreeSpace = max(defaultMinFreeSpace, total*defaultMinFreeSpacePercent/100)
+	}
+	if policy.LowWaterMark == 0 || policy.LowWaterMark > policy.HighWaterMark {
+		policy.LowWaterMark = policy.HighWaterMark / 10 * 8
+	}
+	return policy
+}
+
+// diskSpace returns the total size of, and the space available on, the filesystem containing the given path.
+func diskSpace(path string) (total, free uint64, err error) {
+	var st syscall.Statfs_t
+	if err := syscall.Statfs(path, &st); err != nil {
+		return 0, 0, err
+	}
+	// The types of these fields vary between platforms, so the conversions are needed on some of them.
+	return uint64(st.Blocks) * uint64(st.Bsize), uint64(st.Bavail) * uint64(st.Bsize), nil //nolint:unconvert
 }
 
 // Period of time in seconds between which two artifacts are considered to have been used at the same time.
@@ -459,11 +516,12 @@ func readEntry(path string, files map[fileID]*cacheFile) (*cacheEntry, error) {
 }
 
 // clean runs background cleaning of this cache until the process exits.
+// freeSpace is the space currently available on the filesystem holding the cache.
 // Returns the total size of the cache after it's finished.
 // Sizes only count files that are not hard linked from outside the cache; those are typically also in someone's
 // plz-out, and so removing them would not free any space (and would make it less likely for that file to be shared
 // with the next repo that builds it).
-func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
+func (cache *dirCache) clean(policy cleanPolicy, freeSpace uint64) uint64 {
 	entries := []*cacheEntry{}
 	files := map[fileID]*cacheFile{}
 	var totalSize uint64
@@ -505,8 +563,41 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		}
 	}
 	log.Info("Total cache size: %s", humanize.Bytes(totalSize))
-	if totalSize < highWaterMark {
-		return totalSize // Nothing to do, cache is small enough.
+	// evict removes an entry from the cache, and returns true if it did so.
+	evict := func(entry *cacheEntry, reason string) bool {
+		if _, marked := cache.isMarked(entry.Path); marked {
+			return false
+		}
+		log.Debug("Cleaning %s (%s), used %s, saves up to %s", entry.Path, reason, humanize.Time(time.Unix(entry.Mtime, 0)), humanize.Bytes(entry.Size))
+		if err := cache.cleanPath(entry.Path); err != nil {
+			log.Warning("Error while cleaning cache: %s", err)
+			return false
+		}
+		// A file is only freed once the last entry referring to it is removed.
+		for _, id := range entry.Files {
+			f := files[id]
+			f.Refs--
+			if f.Refs == 0 && f.Unshared {
+				totalSize -= f.Size
+				freeSpace += f.Size
+			}
+		}
+		return true
+	}
+	// First evict anything that hasn't been used for too long, regardless of how big the cache is.
+	if policy.MaxAge > 0 {
+		cutoff := time.Now().Add(-policy.MaxAge).Unix()
+		remaining := candidates[:0]
+		for _, entry := range candidates {
+			if entry.Mtime >= cutoff || !evict(entry, "unused for too long") {
+				remaining = append(remaining, entry)
+			}
+		}
+		candidates = remaining
+	}
+	overSize := totalSize >= policy.HighWaterMark
+	if !overSize && freeSpace >= policy.MinFreeSpace {
+		return totalSize // Nothing more to do, cache is small enough.
 	}
 	// OK, we need to slim it down a bit. We implement a simple LRU algorithm.
 	slices.SortFunc(candidates, func(a, b *cacheEntry) int {
@@ -516,26 +607,17 @@ func (cache *dirCache) clean(highWaterMark, lowWaterMark uint64) uint64 {
 		return cmp.Compare(a.Mtime, b.Mtime)
 	})
 	for _, entry := range candidates {
-		if _, marked := cache.isMarked(entry.Path); marked {
-			continue
-		}
-
-		log.Debug("Cleaning %s, used %s, saves up to %s", entry.Path, humanize.Time(time.Unix(entry.Mtime, 0)), humanize.Bytes(entry.Size))
-		if err := cache.cleanPath(entry.Path); err != nil {
-			log.Warning("Error while cleaning cache: %s", err)
-			continue
-		}
-		// A file is only freed once the last entry referring to it is removed.
-		for _, id := range entry.Files {
-			f := files[id]
-			f.Refs--
-			if f.Refs == 0 && f.Unshared {
-				totalSize -= f.Size
-			}
-		}
-		if totalSize < lowWaterMark {
+		if overSize && totalSize >= policy.LowWaterMark {
+			evict(entry, "cache is too large")
+		} else if freeSpace < policy.MinFreeSpace {
+			evict(entry, "disk is too full")
+		} else {
 			break
 		}
+	}
+	if freeSpace < policy.MinFreeSpace {
+		log.Warning("Free disk space is low (%s available), but there is nothing more that can be removed from the dir cache.", humanize.Bytes(freeSpace))
+		log.Warning("The rest of it is linked into plz-out directories; running plz clean in any old repos or worktrees you no longer need would free it.")
 	}
 	return totalSize
 }
