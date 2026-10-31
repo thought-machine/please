@@ -1,4 +1,4 @@
-GO_CI_LINT_VERSION = "2.13.0"
+GO_CI_LINT_VERSION = "2.15.0"
 
 remote_file(
     name = "golangci-lint",
