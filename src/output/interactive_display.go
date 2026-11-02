@@ -279,7 +279,7 @@ func (d *interactiveDisplay) lprintfPrepare(cols int, s string) string {
 			d.lineBuf.WriteRune(rune)
 			// CSI sequences (e.g. \x1b[1m, \x1b[K) end on any byte in the range 0x40-0x7E,
 			// excluding the opening [.
-			if !(ansiStart && rune == '[') && rune >= 0x40 && rune <= 0x7E {
+			if (!ansiStart || rune != '[') && rune >= 0x40 && rune <= 0x7E {
 				inAnsiCode = false
 			}
 			ansiStart = false
