@@ -265,25 +265,37 @@ func (d *interactiveDisplay) flush() {
 }
 
 func (d *interactiveDisplay) lprintfPrepare(cols int, s string) string {
-	if len(s) < cols {
+	if len(s) < cols && !strings.ContainsRune(s, '\t') {
 		return s // it's short enough, nice and simple
 	}
 	// Okay, it's too long. Tricky thing: ANSI escape codes don't count for width
 	// so we need to count without those. Bonus: make an effort to be unicode-aware.
 	written := 0
 	inAnsiCode := false
+	ansiStart := false
 	d.lineBuf.Reset()
 	for _, rune := range s {
 		if inAnsiCode {
 			d.lineBuf.WriteRune(rune)
-			if rune == 'm' {
+			// CSI sequences (e.g. \x1b[1m, \x1b[K) end on any byte in the range 0x40-0x7E,
+			// excluding the opening [.
+			if !(ansiStart && rune == '[') && rune >= 0x40 && rune <= 0x7E {
 				inAnsiCode = false
 			}
+			ansiStart = false
 		} else if rune == '\x1b' {
 			d.lineBuf.WriteRune(rune)
 			inAnsiCode = true
+			ansiStart = true
 		} else if rune == '\n' {
 			d.lineBuf.WriteRune(rune)
+			written = 0
+		} else if rune == '\t' {
+			// Tabs are one character but can take up to 8 columns. Expand them so we know exactly how wide they are.
+			for n := 8 - written%8; n > 0 && written < cols-3; n-- {
+				d.lineBuf.WriteByte(' ')
+				written++
+			}
 		} else if written == cols-3 {
 			d.lineBuf.WriteString("...")
 			written += 3
