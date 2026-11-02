@@ -8,8 +8,10 @@ import (
 	"cmp"
 	"compress/gzip"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -36,7 +38,7 @@ type dirCache struct {
 
 func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []string) {
 	cacheDir := cache.getPath(target, key, "")
-	lockFile, err := core.AcquireExclusiveFileLock(cacheDir + ".lock")
+	lockFile, err := lockEntry(cacheDir, syscall.LOCK_EX)
 	if err != nil {
 		log.Warning("Failed to acquire cache lock for %s, will not store", target)
 		return
@@ -50,7 +52,7 @@ func (cache *dirCache) Store(target *core.BuildTarget, key []byte, files []strin
 		return
 	}
 	cache.storeFiles(target, key, "", cacheDir, tmpDir, files, true)
-	if err := os.Rename(tmpDir, cacheDir); err != nil && !os.IsNotExist(err) {
+	if err := os.Rename(tmpDir, cacheDir); err != nil && !errors.Is(err, iofs.ErrExist) {
 		log.Warning("Failed to create cache directory %s: %s", cacheDir, err)
 	}
 }
@@ -186,7 +188,7 @@ func (cache *dirCache) storeFile(target *core.BuildTarget, out, cacheDir string)
 }
 
 func (cache *dirCache) Retrieve(target *core.BuildTarget, key []byte, outs []string) bool {
-	lockFile, err := core.AcquireSharedFileLock(cache.getPath(target, key, "") + ".lock")
+	lockFile, err := lockEntry(cache.getPath(target, key, ""), syscall.LOCK_SH)
 	if err != nil {
 		log.Warning("Failed to acquire cache lock for %s, will not retrieve", target)
 		return false
@@ -383,10 +385,43 @@ func newDirCache(config *core.Configuration) *dirCache {
 				log.Warning("Failed to determine free space for dir cache: %s", err)
 				// Safe to carry on, we handle this in the policy below (although it is also very unlikely to happen)
 			}
-			cache.clean(newCleanPolicy(config, total, err == nil), free)
+			cache.cleanIfNeeded(newCleanPolicy(config, total, err == nil), free)
 		}()
 	}
 	return cache
+}
+
+// cleanLockFile is a file in the cache directory that's locked while it's being cleaned.
+const cleanLockFile = ".clean.lock"
+
+// cleanTimestampFile is a file in the cache directory whose modification time records when it was last cleaned.
+const cleanTimestampFile = ".last_clean"
+
+// cleanInterval is the minimum time between cleaning the cache, unless the disk is too full.
+const cleanInterval = 24 * time.Hour
+
+// cleanIfNeeded cleans the cache, unless it's been cleaned recently enough or another process is already doing so.
+// Returns true if it cleaned.
+func (cache *dirCache) cleanIfNeeded(policy cleanPolicy, freeSpace uint64) bool {
+	lockFile := tryLock(filepath.Join(cache.Dir, cleanLockFile), os.O_CREATE)
+	if lockFile == nil {
+		log.Debug("Not cleaning dir cache, another process is already doing so")
+		return false
+	}
+	defer core.ReleaseFileLock(lockFile)
+	timestampFile := filepath.Join(cache.Dir, cleanTimestampFile)
+	if info, err := os.Stat(timestampFile); err == nil && time.Since(info.ModTime()) < cleanInterval && freeSpace >= policy.MinFreeSpace {
+		log.Debug("Not cleaning dir cache, it was last cleaned %s", humanize.Time(info.ModTime()))
+		return false
+	}
+	cache.clean(policy, freeSpace)
+	now := time.Now()
+	if err := os.WriteFile(timestampFile, []byte(now.Format(time.StampMicro)), 0644); err != nil {
+		log.Warning("Failed to record when the dir cache was cleaned: %s", err)
+	} else if err := os.Chtimes(timestampFile, now, now); err != nil {
+		log.Warning("Failed to record when the dir cache was cleaned: %s", err)
+	}
+	return true
 }
 
 // A cleanPolicy describes which entries get evicted when cleaning the cache.
@@ -524,11 +559,17 @@ func readEntry(path string, files map[fileID]*cacheFile) (*cacheEntry, error) {
 func (cache *dirCache) clean(policy cleanPolicy, freeSpace uint64) uint64 {
 	entries := []*cacheEntry{}
 	files := map[fileID]*cacheFile{}
+	seen := map[string]bool{} // All entries that we found
+	lockFiles := []string{}   // Paths of the entries for all lock files that we found
 	var totalSize uint64
 	if err := fs.Walk(cache.Dir, func(path string, isDir bool) error {
-		if !cache.shouldClean(filepath.Base(path), isDir) {
+		if entry, ok := strings.CutSuffix(path, ".lock"); ok && !isDir && cache.shouldClean(filepath.Base(entry), !cache.Compress) {
+			lockFiles = append(lockFiles, entry)
+			return nil
+		} else if !cache.shouldClean(filepath.Base(path), isDir) {
 			return nil // nothing particularly to do for other entries
 		}
+		seen[path] = true
 		if size, marked := cache.isMarked(path); marked {
 			totalSize += size
 		} else if entry, err := readEntry(path, files); err != nil {
@@ -563,6 +604,11 @@ func (cache *dirCache) clean(policy cleanPolicy, freeSpace uint64) uint64 {
 		}
 	}
 	log.Info("Total cache size: %s", humanize.Bytes(totalSize))
+	for _, entry := range lockFiles {
+		if !seen[entry] {
+			cache.removeOrphanedLockFile(entry)
+		}
+	}
 	// evict removes an entry from the cache, and returns true if it did so.
 	evict := func(entry *cacheEntry, reason string) bool {
 		if _, marked := cache.isMarked(entry.Path); marked {
@@ -634,7 +680,7 @@ func (cache *dirCache) touch(path string, info os.FileInfo) {
 }
 
 func (cache *dirCache) cleanPath(path string) error {
-	lockFile, err := core.AcquireExclusiveFileLock(path + ".lock")
+	lockFile, err := lockEntry(path, syscall.LOCK_EX)
 	if err != nil {
 		return err
 	}
@@ -648,7 +694,77 @@ func (cache *dirCache) cleanPath(path string) error {
 	if err := fs.RemoveAll(newPath); err != nil {
 		return fmt.Errorf("Couldn't remove %s: %w", newPath, err)
 	}
+	// We still hold the lock while removing it, so anyone waiting on it will see it's gone (see lockEntry).
+	if err := os.Remove(path + ".lock"); err != nil {
+		log.Debug("Failed to remove lock file for %s: %s", path, err)
+	}
 	return nil
+}
+
+// removeOrphanedLockFile removes the lock file for a cache entry that doesn't exist.
+// It does nothing if anyone else is currently using the lock, or if the entry has since been created.
+func (cache *dirCache) removeOrphanedLockFile(path string) {
+	lockPath := path + ".lock"
+	lockFile := tryLock(lockPath, 0)
+	if lockFile == nil {
+		return
+	}
+	defer core.ReleaseFileLock(lockFile)
+	if !isLockFile(lockFile, lockPath) || core.PathExists(path) {
+		return
+	}
+	if err := os.Remove(lockPath); err != nil {
+		log.Debug("Failed to remove orphaned lock file %s: %s", lockPath, err)
+	}
+}
+
+// lockEntry acquires a lock (shared or exclusive, as given by how) on the lock file for a cache entry.
+// Lock files are deleted while they're held when cleaning, so a process that was waiting for one can end up
+// holding a lock on a file that no longer exists, while someone else creates and locks a new one.
+// We check for that after acquiring the lock and retry if so.
+func lockEntry(path string, how int) (*os.File, error) {
+	lockPath := path + ".lock"
+	for {
+		var lockFile *os.File
+		var err error
+		if how == syscall.LOCK_EX {
+			lockFile, err = core.AcquireExclusiveFileLock(lockPath)
+		} else {
+			lockFile, err = core.AcquireSharedFileLock(lockPath)
+		}
+		if err != nil {
+			return nil, err
+		} else if isLockFile(lockFile, lockPath) {
+			return lockFile, nil
+		}
+		core.ReleaseFileLock(lockFile)
+	}
+}
+
+// isLockFile returns true if the given open file is still the one at the given path.
+func isLockFile(lockFile *os.File, path string) bool {
+	info, err := lockFile.Stat()
+	if err != nil {
+		return false
+	}
+	info2, err := os.Stat(path)
+	return err == nil && os.SameFile(info, info2)
+}
+
+// tryLock opens the given file (with any extra flags given) and takes an exclusive lock on it without waiting.
+// It returns nil if the file can't be opened or someone else already has it locked.
+func tryLock(path string, flag int) *os.File {
+	f, err := os.OpenFile(path, os.O_RDWR|flag, 0644)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Debug("Failed to open lock file %s: %s", path, err)
+		}
+		return nil
+	} else if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		f.Close()
+		return nil
+	}
+	return f
 }
 
 // shouldClean returns true if we should clean this file.
