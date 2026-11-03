@@ -38,6 +38,11 @@ pre {
 /**
  * TACHYONS-LIKE CLASSES
  */
+/* Between tachyons' f3 (1.5rem) and f2 (2.25rem). */
+.f-2-5 {
+  font-size: 1.875rem;
+}
+
 .blue {
   color: var(--blue);
 }
