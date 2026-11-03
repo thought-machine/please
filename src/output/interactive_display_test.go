@@ -32,3 +32,19 @@ func TestNewlinesStillWritte(t *testing.T) {
 	// Test that newline still gets written (it doesn't count as horizontal space and is Very Important)
 	assert.Equal(t, "\x1b[30mwibble ...\x1b[1m\n", d.lprintfPrepare(10, "\x1b[30mwibble wobble\x1b[1m\n"))
 }
+
+func TestLimitedPrintfEraseAfter(t *testing.T) {
+	var d interactiveDisplay
+	assert.Equal(t, "\x1b[Kmmmmmmm...\n", d.lprintfPrepare(10, "\x1b[Kmmmmmmmmmmmmmmmmmmmm\n"))
+}
+
+func TestLimitedPrintfTabsExpanded(t *testing.T) {
+	var d interactiveDisplay
+	assert.Equal(t, "a       b", d.lprintfPrepare(20, "a\tb"))
+	assert.Equal(t, "a       b...", d.lprintfPrepare(12, "a\tbcdefghijk"))
+}
+
+func TestLimitedPrintfNewlineResetsWidth(t *testing.T) {
+	var d interactiveDisplay
+	assert.Equal(t, "wibble ...\nwibble ...\n", d.lprintfPrepare(10, "wibble wobble\nwibble wobble\n"))
+}
