@@ -24,7 +24,7 @@
 }
 
 body {
-  font-family: Roboto, Arial, sans-serif;
+  font-family: Inter, Roboto, Arial, sans-serif;
 }
 
 .smooth-scroll {
@@ -38,6 +38,11 @@ pre {
 /**
  * TACHYONS-LIKE CLASSES
  */
+/* Between tachyons' f3 (1.5rem) and f2 (2.25rem). */
+.f-2-5 {
+  font-size: 1.875rem;
+}
+
 .blue {
   color: var(--blue);
 }
@@ -106,8 +111,8 @@ pre {
   background-color: var(--raisin-black);
 }
 
-.essential-pragmata-pro {
-  font-family: "EssentialPragmataPro", monospace, sans-serif;
+.font-inter {
+  font-family: Inter, Roboto, Arial, sans-serif;
 }
 
 
@@ -421,7 +426,7 @@ ul.bulleted-list > li > * {
 }
 
 .code {
-  font-family: "EssentialPragmataPro", monospace, sans-serif;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 /* Google search */

@@ -97,3 +97,10 @@ google-codelab-step code {
     background-color: #28323f !important;
     color: white !important;
 }
+
+/* Use the brand typeface (Inter) for everything except code, overriding codelab-elements.css. */
+body,
+google-codelab,
+google-codelab :not(code, pre, code *, pre *, .material-icons) {
+    font-family: Inter, Arial, sans-serif;
+}
