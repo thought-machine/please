@@ -318,7 +318,7 @@ def local_repository(name:str, path:str):
         path = path,
     )
 
-def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build", hashes:list=[]):
+def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build", hashes:list=[], labels:list=[]):
     """Defines a please plugin to use from the configured plugin repositories. See
         https://please.build/config.html#please.pluginrepositories for more information.
 
@@ -328,6 +328,7 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         plugin (str): The name of the plugin. Defaults to the name of this rule.
         owner (str): The owner of the plugin to be passed to the template URLS.
         hashes (list): A list of valid hashes for the downloaded archive file.
+        labels (list): Any labels which are applied to the build target.
     """
     plugin = plugin or name
     urls = [url.format(owner=owner, revision=revision, plugin=plugin) for url in CONFIG.PLUGIN_REPOS]
@@ -355,6 +356,7 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         name = name.replace("-", "_"),
         dep = extract_rule,
         plugin = True,
+        labels = labels,
     )
 
     return extract_rule
