@@ -720,76 +720,82 @@
 
   <ul class="bulleted-list">
     <li>
-      <span
-        ><code class="code">alltargets</code>: Lists all targets in the
-        graph.</span
-      >
+      <span>
+        <code class="code">alltargets</code>: Lists all targets in the
+        graph.
+      </span>
     </li>
     <li>
-      <span><code class="code">filter</code>: Filter targets based on <code class="code">--include</code> and <code class="code">--exclude</code>.
+      <span>
+        <code class="code">filter</code>: Filter targets based on <code class="code">--include</code> and <code class="code">--exclude</code>.
         This is commonly used with other commands. For example, to run e2e tests separately from other tests:
         <code class="code">plz query changes --since master > plz-out/changes</code>, then
         <code class="code">cat plz-out/changes | plz query filter --include e2e - | plz test -</code>.
       </span>
     </li>
     <li>
-      <span
-        ><code class="code">changes</code>: Queries changed targets versus a
-        revision or from a set of files.</span
-      >
+      <span>
+        <code class="code">changes</code>: Queries changed targets versus a
+        revision or from a set of files.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">completions</code>: Prints possible completions for
-        a string.</span
-      >
+      <span>
+        <code class="code">completions</code>: Prints possible completions for a string.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">deps</code>: Queries the dependencies of a
-        target.</span
-      >
+      <span><code class="code">config</code>: Prints the please configuration settings.</span>
     </li>
     <li>
-      <span
-        ><code class="code">graph</code>: Prints a JSON representation of the
-        build graph.</span
-      >
+      <span>
+        <code class="code">deps</code>: Queries the dependencies of a target.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">input</code>: Prints all transitive inputs of a
-        target.</span
-      >
+      <span>
+        <code class="code">graph</code>: Prints a JSON representation of the build graph.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">output</code>: Prints all outputs of a target.</span
-      >
+      <span>
+        <code class="code">input</code>: Prints all transitive inputs of a target.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">print</code>: Prints a representation of a single
-        target.</span
-      >
+      <span>
+        <code class="code">output</code>: Prints all outputs of a target.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">reverseDeps</code>: Queries all the reverse
-        dependencies of a target.</span
-      >
+      <span>
+        <code class="code">print</code>: Prints a representation of a single target.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">somepath</code>: Queries for a path between two
-        targets.</span
-      >
+      <span>
+        <code class="code">reverseDeps</code>: Queries all the reverse dependencies of a target.
+      </span>
     </li>
     <li>
-      <span
-        ><code class="code">rules</code>: Prints out a machine-parseable
-        description of all currently known build rules.</span
-      >
+      <span>
+        <code class="code">runtimedeps</code>: Queries all the run-time dependencies of a target.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">reporoot</code>: Output the root of the current Please repo
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">somepath</code>: Queries for a path between two targets.
+      </span>
+    </li>
+    <li>
+      <span>
+        <code class="code">rules</code>: Prints out a machine-parseable description of all currently known build rules.
+      </span>
     </li>
     <li>
       <span>
