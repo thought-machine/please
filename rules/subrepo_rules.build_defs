@@ -339,7 +339,6 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
         url = urls,
         out = name + '_' + basename(urls[0]),
         hashes = hashes,
-        labels = labels,
     )
     extract_rule = build_rule(
         name = name,
@@ -350,6 +349,7 @@ def plugin_repo(name:str, revision:str,  plugin:str="", owner:str="please-build"
           '$TOOL x "$SRCS" -o _tmp',
           'mv $(dirname $(ls _tmp/*/.plzconfig)) "$OUT"',
         ]),
+        labels = labels,
         _subrepo = True,
     )
 
