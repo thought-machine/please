@@ -99,28 +99,41 @@ func (builder *filegroupBuilder) Build(state *core.BuildState, target *core.Buil
 	return true, nil
 }
 
+// MaterialiseFilegroup creates the outputs of a filegroup in plz-out from the given subset of its sources, which
+// must already exist locally. This is used for filegroups built remotely, when their outputs are needed locally.
+func MaterialiseFilegroup(state *core.BuildState, target *core.BuildTarget, srcs []core.BuildInput) error {
+	_, err := buildFilegroupSources(state, target, srcs)
+	return err
+}
+
 // buildFilegroup runs the manual build steps for a filegroup rule.
 // We don't force this to be done in bash to avoid errors with maximum command lengths,
 // and it's actually quite fiddly to get just so there.
 func buildFilegroup(state *core.BuildState, target *core.BuildTarget) (bool, error) {
+	return buildFilegroupSources(state, target, target.AllSources())
+}
+
+func buildFilegroupSources(state *core.BuildState, target *core.BuildTarget, srcs []core.BuildInput) (bool, error) {
 	if err := prepareDirectory(target.OutDir(), false); err != nil {
 		return true, err
 	}
 	changed := false
 	outDir := target.OutDir()
-	localSources := target.AllSourceLocalPaths(state.Graph)
-	for i, source := range target.AllSourceFullPaths(state.Graph) {
-		out := filepath.Join(outDir, localSources[i])
-		fileChanged, err := theFilegroupBuilder.Build(state, target, source, out)
-		if err != nil {
-			return true, err
+	for _, src := range srcs {
+		localSources := target.SourceLocalPaths(state.Graph, src)
+		for i, source := range target.SourceFullPaths(state.Graph, src) {
+			out := filepath.Join(outDir, localSources[i])
+			fileChanged, err := theFilegroupBuilder.Build(state, target, source, out)
+			if err != nil {
+				return true, err
+			}
+			changed = changed || fileChanged
 		}
-		changed = changed || fileChanged
 	}
 
 	// When src targets are in the same package as us, the `source` and `out` paths are the same so the files are
 	// considered unchanged. We should consider ourselves changed though, as the sources Might indeed have changed.
-	for _, bi := range target.AllSources() {
+	for _, bi := range srcs {
 		if changed {
 			break
 		}

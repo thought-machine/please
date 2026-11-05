@@ -171,6 +171,15 @@ func (hasher *PathHasher) SetHash(path string, hash []byte) {
 	hasher.storeHash(path, hash)
 }
 
+// Invalidate forgets any memoised hash for the given path. It's used when something other than a build
+// (for example a download) has replaced the path and we don't know its new hash.
+func (hasher *PathHasher) Invalidate(path string) {
+	path = hasher.ensureRelative(path)
+	hasher.mutex.Lock()
+	delete(hasher.memo, path)
+	hasher.mutex.Unlock()
+}
+
 func (hasher *PathHasher) hash(path string, store, read, timestamp bool) ([]byte, error) {
 	// Try to read xattrs first so we don't have to hash the whole thing.
 	if read && strings.HasPrefix(path, "plz-out/") && hasher.useXattrs {

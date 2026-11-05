@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
@@ -20,6 +21,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -55,6 +57,20 @@ type testServer struct {
 	blobs                         map[string][]byte
 	bytestreams                   map[string][]byte
 	mockActionResult              *pb.ActionResult
+	calls                         serverCalls
+}
+
+// serverCalls counts calls to RPCs that we want to make assertions about.
+type serverCalls struct {
+	GetActionResult, UpdateActionResult, Execute, BlobReads atomic.Int64
+}
+
+// Reset resets all the counters to zero.
+func (c *serverCalls) Reset() {
+	c.GetActionResult.Store(0)
+	c.UpdateActionResult.Store(0)
+	c.Execute.Store(0)
+	c.BlobReads.Store(0)
 }
 
 func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitiesRequest) (*pb.ServerCapabilities, error) {
@@ -86,9 +102,11 @@ func (s *testServer) Reset() {
 	s.blobs = map[string][]byte{}
 	s.bytestreams = map[string][]byte{}
 	s.mockActionResult = nil
+	s.calls.Reset()
 }
 
 func (s *testServer) GetActionResult(ctx context.Context, req *pb.GetActionResultRequest) (*pb.ActionResult, error) {
+	s.calls.GetActionResult.Add(1)
 	s.checkDigest(req.ActionDigest)
 	ar, present := s.actionResults[req.ActionDigest.Hash]
 	if !present {
@@ -102,6 +120,7 @@ func (s *testServer) GetActionResult(ctx context.Context, req *pb.GetActionResul
 }
 
 func (s *testServer) UpdateActionResult(ctx context.Context, req *pb.UpdateActionResultRequest) (*pb.ActionResult, error) {
+	s.calls.UpdateActionResult.Add(1)
 	s.checkDigest(req.ActionDigest)
 	s.actionResults[req.ActionDigest.Hash] = req.ActionResult
 	return req.ActionResult, nil
@@ -138,6 +157,7 @@ func (s *testServer) BatchUpdateBlobs(ctx context.Context, req *pb.BatchUpdateBl
 }
 
 func (s *testServer) BatchReadBlobs(ctx context.Context, req *pb.BatchReadBlobsRequest) (*pb.BatchReadBlobsResponse, error) {
+	s.calls.BlobReads.Add(int64(len(req.Digests)))
 	resp := &pb.BatchReadBlobsResponse{
 		Responses: make([]*pb.BatchReadBlobsResponse_Response, len(req.Digests)),
 	}
@@ -157,8 +177,27 @@ func (s *testServer) BatchReadBlobs(ctx context.Context, req *pb.BatchReadBlobsR
 	return resp, nil
 }
 
-func (s *testServer) GetTree(*pb.GetTreeRequest, pb.ContentAddressableStorage_GetTreeServer) error {
-	return status.Errorf(codes.Unimplemented, "GetTree not implemented for test")
+func (s *testServer) GetTree(req *pb.GetTreeRequest, srv pb.ContentAddressableStorage_GetTreeServer) error {
+	resp := &pb.GetTreeResponse{}
+	queue := []*pb.Digest{req.RootDigest}
+	for len(queue) > 0 {
+		dg := queue[0]
+		queue = queue[1:]
+		s.calls.BlobReads.Add(1)
+		blob, present := s.blobs[dg.Hash]
+		if !present {
+			return status.Errorf(codes.NotFound, "directory %s not found", dg.Hash)
+		}
+		dir := &pb.Directory{}
+		if err := proto.Unmarshal(blob, dir); err != nil {
+			return err
+		}
+		resp.Directories = append(resp.Directories, dir)
+		for _, d := range dir.Directories {
+			queue = append(queue, d.Digest)
+		}
+	}
+	return srv.Send(resp)
 }
 
 func (s *testServer) SpliceBlob(context.Context, *pb.SpliceBlobRequest) (*pb.SpliceBlobResponse, error) {
@@ -170,6 +209,7 @@ func (s *testServer) SplitBlob(context.Context, *pb.SplitBlobRequest) (*pb.Split
 }
 
 func (s *testServer) Read(req *bs.ReadRequest, srv bs.ByteStream_ReadServer) error {
+	s.calls.BlobReads.Add(1)
 	blobName, err := s.bytestreamBlobName(req.ResourceName)
 	if err != nil {
 		return err
@@ -257,6 +297,7 @@ func (s *testServer) QueryWriteStatus(ctx context.Context, req *bs.QueryWriteSta
 }
 
 func (s *testServer) Execute(req *pb.ExecuteRequest, srv pb.Execution_ExecuteServer) error {
+	s.calls.Execute.Add(1)
 	mm := func(msg protoreflect.ProtoMessage) *anypb.Any {
 		a := &anypb.Any{}
 		a.MarshalFrom(msg)

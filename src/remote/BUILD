@@ -50,6 +50,7 @@ go_library(
 go_test(
     name = "remote_test",
     srcs = [
+        "filegroup_test.go",
         "impl_test.go",
         "remote_test.go",
     ],
@@ -71,9 +72,11 @@ go_test(
         "///third_party/go/google.golang.org_grpc//:grpc",
         "///third_party/go/google.golang.org_grpc//codes",
         "///third_party/go/google.golang.org_grpc//status",
+        "///third_party/go/google.golang.org_protobuf//proto",
         "///third_party/go/google.golang.org_protobuf//reflect/protoreflect",
         "///third_party/go/google.golang.org_protobuf//types/known/anypb",
         "///third_party/go/google.golang.org_protobuf//types/known/timestamppb",
+        "//src/build",
         "//src/cache",
         "//src/core",
         "//src/fs",
