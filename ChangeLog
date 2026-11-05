@@ -6,6 +6,9 @@ Version 17.35.0
     * The dir cache evicts entries unused for longer than `DirCacheMaxAge` (default one week),
       `DirCacheHighWaterMark` now defaults to 10% of the disk, and `DirCacheMinFreeSpace`
       evicts entries when the disk is nearly full (#3642)
+    * Connections opened to remote execution servers have a more sensible policy (#3645)
+    * Add labels to plugin_repo build defs (#3650)
+    * Remote execution filegroup builds are handled locally (#3647)
 
 Version 17.34.0
 ---------------
