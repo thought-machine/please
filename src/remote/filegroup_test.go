@@ -2,8 +2,11 @@ package remote
 
 import (
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
@@ -169,7 +172,8 @@ func TestFilegroupConsumerInputRoot(t *testing.T) {
 	c.state.Graph.AddTarget(consumer)
 	b, err := c.uploadInputDir(nil, consumer, false)
 	require.NoError(t, err)
-	b.Build(nil)
+	_, err = b.Build(nil)
+	require.NoError(t, err)
 
 	// The filegroup's outputs appear in its package, not the package of its dependency.
 	assert.Nil(t, b.dirs["package2"])
@@ -471,5 +475,184 @@ func assertFileContent(t *testing.T, filename string, expected []byte) {
 	b, err := os.ReadFile(filename)
 	if assert.NoError(t, err) {
 		assert.Equal(t, expected, b)
+	}
+}
+
+// putDirTree stores a tree of Directory protos containing the given files (keyed by slash-separated
+// path) on the test server, and returns the root Directory and all its descendants.
+func putDirTree(files map[string][]byte) (*pb.Directory, []*pb.Directory) {
+	dirs := map[string]*pb.Directory{".": {}}
+	var mkdir func(name string) *pb.Directory
+	mkdir = func(name string) *pb.Directory {
+		if d, present := dirs[name]; present {
+			return d
+		}
+		d := &pb.Directory{}
+		dirs[name] = d
+		mkdir(filepath.Dir(name))
+		return d
+	}
+	for name, content := range files {
+		d := mkdir(filepath.Dir(name))
+		d.Files = append(d.Files, &pb.FileNode{Name: filepath.Base(name), Digest: putBlob(content)})
+	}
+	// Link up the directories deepest first, so each one is complete before its digest is taken.
+	names := make([]string, 0, len(dirs))
+	for name := range dirs {
+		if name != "." {
+			names = append(names, name)
+		}
+	}
+	slices.SortFunc(names, func(a, b string) int { return strings.Count(b, "/") - strings.Count(a, "/") })
+	children := make([]*pb.Directory, 0, len(names))
+	for _, name := range names {
+		parent := dirs[filepath.Dir(name)]
+		parent.Directories = append(parent.Directories, &pb.DirectoryNode{Name: filepath.Base(name), Digest: putProto(dirs[name])})
+		children = append(children, dirs[name])
+	}
+	return dirs["."], children
+}
+
+// buildRemoteTarget builds a target remotely with the given output files (keyed by path) and output
+// directories (keyed by path, each containing files keyed by their path within it).
+func buildRemoteTarget(t *testing.T, c *Client, label core.BuildLabel, files map[string][]byte, dirs map[string]map[string][]byte) *core.BuildTarget {
+	t.Helper()
+	ar := &pb.ActionResult{
+		ExecutionMetadata: &pb.ExecutedActionMetadata{
+			QueuedTimestamp:             timestamppb.Now(),
+			ExecutionStartTimestamp:     timestamppb.Now(),
+			ExecutionCompletedTimestamp: timestamppb.Now(),
+		},
+	}
+	target := core.NewBuildTarget(label)
+	for name, content := range files {
+		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{Path: name, Digest: putBlob(content)})
+		target.AddOutput(name)
+	}
+	for name, contents := range dirs {
+		root, children := putDirTree(contents)
+		ar.OutputDirectories = append(ar.OutputDirectories, &pb.OutputDirectory{
+			Path:       name,
+			TreeDigest: putProto(&pb.Tree{Root: root, Children: children}),
+		})
+		target.AddOutput(name)
+	}
+	server.mockActionResult = ar
+	target.Command = "echo " + label.String() // Makes the action unique to this target.
+	c.state.Graph.AddTarget(target)
+	_, err := c.Build(target)
+	require.NoError(t, err)
+	target.SetState(core.BuiltRemotely)
+	return target
+}
+
+// resolveFile finds a file in a built input root by its path. Directories known only by digest are read
+// from the test server; the builder's own ones (which haven't been uploaded) are taken from it.
+func resolveFile(t *testing.T, b *dirBuilder, path string) *pb.FileNode {
+	t.Helper()
+	parts := strings.Split(path, "/")
+	dir := b.root
+	for i, part := range parts[:len(parts)-1] {
+		d := findDir(dir, part)
+		if d == nil {
+			return nil
+		}
+		dirName := strings.Join(parts[:i+1], "/")
+		if built, present := b.dirs[dirName]; present && d.Digest.Hash == b.c.digestMessage(built).Hash {
+			dir = built
+			continue
+		}
+		blob, present := server.blobs[d.Digest.Hash]
+		require.True(t, present, "directory %s is neither in the builder nor the CAS", dirName)
+		dir = &pb.Directory{}
+		require.NoError(t, proto.Unmarshal(blob, dir))
+	}
+	return findFile(dir, parts[len(parts)-1])
+}
+
+// assertUniqueNames asserts that no directory in the builder has two subdirectories with the same name.
+func assertUniqueNames(t *testing.T, b *dirBuilder) {
+	t.Helper()
+	for name, dir := range b.dirs {
+		seen := map[string]bool{}
+		for _, d := range dir.Directories {
+			assert.False(t, seen[d.Name], "duplicate directory %s in %s", d.Name, name)
+			seen[d.Name] = true
+		}
+	}
+}
+
+// assertInputFile asserts that the given file exists in a built input root with the given contents.
+func assertInputFile(t *testing.T, b *dirBuilder, path string, content []byte) {
+	t.Helper()
+	if f := resolveFile(t, b, path); assert.NotNil(t, f, "%s should be in the input root", path) {
+		assert.Equal(t, digest.NewFromBlob(content).Hash, f.Digest.Hash)
+	}
+}
+
+func TestFilegroupMergesDirectoriesWithTheSameName(t *testing.T) {
+	defer server.Reset()
+	c := newClientInstance("mock")
+	annotations := []byte("annotations.proto")
+	http := []byte("http.proto")
+	a := buildRemoteTarget(t, c, core.BuildLabel{PackageName: "package3", Name: "fg_merge_a"}, nil, map[string]map[string][]byte{
+		"google": {"api/annotations.proto": annotations},
+	})
+	h := buildRemoteTarget(t, c, core.BuildLabel{PackageName: "package3", Name: "fg_merge_h"}, nil, map[string]map[string][]byte{
+		"google": {"api/http.proto": http},
+	})
+	fg := newFilegroup(c, core.BuildLabel{PackageName: "package3", Name: "fg_merge"}, a.Label, h.Label)
+	_, err := c.Build(fg)
+	require.NoError(t, err)
+
+	consumer := core.NewBuildTarget(core.BuildLabel{PackageName: "consumer", Name: "fg_merge_consumer"})
+	consumer.AddSource(fg.Label)
+	consumer.AddOutput("consumer.txt")
+	c.state.Graph.AddTarget(consumer)
+	b, err := c.uploadInputDir(nil, consumer, false)
+	require.NoError(t, err)
+	_, err = b.Build(nil)
+	require.NoError(t, err)
+
+	assertUniqueNames(t, b)
+	assertInputFile(t, b, "package3/google/api/annotations.proto", annotations)
+	assertInputFile(t, b, "package3/google/api/http.proto", http)
+}
+
+func TestInputRootMergesOutputDirectoryWithOutputFiles(t *testing.T) {
+	// This mimics a proto_library: one rule outputs .proto files individually and another outputs a
+	// directory of generated code under the same top-level directory.
+	for _, filesFirst := range []bool{true, false} {
+		t.Run(fmt.Sprintf("filesFirst=%v", filesFirst), func(t *testing.T) {
+			defer server.Reset()
+			c := newClientInstance("mock")
+			protoFile := []byte("annotations.proto")
+			jsFile := []byte("annotations_pb.js")
+			name := fmt.Sprintf("merge_files_%v", filesFirst)
+			files := buildRemoteTarget(t, c, core.BuildLabel{PackageName: "package4", Name: name + "_files"}, map[string][]byte{
+				"google/api/annotations.proto": protoFile,
+			}, nil)
+			dir := buildRemoteTarget(t, c, core.BuildLabel{PackageName: "package4", Name: name + "_dir"}, nil, map[string]map[string][]byte{
+				"google": {"api/annotations_pb.js": jsFile},
+			})
+			consumer := core.NewBuildTarget(core.BuildLabel{PackageName: "consumer", Name: name + "_consumer"})
+			if filesFirst {
+				consumer.AddSource(files.Label)
+				consumer.AddSource(dir.Label)
+			} else {
+				consumer.AddSource(dir.Label)
+				consumer.AddSource(files.Label)
+			}
+			consumer.AddOutput("consumer.txt")
+			c.state.Graph.AddTarget(consumer)
+			b, err := c.uploadInputDir(nil, consumer, false)
+			require.NoError(t, err)
+			_, err = b.Build(nil)
+			require.NoError(t, err)
+
+			assertUniqueNames(t, b)
+			assertInputFile(t, b, "package4/google/api/annotations.proto", protoFile)
+			assertInputFile(t, b, "package4/google/api/annotations_pb.js", jsFile)
+		})
 	}
 }

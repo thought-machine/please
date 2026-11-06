@@ -94,6 +94,11 @@ type Client struct {
 	// This map is of effective type `map[*core.BuildTarget]*pendingDownload`
 	downloads sync.Map
 
+	// Directory protos we've read from the CAS, keyed by their hash. They're immutable so are safe to cache.
+	//
+	// This map is of effective type `map[string]*pb.Directory`
+	directories sync.Map
+
 	// Server-sent cache properties
 	maxBlobBatchSize int64
 
