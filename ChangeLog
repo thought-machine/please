@@ -1,3 +1,7 @@
+Version 17.35.1
+---------------
+    * Fix for remote execution filegroups with duplicate directories which are now correctly merged.
+
 Version 17.35.0
 ---------------
     * New `AdditionalCACerts` config option to work with intercepting `HTTPProxy` (#3639)
