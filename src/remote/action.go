@@ -186,7 +186,7 @@ func (c *Client) uploadInputs(ch chan<- *uploadinfo.Entry, target *core.BuildTar
 	if err != nil {
 		return nil, err
 	}
-	return b.Build(ch), nil
+	return b.Build(ch)
 }
 
 // uploadInputDir uploads the inputs to the build rule. It returns an un-finalised directory builder representing the
