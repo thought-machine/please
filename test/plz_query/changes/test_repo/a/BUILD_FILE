@@ -1,0 +1,1 @@
+genrule(name="a", srcs=["a.txt"], outs=["a.out"], cmd="cp $SRC $OUT")

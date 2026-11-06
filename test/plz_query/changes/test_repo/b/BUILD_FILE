@@ -1,0 +1,2 @@
+genrule(name="b", srcs=["//a:a"], outs=["b.out"], cmd="cp $SRC $OUT")
+genrule(name="c", outs=["c.out"], cmd="echo c > $OUT")

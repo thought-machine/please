@@ -1,0 +1,3 @@
+# Takes a snapshot written during the test as an input, to check that snapshot files named on the
+# command line aren't treated as changed files.
+genrule(name="snap", srcs=["after.snapshot"], outs=["snap.out"], cmd="cp $SRC $OUT")

@@ -1,3 +1,12 @@
+Version 17.36.0
+---------------
+    * `plz query changes` now compares against the merge base of `--since` and HEAD, rather
+      than the tip of `--since`, consistent with how it calculates changed files. Targets
+      changed on the base branch after the branch point are no longer reported as changed.
+    * New `plz query hashes` command, which writes a snapshot of the hashes of every target in the
+      graph. `plz query changes --before_hashes` compares against such a snapshot instead of checking
+      out and parsing the base revision, and `--write_after_hashes` writes one for the current revision.
+
 Version 17.35.0
 ---------------
     * New `AdditionalCACerts` config option to work with intercepting `HTTPProxy` (#3639)

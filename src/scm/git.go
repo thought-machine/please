@@ -239,6 +239,14 @@ func (g *git) Checkout(revision string) error {
 	return nil
 }
 
+func (g *git) MergeBase(a, b string) (string, error) {
+	out, err := exec.Command("git", "merge-base", a, b).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("git merge-base %s %s failed: %s\nOutput:\n%s", a, b, err, string(out))
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 func (g *git) CurrentRevDate(format string) string {
 	out, err := exec.Command("git", "show", "-s", "--format=%ct").CombinedOutput()
 	if err != nil {
