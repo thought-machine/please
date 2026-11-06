@@ -34,14 +34,27 @@ func Changes(state *core.BuildState, files []string, level int, includeSubrepos 
 
 // diffSnapshot performs a non-recursive diff of a build graph against a snapshot of a previous one.
 func diffSnapshot(before *GraphSnapshot, after *core.BuildState) map[*core.BuildTarget]struct{} {
-	configChanged := !bytes.Equal(before.Header.ConfigHash, after.Hashes.Config)
-	log.Debugf("Has config changed between before and after build states: %v", configChanged)
+	targets := after.Graph.AllTargets()
+	changed := make(map[*core.BuildTarget]struct{}, len(targets))
+	if !bytes.Equal(before.Header.ConfigHash, after.Hashes.Config) {
+		log.Debug("Config has changed between before and after build states, so every target has changed")
+		for _, t := range targets {
+			changed[t] = struct{}{}
+		}
+		return changed
+	}
 
-	changed := map[*core.BuildTarget]struct{}{}
-	for _, t := range after.Graph.AllTargets() {
-		if b, present := before.Targets[t.Label.String()]; !present || configChanged ||
-			!bytes.Equal(b.Rule, build.RuleHash(after, t, true, false)) ||
-			!bytes.Equal(b.Tools, toolsHash(after, t)) {
+	isChanged := make([]bool, len(targets))
+	parallelChunks(targets, func(start int, chunk []*core.BuildTarget) {
+		for i, t := range chunk {
+			b, present := before.Targets[t.Label.String()]
+			isChanged[start+i] = !present ||
+				!bytes.Equal(b.Rule, build.RuleHash(after, t, true, false)) ||
+				!bytes.Equal(b.Tools, toolsHash(after, t))
+		}
+	})
+	for i, t := range targets {
+		if isChanged[i] {
 			changed[t] = struct{}{}
 		}
 	}

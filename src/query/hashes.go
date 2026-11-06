@@ -55,24 +55,14 @@ type GraphSnapshot struct {
 func NewSnapshot(state *core.BuildState) *GraphSnapshot {
 	targets := state.Graph.AllTargets()
 	hashes := make([]TargetHashes, len(targets))
-	var wg sync.WaitGroup
-	workers := runtime.NumCPU()
-	chunk := (len(targets) + workers - 1) / workers
-	for start := 0; start < len(targets); start += chunk {
-		end := min(start+chunk, len(targets))
-		wg.Add(1)
-		go func(start, end int) {
-			defer wg.Done()
-			for i := start; i < end; i++ {
-				t := targets[i]
-				hashes[i] = TargetHashes{
-					Rule:  build.RuleHash(state, t, true, false),
-					Tools: toolsHash(state, t),
-				}
+	parallelChunks(targets, func(start int, chunk []*core.BuildTarget) {
+		for i, t := range chunk {
+			hashes[start+i] = TargetHashes{
+				Rule:  build.RuleHash(state, t, true, false),
+				Tools: toolsHash(state, t),
 			}
-		}(start, end)
-	}
-	wg.Wait()
+		}
+	})
 	s := &GraphSnapshot{
 		Header: SnapshotHeader{
 			FormatVersion: SnapshotFormatVersion,
@@ -85,6 +75,19 @@ func NewSnapshot(state *core.BuildState) *GraphSnapshot {
 		s.Targets[t.Label.String()] = hashes[i]
 	}
 	return s
+}
+
+// parallelChunks splits the targets into chunks and calls f on each one concurrently, passing it the
+// index of the chunk's first target. It returns once they have all finished.
+// f may write to disjoint parts of a shared slice indexed by target, but must otherwise not share state.
+func parallelChunks(targets []*core.BuildTarget, f func(start int, chunk []*core.BuildTarget)) {
+	size := max(len(targets)/runtime.NumCPU(), 100)
+	var wg sync.WaitGroup
+	for start := 0; start < len(targets); start += size {
+		chunk := targets[start:min(start+size, len(targets))]
+		wg.Go(func() { f(start, chunk) })
+	}
+	wg.Wait()
 }
 
 // passEnvHashes returns a hash of the current value of every env var named in any target's pass_env.
