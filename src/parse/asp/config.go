@@ -141,7 +141,7 @@ func getConfigKey(aspKey, configKey string) string {
 	return strings.ToLower(configKey)
 }
 
-// pluginConfig loads the plugin's config into a pyDict. It will load con
+// pluginConfig loads the plugin's config into a pyDict.
 func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, pluginName string) pyDict {
 	var extraVals map[string][]string
 	var ret pyDict

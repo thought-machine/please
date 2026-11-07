@@ -244,11 +244,18 @@ func pkg(s *scope, args []pyObject) pyObject {
 		s.Assert(configVal != nil, "error calling package(): %s is not a known config value", k)
 
 		// Merge in the existing config for dictionaries
-		if overrides, ok := v.(pyDict); ok {
+		if overrides, ok := asDict(v); ok {
 			if pluginConfig, ok := configVal.(pyDict); ok {
-				v = mergePluginConfig(s, overrides, pluginConfig.Copy(), k)
-			} else if pluginConfig, ok := configVal.(pyFrozenDict); ok {
-				v = mergePluginConfig(s, overrides, pluginConfig.Copy(), k)
+				newPluginConfig := pluginConfig.Copy()
+				for pluginKey, override := range overrides {
+					pluginKey = strings.ToUpper(pluginKey)
+					if _, ok := newPluginConfig[pluginKey]; !ok {
+						s.Error("error calling package(): %s.%s is not a known config value", k, pluginKey)
+					}
+
+					newPluginConfig.IndexAssign(pyString(pluginKey), override)
+				}
+				v = newPluginConfig
 			} else {
 				s.Error("error calling package(): can't assign a dict to %s as it's not a dict", k)
 			}
@@ -256,17 +263,6 @@ func pkg(s *scope, args []pyObject) pyObject {
 		s.config.IndexAssign(pyString(k), v)
 	}
 	return None
-}
-
-func mergePluginConfig(s *scope, overrides, newPluginConfig pyDict, key string) pyDict {
-	for pluginKey, override := range overrides {
-		pluginKey = strings.ToUpper(pluginKey)
-		if _, ok := newPluginConfig[pluginKey]; !ok {
-			s.Error("error calling package(): %s.%s is not a known config value", key, pluginKey)
-		}
-		newPluginConfig.IndexAssign(pyString(pluginKey), override)
-	}
-	return newPluginConfig
 }
 
 func tag(s *scope, args []pyObject) pyObject {
@@ -519,11 +515,11 @@ func isType(obj pyObject, name string) bool {
 		return name == "str"
 	case *pyRange:
 		return name == "range"
-	case pyList:
+	case pyList, pyFrozenList:
 		return name == "list"
-	case pyDict:
+	case pyDict, pyFrozenDict:
 		return name == "dict"
-	case *pyConfig:
+	case *pyConfig, *pyFrozenConfig:
 		return name == "config"
 	case *pyFunc:
 		return name == "callable"
