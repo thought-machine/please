@@ -245,7 +245,7 @@ func pkg(s *scope, args []pyObject) pyObject {
 
 		// Merge in the existing config for dictionaries
 		if overrides, ok := asDict(v); ok {
-			if pluginConfig, ok := configVal.(pyDict); ok {
+			if pluginConfig, ok := asDict(configVal); ok {
 				newPluginConfig := pluginConfig.Copy()
 				for pluginKey, override := range overrides {
 					pluginKey = strings.ToUpper(pluginKey)
