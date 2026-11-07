@@ -11,6 +11,13 @@ import (
 	"github.com/thought-machine/please/src/core"
 )
 
+// Used to key a cache to memoise building plugin configs.
+type pluginConfigKey struct {
+	PluginState *core.BuildState // State for the plugin itself
+	State       *core.BuildState // State for the receiving package (or its parent if it has no overrides)
+	InheritOnly bool             // True if State is the parent of a state with no overrides for this plugin
+}
+
 // valueToPyObject converts a field value to a pyObject
 func valueToPyObject(value reflect.Value) pyObject {
 	switch value.Kind() {
@@ -135,8 +142,7 @@ func getConfigKey(aspKey, configKey string) string {
 }
 
 // pluginConfig loads the plugin's config into a pyDict. It will load con
-func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDict {
-	pluginName := strings.ToLower(pluginState.RepoConfig.PluginDefinition.Name)
+func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, pluginName string) pyDict {
 	var extraVals map[string][]string
 	var ret pyDict
 	if pkgState.ParentState == nil {
@@ -144,7 +150,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 		ret = pyDict{}
 	} else {
 		extraVals = getExtraVals(pkgState.RepoConfig, pluginName)
-		ret = pluginConfig(pluginState, pkgState.ParentState)
+		ret = pluginConfig(pluginState, pkgState.ParentState, pluginName)
 	}
 
 	for key, definition := range pluginState.RepoConfig.PluginConfig {
@@ -193,6 +199,35 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState) pyDic
 	return ret
 }
 
+// loadCachedPluginConfig loads the config for a particular plugin, caching it to minimise rebuilds.
+func (i *interpreter) loadCachedPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, name string) pyDict {
+	key := pluginConfigKey{
+		PluginState: pluginState,
+		State:       pkgState,
+	}
+	if len(getExtraVals(pkgState.RepoConfig, name)) == 0 {
+		// This package doesn't have any overrides, so we can reuse the parent state's config.
+		key.State = pkgState.ParentState
+		key.InheritOnly = true
+	}
+	i.pluginConfigLock.RLock()
+	if cfg, present := i.pluginConfigs[key]; present {
+		i.pluginConfigLock.RUnlock()
+		return cfg
+	}
+	i.pluginConfigLock.RUnlock()
+	i.pluginConfigLock.Lock()
+	defer i.pluginConfigLock.Unlock()
+	// Check again since we just released the lock, we may have raced.
+	if cfg, present := i.pluginConfigs[key]; present {
+		return cfg
+	}
+	log.Debugf("Loading configuration for plugin %s", name)
+	cfg := pluginConfig(pluginState, pkgState, name)
+	i.pluginConfigs[key] = cfg
+	return cfg
+}
+
 func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 	if pluginState.RepoConfig == nil {
 		return
@@ -204,19 +239,14 @@ func (i *interpreter) loadPluginConfig(s *scope, pluginState *core.BuildState) {
 		return
 	}
 
-	log.Debugf("Loading configuration for plugin %s", pluginName)
-
-	if s.config.overlay == nil {
-		s.config.overlay = pyDict{}
-	}
-
 	key := strings.ToUpper(pluginName)
 	if _, ok := s.config.overlay[key]; ok {
 		return
 	}
-
-	cfg := pluginConfig(pluginState, s.state)
-	s.config.overlay[key] = cfg
+	if s.config.overlay == nil {
+		s.config.overlay = pyDict{}
+	}
+	s.config.overlay[key] = i.loadCachedPluginConfig(pluginState, s.state, strings.ToLower(pluginName))
 }
 
 func toPyObject(key, val, toType string, optional bool) pyObject {
