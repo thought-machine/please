@@ -200,7 +200,7 @@ func pluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, plugi
 }
 
 // loadCachedPluginConfig loads the config for a particular plugin, caching it to minimise rebuilds.
-func (i *interpreter) loadCachedPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, name string) pyDict {
+func (i *interpreter) loadCachedPluginConfig(pluginState *core.BuildState, pkgState *core.BuildState, name string) pyFrozenDict {
 	key := pluginConfigKey{
 		PluginState: pluginState,
 		State:       pkgState,
@@ -223,7 +223,7 @@ func (i *interpreter) loadCachedPluginConfig(pluginState *core.BuildState, pkgSt
 		return cfg
 	}
 	log.Debugf("Loading configuration for plugin %s", name)
-	cfg := pluginConfig(pluginState, pkgState, name)
+	cfg := pluginConfig(pluginState, pkgState, name).Freeze().(pyFrozenDict)
 	i.pluginConfigs[key] = cfg
 	return cfg
 }
