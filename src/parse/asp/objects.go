@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"iter"
 	"math"
-	"reflect"
 	"slices"
 	"sort"
 	"strconv"
@@ -1007,7 +1006,7 @@ func (c *pyConfig) Equals(other pyObject) bool {
 	default:
 		return false
 	}
-	return c == o || (reflect.DeepEqual(c.base, o.base) && c.overlay.Equals(o.overlay))
+	return c == o || (c.base.dict.Equals(o.base.dict) && c.overlay.Equals(o.overlay))
 }
 
 func (c *pyConfig) Property(scope *scope, name string) pyObject {
