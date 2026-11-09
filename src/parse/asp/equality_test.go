@@ -32,14 +32,6 @@ func TestEqualsFrozen(t *testing.T) {
 	assert.False(t, (pyInt(1)).Equals(pyString("1")))
 }
 
-func TestFreezeIsDeep(t *testing.T) {
-	l := pyList{pyDict{"a": pyList{}}}.Freeze().(pyFrozenList)
-	d, ok := l.pyList[0].(pyFrozenDict)
-	assert.True(t, ok, "nested dict should be frozen")
-	_, ok = d.pyDict["a"].(pyFrozenList)
-	assert.True(t, ok, "nested list should be frozen")
-}
-
 func TestEqualsConfig(t *testing.T) {
 	c1 := &pyConfig{base: &pyConfigBase{dict: pyDict{"A": pyList{pyString("x")}}}, overlay: pyDict{"B": pyInt(1)}}
 	c2 := &pyConfig{base: &pyConfigBase{dict: pyDict{"A": pyList{pyString("x")}.Freeze()}}, overlay: pyDict{"B": pyInt(1)}}

@@ -486,7 +486,7 @@ func (l pyList) Freeze() pyObject {
 			frozen[i] = v
 		}
 	}
-	return pyFrozenList{pyList: frozen}
+	return pyFrozenList{pyList: l}
 }
 
 // Repeat returns a copy of this list, repeated n times
