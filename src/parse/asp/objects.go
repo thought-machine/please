@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"math"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
@@ -23,6 +24,8 @@ type pyObject interface {
 	TypeTag() int32
 	// Returns true if this object evaluates to something truthy.
 	IsTruthy() bool
+	// Returns true if this object is equal to the given one (i.e. implements the == operator).
+	Equals(other pyObject) bool
 }
 
 // A freezable represents an object that can be frozen into a readonly state.
@@ -94,6 +97,11 @@ func (b pyBool) IsTruthy() bool {
 	return b == True
 }
 
+func (b pyBool) Equals(other pyObject) bool {
+	o, ok := other.(pyBool)
+	return ok && b == o
+}
+
 func (b pyBool) String() string {
 	if b == True {
 		return "True"
@@ -125,6 +133,11 @@ func (n pyNone) IsTruthy() bool {
 	return false
 }
 
+func (n pyNone) Equals(other pyObject) bool {
+	_, ok := other.(pyNone)
+	return ok
+}
+
 func (n pyNone) String() string {
 	return "None"
 }
@@ -153,6 +166,11 @@ func (s pySentinel) TypeTag() int32 {
 
 func (s pySentinel) IsTruthy() bool {
 	return false
+}
+
+func (s pySentinel) Equals(other pyObject) bool {
+	o, ok := other.(pySentinel)
+	return ok && s == o
 }
 
 func (s pySentinel) String() string {
@@ -208,6 +226,11 @@ func (i pyInt) TypeTag() int32 {
 
 func (i pyInt) IsTruthy() bool {
 	return i != 0
+}
+
+func (i pyInt) Equals(other pyObject) bool {
+	o, ok := other.(pyInt)
+	return ok && i == o
 }
 
 func (i pyInt) Operator(operator Operator, operand pyObject) pyObject {
@@ -266,6 +289,11 @@ func (s pyString) TypeTag() int32 {
 
 func (s pyString) IsTruthy() bool {
 	return s != ""
+}
+
+func (s pyString) Equals(other pyObject) bool {
+	o, ok := other.(pyString)
+	return ok && s == o
 }
 
 func (s pyString) Property(scope *scope, name string) pyObject {
@@ -347,6 +375,29 @@ func (l pyList) TypeTag() int32 {
 
 func (l pyList) IsTruthy() bool {
 	return len(l) > 0
+}
+
+// Equals compares this list to another, element by element. Frozen lists compare equal to unfrozen
+// ones with the same contents.
+func (l pyList) Equals(other pyObject) bool {
+	var o pyList
+	switch other := other.(type) {
+	case pyList:
+		o = other
+	case pyFrozenList:
+		o = other.pyList
+	default:
+		return false
+	}
+	if len(l) != len(o) {
+		return false
+	}
+	for i, v := range l {
+		if !v.Equals(o[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func (l pyList) Operator(operator Operator, operand pyObject) pyObject {
@@ -436,7 +487,7 @@ func (l pyList) Freeze() pyObject {
 			frozen[i] = v
 		}
 	}
-	return pyFrozenList{pyList: l}
+	return pyFrozenList{pyList: frozen}
 }
 
 // Repeat returns a copy of this list, repeated n times
@@ -481,6 +532,29 @@ func (d pyDict) TypeTag() int32 {
 
 func (d pyDict) IsTruthy() bool {
 	return len(d) > 0
+}
+
+// Equals compares this dict to another. Frozen dicts compare equal to unfrozen ones with the
+// same contents.
+func (d pyDict) Equals(other pyObject) bool {
+	var o pyDict
+	switch other := other.(type) {
+	case pyDict:
+		o = other
+	case pyFrozenDict:
+		o = other.pyDict
+	default:
+		return false
+	}
+	if len(d) != len(o) {
+		return false
+	}
+	for k, v := range d {
+		if v2, present := o[k]; !present || !v.Equals(v2) {
+			return false
+		}
+	}
+	return true
 }
 
 func (d pyDict) Property(scope *scope, name string) pyObject {
@@ -685,6 +759,11 @@ func (f *pyFunc) TypeTag() int32 {
 
 func (f *pyFunc) IsTruthy() bool {
 	return true
+}
+
+func (f *pyFunc) Equals(other pyObject) bool {
+	o, ok := other.(*pyFunc)
+	return ok && f == o
 }
 
 func (f *pyFunc) String() string {
@@ -916,6 +995,21 @@ func (c *pyConfig) IsTruthy() bool {
 	return true // sure, why not
 }
 
+// Equals compares this config to another. Frozen configs compare equal to unfrozen ones with the
+// same contents.
+func (c *pyConfig) Equals(other pyObject) bool {
+	var o *pyConfig
+	switch other := other.(type) {
+	case *pyConfig:
+		o = other
+	case *pyFrozenConfig:
+		o = &other.pyConfig
+	default:
+		return false
+	}
+	return c == o || (reflect.DeepEqual(c.base, o.base) && c.overlay.Equals(o.overlay))
+}
+
 func (c *pyConfig) Property(scope *scope, name string) pyObject {
 	if obj := c.Get(name, nil); obj != nil {
 		return obj
@@ -1055,6 +1149,11 @@ func (r *pyRange) TypeTag() int32 {
 
 func (r *pyRange) IsTruthy() bool {
 	return true
+}
+
+func (r *pyRange) Equals(other pyObject) bool {
+	o, ok := other.(*pyRange)
+	return ok && *r == *o
 }
 
 func (r *pyRange) Operator(operator Operator, operand pyObject) pyObject {
