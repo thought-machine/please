@@ -1,30 +1,135 @@
 package query
 
 import (
+	"cmp"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+	"io"
+	"iter"
 	"os"
 	"path/filepath"
-	"sync"
+	"runtime"
+	"slices"
 
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 )
 
+// graphEncodeOptions are the options used to encode the graph.
+// Aside from AllowDuplicateNames, these reproduce what encoding/json v1 used to output.
+var graphEncodeOptions = json.JoinOptions(
+	jsontext.WithIndent("    "),
+	json.Deterministic(true),           // Sort map keys
+	jsontext.EscapeForJS(true),         // v1 always escaped U+2028 and U+2029
+	jsontext.AllowInvalidUTF8(true),    // v1 replaced invalid UTF-8 with U+FFFD rather than failing
+	jsontext.AllowDuplicateNames(true), // We construct all the keys ourselves; this saves tracking every name in each object
+)
+
 // Graph prints a representation of the build graph as JSON.
 func Graph(state *core.BuildState, targets []core.BuildLabel) {
 	log.Notice("Generating graph...")
-	g := makeJSONGraph(state, targets)
-
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "    ")
-	encoder.SetEscapeHTML(false)
-
-	log.Notice("Encoding...")
-	if err := encoder.Encode(g); err != nil {
+	if err := writeGraph(os.Stdout, state, targets); err != nil {
 		log.Fatalf("Failed to serialise JSON: %s\n", err)
 	}
 	log.Notice("Done")
+}
+
+// writeGraph writes the JSON representation of the build graph to the given writer.
+// When writing the entire graph, it is streamed out one package at a time rather than
+// being constructed in memory first.
+func writeGraph(w io.Writer, state *core.BuildState, targets []core.BuildLabel) error {
+	enc := jsontext.NewEncoder(w, graphEncodeOptions)
+	if len(targets) != 0 {
+		return json.MarshalEncode(enc, makeJSONGraph(state, targets))
+	}
+	return writeAllPackages(enc, state)
+}
+
+// writeAllPackages streams the entire graph to the given encoder. The output is identical to
+// encoding a JSONGraph containing every package.
+func writeAllPackages(enc *jsontext.Encoder, state *core.BuildState) error {
+	// Sort the packages so the output is deterministic; this matches the order of the keys in
+	// JSONGraph (packages in the root repo, then each subrepo in turn, then by name within those).
+	pkgs := slices.SortedFunc(state.Graph.AllPackages(), func(a, b *core.Package) int {
+		return cmp.Or(cmp.Compare(a.SubrepoName, b.SubrepoName), cmp.Compare(a.Name, b.Name))
+	})
+	w := tokenWriter{enc: enc}
+	w.Write(jsontext.BeginObject, jsontext.String("packages"), jsontext.BeginObject)
+	subrepo := ""
+	// The window is fairly generous since per-package cost varies a lot and a slow one blocks
+	// everything queued behind it. Completed packages are small relative to the whole graph.
+	window := 100 * runtime.GOMAXPROCS(0)
+	for pkg := range orderedParallel(pkgs, window, func(pkg *core.Package) JSONPackage {
+		return makeJSONPackage(state, pkg)
+	}) {
+		if pkg.subrepo != subrepo {
+			if subrepo == "" {
+				// End of the root packages, start of the subrepos
+				w.Write(jsontext.EndObject, jsontext.String("subrepos"), jsontext.BeginObject)
+			} else {
+				// End of the previous subrepo's packages and the subrepo itself
+				w.Write(jsontext.EndObject, jsontext.EndObject)
+			}
+			w.Write(jsontext.String(pkg.subrepo), jsontext.BeginObject, jsontext.String("packages"), jsontext.BeginObject)
+			subrepo = pkg.subrepo
+		}
+		w.Write(jsontext.String(pkg.name))
+		if w.err == nil {
+			w.err = json.MarshalEncode(enc, pkg)
+		}
+		if w.err != nil {
+			return w.err
+		}
+	}
+	if subrepo != "" {
+		w.Write(jsontext.EndObject, jsontext.EndObject) // the last subrepo's packages and the subrepo itself
+	}
+	w.Write(jsontext.EndObject, jsontext.EndObject) // packages / subrepos, and the root object
+	return w.err
+}
+
+// A tokenWriter writes tokens to an encoder, retaining the first error that occurs.
+type tokenWriter struct {
+	enc *jsontext.Encoder
+	err error
+}
+
+func (w *tokenWriter) Write(tokens ...jsontext.Token) {
+	for _, tok := range tokens {
+		if w.err != nil {
+			return
+		}
+		w.err = w.enc.WriteToken(tok)
+	}
+}
+
+// orderedParallel applies f to each element of in, running up to roughly n of them concurrently,
+// and yields the results in the same order as the input.
+// Limiting the window bounds how many results can be waiting in memory behind a slow one.
+func orderedParallel[T, U any](in []T, n int, f func(T) U) iter.Seq[U] {
+	return func(yield func(U) bool) {
+		results := make(chan chan U, n)
+		done := make(chan struct{})
+		defer close(done)
+		go func() {
+			defer close(results)
+			for _, x := range in {
+				ch := make(chan U, 1)
+				select {
+				case results <- ch:
+				case <-done:
+					return
+				}
+				go func() { ch <- f(x) }()
+			}
+		}()
+		for ch := range results {
+			if !yield(<-ch) {
+				return
+			}
+		}
+	}
 }
 
 // JSONGraph is an alternate representation of our build graph; will contain different information
@@ -53,9 +158,9 @@ type JSONTarget struct {
 	Requires []string    `json:"requires,omitempty" note:"corresponds to requires in rule declaration"`
 	Command  string      `json:"command,omitempty" note:"the currently active command of the target. not present on filegroup or remote_file actions"`
 	Hash     string      `json:"hash" note:"partial hash of target, does not include source hash"`
-	Test     bool        `json:"test,omitempty" note:"true if target is a test"`
-	Binary   bool        `json:"binary,omitempty" note:"true if target is a binary"`
-	TestOnly bool        `json:"test_only,omitempty" note:"true if target should be restricted to test code"`
+	Test     bool        `json:"test,omitzero" note:"true if target is a test"`
+	Binary   bool        `json:"binary,omitzero" note:"true if target is a binary"`
+	TestOnly bool        `json:"test_only,omitzero" note:"true if target should be restricted to test code"`
 }
 
 func makeJSONGraph(state *core.BuildState, targets []core.BuildLabel) *JSONGraph {
@@ -64,8 +169,8 @@ func makeJSONGraph(state *core.BuildState, targets []core.BuildLabel) *JSONGraph
 		Subrepos: map[string]*JSONGraph{},
 	}
 	if len(targets) == 0 {
-		for pkg := range makeAllPackages(state) {
-			ret.Subrepo(pkg.subrepo).Packages[pkg.name] = pkg
+		for pkg := range state.Graph.AllPackages() {
+			ret.Subrepo(pkg.SubrepoName).Packages[pkg.Name] = makeJSONPackage(state, pkg)
 		}
 	} else {
 		done := map[core.BuildLabel]struct{}{}
@@ -89,22 +194,6 @@ func (graph *JSONGraph) Subrepo(name string) *JSONGraph {
 	}
 	graph.Subrepos[name] = subrepo
 	return subrepo
-}
-
-// makeAllPackages constructs all the JSONPackage objects for this graph in parallel.
-func makeAllPackages(state *core.BuildState) <-chan JSONPackage {
-	ch := make(chan JSONPackage, 100)
-	go func() {
-		var wg sync.WaitGroup
-		for pkg := range state.Graph.AllPackages() {
-			wg.Go(func() {
-				ch <- makeJSONPackage(state, pkg)
-			})
-		}
-		wg.Wait()
-		close(ch)
-	}()
-	return ch
 }
 
 func addJSONTarget(state *core.BuildState, graph *JSONGraph, label core.BuildLabel, done map[core.BuildLabel]struct{}) {
