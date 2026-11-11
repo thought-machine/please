@@ -6,7 +6,6 @@ import (
 	"iter"
 	"path"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"runtime/pprof"
 	"strings"
@@ -726,9 +725,9 @@ func (s *scope) interpretOp(obj pyObject, op OpExpression) pyObject {
 	case Not:
 		return s.negate(obj)
 	case Equal:
-		return newPyBool(reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
+		return newPyBool(obj.Equals(s.interpretExpression(op.Expr)))
 	case NotEqual:
-		return newPyBool(!reflect.DeepEqual(obj, s.interpretExpression(op.Expr)))
+		return newPyBool(!obj.Equals(s.interpretExpression(op.Expr)))
 	case Is:
 		return s.interpretIs(obj, op)
 	case IsNot:
