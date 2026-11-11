@@ -17,12 +17,12 @@ import (
 )
 
 // graphEncodeOptions are the options used to encode the graph.
-// Aside from AllowDuplicateNames, these reproduce what encoding/json v1 used to output.
 var graphEncodeOptions = json.JoinOptions(
 	jsontext.WithIndent("    "),
-	json.Deterministic(true),           // Sort map keys
-	jsontext.EscapeForJS(true),         // v1 always escaped U+2028 and U+2029
-	jsontext.AllowInvalidUTF8(true),    // v1 replaced invalid UTF-8 with U+FFFD rather than failing
+	json.Deterministic(true), // Sort map keys so the output is stable
+	// Paths and commands aren't guaranteed to be valid UTF-8; replace bad bytes with U+FFFD rather
+	// than failing (which would leave a truncated document since we're streaming).
+	jsontext.AllowInvalidUTF8(true),
 	jsontext.AllowDuplicateNames(true), // We construct all the keys ourselves; this saves tracking every name in each object
 )
 
