@@ -2,6 +2,7 @@ package remote
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -48,8 +49,15 @@ func (c *Client) buildFilegroup(target *core.BuildTarget) (*core.BuildMetadata, 
 		}
 	}
 	// Sort the outputs so the hash doesn't depend on the order they were collected in.
+	// Directories can have the same name if several dependencies output one (they're merged by anything
+	// consuming them) so we have to sort on their digests too.
 	slices.SortFunc(outs.Files, func(a, b *pb.FileNode) int { return strings.Compare(a.Name, b.Name) })
-	slices.SortFunc(outs.Directories, func(a, b *pb.DirectoryNode) int { return strings.Compare(a.Name, b.Name) })
+	slices.SortFunc(outs.Directories, func(a, b *pb.DirectoryNode) int {
+		return cmp.Or(strings.Compare(a.Name, b.Name), strings.Compare(a.Digest.GetHash(), b.Digest.GetHash()))
+	})
+	outs.Directories = slices.CompactFunc(outs.Directories, func(a, b *pb.DirectoryNode) bool {
+		return a.Name == b.Name && a.Digest.GetHash() == b.Digest.GetHash()
+	})
 	slices.SortFunc(outs.Symlinks, func(a, b *pb.SymlinkNode) int { return strings.Compare(a.Name, b.Name) })
 	tree := &pb.Tree{Root: outs}
 	b, err := proto.Marshal(tree)
@@ -97,8 +105,8 @@ func (c *Client) addFilegroupSources(outs *pb.Directory, target *core.BuildTarge
 		}
 		// This is needed for the protos of any source directories; it's a bit wasteful for the ones
 		// above them, but they're small and this isn't usually many files.
-		b.Build(ch)
-		return nil
+		_, err := b.Build(ch)
+		return err
 	}); err != nil {
 		return err
 	}

@@ -1,3 +1,8 @@
+Version 17.35.1
+---------------
+    * Fix labels on plugin_repo build def (#3651)
+    * Fix for remote execution filegroups with duplicate directories which are now correctly merged (#3655)
+
 Version 17.35.0
 ---------------
     * New `AdditionalCACerts` config option to work with intercepting `HTTPProxy` (#3639)

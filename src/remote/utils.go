@@ -215,6 +215,19 @@ func (c *Client) setOutputDirectoryOuts(target *core.BuildTarget, actionResultFS
 	return nil
 }
 
+// readDirectory reads a Directory proto from the CAS, caching it for future calls.
+func (c *Client) readDirectory(dg *pb.Digest) (*pb.Directory, error) {
+	if dir, present := c.directories.Load(dg.Hash); present {
+		return dir.(*pb.Directory), nil
+	}
+	dir := &pb.Directory{}
+	if _, err := c.client.ReadProto(context.Background(), digest.NewFromProtoUnvalidated(dg), dir); err != nil {
+		return nil, err
+	}
+	c.directories.Store(dg.Hash, dir)
+	return dir, nil
+}
+
 // maybeGetOutDir will get the output directory based on the directory provided. If there's no matching directory, this
 // will return an empty string indicating that that action output was not an output directory.
 func maybeGetOutDir(dir string, outDirs []core.OutputDirectory) core.OutputDirectory {
@@ -443,6 +456,9 @@ type dirBuilder struct {
 	c    *Client
 	root *pb.Directory
 	dirs map[string]*pb.Directory
+	// The digests we've calculated for directories in dirs, so we can tell them apart from directories
+	// that were added by digest if we're built more than once.
+	digests map[string]string
 }
 
 func newDirBuilder(c *Client) *dirBuilder {
@@ -452,8 +468,9 @@ func newDirBuilder(c *Client) *dirBuilder {
 			".": root, // Ensure the root is in there
 			"":  root, // Some things might try to name it this way
 		},
-		root: root,
-		c:    c,
+		digests: map[string]string{},
+		root:    root,
+		c:       c,
 	}
 }
 
@@ -485,10 +502,16 @@ func (b *dirBuilder) dir(dir, child string) *pb.Directory {
 // Build "builds" the directory. It calculates the digests of all the items in the directory tree, and returns the root
 // directory. If ch is non-nil, it will upload the directory protos to ch. Build doesn't upload any of the actual files
 // in the directory tree, just the protos.
-func (b *dirBuilder) Build(ch chan<- *uploadinfo.Entry) *pb.Directory {
+//
+// Directories with the same name (e.g. output directories of two dependencies in the same package, or one
+// alongside individual output files under the same directory) are merged together, which may require reading
+// their Directory protos from the remote.
+func (b *dirBuilder) Build(ch chan<- *uploadinfo.Entry) (*pb.Directory, error) {
 	// Upload the directory structure
-	b.walk(".", ch)
-	return b.root
+	if _, err := b.walk(".", ch); err != nil {
+		return nil, err
+	}
+	return b.root, nil
 }
 
 // Node returns the file, directory or symlink corresponding to the given path (or nil for all if not found)
@@ -498,51 +521,113 @@ func (b *dirBuilder) Node(name string) (*pb.DirectoryNode, *pb.FileNode, *pb.Sym
 
 // Walk walks the directory tree calculating the digest. If ch is non-nil, it will also upload the direcory protos.
 // Walk does not upload the actual files in the tree, just the tree structure.
-func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) *pb.Digest {
+func (b *dirBuilder) walk(name string, ch chan<- *uploadinfo.Entry) (*pb.Digest, error) {
 	dir := b.dirs[name]
+	if err := b.mergeDirs(name, dir); err != nil {
+		return nil, err
+	}
 	for _, d := range dir.Directories {
-		if d.Digest == nil { // It's not nil if we're reusing outputs from an earlier call.
-			d.Digest = b.walk(filepath.Join(name, d.Name), ch)
+		if d.Digest == nil { // It's not nil if it was added by digest (e.g. the output of another target)
+			dg, err := b.walk(filepath.Join(name, d.Name), ch)
+			if err != nil {
+				return nil, err
+			}
+			d.Digest = dg
 		}
 	}
 	// The protocol requires that these are sorted into lexicographic order. Not all servers
 	// necessarily care, but some do, and we should be compliant.
-	files := dir.Files
-	dirs := dir.Directories
-	syms := dir.Symlinks
-	slices.SortFunc(files, func(a, b *pb.FileNode) int { return strings.Compare(a.Name, b.Name) })
-	slices.SortFunc(dirs, func(a, b *pb.DirectoryNode) int { return strings.Compare(a.Name, b.Name) })
-	slices.SortFunc(syms, func(a, b *pb.SymlinkNode) int { return strings.Compare(a.Name, b.Name) })
-
 	// Ensure there are not duplicates in these slices.
-	last := ""
-	dir.Files = files[:0]
-	for _, f := range files {
-		if f.Name != last {
-			dir.Files = append(dir.Files, f)
-			last = f.Name
-		}
-	}
-	dir.Directories = dirs[:0]
-	for _, d := range dirs {
-		if d.Name != last {
-			dir.Directories = append(dir.Directories, d)
-			last = d.Name
-		}
-	}
-	dir.Symlinks = syms[:0]
-	for _, s := range syms {
-		if s.Name != last {
-			dir.Symlinks = append(dir.Symlinks, s)
-			last = s.Name
-		}
-	}
+	dir.Files = sortUnique(dir.Files, (*pb.FileNode).GetName)
+	dir.Directories = sortUnique(dir.Directories, (*pb.DirectoryNode).GetName)
+	dir.Symlinks = sortUnique(dir.Symlinks, (*pb.SymlinkNode).GetName)
 
 	entry, _ := uploadinfo.EntryFromProto(dir)
 	if ch != nil {
 		ch <- entry
 	}
-	return entry.Digest.ToProto()
+	b.digests[name] = entry.Digest.Hash
+	return entry.Digest.ToProto(), nil
+}
+
+// mergeDirs ensures that each subdirectory of the given directory appears only once in it.
+// A subdirectory needs merging if it's been added more than once with different digests, or if it was added by
+// digest and also has contents added to it in the builder (e.g. via Dir). In that case its contents are expanded
+// into the builder, and it's replaced by a single entry whose digest will be calculated when it's walked.
+func (b *dirBuilder) mergeDirs(name string, dir *pb.Directory) error {
+	byName := make(map[string][]*pb.DirectoryNode, len(dir.Directories))
+	for _, d := range dir.Directories {
+		byName[d.Name] = append(byName[d.Name], d)
+	}
+	if len(byName) == len(dir.Directories) && !b.hasExpandedDigestNodes(name, dir) {
+		return nil // Nothing to do; this is by far the most common case.
+	}
+	dirs := make([]*pb.DirectoryNode, 0, len(byName))
+	for _, d := range dir.Directories {
+		nodes, present := byName[d.Name]
+		if !present {
+			continue // Already handled this name
+		}
+		delete(byName, d.Name)
+		path := filepath.Join(name, d.Name)
+		digests := b.unbuiltDigests(path, nodes)
+		_, inBuilder := b.dirs[path]
+		if len(digests) == 0 || (len(digests) == 1 && !inBuilder) {
+			dirs = append(dirs, nodes[0]) // Either entirely the builder's own, or one directory added multiple times
+			continue
+		}
+		sub, present := b.dirs[path]
+		if !present {
+			sub = &pb.Directory{}
+			b.dirs[path] = sub
+		}
+		for _, dg := range digests {
+			contents, err := b.c.readDirectory(dg)
+			if err != nil {
+				return fmt.Errorf("failed to read directory %s for merging: %w", path, err)
+			}
+			// Any subdirectories of these that need further merging are handled when we walk sub.
+			sub.Files = append(sub.Files, contents.Files...)
+			sub.Directories = append(sub.Directories, contents.Directories...)
+			sub.Symlinks = append(sub.Symlinks, contents.Symlinks...)
+		}
+		delete(b.digests, path) // Its contents have changed, so it'll need to be walked again
+		dirs = append(dirs, &pb.DirectoryNode{Name: d.Name})
+	}
+	dir.Directories = dirs
+	return nil
+}
+
+// hasExpandedDigestNodes returns true if any subdirectory of the given directory was added by digest but also has
+// contents in the builder.
+func (b *dirBuilder) hasExpandedDigestNodes(name string, dir *pb.Directory) bool {
+	for _, d := range dir.Directories {
+		path := filepath.Join(name, d.Name)
+		if _, present := b.dirs[path]; present && d.Digest != nil && b.digests[path] != d.Digest.Hash {
+			return true
+		}
+	}
+	return false
+}
+
+// unbuiltDigests returns the distinct digests of the given nodes (which are all for the given path) that weren't
+// calculated by this builder.
+func (b *dirBuilder) unbuiltDigests(path string, nodes []*pb.DirectoryNode) []*pb.Digest {
+	var digests []*pb.Digest
+	for _, n := range nodes {
+		if n.Digest == nil || n.Digest.Hash == b.digests[path] {
+			continue
+		} else if !slices.ContainsFunc(digests, func(dg *pb.Digest) bool { return dg.Hash == n.Digest.Hash }) {
+			digests = append(digests, n.Digest)
+		}
+	}
+	return digests
+}
+
+// sortUnique sorts the given nodes by name and removes any with duplicate names (keeping the first of each).
+func sortUnique[T any](nodes []T, name func(T) string) []T {
+	slices.SortStableFunc(nodes, func(a, b T) int { return strings.Compare(name(a), name(b)) })
+	return slices.CompactFunc(nodes, func(a, b T) bool { return name(a) == name(b) })
 }
 
 // convertPlatform converts the platform entries from the config into a Platform proto.
