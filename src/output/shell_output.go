@@ -402,11 +402,23 @@ func printBuildResults(state *core.BuildState, duration time.Duration) {
 func printHashes(state *core.BuildState, duration time.Duration) {
 	fmt.Printf("Hashes calculated, total time %s:\n", duration)
 	for _, label := range state.ExpandVisibleOriginalTargets() {
-		hash, err := state.TargetHasher.OutputHash(state.Graph.TargetOrDie(label))
-		if err != nil {
-			fmt.Printf("  %s: cannot calculate: %s\n", label, err)
-		} else {
-			fmt.Printf("  %s: %s\n", label, hex.EncodeToString(hash))
+		target := state.Graph.TargetOrDie(label)
+		targets := []*core.BuildTarget{}
+		for _, t := range state.Graph.PackageOrDie(label).AllChildren(target) {
+			if len(t.Hashes) > 0 {
+				targets = append(targets, t)
+			}
+		}
+		if len(targets) == 0 {
+			targets = append(targets, target)
+		}
+		for _, t := range targets {
+			hash, err := state.TargetHasher.OutputHash(t)
+			if err != nil {
+				fmt.Printf("  %s: cannot calculate: %s\n", t.Label, err)
+			} else {
+				fmt.Printf("  %s: %s\n", t.Label, hex.EncodeToString(hash))
+			}
 		}
 	}
 }
