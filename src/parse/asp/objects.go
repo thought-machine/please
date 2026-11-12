@@ -583,7 +583,7 @@ func (d pyDict) Operator(operator Operator, operand pyObject) pyObject {
 		}
 		panic("unknown dict key: " + s.String())
 	case Union:
-		d2, ok := operand.(pyDict)
+		d2, ok := asDict(operand)
 		if !ok {
 			panic("Operator to | must be another dict, not " + operand.Type())
 		}
