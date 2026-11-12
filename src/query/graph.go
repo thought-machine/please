@@ -2,7 +2,8 @@ package query
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,12 +17,14 @@ func Graph(state *core.BuildState, targets []core.BuildLabel) {
 	log.Notice("Generating graph...")
 	g := makeJSONGraph(state, targets)
 
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "    ")
-	encoder.SetEscapeHTML(false)
-
+	enc := jsontext.NewEncoder(os.Stdout, json.JoinOptions(
+		jsontext.WithIndent("    "),
+		json.Deterministic(true),           // Sort map keys so the output is stable
+		jsontext.AllowInvalidUTF8(true),    // Paths and commands aren't guaranteed to be valid UTF-8; replace bad bytes with U+FFFD rather than failing.
+		jsontext.AllowDuplicateNames(true), // We construct all the keys ourselves; this saves tracking every name in each object
+	))
 	log.Notice("Encoding...")
-	if err := encoder.Encode(g); err != nil {
+	if err := json.MarshalEncode(enc, g); err != nil {
 		log.Fatalf("Failed to serialise JSON: %s\n", err)
 	}
 	log.Notice("Done")
