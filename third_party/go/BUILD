@@ -81,7 +81,7 @@ go_repo(
 
 go_repo(
     module = "github.com/stretchr/testify",
-    version = "v1.11.1",
+    version = "v1.12.1",
 )
 
 go_repo(
@@ -587,7 +587,7 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "github.com/go-logr/logr",
-    version = "v1.4.3",
+    version = "v1.4.4",
 )
 
 go_repo(
@@ -623,19 +623,19 @@ go_repo(
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel",
-    version = "v1.44.0",
+    version = "v1.47.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/metric",
-    version = "v1.44.0",
+    version = "v1.47.0",
 )
 
 go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/otel/trace",
-    version = "v1.44.0",
+    version = "v1.47.0",
 )
 
 go_repo(
@@ -723,4 +723,19 @@ go_repo(
     licences = ["Apache-2.0"],
     module = "go.opentelemetry.io/auto/sdk",
     version = "v1.2.1",
+)
+
+go_repo(
+    licences = [
+        "Apache-2.0",
+        "BSD-3-Clause",
+    ],
+    module = "go.opentelemetry.io/otel/log",
+    version = "v1.47.0",
+)
+
+go_repo(
+    licences = ["MIT"],
+    module = "go.yaml.in/yaml/v3",
+    version = "v3.0.5",
 )
