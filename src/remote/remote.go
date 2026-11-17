@@ -481,6 +481,10 @@ func (c *Client) Download(target *core.BuildTarget) error {
 			log.Debug("Not downloading outputs for %s, they're already up-to-date", target)
 			return nil
 		}
+		if target.IsTextFile {
+			// We know the contents locally so there's no need to download anything.
+			return c.writeTextFile(target, buildAction)
+		}
 		// Show the target as active while it downloads; otherwise nothing appears to be happening during a long
 		// download (which also looks like a stall to cycle detection). Failures aren't logged here since all
 		// callers report them already.
@@ -686,6 +690,11 @@ func (c *Client) maybeRetrieveResults(target *core.BuildTarget, command *pb.Comm
 // execute submits an action to the remote executor and monitors its progress.
 // The returned ActionResult may be nil on failure.
 func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *pb.Digest, isTest, needStdout bool, run int) (*core.BuildMetadata, *pb.ActionResult, error) {
+	// Text files are constructed entirely locally; there's no point checking the action cache since
+	// it's no more expensive to recreate the result than to look it up.
+	if target.IsTextFile {
+		return c.buildTextFile(target, command)
+	}
 	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(target, command, digest, isTest, needStdout, run); metadata != nil {
 			return metadata, ar, nil
@@ -696,11 +705,9 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
-	// Remote files & text files get special treatment at this point.
+	// Remote files get special treatment at this point.
 	if target.IsRemoteFile {
 		return c.fetchRemoteFile(target, digest)
-	} else if target.IsTextFile {
-		return c.buildTextFile(c.state, target, command, digest)
 	}
 
 	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
@@ -943,42 +950,51 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 	return md, ar, err
 }
 
-// buildTextFile "builds" uploads a text file to the CAS
-func (c *Client) buildTextFile(state *core.BuildState, target *core.BuildTarget, command *pb.Command, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
-	ar := &pb.ActionResult{}
-	if err := c.uploadBlobs(func(ch chan<- *uploadinfo.Entry) error {
-		defer close(ch)
-		if len(command.OutputPaths) != 1 {
-			return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(command.OutputPaths))
-		}
-		content, err := target.GetFileContent(state)
-		if err != nil {
-			return err
-		}
-		entry := uploadinfo.EntryFromBlob([]byte(content))
-		ch <- entry
-		ar.OutputFiles = append(ar.OutputFiles, &pb.OutputFile{
-			Path:         command.OutputPaths[0],
-			Digest:       entry.Digest.ToProto(),
-			IsExecutable: target.IsBinary,
-		})
-		return nil
-	}); err != nil {
-		return nil, nil, err
+// buildTextFile "builds" a text file by uploading its contents to the CAS.
+// The ActionResult is constructed locally and never written to the action cache.
+func (c *Client) buildTextFile(target *core.BuildTarget, command *pb.Command) (*core.BuildMetadata, *pb.ActionResult, error) {
+	if len(command.OutputPaths) != 1 {
+		return nil, nil, fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(command.OutputPaths))
 	}
-	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: actionDigest,
-		ActionResult: ar,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
-	}
-	md, err := c.buildMetadata(target, ar, false, false)
+	content, err := target.GetFileContent(c.state)
 	if err != nil {
 		return nil, nil, err
 	}
-	c.locallyCacheResults(target, actionDigest, md)
-	return md, ar, nil
+	entry := uploadinfo.EntryFromBlob([]byte(content))
+	if err := c.uploadIfMissing(context.Background(), []*uploadinfo.Entry{entry}); err != nil {
+		return nil, nil, err
+	}
+	ar := &pb.ActionResult{
+		OutputFiles: []*pb.OutputFile{{
+			Path:         command.OutputPaths[0],
+			Digest:       entry.Digest.ToProto(),
+			IsExecutable: target.IsBinary,
+		}},
+	}
+	md, err := c.buildMetadata(target, ar, false, false)
+	return md, ar, err
+}
+
+// writeTextFile writes the output of a text_file target directly, instead of downloading it from the CAS.
+func (c *Client) writeTextFile(target *core.BuildTarget, digest *pb.Digest) error {
+	outs := target.FullOutputs(c.state.Graph)
+	if len(outs) != 1 {
+		return fmt.Errorf("text_file %s should have a single output, has %d", target.Label, len(outs))
+	}
+	content, err := target.GetFileContent(c.state)
+	if err != nil {
+		return err
+	}
+	if err := c.removeOutputs(target); err != nil {
+		return err
+	} else if err := fs.EnsureDir(outs[0]); err != nil {
+		return err
+	} else if err := os.WriteFile(outs[0], []byte(content), target.OutMode()); err != nil {
+		return err
+	}
+	c.recordAttrs(target, digest)
+	c.state.LogBuildResult(target, core.TargetBuilt, "Built")
+	return nil
 }
 
 // logActionResult logs the state of an action while it's building or testing

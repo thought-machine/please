@@ -139,6 +139,26 @@ func TestExecuteFetch(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestBuildTextFile(t *testing.T) {
+	c := newClient()
+	server.calls.Reset()
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "text_file"})
+	target.IsTextFile = true
+	target.FileContent = "this is a text file"
+	target.AddOutput("text_file.txt")
+	target.BuildTimeout = time.Minute
+	c.state.Graph.AddTarget(target)
+	_, err := c.Build(target)
+	require.NoError(t, err)
+	assert.Zero(t, server.calls.GetActionResult.Load(), "should not look up any action results")
+	assert.Zero(t, server.calls.UpdateActionResult.Load(), "should not write any action results")
+	assert.Zero(t, server.calls.Execute.Load(), "should not execute anything")
+	dg := digest.NewFromBlob([]byte("this is a text file"))
+	assert.Equal(t, []byte("this is a text file"), server.blobs[dg.Hash], "content should be uploaded to the CAS")
+	require.NoError(t, c.Download(target))
+	assertFileContent(t, filepath.Join(target.OutDir(), "text_file.txt"), []byte("this is a text file"))
+}
+
 func TestExecuteTest(t *testing.T) {
 	c := newClientInstance("test")
 	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "target3"})
