@@ -244,8 +244,8 @@ func pkg(s *scope, args []pyObject) pyObject {
 		s.Assert(configVal != nil, "error calling package(): %s is not a known config value", k)
 
 		// Merge in the existing config for dictionaries
-		if overrides, ok := v.(pyDict); ok {
-			if pluginConfig, ok := configVal.(pyDict); ok {
+		if overrides, ok := asDict(v); ok {
+			if pluginConfig, ok := asDict(configVal); ok {
 				newPluginConfig := pluginConfig.Copy()
 				for pluginKey, override := range overrides {
 					pluginKey = strings.ToUpper(pluginKey)
@@ -515,11 +515,11 @@ func isType(obj pyObject, name string) bool {
 		return name == "str"
 	case *pyRange:
 		return name == "range"
-	case pyList:
+	case pyList, pyFrozenList:
 		return name == "list"
-	case pyDict:
+	case pyDict, pyFrozenDict:
 		return name == "dict"
-	case *pyConfig:
+	case *pyConfig, *pyFrozenConfig:
 		return name == "config"
 	case *pyFunc:
 		return name == "callable"

@@ -1638,6 +1638,7 @@ func execute(command string) int {
 		}
 		defer f.Close()
 		defer pprof.WriteHeapProfile(f)
+		defer runtime.GC()
 	}
 	if opts.MutexProfile != "" {
 		runtime.SetMutexProfileFraction(1)

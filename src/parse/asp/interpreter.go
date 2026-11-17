@@ -34,6 +34,9 @@ type interpreter struct {
 
 	regexCache *cmap.Map[string, *regexp.Regexp]
 
+	pluginConfigs    map[pluginConfigKey]pyFrozenDict
+	pluginConfigLock sync.RWMutex
+
 	// packageMetadata store scope level metadata for each package.
 	packageMetadata *cmap.Map[core.BuildLabel, scopeMetadata]
 
@@ -51,12 +54,13 @@ func newInterpreter(state *core.BuildState, p *Parser, callbacks Callbacks) *int
 	s.metadata = &noopScopeMetadata{}
 
 	i := &interpreter{
-		scope:      s,
-		parser:     p,
-		configs:    map[*core.BuildState]*pyConfig{},
-		limiter:    make(semaphore, state.Config.Parse.NumThreads),
-		regexCache: cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
-		callbacks:  callbacks,
+		scope:         s,
+		parser:        p,
+		configs:       map[*core.BuildState]*pyConfig{},
+		limiter:       make(semaphore, state.Config.Parse.NumThreads),
+		regexCache:    cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
+		pluginConfigs: map[pluginConfigKey]pyFrozenDict{},
+		callbacks:     callbacks,
 	}
 	// If we're creating an interpreter for a subrepo, we should share the subinclude cache.
 	if p.interpreter != nil {
