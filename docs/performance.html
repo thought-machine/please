@@ -12,8 +12,9 @@ efforts have been successful.
     dependencies. The test measures the time to analyse a large (~300,000 targets) synthetic graph.
     This is primarily a benchmark of asp, the core build graph and relevant parts of the Go runtime,
     but touches on everything relating to analysing the build graph.</p>
-<p>This benchmark is ran five times. Plotted is the average (mean) time for each run, with the ranges representing the
-    minimum and maximum times.</p>
+<p>This benchmark is ran five times. Plotted is the median time for each commit, with the ranges representing the
+    minimum and maximum times. The axis is capped so occasional extreme outliers are clipped
+    rather than squashing the rest of the graph; hover over a point to see its full range.</p>
 <div id="parse_chart" style="width: 100%; height: 400px"></div>
 
 <h2 id="peak-memory-usage" class="title-2">Peak memory usage</h2>
@@ -95,13 +96,17 @@ efforts have been successful.
                 ]})),
             });
 
+            // Occasional runs on a noisy machine take many times longer than normal; letting those
+            // set the axis range squashes everything else flat. Cap the axis relative to the medians
+            // instead; outlying ranges are clipped at the top (tooltips still show the real values).
+            const parseMax = Math.ceil(1.5 * Math.max(...results.map(r => r.parse.median)) / 5) * 5;
             const parseChart = new google.visualization.LineChart(document.getElementById('parse_chart'));
             parseChart.draw(timeData, {
                 title: 'Parse Time (seconds)',
                 titleTextStyle: {color: 'white'},
                 curveType: 'none',
                 legend: { position: 'none' },
-                vAxis: { minValue: 0, textStyle: {color: 'white'}},
+                vAxis: { viewWindow: { min: 0, max: parseMax }, textStyle: {color: 'white'}},
                 hAxis: { textStyle: {color: 'white'}},
                 backgroundColor: '#202328',
                 lineWidth: 3,
