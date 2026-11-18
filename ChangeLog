@@ -1,3 +1,10 @@
+Version 17.35.2
+---------------
+    * Fix equality comparisons on frozen dicts / lists (#3657)
+    * `plz query graph` is faster and uses less memory (#3660)
+    * Cache plugin configs to save memory at runtime (#3656)
+    * Implement text_file locally (#3663)
+
 Version 17.35.1
 ---------------
     * Fix labels on plugin_repo build def (#3651)
