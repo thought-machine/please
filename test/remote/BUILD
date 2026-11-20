@@ -2,28 +2,28 @@
 remote_file(
     name = "elan",
     binary = True,
-    hashes = ["afabbbae6cb22045a7ee1d53edf0e298602ef6d41a3a2554e1e06555f9827eb4"],
-    url = "https://github.com/thought-machine/please-servers/releases/download/v9.6.9/elan",
+    hashes = ["89de87d8c592de4248142e4b948d4a5e2291a4dd0504a181a2bc9c31eb5821ab"],
+    url = "https://github.com/please-build/mettle/releases/download/v11.19.4/elan",
 )
 
 remote_file(
     name = "mettle",
     binary = True,
-    hashes = ["7f5b2914bd6bfa0461fc86ff14e086bf8fc42bff0f26ba766a7c633f8cd27ff2"],
-    url = "https://github.com/thought-machine/please-servers/releases/download/v9.6.9/mettle",
+    hashes = ["c199cd50ca14ce544b92643fb45d75d3468f21bfbf15b2b9fd3e87b8b585d958"],
+    url = "https://github.com/please-build/mettle/releases/download/v11.19.4/mettle",
 )
 
 remote_file(
     name = "zeal",
     binary = True,
-    hashes = ["c28f1cdc52820c78cfb137066cbe26c88ffc02a954690e37bc175d23eb44711a"],
-    url = "https://github.com/thought-machine/please-servers/releases/download/v9.6.9/zeal",
+    hashes = ["5d81482f671c14675c8b45f3119df0e53617eada30047c16f23c2962e2d077a9"],
+    url = "https://github.com/please-build/mettle/releases/download/v11.19.4/zeal",
 )
 
 sh_cmd(
     name = "run_elan",
     srcs = [":elan"],
-    cmd = "mkdir -p plz-out/elan && exec $(out_location :elan) -s file://\\\\$PWD/plz-out/elan -v warning --log_file plz-out/log/elan.log --port 7777 --admin_disabled",
+    cmd = "mkdir -p plz-out/elan && exec $(out_location :elan) -s 'file://'\\\\$PWD'/plz-out/elan?metadata=skip&no_tmp_dir=true' -v error --log_file plz-out/log/elan.log --port 7777 --admin_disabled",
 )
 
 sh_cmd(
