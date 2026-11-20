@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	fpb "github.com/bazelbuild/remote-apis/build/bazel/remote/asset/v1"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
@@ -62,7 +63,7 @@ type testServer struct {
 
 // serverCalls counts calls to RPCs that we want to make assertions about.
 type serverCalls struct {
-	GetActionResult, UpdateActionResult, Execute, BlobReads atomic.Int64
+	GetActionResult, UpdateActionResult, Execute, BlobReads, FetchBlob atomic.Int64
 }
 
 // Reset resets all the counters to zero.
@@ -71,6 +72,7 @@ func (c *serverCalls) Reset() {
 	c.UpdateActionResult.Store(0)
 	c.Execute.Store(0)
 	c.BlobReads.Store(0)
+	c.FetchBlob.Store(0)
 }
 
 func (s *testServer) GetCapabilities(ctx context.Context, req *pb.GetCapabilitiesRequest) (*pb.ServerCapabilities, error) {
@@ -472,25 +474,29 @@ func (s *testServer) RecoverStreamPanics(srv interface{}, ss grpc.ServerStream, 
 }
 
 func (s *testServer) FetchBlob(ctx context.Context, req *fpb.FetchBlobRequest) (*fpb.FetchBlobResponse, error) {
+	s.calls.FetchBlob.Add(1)
 	// This is a little overly specific but wevs
-	if len(req.Qualifiers) != 1 {
-		return nil, fmt.Errorf("Expected exactly one qualifier, got %s", req.Qualifiers)
-	} else if req.Qualifiers[0].Name != "checksum.sri" {
-		return nil, fmt.Errorf("Missing checksum.sri qualifier")
+	content := []byte("abc")
+	if len(req.Qualifiers) > 1 {
+		return nil, fmt.Errorf("Expected at most one qualifier, got %s", req.Qualifiers)
+	} else if len(req.Qualifiers) == 1 {
+		if req.Qualifiers[0].Name != "checksum.sri" {
+			return nil, fmt.Errorf("Missing checksum.sri qualifier")
+		}
+		sri, err := sri.NewChecker(req.Qualifiers[0].Value)
+		if err != nil {
+			return nil, err
+		}
+		sri.Write(content)
+		if err := sri.Check(); err != nil {
+			return nil, err
+		}
 	}
-	sri, err := sri.NewChecker(req.Qualifiers[0].Value)
-	if err != nil {
-		return nil, err
-	}
-	sri.Write([]byte("abc"))
-	if err := sri.Check(); err != nil {
-		return nil, err
-	}
+	dg := digest.NewFromBlob(content)
+	s.blobs[dg.Hash] = content
 	return &fpb.FetchBlobResponse{
-		BlobDigest: &pb.Digest{
-			Hash:      "edeaaff3f1774ad2888673770c6d64097e391bc362d7d6fb34982ddf0efd18cb",
-			SizeBytes: 3,
-		},
+		Status:     &rpcstatus.Status{},
+		BlobDigest: dg.ToProto(),
 	}, nil
 }
 
