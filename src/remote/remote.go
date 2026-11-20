@@ -489,8 +489,15 @@ func (c *Client) Download(target *core.BuildTarget) error {
 		// download (which also looks like a stall to cycle detection). Failures aren't logged here since all
 		// callers report them already.
 		c.state.LogBuildResult(target, core.TargetBuilding, "Downloading...")
-		_, ar := c.retrieveResults(target, nil, buildAction, false, false, 0)
-		if ar == nil {
+		var ar *pb.ActionResult
+		if target.IsRemoteFile {
+			// These aren't stored in the action cache, but we know what the output is from building it.
+			a, err := c.remoteFileActionResult(target)
+			if err != nil {
+				return err
+			}
+			ar = a
+		} else if _, ar = c.retrieveResults(target, nil, buildAction, false, false, 0); ar == nil {
 			return fmt.Errorf("Failed to retrieve action result for %s", target)
 		}
 		if err := c.reallyDownload(target, buildAction, ar); err != nil {
@@ -695,6 +702,11 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 	if target.IsTextFile {
 		return c.buildTextFile(target, command)
 	}
+	// Remote files are fetched via the remote asset API, which does its own caching, so we don't use the
+	// action cache for them (and there are no inputs to upload).
+	if target.IsRemoteFile {
+		return c.fetchRemoteFile(target, digest)
+	}
 	if !isTest || (!c.state.ForceRerun && c.state.NumTestRuns == 1) {
 		if metadata, ar := c.maybeRetrieveResults(target, command, digest, isTest, needStdout, run); metadata != nil {
 			return metadata, ar, nil
@@ -705,11 +717,6 @@ func (c *Client) execute(target *core.BuildTarget, command *pb.Command, digest *
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to upload build action: %s", err)
 	}
-	// Remote files get special treatment at this point.
-	if target.IsRemoteFile {
-		return c.fetchRemoteFile(target, digest)
-	}
-
 	// We should skip the cache lookup (and override any existing action result) if we --rebuild, or --rerun and this is
 	// one fo the targets we're testing or building.
 	skipCacheLookup := (isTest && (c.state.ForceRerun || c.state.NumTestRuns != 1)) || (!isTest && c.state.ForceRebuild)
@@ -904,7 +911,16 @@ func (c *Client) DataRate() (int, int, int, int) {
 }
 
 // fetchRemoteFile sends a request to fetch a file using the remote asset API.
+// The asset server is responsible for caching fetches; we never read or write the action cache here, although
+// we do store results in the local metadata store (keyed by the action digest) to avoid repeated requests.
 func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Digest) (*core.BuildMetadata, *pb.ActionResult, error) {
+	if !c.state.ShouldRebuild(target) {
+		if metadata, ar := c.retrieveLocalResults(target, actionDigest); metadata != nil {
+			log.Debug("Got locally cached results for %s %s", target.Label, c.actionURL(actionDigest, true))
+			metadata.Cached = true
+			return metadata, ar, nil
+		}
+	}
 	c.state.LogBuildResult(target, core.TargetBuilding, "Downloading...")
 	urls := target.AllURLs(c.state)
 	req := &fpb.FetchBlobRequest{
@@ -912,13 +928,13 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 		Timeout:      durationpb.New(target.BuildTimeout),
 		Uris:         urls,
 	}
-	if c.state.VerifyHashes && (!c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target)) {
-		if sri := subresourceIntegrity(target); sri != "" {
-			req.Qualifiers = []*fpb.Qualifier{{
-				Name:  "checksum.sri",
-				Value: sri,
-			}}
-		}
+	sri := subresourceIntegrity(target)
+	verify := sri != "" && c.state.VerifyHashes && (!c.state.NeedHashesOnly || !c.state.IsOriginalTargetOrParent(target))
+	if verify {
+		req.Qualifiers = []*fpb.Qualifier{{
+			Name:  "checksum.sri",
+			Value: sri,
+		}}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), target.BuildTimeout)
 	defer cancel()
@@ -939,15 +955,32 @@ func (c *Client) fetchRemoteFile(target *core.BuildTarget, actionDigest *pb.Dige
 			IsExecutable: target.IsBinary,
 		}},
 	}
-	if _, err := c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-		InstanceName: c.instance,
-		ActionDigest: actionDigest,
-		ActionResult: ar,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("Error updating action result: %s", err)
-	}
 	md, err := c.buildMetadata(target, ar, false, false)
-	return md, ar, err
+	if err != nil {
+		return nil, nil, err
+	}
+	// The action digest encodes the hashes we expect, so only store this if we've actually verified against them
+	// (or there were none to verify against); otherwise e.g. `plz hash --update` could satisfy a later build.
+	if verify || sri == "" {
+		c.locallyCacheResults(target, actionDigest, md)
+	}
+	return md, ar, nil
+}
+
+// remoteFileActionResult reconstructs the action result for a remote file from its recorded outputs.
+func (c *Client) remoteFileActionResult(target *core.BuildTarget) (*pb.ActionResult, error) {
+	outs := c.targetOutputs(target.Label)
+	if outs == nil || len(outs.Files) != 1 {
+		return nil, fmt.Errorf("No outputs recorded for remote file %s", target)
+	}
+	f := outs.Files[0]
+	return &pb.ActionResult{
+		OutputFiles: []*pb.OutputFile{{
+			Path:         f.Name,
+			Digest:       f.Digest,
+			IsExecutable: f.IsExecutable,
+		}},
+	}, nil
 }
 
 // buildTextFile "builds" a text file by uploading its contents to the CAS.
