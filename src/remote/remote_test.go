@@ -127,16 +127,69 @@ func TestExecutePostBuildFunction(t *testing.T) {
 	assert.Equal(t, []string{"somefile"}, target.Outputs(c.state.Graph))
 }
 
-func TestExecuteFetch(t *testing.T) {
-	c := newClient()
-	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: "remote1"})
+func newRemoteFileTarget(name string) *core.BuildTarget {
+	target := core.NewBuildTarget(core.BuildLabel{PackageName: "package", Name: name})
 	target.IsRemoteFile = true
-	target.AddSource(core.URLLabel("https://get.please.build/linux_amd64/14.2.0/please_14.2.0.tar.gz"))
-	target.AddOutput("please_14.2.0.tar.gz")
+	target.AddSource(core.URLLabel("https://get.please.build/linux_amd64/14.2.0/" + name + ".tar.gz"))
+	target.AddOutput(name + ".tar.gz")
 	target.Hashes = []string{"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"}
 	target.BuildTimeout = time.Minute
+	return target
+}
+
+// useTempMetadataStore points the client's local metadata store at a fresh directory so tests don't see
+// results stored by previous runs.
+func useTempMetadataStore(t *testing.T, c *Client) {
+	t.Helper()
+	c.mdStore = &directoryMetadataStore{
+		instance:      c.state.Config.Remote.Instance,
+		directory:     t.TempDir(),
+		cacheDuration: time.Hour,
+	}
+}
+
+func TestExecuteFetch(t *testing.T) {
+	c := newClient()
+	useTempMetadataStore(t, c)
+	server.calls.Reset()
+	target := newRemoteFileTarget("remote1")
+	c.state.Graph.AddTarget(target)
 	_, err := c.Build(target)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, server.calls.FetchBlob.Load())
+	assert.Zero(t, server.calls.GetActionResult.Load(), "should not look up any action results")
+	assert.Zero(t, server.calls.UpdateActionResult.Load(), "should not write any action results")
+	assert.Zero(t, server.calls.Execute.Load(), "should not execute anything")
+	require.NoError(t, c.Download(target))
+	assertFileContent(t, filepath.Join(target.OutDir(), "remote1.tar.gz"), []byte("abc"))
+
+	// A second build should be satisfied from the local metadata store without contacting the server.
+	c2 := newClient()
+	c2.mdStore = c.mdStore
+	_, err = c2.Build(target)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, server.calls.FetchBlob.Load(), "should not fetch again")
+	assert.Zero(t, server.calls.GetActionResult.Load(), "should not look up any action results")
+}
+
+func TestExecuteFetchUnverified(t *testing.T) {
+	c := newClient()
+	useTempMetadataStore(t, c)
+	server.calls.Reset()
+	target := newRemoteFileTarget("remote2")
+	c.state.Graph.AddTarget(target)
+	c.state.NeedHashesOnly = true
+	c.state.AddOriginalTarget(target.Label)
+	_, err := c.Build(target)
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, server.calls.FetchBlob.Load())
+
+	// This wasn't verified against the hashes so shouldn't be stored for a later build to use.
+	c2 := newClient()
+	c2.mdStore = c.mdStore
+	_, err = c2.Build(target)
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, server.calls.FetchBlob.Load(), "should fetch again")
 }
 
 func TestBuildTextFile(t *testing.T) {
