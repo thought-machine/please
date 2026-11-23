@@ -115,6 +115,9 @@ type Client struct {
 	// Remote build ID
 	buildID string
 
+	// Whether the action cache reported updatability
+	actionCacheUpdatable bool
+
 	// Stats used to report RPC data rates
 	stats *statsHandler
 
@@ -269,6 +272,8 @@ func (c *Client) initExec() error {
 		// bit to allow a bit of serialisation overhead etc.
 		c.maxBlobBatchSize = 4000000
 	}
+	c.actionCacheUpdatable = resp.CacheCapabilities != nil && resp.CacheCapabilities.ActionCacheUpdateCapabilities != nil && resp.CacheCapabilities.ActionCacheUpdateCapabilities.UpdateEnabled
+	log.Debug("Action cache update enabled: %v", c.actionCacheUpdatable)
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("Failed to determine user home dir: %s", err)
@@ -449,11 +454,13 @@ func (c *Client) build(target *core.BuildTarget) (*core.BuildMetadata, *pb.Actio
 			// Store results under unstamped digest too.
 			c.locallyCacheResults(target, unstampedDigest, metadata)
 		}
-		c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
-			InstanceName: c.instance,
-			ActionDigest: unstampedDigest,
-			ActionResult: ar,
-		})
+		if c.actionCacheUpdatable {
+			c.client.UpdateActionResult(context.Background(), &pb.UpdateActionResultRequest{
+				InstanceName: c.instance,
+				ActionDigest: unstampedDigest,
+				ActionResult: ar,
+			})
+		}
 		c.unstampedBuildActionDigests.Put(target.Label, unstampedDigest)
 	} else {
 		c.unstampedBuildActionDigests.Put(target.Label, stampedDigest)
