@@ -4,6 +4,7 @@ package scm
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -67,17 +68,11 @@ func (g *git) ChangesIn(diffSpec string, relativeTo string) []string {
 	if relativeTo == "" {
 		relativeTo = g.repoRoot
 	}
-	command := []string{"diff-tree", "--no-commit-id", "--name-only", "-r", diffSpec}
-	out, err := exec.Command("git", command...).CombinedOutput()
+	names, err := listFiles("diff-tree", "--no-commit-id", "--name-only", "-z", "-r", diffSpec)
 	if err != nil {
-		log.Fatalf("unable to determine changes: %s\nOutput:\n%s", err, string(out))
+		log.Fatalf("unable to determine changes: %s", err)
 	}
-	output := strings.Split(string(out), "\n")
-	files := make([]string, len(output))
-	for i, o := range output {
-		files[i] = g.fixGitRelativePath(strings.TrimSpace(o), relativeTo)
-	}
-	return files
+	return g.fixGitRelativePaths(names, relativeTo)
 }
 
 // ChangedFiles returns a list of modified files since the given commit, optionally including untracked files.
@@ -85,45 +80,52 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 	if relativeTo == "" {
 		relativeTo = g.repoRoot
 	}
-	relSuffix := []string{"--", relativeTo}
-	command := make([]string, 0, 3+len(relSuffix))
-	command = append(command, []string{"diff", "--name-only", "HEAD"}...)
-
-	out, err := exec.Command("git", append(command, relSuffix...)...).CombinedOutput()
+	files, err := listFiles("diff", "--name-only", "-z", "HEAD", "--", relativeTo)
 	if err != nil {
-		log.Fatalf("unable to find changes: %s\nOutput:\n%s)", err, string(out))
+		log.Fatalf("unable to find changes: %s", err)
 	}
-	files := strings.Split(string(out), "\n")
 
 	if fromCommit != "" {
 		// Grab the diff from the merge-base to HEAD using ... syntax.  This ensures we have just
 		// the changes that have occurred on the current branch.
-		fromCommand := make([]string, 0, 3+len(relSuffix))
-		fromCommand = append(fromCommand, []string{"diff", "--name-only", fromCommit + "...HEAD"}...)
-		fromCommand = append(fromCommand, relSuffix...)
-		out, err = exec.Command("git", fromCommand...).CombinedOutput()
+		committedChanges, err := listFiles("diff", "--name-only", "-z", fromCommit+"...HEAD", "--", relativeTo)
 		if err != nil {
-			log.Fatalf("unable to check diff vs. %s: %s\nOutput:\n%s", fromCommit, err, string(out))
+			log.Fatalf("unable to check diff vs. %s: %s", fromCommit, err)
 		}
-		committedChanges := strings.Split(string(out), "\n")
 		files = append(files, committedChanges...)
 	}
 	if includeUntracked {
-		includeCommand := make([]string, 0, 3+len(relSuffix))
-		includeCommand = append(includeCommand, []string{"ls-files", "--other", "--exclude-standard"}...)
-		out, err = exec.Command("git", append(includeCommand, relSuffix...)...).CombinedOutput()
+		untracked, err := listFiles("ls-files", "--other", "--exclude-standard", "-z", "--", relativeTo)
 		if err != nil {
-			log.Fatalf("unable to determine untracked files: %s\nOutput:\n%s", err, string(out))
+			log.Fatalf("unable to determine untracked files: %s", err)
 		}
-		untracked := strings.Split(string(out), "\n")
 		files = append(files, untracked...)
 	}
 	// git will report changed files relative to the worktree: re-relativize to relativeTo
-	normalized := make([]string, len(files))
-	for i, f := range files {
-		normalized[i] = g.fixGitRelativePath(strings.TrimSpace(f), relativeTo)
+	return g.fixGitRelativePaths(files, relativeTo)
+}
+
+// listFiles runs a git command that prints NUL-separated file names (i.e. one passed -z).
+// Without -z git quotes names that contain non-ASCII or special characters.
+func listFiles(args ...string) ([]string, error) {
+	out, err := exec.Command("git", args...).Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, fmt.Errorf("%w\nOutput:\n%s", err, exitErr.Stderr)
+		}
+		return nil, err
 	}
-	return normalized
+	names := strings.Split(string(out), "\x00")
+	return names[:len(names)-1], nil // There is a NUL after the last name
+}
+
+func (g *git) fixGitRelativePaths(worktreePaths []string, relativeTo string) []string {
+	ret := make([]string, len(worktreePaths))
+	for i, p := range worktreePaths {
+		ret[i] = g.fixGitRelativePath(p, relativeTo)
+	}
+	return ret
 }
 
 func (g *git) fixGitRelativePath(worktreePath, relativeTo string) string {
