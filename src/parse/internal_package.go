@@ -30,15 +30,15 @@ func GetInternalPackage(config *core.Configuration) (string, error) {
 	var arcatHash string
 	switch fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH) {
 	case "darwin_amd64":
-		arcatHash = "6af2cf108592535701aa9395f3a5deeb48a5dfbe8174a8ebe3d56bb93de2c255"
+		arcatHash = "0c674f9c324a5556d413fc9880fd9b4bd3df7e6f18f0c7258d7f3975c938e912"
 	case "darwin_arm64":
-		arcatHash = "5070ef05d14c66a85d438f400c6ff734a23833929775d6824b69207b704034bf"
+		arcatHash = "aa359996e3e7c166c49421a14bf7ca80bc17508baf13556c4847383383d01b96"
 	case "freebsd_amd64":
-		arcatHash = "05ad6ac45be3a4ca1238bb1bd09207a596f8ff5f885415f8df4ff2dc849fa04e"
+		arcatHash = "ee9abff21f102a11691a133a833143a31c724483fe3432fe875e4bf3731e9bd1"
 	case "linux_amd64":
-		arcatHash = "aec85425355291e515cd10ac0addec3a5bc9e05c9d07af01aca8c34aaf0f1222"
+		arcatHash = "614a76d4e33526fe6cb75e98a70046661b5c6b7a0c3571c63af11dd525a02db3"
 	case "linux_arm64":
-		arcatHash = "8266cb95cc84b23642bca6567f8b4bd18de399c887cb5845ab6a901d0dba54d2"
+		arcatHash = "dc50418e8962457dbcfc6e70463f088beef1f5b785c9fb030a14eeb67de0efa5"
 	default:
 		return "", fmt.Errorf("arcat tool not supported for platform: %s_%s", runtime.GOOS, runtime.GOARCH)
 	}
