@@ -1,0 +1,7 @@
+
+# Empty plugin to load config.
+filegroup(
+    name = "plugin",
+    srcs = [],
+    visibility = ["PUBLIC"]
+)
