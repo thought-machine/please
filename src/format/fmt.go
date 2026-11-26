@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"github.com/please-build/buildtools/build"
+	"github.com/please-build/buildtools/tables"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/thought-machine/please/src/cli/logging"
@@ -27,7 +28,7 @@ var log = logging.Log
 // The returned bool is true if any changes were needed.
 func Format(config *core.Configuration, filenames []string, rewrite, quiet bool) (bool, error) {
 	if len(filenames) == 0 {
-		return formatAll(plz.FindAllBuildFiles(config, core.RepoRoot, ""), config.Please.NumThreads, rewrite, quiet)
+		return formatAll(config, plz.FindAllBuildFiles(config, core.RepoRoot, ""), rewrite, quiet)
 	}
 	ch := make(chan string)
 	go func() {
@@ -36,17 +37,17 @@ func Format(config *core.Configuration, filenames []string, rewrite, quiet bool)
 		}
 		close(ch)
 	}()
-	return formatAll(ch, config.Please.NumThreads, rewrite, quiet)
+	return formatAll(config, ch, rewrite, quiet)
 }
 
-func formatAll(filenames <-chan string, parallelism int, rewrite, quiet bool) (bool, error) {
+func formatAll(config *core.Configuration, filenames <-chan string, rewrite, quiet bool) (bool, error) {
 	var changed int64
 	var g errgroup.Group
-	g.SetLimit(parallelism)
+	g.SetLimit(config.Please.NumThreads)
 	for filename := range filenames {
 		filename := filename
 		g.Go(func() error {
-			c, err := format(filename, rewrite, quiet)
+			c, err := format(config, filename, rewrite, quiet)
 			if c {
 				atomic.AddInt64(&changed, 1)
 			}
@@ -57,7 +58,7 @@ func formatAll(filenames <-chan string, parallelism int, rewrite, quiet bool) (b
 	return changed > 0, err
 }
 
-func format(filename string, rewrite, quiet bool) (bool, error) {
+func format(config *core.Configuration, filename string, rewrite, quiet bool) (bool, error) {
 	before, err := os.ReadFile(filename)
 	if err != nil {
 		return true, err
@@ -67,7 +68,19 @@ func format(filename string, rewrite, quiet bool) (bool, error) {
 		return true, err
 	}
 	simplify(f)
-	after := build.Format(f)
+	after := build.FormatWithRewriter(
+		&build.Rewriter{
+			IsLabelArg:                      tables.IsLabelArg,
+			LabelDenyList:                   tables.LabelDenylist,
+			IsSortableListArg:               tables.IsSortableListArg,
+			SortableDenylist:                tables.SortableDenylist,
+			SortableAllowlist:               tables.SortableAllowlist,
+			NamePriority:                    tables.NamePriority,
+			StripLabelLeadingSlashes:        tables.StripLabelLeadingSlashes,
+			ShortenAbsoluteLabelsToRelative: config.Format.ShortenAbsoluteLabelsToRelative,
+		},
+		f,
+	)
 	if bytes.Equal(before, after) {
 		log.Debug("%s is already in canonical format", filename)
 		return false, nil

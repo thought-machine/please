@@ -1,0 +1,10 @@
+go_library(
+    name = "name",
+    srcs = [
+        "src.go",
+    ],
+    deps = [
+        ":test_data",
+        "//src/format/test_data",
+    ],
+)
