@@ -110,14 +110,15 @@ func (g *git) ChangedFiles(fromCommit string, includeUntracked bool, relativeTo 
 func listFiles(args ...string) ([]string, error) {
 	out, err := exec.Command("git", args...).Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return nil, fmt.Errorf("%w\nOutput:\n%s", err, exitErr.Stderr)
 		}
 		return nil, err
 	}
-	names := strings.Split(string(out), "\x00")
-	return names[:len(names)-1], nil // There is a NUL after the last name
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return strings.Split(strings.TrimSuffix(string(out), "\x00"), "\x00"), nil
 }
 
 func (g *git) fixGitRelativePaths(worktreePaths []string, relativeTo string) []string {
