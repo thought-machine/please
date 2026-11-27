@@ -276,7 +276,7 @@ func formatTestCase(result core.TestCase, name string, detailed bool) string {
 		return formatTestName(result, name) + " (No results)"
 	}
 	var outcome core.TestExecution
-	if len(result.Executions) > 1 && result.Success() != nil {
+	if result.IsFlakyPass() {
 		return fmt.Sprintf("%s ${BOLD_MAGENTA}%s${RESET}", formatTestName(result, name), "FLAKY PASS")
 	}
 

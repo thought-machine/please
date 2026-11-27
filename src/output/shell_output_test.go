@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/thought-machine/please/src/core"
 )
 
 func TestColouriseError(t *testing.T) {
@@ -57,4 +59,17 @@ func TestShouldInclude(t *testing.T) {
 			assert.Equal(t, testCase.expectedOutcome, shouldInclude(testCase.file, testCase.includeFiles))
 		})
 	}
+}
+
+func TestFormatTestCaseFlakyPass(t *testing.T) {
+	pass := core.TestExecution{}
+	fail := core.TestExecution{Failure: &core.TestResultFailure{Message: "failed"}}
+	// A test case that failed and then passed on rerun is a flaky pass.
+	flaky := core.TestCase{Name: "TestFlaky", Executions: []core.TestExecution{fail, pass}}
+	assert.Contains(t, formatTestCase(flaky, "TestFlaky", false), "FLAKY PASS")
+	// A test case that passed on every run is not.
+	stable := core.TestCase{Name: "TestStable", Executions: []core.TestExecution{pass, pass}}
+	result := formatTestCase(stable, "TestStable", false)
+	assert.NotContains(t, result, "FLAKY")
+	assert.Contains(t, result, "PASS")
 }
