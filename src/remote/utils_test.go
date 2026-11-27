@@ -72,7 +72,8 @@ func TestCommandCredProviderValidJWTIsCached(t *testing.T) {
 		assert.Equal(t, jwtToken, token)
 	}
 	assert.Equal(t, 1, count())
-	assert.True(t, expiry.Equal(cred.expiry), "expected expiry %s, was %s", expiry, cred.expiry)
+	expectedExpiry := expiry.Add(-tokenExpiryMargin)
+	assert.True(t, expectedExpiry.Equal(cred.expiry), "expected expiry %s, was %s", expectedExpiry, cred.expiry)
 }
 
 func TestCommandCredProviderExpiredJWTIsRefreshed(t *testing.T) {
