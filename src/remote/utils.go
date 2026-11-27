@@ -777,6 +777,9 @@ func (cred *commandCredProvider) GetRequestMetadata(ctx context.Context, _ ...st
 	}, err
 }
 
+// tokenExpiryMargin is taken off token expiry times to avoid any issues with time sync or network delay.
+const tokenExpiryMargin = 20 * time.Second
+
 func (cred *commandCredProvider) getToken(ctx context.Context) (string, error) {
 	// Use the mutex to singleflight checking & getting a new token
 	cred.lock.Lock()
@@ -798,8 +801,7 @@ func (cred *commandCredProvider) getToken(ctx context.Context) (string, error) {
 	claims := jwt.RegisteredClaims{}
 	// ParseUnverified because we just want the expiry; we are not the ones who validate this token.
 	if _, _, err := jwt.NewParser().ParseUnverified(cred.token, &claims); err == nil && claims.ExpiresAt != nil {
-		// Take off 20 seconds to avoid any issues with time sync or network delay.
-		cred.expiry = claims.ExpiresAt.Time.Add(-20 * time.Second)
+		cred.expiry = claims.ExpiresAt.Time.Add(-tokenExpiryMargin)
 	} else {
 		// Assume this never expires
 		cred.expiry = time.Date(3000, time.January, 1, 0, 0, 0, 0, time.UTC)
