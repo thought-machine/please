@@ -801,7 +801,7 @@ func (cred *commandCredProvider) getToken(ctx context.Context) (string, error) {
 	claims := jwt.RegisteredClaims{}
 	// ParseUnverified because we just want the expiry; we are not the ones who validate this token.
 	if _, _, err := jwt.NewParser().ParseUnverified(cred.token, &claims); err == nil && claims.ExpiresAt != nil {
-		cred.expiry = claims.ExpiresAt.Time.Add(-tokenExpiryMargin)
+		cred.expiry = claims.ExpiresAt.Add(-tokenExpiryMargin)
 	} else {
 		// Assume this never expires
 		cred.expiry = time.Date(3000, time.January, 1, 0, 0, 0, 0, time.UTC)
