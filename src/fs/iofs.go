@@ -15,7 +15,7 @@ func (osFS) Open(name string) (iofs.File, error) {
 	return os.Open(name)
 }
 
-func (osFS) Stat(name string) (fs.FileInfo, error) {
+func (osFS) Stat(name string) (iofs.FileInfo, error) {
 	return os.Stat(name)
 }
 
