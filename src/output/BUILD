@@ -29,5 +29,6 @@ go_test(
     deps = [
         ":output",
         "///third_party/go/github.com_stretchr_testify//assert",
+        "//src/core",
     ],
 )

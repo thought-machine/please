@@ -54,12 +54,12 @@ func (testSuite *TestSuite) Tests() int {
 	return len(testSuite.TestCases)
 }
 
-// FlakyPasses returns the number of TestCases which succeeded after some number of executions.
+// FlakyPasses returns the number of TestCases which succeeded after previously failing or erroring.
 func (testSuite TestSuite) FlakyPasses() int {
 	flakyPasses := 0
 
 	for _, result := range testSuite.TestCases {
-		if result.Success() != nil && len(result.Executions) > 1 {
+		if result.IsFlakyPass() {
 			flakyPasses++
 		}
 	}
@@ -162,6 +162,11 @@ func (testCase *TestCase) Success() *TestExecution {
 		}
 	}
 	return nil
+}
+
+// IsFlakyPass returns true if this test case eventually passed but had failed or errored on an earlier run.
+func (testCase *TestCase) IsFlakyPass() bool {
+	return testCase.Success() != nil && (len(testCase.Failures()) > 0 || len(testCase.Errors()) > 0)
 }
 
 // Skip returns the either the skipped execution of a test case, or nil if it was never skipped.
