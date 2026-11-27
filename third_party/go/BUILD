@@ -310,11 +310,6 @@ go_repo(
 )
 
 go_repo(
-    module = "github.com/karrick/godirwalk",
-    version = "v1.17.0",
-)
-
-go_repo(
     module = "github.com/beorn7/perks",
     version = "v1.0.1",
 )

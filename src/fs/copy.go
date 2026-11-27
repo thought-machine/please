@@ -2,6 +2,7 @@ package fs
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -58,15 +59,16 @@ func RecursiveCopyOrLinkFile(from string, to string, mode os.FileMode, link, fal
 		return err
 	}
 	if info.IsDir() {
-		return WalkMode(from, func(name string, fileMode Mode) error {
+		return WalkMode(from, func(name string, entry fs.DirEntry) error {
 			dest := filepath.Join(to, name[len(from):])
-			if fileMode.IsDir() {
+			if entry.IsDir() {
 				return os.MkdirAll(dest, DirPermissions)
 			}
-			if fileMode.IsSymlink() {
+			t := entry.Type()
+			if t&fs.ModeSymlink == fs.ModeSymlink {
 				return copySymlink(name, dest)
 			}
-			return CopyOrLinkFile(name, dest, fileMode.ModeType(), mode, link, fallback)
+			return CopyOrLinkFile(name, dest, t, mode, link, fallback)
 		})
 	}
 	return CopyOrLinkFile(from, to, info.Mode(), mode, link, fallback)

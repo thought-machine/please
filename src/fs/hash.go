@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -209,8 +210,8 @@ func (hasher *PathHasher) hash(path string, store, read, timestamp bool) ([]byte
 		}
 		return h.Sum(nil), nil
 	} else if err == nil && info.IsDir() {
-		err = WalkMode(path, func(p string, mode Mode) error {
-			if mode.IsSymlink() {
+		err = WalkMode(path, func(p string, entry fs.DirEntry) error {
+			if entry.Type()&fs.ModeSymlink == fs.ModeSymlink {
 				// Is a symlink, must verify that it's not absolute.
 				deref, err := os.Readlink(p)
 				if err != nil {
@@ -225,7 +226,7 @@ func (hasher *PathHasher) hash(path string, store, read, timestamp bool) ([]byte
 				// Just write something to the hash indicating that we found something here,
 				// otherwise rules might be marked as unchanged if they added additional symlinks.
 				h.Write(boolTrueHashValue)
-			} else if !mode.IsDir() {
+			} else if !entry.IsDir() {
 				return hasher.fileHash(h, p)
 			}
 			return nil
