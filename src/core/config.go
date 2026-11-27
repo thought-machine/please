@@ -577,7 +577,8 @@ type Configuration struct {
 		Instance                string       `help:"Remote instance name to request; depending on the server this may be required."`
 		Name                    string       `help:"A name for this worker instance. This is attached to artifacts uploaded to remote storage." example:"agent-001"`
 		DisplayURL              string       `help:"A URL to browse the remote server with (e.g. using buildbarn-browser). Only used when printing hashes."`
-		TokenFile               string       `help:"A file containing a token that is attached to outgoing RPCs to authenticate them. This is somewhat bespoke; we are still investigating further options for authentication."`
+		TokenFile               string       `help:"A file containing a token that is attached to outgoing RPCs to authenticate them. Deprecated in favour of authcommand."`
+		AuthCommand             string       `help:"Shell command to run to generate an authentication token for the RPC calls (e.g. 'gcloud auth print-access-token'). If it is a JWT, it will automatically be renewed."`
 		Timeout                 cli.Duration `help:"Timeout for connections made to the remote server."`
 		Secure                  bool         `help:"Whether to use TLS for communication or not."`
 		VerifyOutputs           bool         `help:"Whether to verify all outputs are present after a cached remote execution action. Depending on your server implementation, you may require this to ensure files are really present."`

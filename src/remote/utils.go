@@ -7,18 +7,22 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	iofs "io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	pb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
+	"github.com/golang-jwt/jwt/v5"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
@@ -702,7 +706,12 @@ func (c *Client) dialOpts() ([]grpc.DialOption, error) {
 	opts[1] = grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(419430400))
 	opts[2] = grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor)
 	opts[3] = grpc.WithChainStreamInterceptor(grpc_prometheus.StreamClientInterceptor)
-	if c.state.Config.Remote.TokenFile == "" {
+
+	if c.state.Config.Remote.AuthCommand != "" {
+		return append(opts, grpc.WithPerRPCCredentials(&commandCredProvider{
+			command: c.state.Config.Remote.AuthCommand,
+		})), nil
+	} else if c.state.Config.Remote.TokenFile == "" {
 		return opts, nil
 	}
 	token, err := os.ReadFile(c.state.Config.Remote.TokenFile)
@@ -732,7 +741,7 @@ func preSharedToken(token string) tokenCredProvider {
 
 type tokenCredProvider map[string]string
 
-func (cred tokenCredProvider) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+func (cred tokenCredProvider) GetRequestMetadata(ctx context.Context, _ ...string) (map[string]string, error) {
 	return cred, nil
 }
 
@@ -752,4 +761,51 @@ func (c *Client) contextWithMetadata(target *core.BuildTarget) context.Context {
 		},
 	})
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(key, string(b)))
+}
+
+type commandCredProvider struct {
+	command string    // the command to run
+	token   string    // the token we last retrieved
+	expiry  time.Time // expiry time of the last token
+	lock    sync.Mutex
+}
+
+func (cred *commandCredProvider) GetRequestMetadata(ctx context.Context, _ ...string) (map[string]string, error) {
+	token, err := cred.getToken(ctx)
+	return map[string]string{
+		"authorization": "Bearer " + token,
+	}, err
+}
+
+func (cred *commandCredProvider) getToken(ctx context.Context) (string, error) {
+	// Use the mutex to singleflight checking & getting a new token
+	cred.lock.Lock()
+	defer cred.lock.Unlock()
+	if cred.expiry.After(time.Now()) {
+		return cred.token, nil
+	}
+	log.Debug("Refreshing RPC auth token: %s", cred.command)
+	out, err := exec.CommandContext(ctx, "bash", "--noprofile", "--norc", "-c", cred.command).Output()
+	if err != nil {
+		if eerr, ok := errors.AsType[*exec.ExitError](err); ok {
+			return "", fmt.Errorf("%w: %s", eerr, string(eerr.Stderr))
+		}
+		return "", err
+	}
+	log.Debug("Refreshed RPC auth token")
+	cred.token = strings.TrimSpace(string(out))
+
+	claims := jwt.RegisteredClaims{}
+	// ParseUnverified because we just want the expiry; we are not the ones who validate this token.
+	if _, _, err := jwt.NewParser().ParseUnverified(cred.token, &claims); err == nil && claims.ExpiresAt != nil {
+		cred.expiry = claims.ExpiresAt.Time
+	} else {
+		// Assume this never expires
+		cred.expiry = time.Date(3000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	}
+	return cred.token, nil
+}
+
+func (cred *commandCredProvider) RequireTransportSecurity() bool {
+	return false // Allow these to be provided over an insecure channel; this facilitates e.g. service meshes like Istio.
 }

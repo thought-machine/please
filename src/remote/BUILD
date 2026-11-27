@@ -20,6 +20,7 @@ go_library(
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/asset/v1",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/execution/v2",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/semver",
+        "///third_party/go/github.com_golang-jwt_jwt_v5//:v5",
         "///third_party/go/github.com_google_uuid//:uuid",
         "///third_party/go/github.com_grpc-ecosystem_go-grpc-middleware//retry",
         "///third_party/go/github.com_grpc-ecosystem_go-grpc-prometheus//:go-grpc-prometheus",
@@ -53,6 +54,7 @@ go_test(
         "filegroup_test.go",
         "impl_test.go",
         "remote_test.go",
+        "utils_test.go",
     ],
     data = ["test_data"],
     # TODO(#1412): find out why this flakes on circle
@@ -64,6 +66,7 @@ go_test(
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/asset/v1",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/remote/execution/v2",
         "///third_party/go/github.com_bazelbuild_remote-apis//build/bazel/semver",
+        "///third_party/go/github.com_golang-jwt_jwt_v5//:v5",
         "///third_party/go/github.com_peterebden_go-sri//:go-sri",
         "///third_party/go/github.com_stretchr_testify//assert",
         "///third_party/go/github.com_stretchr_testify//require",

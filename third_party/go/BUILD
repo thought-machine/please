@@ -739,3 +739,9 @@ go_repo(
     module = "go.yaml.in/yaml/v3",
     version = "v3.0.5",
 )
+
+go_repo(
+    licences = ["MIT"],
+    module = "github.com/golang-jwt/jwt/v5",
+    version = "v5.3.1",
+)
