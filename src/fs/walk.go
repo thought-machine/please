@@ -2,27 +2,8 @@ package fs
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 )
-
-type mode os.FileMode
-
-func (m mode) IsDir() bool {
-	return os.FileMode(m).IsDir()
-}
-
-func (m mode) IsRegular() bool {
-	return os.FileMode(m).IsRegular()
-}
-
-func (m mode) IsSymlink() bool {
-	return os.FileMode(m)&os.ModeSymlink != 0
-}
-
-func (m mode) ModeType() os.FileMode {
-	return os.FileMode(m)
-}
 
 // Walk implements an equivalent to filepath.Walk.
 func Walk(rootPath string, callback func(name string, isDir bool) error) error {
