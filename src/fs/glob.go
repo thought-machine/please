@@ -169,7 +169,6 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 	}
 	dir := walkedDir{}
 	err := iofs.WalkDir(globber.fs, rootPath, func(path string, d iofs.DirEntry, err error) error {
-		typeMode := mode(d.Type())
 		if isBuildFile(globber.buildFileNames, path) {
 			packageName := filepath.Dir(path)
 			if packageName != rootPath {
@@ -181,7 +180,7 @@ func (globber *Globber) walkDir(rootPath string) (walkedDir, error) {
 		if d.Name() == "plz-out" && rootPath == "." {
 			return filepath.SkipDir
 		}
-		if typeMode.IsSymlink() {
+		if d.Type()&iofs.ModeSymlink == iofs.ModeSymlink {
 			dir.symlinks = append(dir.symlinks, path)
 		} else {
 			dir.fileNames = append(dir.fileNames, path)

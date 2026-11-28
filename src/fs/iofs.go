@@ -15,5 +15,9 @@ func (osFS) Open(name string) (iofs.File, error) {
 	return os.Open(name)
 }
 
+func (osFS) Stat(name string) (iofs.FileInfo, error) {
+	return os.Stat(name)
+}
+
 // HostFS returns an io/fs.FS that behaves the same as the host OS i.e. the same way os.Open works.
 var HostFS = osFS{}

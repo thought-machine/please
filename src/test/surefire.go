@@ -1,6 +1,7 @@
 package test
 
 import (
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 
@@ -22,11 +23,11 @@ func CopySurefireXMLFilesToDir(state *core.BuildState, surefireDir string) {
 }
 
 func copySurefireXMLtoDir(path string, surefireDir string) {
-	fs.WalkMode(path, func(path string, mode fs.Mode) error {
+	fs.WalkMode(path, func(path string, mode iofs.DirEntry) error {
 		if !mode.IsDir() {
 			if surefireResult := filepath.Join(surefireDir, filepath.Base(path)); !fs.PathExists(surefireResult) {
 				if bytes, _ := os.ReadFile(path); looksLikeJUnitXMLTestResults(bytes) {
-					if err := fs.CopyOrLinkFile(path, surefireResult, mode.ModeType(), 0644, true, true); err != nil {
+					if err := fs.CopyOrLinkFile(path, surefireResult, mode.Type(), 0644, true, true); err != nil {
 						log.Errorf("Error linking %s to %s - %s", surefireResult, path, err)
 					}
 				}

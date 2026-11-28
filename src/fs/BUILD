@@ -7,7 +7,6 @@ go_library(
     pgo_file = "//:pgo",
     visibility = ["PUBLIC"],
     deps = [
-        "///third_party/go/github.com_karrick_godirwalk//:godirwalk",
         "///third_party/go/github.com_peterebden_go-deferred-regex//:go-deferred-regex",
         "///third_party/go/github.com_pkg_xattr//:xattr",
         "//src/cli/logging",

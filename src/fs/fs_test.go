@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"io/fs"
 	"os"
 	"testing"
 
@@ -41,4 +42,8 @@ func TestIsPackage(t *testing.T) {
 
 	isPackage = IsPackage([]string{"TEST_BUILD"}, "src/fs/test_data/test_subfolder4")
 	assert.True(t, isPackage)
+}
+
+func TestIsStatFS(t *testing.T) {
+	var _ fs.StatFS = HostFS
 }
