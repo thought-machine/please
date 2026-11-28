@@ -28,7 +28,7 @@ type interpreter struct {
 	configsMutex sync.RWMutex
 
 	breakpointMutex sync.Mutex
-	limiter         semaphore
+	limiter         *limiter
 
 	stringMethods, dictMethods, configMethods map[string]*pyFunc
 
@@ -57,7 +57,7 @@ func newInterpreter(state *core.BuildState, p *Parser, callbacks Callbacks) *int
 		scope:         s,
 		parser:        p,
 		configs:       map[*core.BuildState]*pyConfig{},
-		limiter:       make(semaphore, state.Config.Parse.NumThreads),
+		limiter:       newLimiter(state.Config.Parse.NumThreads),
 		regexCache:    cmap.New[string, *regexp.Regexp](cmap.SmallShardCount, cmap.XXHash),
 		pluginConfigs: map[pluginConfigKey]pyFrozenDict{},
 		callbacks:     callbacks,

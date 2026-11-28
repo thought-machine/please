@@ -19,12 +19,6 @@ import (
 
 var log = logging.Log
 
-// A semaphore implements the standard synchronisation mechanism based on a buffered channel.
-type semaphore chan struct{}
-
-func (s semaphore) Acquire() { s <- struct{}{} }
-func (s semaphore) Release() { <-s }
-
 // Callbacks is the interface we require from something that we can call back to for builds / parsing a subrepo.
 type Callbacks interface {
 	EnsureSubrepo(ctx context.Context, subrepo string, defining, dependent core.BuildLabel) error
@@ -38,7 +32,7 @@ type Parser struct {
 	builtins map[string][]byte
 
 	// Parallelism limiter to ensure we don't try to run too many parses simultaneously
-	limiter semaphore
+	limiter *limiter
 }
 
 // NewParser creates a new parser instance. One is normally sufficient for a process lifetime.
@@ -53,7 +47,7 @@ func NewParser(state *core.BuildState, callbacks Callbacks) *Parser {
 func NewParserOnly() *Parser {
 	return &Parser{
 		builtins: map[string][]byte{},
-		limiter:  make(semaphore, 10),
+		limiter:  newLimiter(10),
 	}
 }
 
@@ -83,11 +77,17 @@ func (p *Parser) MustLoadBuiltins(filename string, contents []byte) {
 	}
 }
 
+// start acquires a parser slot for a new parse. The caller must call p.limiter.Release() when done.
+func (p *Parser) start(ctx context.Context) context.Context {
+	p.limiter.Start(ctx)
+	return withinParse(ctx)
+}
+
 // ParseFile parses the contents of a single file in the BUILD language.
 // It returns true if the call was deferred at some point awaiting  target to build,
 // along with any error encountered.
 func (p *Parser) ParseFile(ctx context.Context, pkg *core.Package, label, dependent *core.BuildLabel, fs iofs.FS, filename string) error {
-	p.limiter.Acquire()
+	ctx = p.start(ctx)
 	defer p.limiter.Release()
 
 	statements, err := p.parse(fs, filename)
@@ -104,7 +104,7 @@ func (p *Parser) ParseFile(ctx context.Context, pkg *core.Package, label, depend
 
 // PreloadSubinclude pre-registers a preload, forcing us to build any transitive preloads before we move on
 func (p *Parser) PreloadSubinclude(ctx context.Context, label core.BuildLabel) error {
-	p.limiter.Acquire()
+	ctx = p.start(ctx)
 	defer p.limiter.Release()
 
 	// This is a throw away scope. We're just doing this to avoid race conditions setting this on the main scope.
@@ -120,7 +120,7 @@ func (p *Parser) PreloadSubinclude(ctx context.Context, label core.BuildLabel) e
 // The first return value is true if parsing succeeds - if the error is still non-nil
 // that indicates that interpretation failed.
 func (p *Parser) ParseReader(ctx context.Context, pkg *core.Package, r io.ReadSeeker, forLabel, dependent *core.BuildLabel) (bool, error) {
-	p.limiter.Acquire()
+	ctx = p.start(ctx)
 	defer p.limiter.Release()
 
 	stmts, err := p.parseAndHandleErrors(r)
